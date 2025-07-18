@@ -1,0 +1,6 @@
+[submodule "MathCPP"]
+	path = MathCPP
+	url = https://github.com/nick-fetcko/MathCPP
+[submodule "Serial"]
+	path = Serial
+	url = https://github.com/nick-fetcko/Serial

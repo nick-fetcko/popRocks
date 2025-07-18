@@ -1,0 +1,16 @@
+{
+  "dependencies": [
+    "fftw3",
+    "libjpeg-turbo",
+    "sdl2",
+    {
+      "name": "sdl2-image",
+      "features": [
+        "libjpeg-turbo"
+      ]
+    },
+    "sdl2-mixer",
+    "sdl2-net",
+    "sdl2-ttf"
+  ]
+}

@@ -1,0 +1,23 @@
+{
+	"Default" : {
+		"bufferSize" : 2048,
+		"decayTime": 0.5,
+		"fadeTime" : 0.5,
+		"pulse" : false,
+		"pulseTime" : 0.1
+	},
+	"Fast" : {
+		"bufferSize" : 128,
+		"decayTime": 0.1,
+		"fadeTime" : 0.1,
+		"pulse" : false,
+		"pulseTime" : 0.04
+	},
+	"Slow" : {
+		"bufferSize" : 256,
+		"decayTime": 7.5,
+		"fadeTime" : 5,
+		"pulse" : true,
+		"pulseTime" : 1
+	}
+}

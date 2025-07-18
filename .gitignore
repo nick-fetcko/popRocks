@@ -1,0 +1,14 @@
+._*
+*.vs
+*.log
+*.tlog
+*.pch
+*.ipch
+*.cache
+*.pdb
+*.user
+*.metagen
+.DS_Store
+desktop.ini
+
+Build/
