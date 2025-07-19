@@ -71,9 +71,8 @@ vector<std::size_t> Peaks::findPeaks(const vector<double> &data, int width,
         av = decayRate * av + (1 - decayRate) * data[mid];
         if (av < data[mid])
             av = data[mid];
-        std::size_t i = mid - width;
-        if (i < 0)
-            i = 0;
+        std::size_t i = 
+			width > mid ? 0 : mid - width;
         std::size_t stop = mid + width + 1;
         if (stop > data.size())
             stop = data.size();
@@ -111,9 +110,10 @@ bool Peaks::overThreshold(const vector<double> &data, std::size_t index, int wid
     if (data[index] < av)
         return false;
     if (isRelative) {
-        std::size_t iStart = index - pre * width;
-        if (iStart < 0)
-            iStart = 0;
+        std::size_t iStart = 
+			pre * width > index ?
+			0 :
+			index - pre * width;
         std::size_t iStop = index + post * width;
         if (iStop > data.size())
             iStop = data.size();
