@@ -52,17 +52,23 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 		void LoadFromTags(const std::map<std::string, std::string> &tags) override {
 			if (auto title = tags.find("title"); title != tags.end())
 				SetTitle(title->second);
-			if (auto track = tags.find("tracknumber"); track != tags.end()) {
+			auto track = tags.find("tracknumber");
+			// MP4 tags can use "track" instead of "tracknumber"
+			if (track == tags.end()) track = tags.find("track");
+			if (track != tags.end()) {
 				try {
-					index = std::stoll(track->second);
+					index = std::stoll(Fetcko::Utils::Split(track->second, '/')[0]);
 				}
 				catch (std::exception &e) {
 					CConsole::Console.Print("Track number '" + track->second + "' is not a number: " + e.what(), MSG_ALERT);
 				}
 			}
-			if (auto disc = tags.find("discnumber"); disc != tags.end()) {
+			auto disc = tags.find("discnumber");
+			// MP4 tags can use "disc" instead of "discnumber"
+			if (disc == tags.end()) disc = tags.find("disc");
+			if (disc != tags.end()) {
 				try {
-					this->disc = std::stoll(disc->second);
+					this->disc = std::stoll(Fetcko::Utils::Split(disc->second, '/')[0]);
 				}
 				catch (std::exception &e) {
 					CConsole::Console.Print("Disc number '" + disc->second + "' is not a number: " + e.what(), MSG_ALERT);
