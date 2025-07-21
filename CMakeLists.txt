@@ -10,6 +10,10 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
 
+if (WIN32)
+	set(APP_ICON_RESOURCE_WINDOWS "${CMAKE_CURRENT_SOURCE_DIR}/icon.rc")
+	set(VERSION_RESOURCE_WINDOWS "${CMAKE_CURRENT_SOURCE_DIR}/version.rc")
+endif()
 
 # Since this is Windows only (for now), install these via vcpkg:
 #	vcpkg install sdl2:x64-windows
@@ -33,65 +37,65 @@ add_subdirectory(MathCPP)
 add_subdirectory(Serial/src)
 
 set(_poprocks_cpp_headers
-		AlbumArt.hpp
-		AutoFader.hpp
-		BeatDetect.hpp
-		Bicubic.hpp
-		Buffer.hpp
-		CApp.h
-		CConsole.h
-		ColorChangeListener.hpp
-		Controls.hpp
-		Cue.hpp
-		DynamicGain.hpp
-		ExclusiveIndicator.hpp
-		FFTLineRenderer.hpp
-		FFTRenderer.hpp
-		FPSCounter.hpp
-		Gaussian.hpp
-		Hash.hpp
-		ID3V2.hpp
-		LightPack.hpp
-		LineRenderer.hpp
-		Mappings.h
-		Metadata.hpp
-		MP4.hpp
-		OscilloscopeRenderer.hpp
-		Playlist.hpp
-		Polyline.hpp
-		Preset.hpp
-		RecordAudioStream.h
-		Renderer.hpp
-		Settings.hpp
-		TagLoader.hpp
-		Text.hpp
-		Utils.hpp
-		Volume.hpp
-		)
+	AlbumArt.hpp
+	AutoFader.hpp
+	BeatDetect.hpp
+	Bicubic.hpp
+	Buffer.hpp
+	CApp.h
+	CConsole.h
+	ColorChangeListener.hpp
+	Controls.hpp
+	Cue.hpp
+	DynamicGain.hpp
+	ExclusiveIndicator.hpp
+	FFTLineRenderer.hpp
+	FFTRenderer.hpp
+	FPSCounter.hpp
+	Gaussian.hpp
+	Hash.hpp
+	ID3V2.hpp
+	LightPack.hpp
+	LineRenderer.hpp
+	Mappings.h
+	Metadata.hpp
+	MP4.hpp
+	OscilloscopeRenderer.hpp
+	Playlist.hpp
+	Polyline.hpp
+	Preset.hpp
+	RecordAudioStream.h
+	Renderer.hpp
+	Settings.hpp
+	TagLoader.hpp
+	Text.hpp
+	Utils.hpp
+	Volume.hpp
+	)
 set(_poprocks_cpp_sources
-		AlbumArt.cpp
-		BeatDetect.cpp
-		Bicubic.cpp
-		main.cpp
-		CApp.cpp
-		CApp_Commands.cpp
-		CConsole.cpp
-		Controls.cpp
-		Cue.cpp
-		FFTRenderer.cpp
-		Gaussian.cpp
-		ID3V2.cpp
-		LightPack.cpp
-		Mappings.cpp
-		Metadata.cpp
-		MP4.cpp
-		Playlist.cpp
-		Preset.cpp
-		Settings.cpp
-		Text.cpp
-		Utils.cpp
-		Volume.cpp
-		)
+	AlbumArt.cpp
+	BeatDetect.cpp
+	Bicubic.cpp
+	main.cpp
+	CApp.cpp
+	CApp_Commands.cpp
+	CConsole.cpp
+	Controls.cpp
+	Cue.cpp
+	FFTRenderer.cpp
+	Gaussian.cpp
+	ID3V2.cpp
+	LightPack.cpp
+	Mappings.cpp
+	Metadata.cpp
+	MP4.cpp
+	Playlist.cpp
+	Preset.cpp
+	Settings.cpp
+	Text.cpp
+	Utils.cpp
+	Volume.cpp
+	)
 
 # Beatroot source obtained from
 #   https://code.soundsoftware.ac.uk/projects/beatroot-vamp
@@ -99,60 +103,67 @@ set(_beatroot_dir
 	third_party/beatroot)
 
 set(_beatroot_headers
-		${_beatroot_dir}/Agent.h
-		${_beatroot_dir}/AgentList.h
-		${_beatroot_dir}/BeatRootProcessor.h
-		${_beatroot_dir}/BeatTracker.h
-		${_beatroot_dir}/Event.h
-		${_beatroot_dir}/Induction.h
-		${_beatroot_dir}/Peaks.h
-		)
+	${_beatroot_dir}/Agent.h
+	${_beatroot_dir}/AgentList.h
+	${_beatroot_dir}/BeatRootProcessor.h
+	${_beatroot_dir}/BeatTracker.h
+	${_beatroot_dir}/Event.h
+	${_beatroot_dir}/Induction.h
+	${_beatroot_dir}/Peaks.h
+	)
 set(_beatroot_sources
-		${_beatroot_dir}/Agent.cpp
-		${_beatroot_dir}/AgentList.cpp
-		${_beatroot_dir}/BeatRootProcessor.cpp
-		${_beatroot_dir}/BeatTracker.cpp
-		${_beatroot_dir}/Induction.cpp
-		${_beatroot_dir}/Peaks.cpp
-		)
+	${_beatroot_dir}/Agent.cpp
+	${_beatroot_dir}/AgentList.cpp
+	${_beatroot_dir}/BeatRootProcessor.cpp
+	${_beatroot_dir}/BeatTracker.cpp
+	${_beatroot_dir}/Induction.cpp
+	${_beatroot_dir}/Peaks.cpp
+	)
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/third_party FILES
-		${_beatroot_headers}
-		${_beatroot_sources}
-		)
+	${_beatroot_headers}
+	${_beatroot_sources}
+	)
 
 set(_glad_dir
 	third_party/glad)
 
 set(_glad_headers
-		${_glad_dir}/glad/glad.h
-		${_glad_dir}/KHR/khrplatform.h
-		)
+	${_glad_dir}/glad/glad.h
+	${_glad_dir}/KHR/khrplatform.h
+	)
 set(_glad_sources
-		${_glad_dir}/glad/glad.c
-		)
+	${_glad_dir}/glad/glad.c
+	)
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/third_party FILES
-		${_glad_headers}
-		${_glad_sources}
-		)
+	${_glad_headers}
+	${_glad_sources}
+	)
 
 add_executable(popRocks
-		WIN32
-		${_beatroot_headers}
-		${_glad_headers}
-		${_poprocks_cpp_headers}
-		${_beatroot_sources}
-		${_glad_sources}
-		${_poprocks_cpp_sources}
+	${_beatroot_headers}
+	${_glad_headers}
+	${_poprocks_cpp_headers}
+	${_beatroot_sources}
+	${_glad_sources}
+	${_poprocks_cpp_sources}
+	)
+
+if (WIN32)
+	target_sources(popRocks 
+		PRIVATE 		
+		${APP_ICON_RESOURCE_WINDOWS}
+		${VERSION_RESOURCE_WINDOWS}
 		)
+endif()
 
 target_include_directories(popRocks PUBLIC 
-		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-		${_beatroot_dir}
-		${_glad_dir}
-		Serial/src
-		)
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+	${_beatroot_dir}
+	${_glad_dir}
+	Serial/src
+	)
 target_compile_features(popRocks PUBLIC cxx_std_17)
 
 # Prevent windows.h from defining min and max macros
