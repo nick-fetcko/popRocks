@@ -18,7 +18,7 @@ public:
 
 	virtual ~Volume() = default;
 
-	void OnInit(const std::string_view &fontFile);
+	void OnInit(const std::filesystem::path &fontFile);
 
 	void OnLoop(int x, int y, const Delta &time);
 

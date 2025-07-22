@@ -3,13 +3,14 @@
 #include <fstream>
 
 #include "CConsole.h"
+#include "Utils.hpp"
 
 const std::vector<Preset> Preset::Presets = Preset::Load();
 
 std::vector<Preset> Preset::Load() {
 	std::vector<Preset> ret;
 
-	std::ifstream inFile("../../Data/Presets.json");
+	std::ifstream inFile(Fetcko::Utils::GetResource("Presets.json"));
 
 	try {
 		Node json;

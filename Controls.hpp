@@ -90,7 +90,7 @@ private:
 
 	ExclusiveIndicator exclusiveIndicator;
 
-	const std::string_view FontFile;
+	const std::filesystem::path FontFile;
 
 	float scale = 1.0f;
 };

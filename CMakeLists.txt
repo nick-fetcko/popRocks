@@ -1,5 +1,5 @@
-# 3.11.0 required for cxx_std_17 and FetchContent
-cmake_minimum_required(VERSION 3.11.0 FATAL_ERROR)
+# 3.26.0 required for copy_directory_if_different
+cmake_minimum_required(VERSION 3.26.0 FATAL_ERROR)
 project(popRocks VERSION 0.0.1 LANGUAGES C CXX)
 
 # Allows usage of configure time content
@@ -230,3 +230,10 @@ add_custom_command(TARGET popRocks POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:basswv> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CONFIGURATION_TYPES}
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:basswasapi> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CONFIGURATION_TYPES}
 	)
+
+# Copy data files when building in Release
+if (${CMAKE_CONFIGURATION_TYPES} STREQUAL "Release")
+	add_custom_command(TARGET popRocks POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different "${CMAKE_CURRENT_SOURCE_DIR}/Data" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CONFIGURATION_TYPES}/Data"
+		)
+endif()

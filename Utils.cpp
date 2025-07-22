@@ -27,9 +27,9 @@ std::string Utils::GetStringFromFile(const std::filesystem::path & path) {
 
 std::filesystem::path Utils::GetResource(const std::filesystem::path &path) {
 #ifdef _DEBUG
-	return std::filesystem::path("..") / ".." / ".." / ".." / path;
+	return std::filesystem::path("..") / ".." / "Data" / path;
 #else
-	return std::filesystem::path(".") / path;
+	return std::filesystem::path(".") / "Data" / path;
 #endif
 }
 }

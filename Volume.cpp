@@ -1,10 +1,12 @@
 #include "Volume.hpp"
 
-void Volume::OnInit(const std::string_view &fontFile) {
+void Volume::OnInit(const std::filesystem::path &fontFile) {
+	auto string = fontFile.u8string();
+
 	ring.SetWidth(radius / 10);
 	outlineRing.SetWidth(radius / 10 + (radius / 25) * 2);
-	font = TTF_OpenFont(fontFile.data(), static_cast<int>(radius / 2));
-	outlineFont = TTF_OpenFont(fontFile.data(), static_cast<int>(radius / 2));
+	font = TTF_OpenFont(string.c_str(), static_cast<int>(radius / 2));
+	outlineFont = TTF_OpenFont(string.c_str(), static_cast<int>(radius / 2));
 
 	TTF_SetFontOutline(outlineFont, static_cast<int>(radius / 25));
 	text.OnInit(font);

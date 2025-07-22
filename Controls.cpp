@@ -14,7 +14,7 @@
 //
 //        A homegrown font implementation similar to https://learnopengl.com/In-Practice/Text-Rendering
 //        would be ideal here, as we can use a different font _per character_.
-Controls::Controls(AlbumArt *const albumArt) : albumArt(albumArt), FontFile("../../Data/KurintoSans-Rg.ttf") {
+Controls::Controls(AlbumArt *const albumArt) : albumArt(albumArt), FontFile(Fetcko::Utils::GetResource("KurintoSans-Rg.ttf")) {
 
 }
 
@@ -22,7 +22,7 @@ inline void Controls::OpenFont() {
 	if (font)
 		TTF_SetFontSize(font, static_cast<int>(18 * scale));
 	else
-		font = TTF_OpenFont(FontFile.data(), static_cast<int>(18 * scale));
+		font = TTF_OpenFont(FontFile.u8string().c_str(), static_cast<int>(18 * scale));
 
 	if (font) {
 		elapsedText.OnInit(font);
