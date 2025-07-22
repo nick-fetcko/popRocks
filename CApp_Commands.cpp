@@ -403,6 +403,7 @@ void CApp::AddCommands() {
 						auto radius = std::stof(args[1]);
 
 						albumArt.SetRadius(radius);
+						albumArt.Scale(true);
 						controls.GetVolume().SetRadius(radius);
 					} catch (std::exception &e) {
 						CConsole::Console.Print(std::string("Could not set radius: ") + e.what(), MSG_ERROR);
