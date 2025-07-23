@@ -238,7 +238,7 @@ void CApp::OnInit() {
 	// https://tgui.eu/tutorials/latest-stable/dpi-scaling/
 	SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
 
-	SDL_Init(SDL_INIT_EVERYTHING);
+	CConsole::Console.Print("SDL_Init() returned " + std::to_string(SDL_Init(SDL_INIT_EVERYTHING)), MSG_DIAG);
 	auto ret = IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG | IMG_INIT_WEBP);
 
 	std::stringstream stream;
@@ -250,6 +250,19 @@ void CApp::OnInit() {
 
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
+
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+
+	// For some reason we need to explicitly
+	// request an 8-bit alpha channel on certain
+	// OpenGL implementations (namely VBoxSVGA's)
+	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
+
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+
 	sdlWindow = SDL_CreateWindow(
 		"popRocks",
 		SDL_WINDOWPOS_CENTERED,
@@ -258,12 +271,12 @@ void CApp::OnInit() {
 		windowHeight,
 		SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
 	);
-	SDL_GLContext Context = SDL_GL_CreateContext(sdlWindow);
-	SDL_GL_MakeCurrent(sdlWindow, Context);
+	SDL_GLContext context = SDL_GL_CreateContext(sdlWindow);
+	if (!context)
+		CConsole::Console.Print(std::string("Could not create OpenGL context: ") + SDL_GetError(), MSG_ERROR);
 
-	gladLoadGL();
-
-	sdlRenderer = SDL_CreateRenderer(sdlWindow, 0, 0);
+	CConsole::Console.Print("gladLoadGL() returned " + std::to_string(gladLoadGL()), MSG_DIAG);
+	CConsole::Console.Print(std::string("OpenGL Version: ") + reinterpret_cast<const char*>(glGetString(GL_VERSION)), MSG_DIAG);
 
 	// Prefer adaptive sync over regular vsync
 	if (SDL_GL_SetSwapInterval(-1) == -1)
@@ -555,7 +568,7 @@ void CApp::OnLoop(const Delta &time) {
 	SwapBuffers();
 }
 
-void CApp::SwapBuffers() {
+inline void CApp::SwapBuffers() {
 	controls.GetFpsCounter().OnFrame();
 	SDL_GL_SwapWindow(sdlWindow);
 }

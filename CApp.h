@@ -163,7 +163,6 @@ private:
 
 	float hStep = 0.0f;
 	SDL_Window *sdlWindow = nullptr;
-	SDL_Renderer *sdlRenderer = nullptr;
 	Colour<float> visColor{ 0.0f, 0.5f, 1.0f };
 
 	std::wstring savedFile;
