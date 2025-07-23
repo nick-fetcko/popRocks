@@ -100,10 +100,9 @@ private:
 	GLuint album = 0;
 	int albumWidth = 0, albumHeight = 0;
 	int scaledAlbumWidth = 0, scaledAlbumHeight = 0;
-	float albumVertexBuffer[361 * 2] = { 0.0f };
+	float albumVertexBuffer[362 * 2] = { 0.0f };
 	float squareVertexBuffer[8] = { 0 };
-	float albumTexCoords[360 * 2] = { 0.0f };
-	unsigned short albumIndexBuffer[360 * 3] = { 0 };
+	float albumTexCoords[362 * 2] = { 0.0f };
 	bool albumLoaded = false;
 
 	float aspectRatio = 1.0f;

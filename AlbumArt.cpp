@@ -20,34 +20,13 @@ void AlbumArt::OnInit(int windowWidth, int windowHeight, float scale) {
 	this->scale = scale;
 	radius *= scale;
 
-	for (unsigned short i = 2; i < 360; i++) {
-		albumIndexBuffer[((i - 2) * 3)] = 0;
-		albumIndexBuffer[((i - 2) * 3) + 1] = i - 1;
-		albumIndexBuffer[((i - 2) * 3) + 2] = i;
-	}
-
-	albumIndexBuffer[((360 - 2) * 3)] = 0;
-	albumIndexBuffer[((360 - 2) * 3) + 1] = 359;
-	albumIndexBuffer[((360 - 2) * 3) + 2] = 1;
-	albumIndexBuffer[((361 - 2) * 3)] = 0;
-	albumIndexBuffer[((361 - 2) * 3) + 1] = 1;
-	albumIndexBuffer[((361 - 2) * 3) + 2] = 2;
-
 	albumTexCoords[0] = albumTexCoords[1] = 0.5;
-
-	albumTexCoords[0] = 0;
-	albumTexCoords[1] = 0;
-	albumTexCoords[2] = 0;
-	albumTexCoords[3] = 1.0f;
-	albumTexCoords[4] = 1.0f;
-	albumTexCoords[5] = 1.0f;
-	albumTexCoords[6] = 1.0f;
-	albumTexCoords[7] = 0;
 
 	float degInRad;
 	albumVertexBuffer[0] = 0;
 	albumVertexBuffer[1] = 0;
-	for (int i = 0; i < 360; i++) {
+
+	for (int i = 1; i <= 360; i++) {
 		degInRad = i * Maths::DEG2RAD<float>;
 		albumVertexBuffer[(i * 2)] = sin(degInRad) * radius;
 		albumVertexBuffer[(i * 2) + 1] = cos(degInRad) * radius;
@@ -55,6 +34,12 @@ void AlbumArt::OnInit(int windowWidth, int windowHeight, float scale) {
 		albumTexCoords[(i * 2)] = 0.5f + 0.5f * sin(degInRad);
 		albumTexCoords[(i * 2) + 1] = 0.5f + 0.5f * cos(degInRad);
 	}
+
+	albumVertexBuffer[361 * 2] = albumVertexBuffer[2];
+	albumVertexBuffer[361 * 2 + 1] = albumVertexBuffer[3];
+
+	albumTexCoords[361 * 2] = albumTexCoords[2];
+	albumTexCoords[361 * 2 + 1] = albumTexCoords[3];
 }
 
 void AlbumArt::OnResize(int windowWidth, int windowHeight, float scale) {
@@ -74,7 +59,7 @@ void AlbumArt::OnResize(int windowWidth, int windowHeight, float scale) {
 
 void AlbumArt::UpdateVertexCoords() {
 	float degInRad = 0.0f;
-	for (int i = 0; i < 360; i++) {
+	for (int i = 1; i <= 360; i++) {
 		degInRad = i * Maths::DEG2RAD<float>;
 		albumVertexBuffer[(i * 2)] = sin(degInRad) * radius;
 		albumVertexBuffer[(i * 2) + 1] = cos(degInRad) * radius;
@@ -83,7 +68,7 @@ void AlbumArt::UpdateVertexCoords() {
 
 void AlbumArt::UpdateTextureCoords() {
 	float degInRad = 0.0f;
-	for (int i = 0; i < 360; i++) {
+	for (int i = 1; i <= 360; i++) {
 		degInRad = i * Maths::DEG2RAD<float>;
 
 		// Switch dimensions based on which is larger
@@ -144,7 +129,7 @@ void AlbumArt::OnLoop(GLfloat x, GLfloat y, float frameCount) {
 
 		glEnableClientState(GL_VERTEX_ARRAY);
 		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		glDrawElements(GL_TRIANGLE_FAN, 360 * 3, GL_UNSIGNED_SHORT, albumIndexBuffer);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, 362);
 		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 		glDisableClientState(GL_VERTEX_ARRAY);
 
@@ -177,7 +162,7 @@ int AlbumArt::DrawSquare(int x, int y, int height, GLfloat alpha) {
 
 		glEnableClientState(GL_VERTEX_ARRAY);
 		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		glDrawElements(GL_TRIANGLE_FAN, 6, GL_UNSIGNED_SHORT, Buffer::SquareBuffer.data());
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, Buffer::SquareBuffer.data());
 		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 		glDisableClientState(GL_VERTEX_ARRAY);
 
