@@ -142,7 +142,7 @@ public:
 				indexBuffer = new GLushort[size * 6];
 
 				for (std::size_t i = 0; i < size; ++i) {
-					auto a = ((i - 1) < 0) ? 0 : (i - 1);
+					auto a = (i == 0 ? 0 : (i - 1));
 					auto b = i;
 					auto c = ((i + 1) >= size) ? size - 1 : (i + 1);
 					auto d = ((i + 2) >= size) ? size - 1 : (i + 2);
@@ -161,7 +161,7 @@ public:
 					BetweenTwoPoints<false>(points[i - 1], points[i]);
 			} else {
 				for (std::size_t i = 0; i < size; ++i) {
-					auto a = ((i - 1) < 0) ? 0 : (i - 1);
+					auto a = (i == 0 ? 0 : (i - 1));
 					auto b = i;
 					auto c = ((i + 1) >= size) ? size - 1 : (i + 1);
 					auto d = ((i + 2) >= size) ? size - 1 : (i + 2);
