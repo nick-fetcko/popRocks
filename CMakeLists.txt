@@ -11,8 +11,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
 
 if (WIN32)
-	set(APP_ICON_RESOURCE_WINDOWS "${CMAKE_CURRENT_SOURCE_DIR}/icon.rc")
-	set(VERSION_RESOURCE_WINDOWS "${CMAKE_CURRENT_SOURCE_DIR}/version.rc")
+	set(APP_ICON_RESOURCE_WINDOWS "${CMAKE_CURRENT_SOURCE_DIR}/Resources/icon.rc")
+	set(VERSION_RESOURCE_WINDOWS "${CMAKE_CURRENT_SOURCE_DIR}/Resources/version.rc")
 endif()
 
 # Since this is Windows only (for now), install these via vcpkg:
@@ -37,64 +37,64 @@ add_subdirectory(MathCPP)
 add_subdirectory(Serial/src)
 
 set(_poprocks_cpp_headers
-	AlbumArt.hpp
-	AutoFader.hpp
-	BeatDetect.hpp
-	Bicubic.hpp
-	Buffer.hpp
-	CApp.h
-	CConsole.h
-	ColorChangeListener.hpp
-	Controls.hpp
-	Cue.hpp
-	DynamicGain.hpp
-	ExclusiveIndicator.hpp
-	FFTLineRenderer.hpp
-	FFTRenderer.hpp
-	FPSCounter.hpp
-	Gaussian.hpp
-	Hash.hpp
-	ID3V2.hpp
-	LightPack.hpp
-	LineRenderer.hpp
-	Mappings.h
-	Metadata.hpp
-	MP4.hpp
-	OscilloscopeRenderer.hpp
-	Playlist.hpp
-	Polyline.hpp
-	Preset.hpp
-	RecordAudioStream.h
-	Renderer.hpp
-	Settings.hpp
-	TagLoader.hpp
-	Text.hpp
-	Utils.hpp
-	Volume.hpp
+	Source/AlbumArt.hpp
+	Source/AutoFader.hpp
+	Source/BeatDetect.hpp
+	Source/Bicubic.hpp
+	Source/Buffer.hpp
+	Source/CApp.h
+	Source/CConsole.h
+	Source/ColorChangeListener.hpp
+	Source/Controls.hpp
+	Source/Cue.hpp
+	Source/DynamicGain.hpp
+	Source/ExclusiveIndicator.hpp
+	Source/FFTLineRenderer.hpp
+	Source/FFTRenderer.hpp
+	Source/FPSCounter.hpp
+	Source/Gaussian.hpp
+	Source/Hash.hpp
+	Source/ID3V2.hpp
+	Source/LightPack.hpp
+	Source/LineRenderer.hpp
+	Source/Mappings.h
+	Source/Metadata.hpp
+	Source/MP4.hpp
+	Source/OscilloscopeRenderer.hpp
+	Source/Playlist.hpp
+	Source/Polyline.hpp
+	Source/Preset.hpp
+	Source/RecordAudioStream.h
+	Source/Renderer.hpp
+	Source/Settings.hpp
+	Source/TagLoader.hpp
+	Source/Text.hpp
+	Source/Utils.hpp
+	Source/Volume.hpp
 	)
 set(_poprocks_cpp_sources
-	AlbumArt.cpp
-	BeatDetect.cpp
-	Bicubic.cpp
-	main.cpp
-	CApp.cpp
-	CApp_Commands.cpp
-	CConsole.cpp
-	Controls.cpp
-	Cue.cpp
-	FFTRenderer.cpp
-	Gaussian.cpp
-	ID3V2.cpp
-	LightPack.cpp
-	Mappings.cpp
-	Metadata.cpp
-	MP4.cpp
-	Playlist.cpp
-	Preset.cpp
-	Settings.cpp
-	Text.cpp
-	Utils.cpp
-	Volume.cpp
+	Source/AlbumArt.cpp
+	Source/BeatDetect.cpp
+	Source/Bicubic.cpp
+	Source/main.cpp
+	Source/CApp.cpp
+	Source/CApp_Commands.cpp
+	Source/CConsole.cpp
+	Source/Controls.cpp
+	Source/Cue.cpp
+	Source/FFTRenderer.cpp
+	Source/Gaussian.cpp
+	Source/ID3V2.cpp
+	Source/LightPack.cpp
+	Source/Mappings.cpp
+	Source/Metadata.cpp
+	Source/MP4.cpp
+	Source/Playlist.cpp
+	Source/Preset.cpp
+	Source/Settings.cpp
+	Source/Text.cpp
+	Source/Utils.cpp
+	Source/Volume.cpp
 	)
 
 # Beatroot source obtained from
