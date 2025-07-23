@@ -273,7 +273,8 @@ void CApp::OnInit() {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	OnResize(windowWidth, windowHeight);
+	// This updates the scale variable for us
+	GetScale(sdlWindow, &windowWidth, &windowHeight);
 
 	if (!BASS_PluginLoad("bassflac.dll", 0))
 		CConsole::Console.Print("Could not load FLAC plugin! Error code " + std::to_string(BASS_ErrorGetCode()), MSG_ERROR);
@@ -284,9 +285,6 @@ void CApp::OnInit() {
 
 	if (BASS_Init(device, freq, 0, 0, nullptr) != TRUE)
 		CConsole::Console.Print("Could not initialize audio device!", MSG_ERROR);
-	
-	// This updates the scale variable for us
-	GetScale(sdlWindow);
 
 	lightPack.OnInit();
 	albumArt.OnInit(windowWidth, windowHeight, scale);
@@ -298,6 +296,8 @@ void CApp::OnInit() {
 		if (SDL_GetWindowFlags(sdlWindow) & SDL_WINDOW_FULLSCREEN_DESKTOP)
 			SDL_ShowCursor(in ? SDL_ENABLE : SDL_DISABLE);
 	});
+
+	OnResize(windowWidth, windowHeight, scale);
 }
 
  CApp::~CApp() {
