@@ -12,6 +12,7 @@
 #include <event.h>
 
 #include "MathCPP/Duration.hpp"
+#include "OpenGL/Context.hpp"
 
 #include "AlbumArt.hpp"
 #include "AutoFader.hpp"
@@ -39,7 +40,7 @@ public:
 	void LoadFromTags(const std::map<std::string, std::string> &tags) override;
 	void LoadFromID3v1(const TAG_ID3 *id3) override;
 
-	double OnLoop(const Delta &time, HSTREAM streamHandle, std::function<void(float)> setColor);
+	double OnLoop(const Delta &time, HSTREAM streamHandle, Context &context, std::function<void(float)> setColor);
 
 	void OnDestroy();
 
@@ -79,7 +80,6 @@ private:
 	FPSCounter fpsCounter;
 
 	double currentFileLength = 0.0;
-	float posRect[8] = { 0 };
 
 	double currentPos = 0.0;
 	int elapsedSeconds = -1;
@@ -93,4 +93,8 @@ private:
 	const std::filesystem::path FontFile;
 
 	float scale = 1.0f;
+
+	std::unique_ptr<VertexArray> vao;
+	std::unique_ptr<ArrayBuffer> vbo;
+	std::unique_ptr<ElementBuffer> eab;
 };

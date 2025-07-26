@@ -1,7 +1,6 @@
 #include "ID3V2.hpp"
 
 #include "CConsole.h"
-#include "Utils.hpp"
 
 // ===============================================
 // ================ ID3V2::Header ================

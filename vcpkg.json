@@ -1,5 +1,6 @@
 {
   "dependencies": [
+    "glm",
     "fftw3",
     "libjpeg-turbo",
     "sdl2",

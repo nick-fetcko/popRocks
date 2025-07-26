@@ -29,6 +29,7 @@ public:
 
 	void OnInit(int windowWidth, int windowHeight, TTF_Font *font, float scale = 1.0f);
 	void OnResize(int windowWidth, int windowHeight, float scale = 1.0f);
+	void OnDestroy();
 
 	void Clear();
 
@@ -41,7 +42,7 @@ public:
 	//        that intuitive
 	const std::optional<Track> Next() const;
 
-	void OnLoop(Vector2i pos, float maxHeight, float alpha);
+	void OnLoop(Vector2i pos, float maxHeight, float alpha, Context &context);
 
 	std::optional<Track> OnMouseClicked(const Vector2i &mousePos);
 
@@ -144,29 +145,36 @@ private:
 		typename const std::vector<T>::const_iterator &current,
 		Vector2i pos, // need a local pos var because we modify it
 		float maxHeight,
-		float alpha
+		float alpha,
+		Context &context
 	) {
 		// Limit our background rectangle to our
 		// max height
-		if (rect[3] > maxHeight + em.y / 2 - pos.y)
-			rect[3] = rect[5] = maxHeight + em.y / 2 - pos.y;
+		if (auto height = maxHeight + em.y / 2 - pos.y; this->height > height) {
+			this->height = height;
+			vbo->Bind();
+			vbo->BufferSubData(7, sizeof(float), &height);
+			vbo->BufferSubData(13, sizeof(float), &height);
+			vbo->Unbind();
+		}
 
-		glTranslatef(static_cast<GLfloat>(pos.x), static_cast<GLfloat>(pos.y), 0.0f);
+		context.Use(2);
+		context.Translate(static_cast<GLfloat>(pos.x), static_cast<GLfloat>(pos.y), 0.0f);
+		context.Apply();
 
-		glVertexPointer(2, GL_FLOAT, 0, rect);
+		vao->Bind();
+		eab->Bind();
+		eab->DrawElements(GL_TRIANGLES);
+		eab->Unbind();
+		vao->Unbind();
 
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glEnableClientState(GL_COLOR_ARRAY);
+		vbo->Bind();
+		vbo->BufferSubData(5, sizeof(float), &alpha);
+		vbo->BufferSubData(23, sizeof(float), &alpha);
+		vbo->Unbind();
 
-		rectColors[3] = rectColors[15] = alpha;
-
-		glColorPointer(4, GL_FLOAT, 0, rectColors);
-
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, Buffer::SquareBuffer.data());
-		glDisableClientState(GL_VERTEX_ARRAY);
-		glDisableClientState(GL_COLOR_ARRAY);
-
-		glLoadIdentity();
+		context.Use(0);
+		context.LoadIdentity();
 
 		std::size_t maxIndex = static_cast<std::size_t>(
 			titles.empty() ?
@@ -185,15 +193,21 @@ private:
 				return;
 
 			if (iter == current)
-				glColor4f(1.0f, 1.0f, 1.0f, alpha);
+				context.Color(1.0f, 1.0f, 1.0f, alpha);
 			else
-				glColor4f(0.6f, 0.6f, 0.6f, alpha - (static_cast<float>(i - distance) / maxIndex));
+				context.Color(0.6f, 0.6f, 0.6f, alpha - (static_cast<float>(i - distance) / maxIndex));
 
-			title.OnLoop(pos.x, pos.y);
+			title.OnLoop(pos.x, pos.y, context);
 
 			// Reduce the height as we near the end of the playlist
-			if (i == titles.size() - 2 && pos.y < maxHeight)
-				rect[3] = rect[5] = pos.y + em.y / 2.0f;
+			if (i == titles.size() - 2 && pos.y < maxHeight) {
+				height = pos.y + em.y / 2.0f;
+
+				vbo->Bind();
+				vbo->BufferSubData(7, 1 * sizeof(float), &height);
+				vbo->BufferSubData(13, 1 * sizeof(float), &height);
+				vbo->Unbind();
+			}
 
 			pos.y += title.GetSize().y;
 
@@ -215,13 +229,11 @@ private:
 
 	std::unique_ptr<Cue> cue;
 
-	float rect[8] = { 0.0f };
-	float rectColors[16] = {
-		0.0f, 0.0f, 0.0f, 0.75f,
-		0.0f, 0.0f, 0.0f, 0.0f,
-		0.0f, 0.0f, 0.0f, 0.0f,
-		0.0f, 0.0f, 0.0f, 0.75f
-	};
-
 	float scale = 1.0f;
+
+	std::unique_ptr<VertexArray> vao;
+	std::unique_ptr<ArrayBuffer> vbo;
+	std::unique_ptr<ElementBuffer> eab;
+
+	float height = 0.0f;
 };

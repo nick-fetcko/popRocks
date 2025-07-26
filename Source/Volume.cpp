@@ -15,14 +15,14 @@ void Volume::OnInit(const std::filesystem::path &fontFile) {
 	UpdateVolume();
 }
 
-void Volume::OnLoop(int x, int y, const Delta &time) {
+void Volume::OnLoop(int x, int y, const Delta &time, Context &context) {
 	AutoFader::OnLoop(time);
 
-	glColor4f(color.r, color.g, color.b, alpha);
+	context.Color(color.r, color.g, color.b, alpha);
 	//glTranslatef(x, y, 0);
 
-	outlineText.OnLoop(x - outlineText.GetSize().x / 2, y - outlineText.GetSize().y / 2);
-	text.OnLoop(x - text.GetSize().x / 2, y - text.GetSize().y / 2);
+	outlineText.OnLoop(x - outlineText.GetSize().x / 2, y - outlineText.GetSize().y / 2, context);
+	text.OnLoop(x - text.GetSize().x / 2, y - text.GetSize().y / 2, context);
 	/*
 	glColor4f(1.0f, 1.0f, 1.0f, alpha);
 
@@ -40,22 +40,27 @@ void Volume::OnLoop(int x, int y, const Delta &time) {
 
 	glLoadIdentity();
 	*/
+	context.Use(1);
 
-	glColor4f(0.0f, 0.0f, 0.0f, alpha);
-	glTranslatef(
+	context.Color(0.0f, 0.0f, 0.0f, alpha);
+	context.Translate(
 		static_cast<GLfloat>(x),
 		static_cast<GLfloat>(y),
 		0
 	);
-	outlineRing.Draw();
+	context.Apply();
+	outlineRing.Draw(context);
 
-	glColor4f(color.r, color.g, color.b, alpha);
-	glTranslatef(
+	context.Color(color.r, color.g, color.b, alpha);
+	context.Translate(
 		static_cast<GLfloat>(x),
 		static_cast<GLfloat>(y),
 		0
 	);
-	ring.Draw();
+	context.Apply();
+	ring.Draw(context);
+
+	context.Use(0);
 }
 
 void Volume::SetRadius(float radius) {

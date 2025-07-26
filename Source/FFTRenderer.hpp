@@ -35,6 +35,8 @@ public:
 		const Delta &time,
 		bool fileLoaded,
 		float hStep,
+		Context &context,
+		const Colour<float> &color,
 		float maxHeardSample = 0.0f,
 		bool resetGain = false
 	) override;
@@ -42,7 +44,8 @@ public:
 	void Draw(
 		const Delta &time,
 		float frameCount,
-		const Colour<float> &color
+		const Colour<float> &color,
+		Context &context
 	) override;
 
 	void Reset() override;
@@ -72,7 +75,7 @@ public:
 	}
 
 private:
-	const std::array<unsigned short, 6> *indexBuffer = &Buffer::SquareBuffer;
+	const std::array<unsigned short, 6> *indexBuffer = &Buffers::SquareBuffer;
 
 	const float *floatBuffer = nullptr;
 
@@ -95,4 +98,8 @@ private:
 	bool xRot = false;
 	bool yRot = false;
 	bool zRot = true;
+
+	std::unique_ptr<VertexArray> vao;
+	std::unique_ptr<ArrayBuffer> vbo;
+	std::unique_ptr<ElementBuffer> eab;
 };

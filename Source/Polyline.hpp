@@ -16,7 +16,13 @@
 
 #include "MathCPP/Vector.hpp"
 
+#include "OpenGL/Buffer.hpp"
+#include "OpenGL/Context.hpp"
+#include "OpenGL/VertexArray.hpp"
+
 #include "CConsole.h"
+
+using namespace Fetcko;
 
 class Polyline {
 public:
@@ -37,8 +43,6 @@ public:
 	}
 
 	virtual ~Polyline() {
-		glDeleteBuffers(1, &elementBuffer);
-		glDeleteBuffers(1, &arrayBuffer);
 		delete[] vertexBuffer;
 		delete[] indexBuffer;
 	}
@@ -195,16 +199,14 @@ public:
 		}
 	}
 
-	void Draw() const {
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glBindBuffer(GL_ARRAY_BUFFER, arrayBuffer);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer);
-		glVertexPointer(2, GL_FLOAT, 0, 0);
-		glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_SHORT, nullptr);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glDisableClientState(GL_VERTEX_ARRAY);
-		glLoadIdentity();
+	void Draw(Context &context) const {
+		vao->Bind();
+		eab->Bind();
+		eab->DrawElements(GL_TRIANGLES);
+		eab->Unbind();
+		vao->Unbind();
+
+		context.LoadIdentity();
 	}
 
 private:
@@ -219,29 +221,34 @@ private:
 		firstPoints = std::move(other.firstPoints);
 		lastPoints = std::move(other.lastPoints);
 		size = std::move(other.size);
-		elementBuffer = std::move(other.elementBuffer);
-		other.elementBuffer = 0;
-		arrayBuffer = std::move(other.arrayBuffer);
-		other.arrayBuffer = 0;
+		vbo = std::move(other.vbo);
+		vao = std::move(other.vao);
+		eab = std::move(other.eab);
 	}
 
 	inline void CreateArrayBuffer() {
-		glDeleteBuffers(1, &arrayBuffer);
-		glGenBuffers(1, &arrayBuffer);
+		vao = std::make_unique<VertexArray>();
+		vbo = std::make_unique<ArrayBuffer>();
+
+		vao->Bind();
+		vbo->Bind();
+		vao->AddAttribute(VertexArray::Attribute(0, 2, 2 * sizeof(float)));
+		vbo->Unbind();
+		vao->Unbind();
 	}
 
 	inline void UpdateArrayBuffer() {
-		glBindBuffer(GL_ARRAY_BUFFER, arrayBuffer);
-		glBufferData(GL_ARRAY_BUFFER, vertexCount * sizeof(float), vertexBuffer, GL_STATIC_DRAW);
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		vbo->Bind();
+		vbo->BufferData(vertexBuffer, vertexCount);
+		vbo->Unbind();
 	}
 
 	inline void UpdateElementBuffer() {
-		glDeleteBuffers(1, &elementBuffer);
-		glGenBuffers(1, &elementBuffer);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexCount * sizeof(GLushort), indexBuffer, GL_STATIC_DRAW);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+		eab = std::make_unique<ElementBuffer>();
+
+		eab->Bind();
+		eab->BufferData(indexBuffer, indexCount);
+		eab->Unbind();
 	}
 
 	template<bool UpdateIndices>
@@ -371,6 +378,7 @@ private:
 
 	std::size_t size = 0;
 
-	GLuint elementBuffer = 0;
-	GLuint arrayBuffer = 0;
+	std::unique_ptr<VertexArray> vao;
+	std::unique_ptr<ArrayBuffer> vbo;
+	std::unique_ptr<ElementBuffer> eab;
 };

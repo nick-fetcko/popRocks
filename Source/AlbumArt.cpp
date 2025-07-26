@@ -16,30 +16,77 @@
 
 using namespace MathsCPP;
 
+AlbumArt::AlbumArt(std::unique_ptr<Context> &context) : context(context) {
+
+}
+
 void AlbumArt::OnInit(int windowWidth, int windowHeight, float scale) {
 	this->scale = scale;
 	radius *= scale;
 
-	albumTexCoords[0] = albumTexCoords[1] = 0.5;
-
-	float degInRad;
-	albumVertexBuffer[0] = 0;
-	albumVertexBuffer[1] = 0;
-
-	for (int i = 1; i <= 360; i++) {
-		degInRad = i * Maths::DEG2RAD<float>;
-		albumVertexBuffer[(i * 2)] = sin(degInRad) * radius;
-		albumVertexBuffer[(i * 2) + 1] = cos(degInRad) * radius;
-
-		albumTexCoords[(i * 2)] = 0.5f + 0.5f * sin(degInRad);
-		albumTexCoords[(i * 2) + 1] = 0.5f + 0.5f * cos(degInRad);
+	if (context) {
+		context->With(3, [this](Context::Shader &shader) {
+			shader.program.Uniform1f("radius", radius);
+		});
 	}
 
-	albumVertexBuffer[361 * 2] = albumVertexBuffer[2];
-	albumVertexBuffer[361 * 2 + 1] = albumVertexBuffer[3];
+	std::vector<float> buffer(362 * 4);
 
-	albumTexCoords[361 * 2] = albumTexCoords[2];
-	albumTexCoords[361 * 2 + 1] = albumTexCoords[3];
+	buffer[0] = 0;
+	buffer[1] = 0;
+
+	buffer[2] = buffer[3] = 0.5;
+
+	float degInRad;
+	for (int i = 1; i <= 360; i++) {
+		degInRad = i * Maths::DEG2RAD<float>;
+
+		buffer[(i * 4)] = sin(degInRad) * radius;
+		buffer[(i * 4) + 1] = cos(degInRad) * radius;
+
+		buffer[(i * 4) + 2] = 0.5f + 0.5f * sin(degInRad);
+		buffer[(i * 4) + 3] = 0.5f + 0.5f * cos(degInRad);
+	}
+
+	buffer[361 * 4] = buffer[4];
+	buffer[361 * 4 + 1] = buffer[5];
+
+	buffer[361 * 4 + 2] = buffer[6];
+	buffer[361 * 4 + 3] = buffer[7];
+
+	vao = std::make_unique<VertexArray>();
+	vbo = std::make_unique<ArrayBuffer>();
+
+	vao->Bind();
+	vbo->Bind();
+	vao->AddAttribute(VertexArray::Attribute(0, 2, 4 * sizeof(float)));
+	vao->AddAttribute(VertexArray::Attribute(1, 2, 4 * sizeof(float), 2 * sizeof(float)));
+	vbo->BufferData(buffer);
+	vbo->Unbind();
+	vao->Unbind();
+
+	squareVao = std::make_unique<VertexArray>();
+	squareVbo = std::make_unique<ArrayBuffer>();
+	squareEab = std::make_unique<ElementBuffer>();
+
+	std::vector<float> squareBuffer = {
+		0, 0, Buffers::TexCoordBuffer[0], Buffers::TexCoordBuffer[1],
+		0, 0, Buffers::TexCoordBuffer[2], Buffers::TexCoordBuffer[3],
+		0, 0, Buffers::TexCoordBuffer[4], Buffers::TexCoordBuffer[5],
+		0, 0, Buffers::TexCoordBuffer[6], Buffers::TexCoordBuffer[7]
+	};
+
+	squareVao->Bind();
+	squareVbo->Bind();
+	squareVao->AddAttribute(VertexArray::Attribute(0, 2, 4 * sizeof(float)));
+	squareVao->AddAttribute(VertexArray::Attribute(1, 2, 4 * sizeof(float), 2 * sizeof(float)));
+	squareVbo->BufferData(squareBuffer);
+	squareVbo->Unbind();
+	squareVao->Unbind();
+
+	squareEab->Bind();
+	squareEab->BufferData<std::size(Buffers::SquareBuffer)>(Buffers::SquareBuffer);
+	squareEab->Unbind();
 }
 
 void AlbumArt::OnResize(int windowWidth, int windowHeight, float scale) {
@@ -59,15 +106,31 @@ void AlbumArt::OnResize(int windowWidth, int windowHeight, float scale) {
 
 void AlbumArt::UpdateVertexCoords() {
 	float degInRad = 0.0f;
+	float data[2];
+
+	vbo->Bind();
 	for (int i = 1; i <= 360; i++) {
 		degInRad = i * Maths::DEG2RAD<float>;
-		albumVertexBuffer[(i * 2)] = sin(degInRad) * radius;
-		albumVertexBuffer[(i * 2) + 1] = cos(degInRad) * radius;
+		data[0] = sin(degInRad) * radius;
+		data[1] = cos(degInRad) * radius;
+
+		vbo->BufferSubData(i * 4, sizeof(data), data);
+		if (i == 1) vbo->BufferSubData(361 * 4, sizeof(data), data);
+	}
+	vbo->Unbind();
+
+	if (context) {
+		context->With(3, [this](Context::Shader &shader) {
+			shader.program.Uniform1f("radius", radius);
+		});
 	}
 }
 
 void AlbumArt::UpdateTextureCoords() {
 	float degInRad = 0.0f;
+	float data[2];
+
+	vbo->Bind();
 	for (int i = 1; i <= 360; i++) {
 		degInRad = i * Maths::DEG2RAD<float>;
 
@@ -76,19 +139,23 @@ void AlbumArt::UpdateTextureCoords() {
 		// This prefers "filling out" the circle over
 		// letterboxing / pillarboxing inside of it
 		if (albumWidth > albumHeight) {
-			albumTexCoords[(i * 2)] = 0.5f + 0.5f * sin(degInRad) / aspectRatio;
-			albumTexCoords[(i * 2) + 1] = 0.5f + 0.5f * cos(degInRad);
+			data[0] = 0.5f + 0.5f * sin(degInRad) / aspectRatio;
+			data[1] = 0.5f + 0.5f * cos(degInRad);
 		} else if (albumHeight > albumWidth) {
-			albumTexCoords[(i * 2)] = 0.5f + 0.5f * sin(degInRad);
-			albumTexCoords[(i * 2) + 1] = 0.5f + 0.5f * cos(degInRad) * aspectRatio;
+			data[0] = 0.5f + 0.5f * sin(degInRad);
+			data[1] = 0.5f + 0.5f * cos(degInRad) * aspectRatio;
 		} else { // If they're equal, we're 1:1
-			albumTexCoords[(i * 2)] = 0.5f + 0.5f * sin(degInRad);
-			albumTexCoords[(i * 2) + 1] = 0.5f + 0.5f * cos(degInRad);
+			data[0] = 0.5f + 0.5f * sin(degInRad);
+			data[1] = 0.5f + 0.5f * cos(degInRad);
 		}
+
+		vbo->BufferSubData(i * 4 + 2, sizeof(data), data);
+		if (i == 1) vbo->BufferSubData(361 * 4 + 2, sizeof(data), data);
 	}
+	vbo->Unbind();
 }
 
-void AlbumArt::OnLoop(GLfloat x, GLfloat y, float frameCount) {
+void AlbumArt::OnLoop(GLfloat x, GLfloat y, float frameCount, Context &context) {
 	// try_lock so we don't miss a frame or two
 	if (mutex.try_lock()) {
 		if (surfaceToLoad) {
@@ -110,67 +177,72 @@ void AlbumArt::OnLoop(GLfloat x, GLfloat y, float frameCount) {
 	}
 
 	if (albumLoaded) {
-		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+		context.Color(1.0f, 1.0f, 1.0f, 1.0f);
 		glEnable(GL_TEXTURE_2D);
-		glTranslatef(
+
+		context.Translate(
 			x,
 			y,
-			0.0f
+			0
 		);
-		glRotatef(
+		context.Rotate(
 			360.0f + frameCount,
 			0.0f,
 			0.0f,
 			1.0f
 		);
-		glBindTexture(GL_TEXTURE_2D, album);
-		glVertexPointer(2, GL_FLOAT, 0, albumVertexBuffer);
-		glTexCoordPointer(2, GL_FLOAT, 0, albumTexCoords);
+		context.Apply();
 
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, 362);
-		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-		glDisableClientState(GL_VERTEX_ARRAY);
+		glBindTexture(GL_TEXTURE_2D, album);
+
+		vao->Bind();
+		vbo->DrawArrays(GL_TRIANGLE_FAN, 0, 362);
+		vao->Unbind();
 
 		glDisable(GL_TEXTURE_2D);
-		glLoadIdentity();
+		
+		context.LoadIdentity();
 	}
 }
 
-int AlbumArt::DrawSquare(int x, int y, int height, GLfloat alpha) {
+int AlbumArt::DrawSquare(int x, int y, int height, GLfloat alpha, Context &context) {
 	if (albumLoaded) {
 		// If our size changed, update the vertex buffer
-		if (squareVertexBuffer[3] != height ||
-			squareVertexBuffer[4] != height * aspectRatio) {
-			squareVertexBuffer[3] = static_cast<float>(height);
-			squareVertexBuffer[4] = height * aspectRatio;
-			squareVertexBuffer[5] = static_cast<float>(height);
-			squareVertexBuffer[6] = height * aspectRatio;
-		}
+		if (squareHeight != height ||
+			squareWidth != height * aspectRatio) {
+			squareHeight = height;
+			squareWidth = height * aspectRatio;
 
-		glColor4f(1.0f, 1.0f, 1.0f, alpha);
+			squareVbo->Bind();
+			squareVbo->BufferSubData(5, sizeof(float), &squareHeight);
+			squareVbo->BufferSubData(8, sizeof(float), &squareWidth);
+			squareVbo->BufferSubData(9, sizeof(float), &squareHeight);
+			squareVbo->BufferSubData(12, sizeof(float), &squareWidth);
+			squareVbo->Unbind();
+		}
+		
+		context.Color(1.0f, 1.0f, 1.0f, alpha);
+
 		glEnable(GL_TEXTURE_2D);
-		glTranslatef(
+		context.Translate(
 			static_cast<GLfloat>(x),
 			static_cast<GLfloat>(y),
 			0.0f
 		);
+		context.Apply();
 		glBindTexture(GL_TEXTURE_2D, album);
-		glVertexPointer(2, GL_FLOAT, 0, squareVertexBuffer);
-		glTexCoordPointer(2, GL_FLOAT, 0, Buffer::TexCoordBuffer.data());
 
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, Buffer::SquareBuffer.data());
-		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-		glDisableClientState(GL_VERTEX_ARRAY);
+		squareVao->Bind();
+		squareEab->Bind();
+		squareEab->DrawElements(GL_TRIANGLES);
+		squareEab->Unbind();
+		squareVao->Unbind();
 
 		glDisable(GL_TEXTURE_2D);
-		glLoadIdentity();
+		context.LoadIdentity();
 
 		// Return our width
-		return static_cast<int>(squareVertexBuffer[4]);
+		return static_cast<int>(squareWidth);
 	}
 
 	return 0;
@@ -182,6 +254,13 @@ void AlbumArt::OnDestroy() {
 
 	glDeleteTextures(1, &album);
 	album = 0;
+
+	vao.reset();
+	vbo.reset();
+
+	squareVao.reset();
+	squareVbo.reset();
+	squareEab.reset();
 }
 
 std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder) const {

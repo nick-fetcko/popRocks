@@ -43,6 +43,20 @@ void Controls::OnInit(int windowWidth, int windowHeight, float scale) {
 	this->windowHeight = windowHeight;
 	this->scale = scale;
 
+	vao = std::make_unique<VertexArray>();
+	vbo = std::make_unique<ArrayBuffer>();
+	eab = std::make_unique<ElementBuffer>();
+
+	vao->Bind();
+	vbo->Bind();
+	vao->AddAttribute(VertexArray::Attribute(0, 2, 2 * sizeof(float)));
+	vbo->Unbind();
+	vao->Unbind();
+
+	eab->Bind();
+	eab->BufferData<std::size(Buffers::SquareBuffer)>(Buffers::SquareBuffer);
+	eab->Unbind();
+
 	auto ret = TTF_Init();
 
 	if (ret == 0)
@@ -128,7 +142,7 @@ void Controls::LoadFromID3v1(const TAG_ID3 *id3) {
 		albumText.SetText(std::string(id3->album, id3->album + 30));
 }
 
-double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, std::function<void(float)> setColor) {
+double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &context, std::function<void(float)> setColor) {
 	AutoFader::OnLoop(time);
 
 	if (streamHandle) {
@@ -143,32 +157,40 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, std::function<v
 			currentPos -= cue->GetCurrentTrack()->startTime;
 
 		// Only update if BASS didn't error out
-		auto pixels = posRect[4];
+		float pixels = 0.0f;
 		if (currentPos != -1) {
 			pixels = static_cast<float>((currentPos / GetCurrentSongLength()) * windowWidth);
 
-			posRect[0] = 0;
-			posRect[1] = 0;
-			posRect[2] = 0;
-			posRect[3] = SeekbarSize * scale;
-			posRect[4] = pixels;
-			posRect[5] = SeekbarSize * scale;
-			posRect[6] = pixels;
-			posRect[7] = 0;
+			std::vector<float> posRect = {
+				0,
+				0,
+				0,
+				SeekbarSize * scale,
+				pixels,
+				SeekbarSize * scale,
+				pixels,
+				0 
+			};
+
+			vbo->Bind();
+			vbo->BufferData(posRect, GL_DYNAMIC_DRAW);
+			vbo->Unbind();
 		}
 
-		glTranslatef(0, windowHeight - SeekbarSize * scale, 0.0f);
-
-		glVertexPointer(2, GL_FLOAT, 0, posRect);
-
-		glEnableClientState(GL_VERTEX_ARRAY);
+		context.Use(1);
+		context.Translate(0, windowHeight - SeekbarSize * scale, 0.0f);
+		context.Apply();
 
 		setColor(alpha);
 
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, Buffer::SquareBuffer.data());
-		glDisableClientState(GL_VERTEX_ARRAY);
+		vao->Bind();
+		eab->Bind();
+		eab->DrawElements(GL_TRIANGLES);
+		eab->Unbind();
+		vao->Unbind();
 
-		glLoadIdentity();
+		context.Use(0);
+		context.LoadIdentity();
 
 		auto elapsed = static_cast<int>(currentPos);
 
@@ -186,7 +208,7 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, std::function<v
 
 			auto yOffset = static_cast<int>(SeekbarSize * scale);
 
-			glColor4f(1.0f, 1.0f, 1.0f, alpha);
+			context.Color(1.0f, 1.0f, 1.0f, alpha);
 
 			elapsedText.OnLoop(
 				std::min(
@@ -196,12 +218,14 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, std::function<v
 					),
 					windowWidth - elapsedText.GetSize().x - margin
 				),
-				windowHeight - yOffset - elapsedText.GetSize().y
+				windowHeight - yOffset - elapsedText.GetSize().y,
+				context
 			);
 
 			remainingText.OnLoop(
 				windowWidth - remainingText.GetSize().x - margin,
-				windowHeight - yOffset / 2 - remainingText.GetSize().y / 2
+				windowHeight - yOffset / 2 - remainingText.GetSize().y / 2,
+				context
 			);
 
 			int xOffset = 0;
@@ -222,7 +246,8 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, std::function<v
 						margin,
 						windowHeight - yOffset - albumHeight,
 						albumHeight,
-						alpha
+						alpha,
+						context
 					) + margin;
 
 				// Since album height is 4 * text height:
@@ -237,33 +262,36 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, std::function<v
 			if (!albumText.Empty()) {
 				albumText.OnLoop(
 					margin + xOffset,
-					windowHeight - (yOffset += albumText.GetSize().y)
+					windowHeight - (yOffset += albumText.GetSize().y),
+					context
 				);
 			}
 			if (!artistText.Empty()) {
 				artistText.OnLoop(
 					margin + xOffset,
-					windowHeight - (yOffset += artistText.GetSize().y)
+					windowHeight - (yOffset += artistText.GetSize().y),
+					context
 				);
 			}
 			if (!titleText.Empty()) {
 				titleText.OnLoop(
 					margin + xOffset,
-					windowHeight - (yOffset += titleText.GetSize().y)
+					windowHeight - (yOffset += titleText.GetSize().y),
+					context
 				);
 			}
 
-			fpsCounter.Draw();
+			fpsCounter.Draw(context);
 
 			auto aboveMetadata = windowHeight - yOffset - albumHeight / 2 - exclusiveIndicator.GetHeight() / 2;
 
-			playlist.OnLoop(fpsCounter.GetSize(), aboveMetadata - albumHeight / 8.0f, alpha);
+			playlist.OnLoop(fpsCounter.GetSize(), aboveMetadata - albumHeight / 8.0f, alpha, context);
 
 			// Only render our volume if we're in exclusive mode
 			if (exclusiveIndicator.IsExclusive())
-				volume.OnLoop(windowWidth / 2, windowHeight / 2, time);
+				volume.OnLoop(windowWidth / 2, windowHeight / 2, time, context);
 
-			exclusiveIndicator.OnLoop(margin, aboveMetadata, alpha);
+			exclusiveIndicator.OnLoop(margin, aboveMetadata, alpha, context);
 		}
 
 		return currentPos;
@@ -304,6 +332,12 @@ std::optional<double> Controls::GetNextSongLength() const {
 
 void Controls::OnDestroy() {
 	albumArt->RemoveColorChangeListener(&volume);
+
+	vao.reset();
+	vbo.reset();
+	eab.reset();
+
+	playlist.OnDestroy();
 
 	elapsedText.OnDestroy();
 	remainingText.OnDestroy();

@@ -32,6 +32,8 @@ public:
 		const Delta &time,
 		bool fileLoaded,
 		float hStep,
+		Context &context,
+		const Colour<float> &color,
 		float maxHeardSample = 0.0f,
 		bool resetGain = false
 	) override {
@@ -56,14 +58,17 @@ public:
 	void Draw(
 		const Delta &time,
 		float frameCount,
-		const Colour<float> &color
+		const Colour<float> &color,
+		Context &context
 	) override {
 		// Center / scale points within our album art circle
 		for (auto i = 0; i < bufferLength; ++i)
 			points[i].y = ((points[i].y - minPoint) / (maxPoint - minPoint)) * (albumArt->GetRadius() * 2) + albumArt->GetRadius() * -1;
 
-		SetColor(color, 1.0f);
-		glTranslatef(0, windowHeight / 2.0f, 0);
+		context.Use(1);
+
+		SetColor(color, 1.0f, context);
+		context.Translate(0, windowHeight / 2.0f, 0);
 		// TODO: allow the oscilloscope / fft line to rotate
 		/*
 		glRotatef(
@@ -73,8 +78,11 @@ public:
 			1.0f
 		);
 		*/
+		context.Apply();
 		line.SetPoints<Polyline::Join::None>(points, bufferLength);
-		line.Draw();
+		line.Draw(context);
+
+		context.Use(0);
 	}
 
 	void Reset() override {

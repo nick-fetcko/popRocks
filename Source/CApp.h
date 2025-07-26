@@ -23,6 +23,7 @@
 #include "FFtw3.h"
 
 #include "MathCPP/Duration.hpp"
+#include "OpenGL/Context.hpp"
 
 #include "AlbumArt.hpp"
 #include "BeatDetect.hpp"
@@ -42,6 +43,7 @@
 #include "Volume.hpp"
 
 using namespace MathsCPP;
+using namespace Fetcko;
 
 class MyAudioSink;
 
@@ -241,4 +243,6 @@ private:
 	BASS_WASAPI_INFO wasapiInfo{ 0 };
 
 	float scale = 1.0f;
+
+	std::unique_ptr<Context> context;
 };

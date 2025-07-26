@@ -5,6 +5,21 @@
 void Text::OnInit(TTF_Font *font) {
 	this->font = font;
 
+	vao = std::make_unique<VertexArray>();
+	vbo = std::make_unique<ArrayBuffer>();
+	eab = std::make_unique<ElementBuffer>();
+
+	vao->Bind();
+	vbo->Bind();
+	vao->AddAttribute(VertexArray::Attribute(0, 2, 4 * sizeof(float)));
+	vao->AddAttribute(VertexArray::Attribute(1, 2, 4 * sizeof(float), 2 * sizeof(float)));
+	vbo->Unbind();
+	vao->Unbind();
+
+	eab->Bind();
+	eab->BufferData<std::size(Buffers::SquareBuffer)>(Buffers::SquareBuffer);
+	eab->Unbind();
+
 	// Refresh our text, if there is any
 	SetText(text, true);
 }
@@ -85,14 +100,28 @@ void Text::SetText(const std::string &text, bool force) {
 
 	delete[] flat;
 
-	rect[0] = 0;
-	rect[1] = 0;
-	rect[2] = 0;
-	rect[3] = static_cast<float>(surface->h);
-	rect[4] = static_cast<float>(surface->w);
-	rect[5] = static_cast<float>(surface->h);
-	rect[6] = static_cast<float>(surface->w);
-	rect[7] = 0;
+	std::vector<float> buffer(16);
+
+	buffer[0] = 0;
+	buffer[1] = 0;
+	buffer[2] = Buffers::TexCoordBuffer[0];
+	buffer[3] = Buffers::TexCoordBuffer[1];
+	buffer[4] = 0;
+	buffer[5] = static_cast<float>(surface->h);
+	buffer[6] = Buffers::TexCoordBuffer[2];
+	buffer[7] = Buffers::TexCoordBuffer[3];
+	buffer[8] = static_cast<float>(surface->w);
+	buffer[9] = static_cast<float>(surface->h);
+	buffer[10] = Buffers::TexCoordBuffer[4];
+	buffer[11] = Buffers::TexCoordBuffer[5];
+	buffer[12] = static_cast<float>(surface->w);
+	buffer[13] = 0;
+	buffer[14] = Buffers::TexCoordBuffer[6];
+	buffer[15] = Buffers::TexCoordBuffer[7];
+
+	vbo->Bind();
+	vbo->BufferData(buffer);
+	vbo->Unbind();
 
 	size = { surface->w, surface->h + TTF_FontDescent(font) / 2.0f };
 
@@ -103,27 +132,28 @@ void Text::SetText(const std::string &text, bool force) {
 void Text::OnDestroy() {
 	glDeleteTextures(1, &texture);
 	texture = 0;
+
+	vao.reset();
+	vbo.reset();
+	eab.reset();
 }
 
-void Text::OnLoop(int x, int y) const {
+void Text::OnLoop(int x, int y, Context &context) const {
 	if (!font || Empty()) return;
 
 	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, texture);
 
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	context.Translate(x, y, 0.0f);
+	context.Apply();
 
-	glVertexPointer(2, GL_FLOAT, 0, rect);
-	glTexCoordPointer(2, GL_FLOAT, 0, Buffer::TexCoordBuffer.data());
+	vao->Bind();
+	eab->Bind();
+	eab->DrawElements(GL_TRIANGLES);
+	eab->Unbind();
+	vao->Unbind();
 
-	glTranslatef(static_cast<GLfloat>(x), static_cast<GLfloat>(y), 0.0f);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, Buffer::SquareBuffer.data());
-
-	glLoadIdentity();
-
-	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-	glDisableClientState(GL_VERTEX_ARRAY);
+	context.LoadIdentity();
 
 	glDisable(GL_TEXTURE_2D);
 }

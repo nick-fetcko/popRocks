@@ -1,5 +1,7 @@
 #pragma once
 
+#include "OpenGL/Context.hpp"
+
 #include "Settings.hpp"
 #include "Text.hpp"
 
@@ -12,16 +14,16 @@ public:
 
 	const int32_t GetHeight() const { return text.GetSize().y; }
 
-	void OnLoop(int x, int y, float alpha) {
+	void OnLoop(int x, int y, float alpha, Context &context) {
 		pos.x = x;
 		pos.y = y - text.GetSize().y / 2;
 
 		if (IsExclusive())
-			glColor4f(1.0f, 1.0f, 1.0f, alpha);
+			context.Color(1.0f, 1.0f, 1.0f, alpha);
 		else
-			glColor4f(0.5f, 0.5f, 0.5f, alpha);
+			context.Color(0.5f, 0.5f, 0.5f, alpha);
 
-		text.OnLoop(x, y - text.GetSize().y / 2);
+		text.OnLoop(x, y - text.GetSize().y / 2, context);
 	}
 
 	void OnDestroy() {

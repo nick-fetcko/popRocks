@@ -3,6 +3,7 @@
 #include <glad/glad.h>
 
 #include "MathCPP/Colour.hpp"
+#include "OpenGL/Context.hpp"
 
 #include "AutoFader.hpp"
 #include "ColorChangeListener.hpp"
@@ -11,6 +12,7 @@
 #include "Text.hpp"
 
 using namespace MathsCPP;
+using namespace Fetcko;
 
 class Volume : public ColorChangeListener, public AutoFader {
 public:
@@ -20,7 +22,7 @@ public:
 
 	void OnInit(const std::filesystem::path &fontFile);
 
-	void OnLoop(int x, int y, const Delta &time);
+	void OnLoop(int x, int y, const Delta &time, Context &context);
 
 	void SetRadius(float radius);
 

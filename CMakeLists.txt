@@ -35,6 +35,8 @@ find_package(FFTW3 CONFIG REQUIRED)
 
 add_subdirectory(MathCPP)
 add_subdirectory(Serial/src)
+add_subdirectory(OpenGL)
+add_subdirectory(Utils)
 
 set(_poprocks_cpp_headers
 	Source/AlbumArt.hpp
@@ -69,7 +71,6 @@ set(_poprocks_cpp_headers
 	Source/Settings.hpp
 	Source/TagLoader.hpp
 	Source/Text.hpp
-	Source/Utils.hpp
 	Source/Volume.hpp
 	)
 set(_poprocks_cpp_sources
@@ -93,7 +94,6 @@ set(_poprocks_cpp_sources
 	Source/Preset.cpp
 	Source/Settings.cpp
 	Source/Text.cpp
-	Source/Utils.cpp
 	Source/Volume.cpp
 	)
 
@@ -125,28 +125,10 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/third_party FILES
 	${_beatroot_sources}
 	)
 
-set(_glad_dir
-	third_party/glad)
-
-set(_glad_headers
-	${_glad_dir}/glad/glad.h
-	${_glad_dir}/KHR/khrplatform.h
-	)
-set(_glad_sources
-	${_glad_dir}/glad/glad.c
-	)
-
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/third_party FILES
-	${_glad_headers}
-	${_glad_sources}
-	)
-
 add_executable(popRocks
 	${_beatroot_headers}
-	${_glad_headers}
 	${_poprocks_cpp_headers}
 	${_beatroot_sources}
-	${_glad_sources}
 	${_poprocks_cpp_sources}
 	)
 
@@ -161,7 +143,6 @@ endif()
 target_include_directories(popRocks PUBLIC 
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 	${_beatroot_dir}
-	${_glad_dir}
 	Serial/src
 	)
 target_compile_features(popRocks PUBLIC cxx_std_17)
@@ -219,7 +200,7 @@ set_target_properties(basswasapi PROPERTIES
 	IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswasapi/lib/basswasapi.lib"
 	)
 
-target_link_libraries(popRocks PRIVATE MathsCPP ${OPENGL_LIBRARIES} SDL2::SDL2 SDL2::SDL2main SDL2_mixer::SDL2_mixer SDL2_image::SDL2_image SDL2_net::SDL2_net SDL2_ttf::SDL2_ttf bass bassflac bassape basswv basswasapi FFTW3::fftw3 serial ${JPEG_LIBRARIES})
+target_link_libraries(popRocks PRIVATE MathsCPP Utils ${OPENGL_LIBRARIES} OpenGL SDL2::SDL2 SDL2::SDL2main SDL2_mixer::SDL2_mixer SDL2_image::SDL2_image SDL2_net::SDL2_net SDL2_ttf::SDL2_ttf bass bassflac bassape basswv basswasapi FFTW3::fftw3 serial ${JPEG_LIBRARIES})
 target_include_directories(popRocks PRIVATE ${JPEG_INCLUDE_DIR})
 
 add_custom_command(TARGET popRocks POST_BUILD

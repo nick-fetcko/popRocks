@@ -2,7 +2,7 @@
 
 #include <array>
 
-class Buffer {
+class Buffers {
 public:
 	constexpr static std::array<unsigned short, 6> TriangleBuffer{ 0, 3, 1, 0, 3, 1 };
 	constexpr static std::array<unsigned short, 6> SquareBuffer{ 0, 1, 2, 0, 2, 3 };

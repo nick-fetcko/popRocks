@@ -185,14 +185,37 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 inline void Playlist::UpdateSize() {
 	em = this->titles.begin()->MeasureText("M");
 
-	rect[0] = -em.x / 2;
-	rect[1] = -em.y / 2;
-	rect[2] = -em.x / 2;
-	rect[3] = size.y + em.y / 2;
-	rect[4] = size.x + em.x / 2;
-	rect[5] = size.y + em.y / 2;
-	rect[6] = size.x + em.x / 2;
-	rect[7] = -em.x / 2;
+	height = size.y + em.y / 2;
+	std::vector<float> rect = {
+		-em.x / 2,
+		-em.y / 2,
+		0.0f,
+		0.0f,
+		0.0f,
+		0.75f,
+		-em.x / 2,
+		height,
+		0.0f,
+		0.0f,
+		0.0f,
+		0.0f,
+		size.x + em.x / 2,
+		height,
+		0.0f,
+		0.0f,
+		0.0f,
+		0.0f,
+		size.x + em.x / 2,
+		-em.x / 2,
+		0.0f,
+		0.0f,
+		0.0f,
+		0.75f
+	};
+
+	vbo->Bind();
+	vbo->BufferData(rect, GL_DYNAMIC_DRAW);
+	vbo->Unbind();
 }
 
 void Playlist::OnInit(int windowWidth, int windowHeight, TTF_Font *font, float scale) {
@@ -200,6 +223,21 @@ void Playlist::OnInit(int windowWidth, int windowHeight, TTF_Font *font, float s
 	this->windowHeight = windowHeight;
 	this->font = font;
 	this->scale = scale;
+
+	vao = std::make_unique<VertexArray>();
+	vbo = std::make_unique<ArrayBuffer>();
+	eab = std::make_unique<ElementBuffer>();
+
+	vao->Bind();
+	vbo->Bind();
+	vao->AddAttribute(VertexArray::Attribute(0, 2, 6 * sizeof(float)));
+	vao->AddAttribute(VertexArray::Attribute(1, 4, 6 * sizeof(float), 2 * sizeof(float)));
+	vbo->Unbind();
+	vao->Unbind();
+
+	eab->Bind();
+	eab->BufferData<std::size(Buffers::SquareBuffer)>(Buffers::SquareBuffer);
+	eab->Unbind();
 }
 
 void Playlist::OnResize(int windowWidth, int windowHeight, float scale) {
@@ -218,6 +256,12 @@ void Playlist::OnResize(int windowWidth, int windowHeight, float scale) {
 		UpdateSize();
 	}
 	this->scale = scale;
+}
+
+void Playlist::OnDestroy() {
+	vao.reset();
+	vbo.reset();
+	eab.reset();
 }
 
 void Playlist::Clear() {
@@ -281,14 +325,14 @@ const std::optional<Playlist::Track> Playlist::Next() const {
 	return Track{ *(currentFile + 1) };
 }
 
-void Playlist::OnLoop(Vector2i pos, float maxHeight, float alpha) {
+void Playlist::OnLoop(Vector2i pos, float maxHeight, float alpha, Context &context) {
 	// We want to store its _origin_
 	this->pos = pos;
 
 	if (!files.empty())
-		OnLoop(files, currentFile, pos, maxHeight, alpha);
+		OnLoop(files, currentFile, pos, maxHeight, alpha, context);
 	else if (cue)
-		OnLoop(cue->GetTracks(), cue->GetCurrentTrack(), pos, maxHeight, alpha);
+		OnLoop(cue->GetTracks(), cue->GetCurrentTrack(), pos, maxHeight, alpha, context);
 }
 
 std::optional<Playlist::Track> Playlist::OnMouseClicked(const Vector2i &mousePos) {

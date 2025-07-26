@@ -323,13 +323,13 @@ void CApp::AddCommands() {
 		{
 			L"tri", [&](const std::vector<std::wstring> &args) {
 				if (auto fftRenderer = dynamic_cast<FFTRenderer *>(renderer))
-					fftRenderer->SetIndexBuffer(&Buffer::TriangleBuffer);
+					fftRenderer->SetIndexBuffer(&Buffers::TriangleBuffer);
 			}
 		},
 		{
 			L"squ", [&](const std::vector<std::wstring> &args) {
 				if (auto fftRenderer = dynamic_cast<FFTRenderer *>(renderer))
-					fftRenderer->SetIndexBuffer(&Buffer::SquareBuffer);
+					fftRenderer->SetIndexBuffer(&Buffers::SquareBuffer);
 			}
 		},
 		{

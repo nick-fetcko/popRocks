@@ -4,8 +4,11 @@
 
 #include <glad/glad.h>
 
+#include "OpenGL/Context.hpp"
+
 #include "Text.hpp"
 
+using namespace Fetcko;
 using namespace std::literals::chrono_literals;
 
 class FPSCounter {
@@ -31,8 +34,8 @@ public:
 		lastFrame = std::move(now);
 	}
 
-	void Draw() {
-		text.OnLoop(Margin, Margin);
+	void Draw(Context &context) {
+		text.OnLoop(Margin, Margin, context);
 	}
 
 	void OnDestroy() {

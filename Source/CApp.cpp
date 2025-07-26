@@ -111,7 +111,7 @@ DWORD CALLBACK OutputWasapiProc(void *buffer, DWORD length, void *user) {
 // =====================================================
 // ======================= CApp ========================
 // =====================================================
-CApp::CApp() : controls(&albumArt), circleLine(12.0f) {
+CApp::CApp() : albumArt(context), controls(&albumArt), circleLine(12.0f) {
 	renderer = new FFTRenderer(&dynamicGain, &albumArt);
 
 	// If we close the console, make sure to
@@ -271,8 +271,7 @@ void CApp::OnInit() {
 		windowHeight,
 		SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
 	);
-	SDL_GLContext context = SDL_GL_CreateContext(sdlWindow);
-	if (!context)
+	if (!SDL_GL_CreateContext(sdlWindow))
 		CConsole::Console.Print(std::string("Could not create OpenGL context: ") + SDL_GetError(), MSG_ERROR);
 
 	CConsole::Console.Print("gladLoadGL() returned " + std::to_string(gladLoadGL()), MSG_DIAG);
@@ -285,6 +284,36 @@ void CApp::OnInit() {
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	context = std::make_unique<Context>();
+	context->AddShader(
+		Utils::GetResource("vertex-texture.glsl"),
+		Utils::GetResource("fragment-texture.glsl")
+	);
+	context->AddShader(
+		Utils::GetResource("vertex.glsl"),
+		Utils::GetResource("fragment.glsl")
+	);
+	context->AddShader(
+		Utils::GetResource("vertex-color.glsl"),
+		Utils::GetResource("fragment-color.glsl")
+	);
+	context->AddShader(
+		Utils::GetResource("vertex-rotate.glsl"),
+		Utils::GetResource("fragment-rotate.glsl")
+	);
+
+	// Cache our uniforms
+	for (std::size_t i = 0; i < context->GetNumberOfShaders(); ++i) {
+		context->Use(i);
+		context->GetShaderProgram().CacheUniformLocation("projection");
+		context->GetShaderProgram().CacheUniformLocation("color");
+		if (i == 3) {
+			context->GetShaderProgram().CacheUniformLocation("screenSize");
+			context->GetShaderProgram().CacheUniformLocation("radius");
+		}
+		context->Color(1.0f, 1.0f, 1.0f, 1.0f);
+	}
 
 	// This updates the scale variable for us
 	GetScale(sdlWindow, &windowWidth, &windowHeight);
@@ -367,12 +396,13 @@ void CApp::OnResize(int width, int height, float scale) {
 	windowHeight = height;
 	hStep = static_cast<float>(windowWidth) / bufferLength;
 
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glOrtho(0, windowWidth, windowHeight, 0, -100.0f, 100.0f);
+	context->SetProjection(glm::ortho(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f));
+	context->Apply();
 
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
+	context->With(3, [width, height](Context::Shader &shader) {
+		shader.program.Uniform2f("screenSize", width, height);
+	});
+
 	glViewport(0, 0, windowWidth, windowHeight);
 
 	glClearAccum(0.0, 0.0, 0.0, 1.0);
@@ -392,7 +422,7 @@ const Colour<float> &CApp::GetColor() const {
 void CApp::SetColor(float alpha) const {
 	const auto &color = GetColor();
 
-	glColor4f(color.r, color.g, color.b, alpha);
+	context->Color(color.r, color.g, color.b, alpha);
 }
 
 inline void CApp::AdvanceToNextTrack() {
@@ -402,6 +432,8 @@ inline void CApp::AdvanceToNextTrack() {
 void CApp::OnLoop(const Delta &time) {
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
+
+	context->Use(0);
 
 	if (!fileLoaded && !listening) {
 		SwapBuffers();
@@ -474,6 +506,8 @@ void CApp::OnLoop(const Delta &time) {
 		time,
 		fileLoaded,
 		hStep,
+		*context,
+		GetColor(),
 		maxHeardSample,
 		resetGain
 	);
@@ -511,7 +545,7 @@ void CApp::OnLoop(const Delta &time) {
 		}
 	}
 			
-	renderer->Draw(time, frameCount, GetColor());
+	renderer->Draw(time, frameCount, GetColor(), *context);
 
 	if (!shuttingDown)
 		lightPack.OnLoop((albumArt.Loaded() && !overrideColor) ? albumArt.GetColor() : visColor);
@@ -526,14 +560,16 @@ void CApp::OnLoop(const Delta &time) {
 
 	// Draw album art OVER the accumulation buffer
 	// since we don't want it getting blurry
+
 	albumArt.OnLoop(
 		windowWidth / 2.0f,
 		windowHeight / 2.0f,
-		frameCount
+		frameCount,
+		*context
 	);
 
 	// Render the controls over the accumulation buffer, too
-	auto elapsed = controls.OnLoop(time, streamHandle, [this](float alpha) { SetColor(alpha); });
+	auto elapsed = controls.OnLoop(time, streamHandle, *context, [this](float alpha) { SetColor(alpha); });
 
 	// If we reached the end of the song, try loading the next
 	// song in the playlist
@@ -599,6 +635,9 @@ void CApp::OnDestroy() {
 	albumArt.RemoveColorChangeListener(this);
 
 	controls.OnDestroy();
+
+	// Make sure to free our shader resources
+	context.reset();
 
 	BASS_WASAPI_Free();
 	BASS_Free();

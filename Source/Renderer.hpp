@@ -6,9 +6,12 @@
 #include <optional>
 
 #include "MathCPP/Duration.hpp"
+#include "OpenGL/Context.hpp"
 
 #include "AlbumArt.hpp"
 #include "DynamicGain.hpp"
+
+using namespace Fetcko;
 
 class Renderer {
 public:
@@ -61,6 +64,8 @@ public:
 		const Delta &time,
 		bool fileLoaded,
 		float hStep,
+		Context &context,
+		const Colour<float> &color,
 		float maxHeartSample = 0.0f,
 		bool resetGain = false
 	) = 0;
@@ -68,7 +73,8 @@ public:
 	virtual void Draw(
 		const Delta &time,
 		float frameCount,
-		const Colour<float> &color
+		const Colour<float> &color,
+		Context &context
 	) = 0;
 	virtual void Reset() = 0;
 
@@ -83,8 +89,8 @@ public:
 	}
 
 protected:
-	void SetColor(const Colour<float> &color, float alpha) {
-		glColor4f(color.r, color.g, color.b, alpha);
+	void SetColor(const Colour<float> &color, float alpha, Context &context) {
+		context.Color(color.r, color.g, color.b, alpha);
 	}
 
 	bool initialized = false;

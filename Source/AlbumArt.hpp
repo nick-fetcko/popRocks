@@ -12,10 +12,14 @@
 #include <SDL_image.h>
 
 #include "MathCPP/Colour.hpp"
+#include "OpenGL/Context.hpp"
+#include "OpenGL/VertexArray.hpp"
+#include "OpenGL/Buffer.hpp"
 
 #include "ColorChangeListener.hpp"
 
 using namespace MathsCPP;
+using namespace Fetcko;
 
 class AlbumArt {
 public:
@@ -29,9 +33,11 @@ public:
 
 	enum class ColorMethod { Average, Dominant };
 
+	AlbumArt(std::unique_ptr<Context> &context);
+
 	void OnInit(int windowWidth, int windowHeight, float scale = 1.0f);
 	void OnResize(int windowWidth, int windowHeight, float scale = 1.0f);
-	void OnLoop(GLfloat x, GLfloat y, float frameCount);
+	void OnLoop(GLfloat x, GLfloat y, float frameCount, Context &context);
 	void OnDestroy();
 
 	// fileName is the path to the _song_
@@ -72,7 +78,7 @@ public:
 	void AddColorChangeListener(ColorChangeListener *listener);
 	void RemoveColorChangeListener(ColorChangeListener *listener);
 
-	int DrawSquare(int x, int y, int height, GLfloat alpha);
+	int DrawSquare(int x, int y, int height, GLfloat alpha, Context &context);
 
 	const float &GetAspectRatio() const { return aspectRatio; }
 
@@ -99,10 +105,9 @@ private:
 
 	GLuint album = 0;
 	int albumWidth = 0, albumHeight = 0;
+	float squareHeight = 0;
+	float squareWidth = 0;
 	int scaledAlbumWidth = 0, scaledAlbumHeight = 0;
-	float albumVertexBuffer[362 * 2] = { 0.0f };
-	float squareVertexBuffer[8] = { 0 };
-	float albumTexCoords[362 * 2] = { 0.0f };
 	bool albumLoaded = false;
 
 	float aspectRatio = 1.0f;
@@ -150,4 +155,13 @@ private:
 	std::mutex mutex;
 
 	float scale = 1.0f;
+
+	std::unique_ptr<VertexArray> vao;
+	std::unique_ptr<ArrayBuffer> vbo;
+
+	std::unique_ptr<VertexArray> squareVao;
+	std::unique_ptr<ArrayBuffer> squareVbo;
+	std::unique_ptr<ElementBuffer> squareEab;
+
+	std::unique_ptr<Context> &context;
 };

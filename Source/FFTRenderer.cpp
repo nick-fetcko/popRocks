@@ -4,7 +4,7 @@ FFTRenderer::FFTRenderer(
 	const DynamicGain<float> *dynamicGain,
 	const AlbumArt *albumArt) :
 	Renderer(dynamicGain, albumArt),
-	indexBuffer(&Buffer::SquareBuffer) {
+	indexBuffer(&Buffers::SquareBuffer) {
 
 }
 
@@ -36,7 +36,7 @@ bool FFTRenderer::SetBuffer(const uint8_t *const buffer, std::size_t len, bool f
 		delete[] min;
 		delete[] max;
 
-		rects = new float[8 * fullBufferLength];
+		rects = new float[28 * fullBufferLength];
 		shrinkDecays = new Decay[fullBufferLength];
 		fadeDecays = new Decay[fullBufferLength];
 
@@ -72,9 +72,16 @@ void FFTRenderer::OnLoop(
 	const Delta &time,
 	bool fileLoaded,
 	float hStep,
+	Context &context,
+	const Colour<float> &color,
 	float maxHeardSample,
 	bool resetGain
 ) {
+	auto brightColor = color.ToHsv();
+	brightColor.v = 1.0;
+	//brightColor.s = 1.0;
+	auto brightRgb = Colour<float>::FromHsv(brightColor.h, brightColor.s, brightColor.v);
+
 	std::size_t maxUpdates = 0;
 
 	for (int i = 0; i < fullBufferLength; i++) {
@@ -136,68 +143,106 @@ void FFTRenderer::OnLoop(
 
 		// Only update the rectangles we're actively rendering
 		if (i < bufferLength) {
-			float thickness = std::ceil(std::max((albumArt->GetRadius() * Maths::PI<float>) / bufferLength, 1.0f));
+			const Colour<float> *finalColor = &color;
+			float alpha = fadeDecays[i].Get();
 
-			rects[i * 8 + 0] = -thickness;
-			rects[i * 8 + 1] = 0;
-			rects[i * 8 + 2] = -thickness;
-			rects[i * 8 + 3] = shrinkDecays[i].Get();
-			rects[i * 8 + 4] = thickness;
-			rects[i * 8 + 5] = shrinkDecays[i].Get();
-			rects[i * 8 + 6] = thickness;
-			rects[i * 8 + 7] = 0;
+			if (pulse && fadeDecays[i].WasReset()) {
+				finalColor = &brightRgb;
+				alpha = static_cast<float>(
+					fadeDecays[i].Get() - fadeDecays[i].Get() * (fadeDecays[i].SinceLastReset().AsSeconds() / pulseTime.AsSeconds())
+				);
+				if (fadeDecays[i].SinceLastReset() >= pulseTime)
+					fadeDecays[i].HasBeenReset();
+			}
+
+			fadeDecays[i].Update(time);
+
+			float thickness = std::ceil(std::max((albumArt->GetRadius() * Maths::PI<float>) / bufferLength, 1.0f));
+			auto angle = (((((static_cast<float>(i) / bufferLength * 360.0f)) / distribution) * 360.0f));
+			angle *= Maths::DEG2RAD<float>;
+
+			// Top left
+			rects[i * 28 + 0] = -thickness;
+			rects[i * 28 + 1] = 0.0f;
+			rects[i * 28 + 2] = finalColor->r;
+			rects[i * 28 + 3] = finalColor->g;
+			rects[i * 28 + 4] = finalColor->b;
+			rects[i * 28 + 5] = alpha;
+			rects[i * 28 + 6] = angle;
+
+			// Bottom Left
+			rects[i * 28 + 7] = -thickness;
+			rects[i * 28 + 8] = shrinkDecays[i].Get();
+			rects[i * 28 + 9] = finalColor->r;
+			rects[i * 28 + 10] = finalColor->g;
+			rects[i * 28 + 11] = finalColor->b;
+			rects[i * 28 + 12] = alpha;
+			rects[i * 28 + 13] = angle;
+
+			// Bottom Right
+			rects[i * 28 + 14] = thickness;
+			rects[i * 28 + 15] = shrinkDecays[i].Get();
+			rects[i * 28 + 16] = finalColor->r;
+			rects[i * 28 + 17] = finalColor->g;
+			rects[i * 28 + 18] = finalColor->b;
+			rects[i * 28 + 19] = alpha;
+			rects[i * 28 + 20] = angle;
+
+			// Top Right
+			rects[i * 28 + 21] = thickness;
+			rects[i * 28 + 22] = 0.0f;
+			rects[i * 28 + 23] = finalColor->r;
+			rects[i * 28 + 24] = finalColor->g;
+			rects[i * 28 + 25] = finalColor->b;
+			rects[i * 28 + 26] = alpha;
+			rects[i * 28 + 27] = angle;
 		}
 	}
+
+	if (!vao) {
+		vao = std::make_unique<VertexArray>();
+		vbo = std::make_unique<ArrayBuffer>();
+		eab = std::make_unique<ElementBuffer>();
+
+		vao->Bind();
+		vbo->Bind();
+		vao->AddAttribute(VertexArray::Attribute(0, 2, 7 * sizeof(float)));
+		vao->AddAttribute(VertexArray::Attribute(1, 4, 7 * sizeof(float), 2 * sizeof(float)));
+		vao->AddAttribute(VertexArray::Attribute(2, 1, 7 * sizeof(float), 6 * sizeof(float)));
+		vbo->Unbind();
+		vao->Unbind();
+
+		std::vector<unsigned short> indices(bufferLength * 6);
+		for (std::size_t i = 0; i < bufferLength; ++i) {
+			indices[i * 6] = Buffers::SquareBuffer[0] + (4 * i);
+			indices[i * 6 + 1] = Buffers::SquareBuffer[1] + (4 * i);
+			indices[i * 6 + 2] = Buffers::SquareBuffer[2] + (4 * i);
+			indices[i * 6 + 3] = Buffers::SquareBuffer[3] + (4 * i);
+			indices[i * 6 + 4] = Buffers::SquareBuffer[4] + (4 * i);
+			indices[i * 6 + 5] = Buffers::SquareBuffer[5] + (4 * i);
+		}
+
+		eab->Bind();
+		eab->BufferData(indices);
+		eab->Unbind();
+	}
+
+	vbo->Bind();
+	vbo->BufferData(rects, bufferLength * 28, GL_DYNAMIC_DRAW);
+	vbo->Unbind();
 }
 
-void FFTRenderer::Draw(const Delta &time, float frameCount, const Colour<float> &color) {
-	auto brightColor = color.ToHsv();
-	brightColor.v = 1.0;
-	//brightColor.s = 1.0;
-	auto brightRgb = Colour<float>::FromHsv(brightColor.h, brightColor.s, brightColor.v);
+void FFTRenderer::Draw(const Delta &time, float frameCount, const Colour<float> &color, Context &context) {
+	context.Use(3);
+	context.LoadIdentity();
 
-	for (int i = 0; i < bufferLength; i++) {
-		glVertexPointer(2, GL_FLOAT, 0, &rects[i * 8]);
+	vao->Bind();
+	eab->Bind();
+	eab->DrawElements(GL_TRIANGLES);
+	eab->Unbind();
+	vao->Unbind();
 
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glTranslatef(windowWidth / 2.0f, windowHeight / 2.0f, 0.0f);
-		auto angle = ((((static_cast<float>(i) / bufferLength * 360.0f) - frameCount) / distribution) * 360.0f);
-		glTranslatef(
-			albumArt->GetRadius() * sin(angle * Maths::DEG2RAD<float>),
-			albumArt->GetRadius() * cos(angle * Maths::DEG2RAD<float>),
-			0.0f
-		);
-		glRotatef(
-			360.0f - angle,
-			xRot ? 1.0f : 0.0f,
-			yRot ? 1.0f : 0.0f,
-			zRot ? 1.0f : 0.0f
-		);
-
-		fadeDecays[i].Update(time);
-
-		SetColor(color, fadeDecays[i].Get());
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, indexBuffer->data());
-
-		// FIXME: Rendering a _copy_ of the rectangle is not efficient
-		if (pulse && fadeDecays[i].WasReset()) {
-			SetColor(
-				brightRgb,
-				static_cast<float>(
-					fadeDecays[i].Get() - fadeDecays[i].Get() * (fadeDecays[i].SinceLastReset().AsSeconds() / pulseTime.AsSeconds())
-				)
-			);
-			
-			if (fadeDecays[i].SinceLastReset() >= pulseTime)
-				fadeDecays[i].HasBeenReset();
-
-			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, indexBuffer->data());
-		}
-
-		glDisableClientState(GL_VERTEX_ARRAY);
-
-		glLoadIdentity();
-	}
+	context.Use(0);
 }
 
 void FFTRenderer::Reset() {
