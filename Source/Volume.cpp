@@ -1,5 +1,7 @@
 #include "Volume.hpp"
 
+#include "Hash.hpp"
+
 void Volume::OnInit(const std::filesystem::path &fontFile) {
 	auto string = fontFile.u8string();
 
@@ -40,7 +42,7 @@ void Volume::OnLoop(int x, int y, const Delta &time, Context &context) {
 
 	glLoadIdentity();
 	*/
-	context.Use(1);
+	context.Use("basic"_hash);
 
 	context.Color(0.0f, 0.0f, 0.0f, alpha);
 	context.Translate(
@@ -60,7 +62,7 @@ void Volume::OnLoop(int x, int y, const Delta &time, Context &context) {
 	context.Apply();
 	ring.Draw(context);
 
-	context.Use(0);
+	context.Use("texture"_hash);
 }
 
 void Volume::SetRadius(float radius) {

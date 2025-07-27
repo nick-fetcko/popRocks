@@ -3,6 +3,7 @@
 #include <sstream>
 
 #include "CConsole.h"
+#include "Hash.hpp"
 
 // FIXME: KurintoSans covers a good span of Unicode characters, but not all.
 //        For example: it has all the kana, but no kanji
@@ -177,7 +178,7 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 			vbo->Unbind();
 		}
 
-		context.Use(1);
+		context.Use("basic"_hash);
 		context.Translate(0, windowHeight - SeekbarSize * scale, 0.0f);
 		context.Apply();
 
@@ -189,7 +190,7 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 		eab->Unbind();
 		vao->Unbind();
 
-		context.Use(0);
+		context.Use("texture"_hash);
 		context.LoadIdentity();
 
 		auto elapsed = static_cast<int>(currentPos);

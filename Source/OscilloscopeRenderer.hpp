@@ -66,7 +66,7 @@ public:
 		for (auto i = 0; i < bufferLength; ++i)
 			points[i].y = ((points[i].y - minPoint) / (maxPoint - minPoint)) * (albumArt->GetRadius() * 2) + albumArt->GetRadius() * -1;
 
-		context.Use(1);
+		context.Use("basic"_hash);
 
 		SetColor(color, 1.0f, context);
 		context.Translate(0, windowHeight / 2.0f, 0);
@@ -83,7 +83,7 @@ public:
 		line.SetPoints<Polyline::Join::None>(points, bufferLength);
 		line.Draw(context);
 
-		context.Use(0);
+		context.Use("texture"_hash);
 	}
 
 	void Reset() override {

@@ -25,7 +25,7 @@ void AlbumArt::OnInit(int windowWidth, int windowHeight, float scale) {
 	radius *= scale;
 
 	if (context) {
-		context->With(3, [this](Context::Shader &shader) {
+		context->With("rotate"_hash, [this](Context::Shader &shader) {
 			shader.program.Uniform1f("radius", radius);
 		});
 	}
@@ -120,7 +120,7 @@ void AlbumArt::UpdateVertexCoords() {
 	vbo->Unbind();
 
 	if (context) {
-		context->With(3, [this](Context::Shader &shader) {
+		context->With("rotate"_hash, [this](Context::Shader &shader) {
 			shader.program.Uniform1f("radius", radius);
 		});
 	}

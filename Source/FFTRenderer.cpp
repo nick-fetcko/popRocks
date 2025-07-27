@@ -1,5 +1,7 @@
 #include "FFTRenderer.hpp"
 
+#include "Hash.hpp"
+
 FFTRenderer::FFTRenderer(
 	const DynamicGain<float> *dynamicGain,
 	const AlbumArt *albumArt) :
@@ -234,7 +236,7 @@ void FFTRenderer::OnLoop(
 }
 
 void FFTRenderer::Draw(const Delta &time, float frameCount, const Colour<float> &color, Context &context) {
-	context.Use(3);
+	context.Use("rotate"_hash);
 	context.LoadIdentity();
 
 	vao->Bind();
@@ -243,7 +245,7 @@ void FFTRenderer::Draw(const Delta &time, float frameCount, const Colour<float> 
 	eab->Unbind();
 	vao->Unbind();
 
-	context.Use(0);
+	context.Use("texture"_hash);
 }
 
 void FFTRenderer::Reset() {

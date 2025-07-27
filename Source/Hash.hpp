@@ -30,3 +30,7 @@ constexpr std::uint64_t hash_64_fnv1a_const(const char *str, std::size_t len, st
 	}
 	return value;
 }
+
+constexpr std::uint32_t operator ""_hash(const char *c, std::size_t s) noexcept {
+	return hash_32_fnv1a_const(c, s);
+}

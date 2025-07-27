@@ -23,6 +23,7 @@
 #include "Buffer.hpp"
 #include "FFTLineRenderer.hpp"
 #include "FFTRenderer.hpp"
+#include "Hash.hpp"
 #include "ID3V2.hpp"
 #include "MP4.hpp"
 #include "OscilloscopeRenderer.hpp"
@@ -288,31 +289,34 @@ void CApp::OnInit() {
 	context = std::make_unique<Context>();
 	context->AddShader(
 		Utils::GetResource("vertex-texture.glsl"),
-		Utils::GetResource("fragment-texture.glsl")
+		Utils::GetResource("fragment-texture.glsl"),
+		"texture"_hash
 	);
 	context->AddShader(
 		Utils::GetResource("vertex.glsl"),
-		Utils::GetResource("fragment.glsl")
+		Utils::GetResource("fragment.glsl"),
+		"basic"_hash
 	);
 	context->AddShader(
 		Utils::GetResource("vertex-color.glsl"),
-		Utils::GetResource("fragment-color.glsl")
+		Utils::GetResource("fragment-color.glsl"),
+		"color"_hash
 	);
 	context->AddShader(
 		Utils::GetResource("vertex-rotate.glsl"),
-		Utils::GetResource("fragment-rotate.glsl")
+		Utils::GetResource("fragment-rotate.glsl"),
+		"rotate"_hash
 	);
 
 	// Cache our uniforms
-	for (std::size_t i = 0; i < context->GetNumberOfShaders(); ++i) {
-		context->Use(i);
-		context->GetShaderProgram().CacheUniformLocation("projection");
-		context->GetShaderProgram().CacheUniformLocation("color");
-		if (i == 3) {
-			context->GetShaderProgram().CacheUniformLocation("screenSize");
-			context->GetShaderProgram().CacheUniformLocation("radius");
+	for (auto &[hash, shader] : *context) {
+		shader.program.CacheUniformLocation("projection");
+		shader.program.CacheUniformLocation("color");
+		if (hash == "rotate"_hash) {
+			shader.program.CacheUniformLocation("screenSize");
+			shader.program.CacheUniformLocation("radius");
 		}
-		context->Color(1.0f, 1.0f, 1.0f, 1.0f);
+		shader.program.Uniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
 	}
 
 	// This updates the scale variable for us
@@ -399,7 +403,7 @@ void CApp::OnResize(int width, int height, float scale) {
 	context->SetProjection(glm::ortho(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f));
 	context->Apply();
 
-	context->With(3, [width, height](Context::Shader &shader) {
+	context->With("rotate"_hash, [width, height](Context::Shader &shader) {
 		shader.program.Uniform2f("screenSize", width, height);
 	});
 
@@ -433,7 +437,7 @@ void CApp::OnLoop(const Delta &time) {
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	context->Use(0);
+	context->Use("texture"_hash);
 
 	if (!fileLoaded && !listening) {
 		SwapBuffers();

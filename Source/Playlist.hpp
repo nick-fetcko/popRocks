@@ -9,6 +9,7 @@
 
 #include "Buffer.hpp"
 #include "Cue.hpp"
+#include "Hash.hpp"
 #include "Metadata.hpp"
 #include "TagLoader.hpp"
 #include "Text.hpp"
@@ -158,7 +159,7 @@ private:
 			vbo->Unbind();
 		}
 
-		context.Use(2);
+		context.Use("color"_hash);
 		context.Translate(static_cast<GLfloat>(pos.x), static_cast<GLfloat>(pos.y), 0.0f);
 		context.Apply();
 
@@ -173,7 +174,7 @@ private:
 		vbo->BufferSubData(23, sizeof(float), &alpha);
 		vbo->Unbind();
 
-		context.Use(0);
+		context.Use("texture"_hash);
 		context.LoadIdentity();
 
 		std::size_t maxIndex = static_cast<std::size_t>(
