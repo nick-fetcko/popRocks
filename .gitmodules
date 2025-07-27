@@ -4,3 +4,9 @@
 [submodule "Serial"]
 	path = Serial
 	url = https://github.com/nick-fetcko/Serial
+[submodule "Utils"]
+	path = Utils
+	url = https://github.com/nick-fetcko/Utils
+[submodule "OpenGL"]
+	path = OpenGL
+	url = https://github.com/nick-fetcko/OpenGL
