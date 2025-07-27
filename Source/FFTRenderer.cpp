@@ -44,7 +44,7 @@ bool FFTRenderer::SetBuffer(const uint8_t *const buffer, std::size_t len, bool f
 		delete[] min;
 		delete[] max;
 
-		rects = new float[28 * fullBufferLength];
+		rects = new float[Indices::Total * fullBufferLength];
 		shrinkDecays = new Decay[fullBufferLength];
 		fadeDecays = new Decay[fullBufferLength];
 
@@ -171,40 +171,40 @@ void FFTRenderer::OnLoop(
 			angle *= Maths::DEG2RAD<float>;
 
 			// Top left
-			rects[i * 28 + 0] = -thickness;
-			rects[i * 28 + 1] = 0.0f;
-			rects[i * 28 + 2] = finalColor->r;
-			rects[i * 28 + 3] = finalColor->g;
-			rects[i * 28 + 4] = finalColor->b;
-			rects[i * 28 + 5] = alpha;
-			rects[i * 28 + 6] = angle;
+			rects[i * Indices::Total + Indices::TopLeftCoords] = -thickness;
+			rects[i * Indices::Total + Indices::TopLeftCoords + 1] = 0.0f;
+			rects[i * Indices::Total + Indices::TopLeftColor] = finalColor->r;
+			rects[i * Indices::Total + Indices::TopLeftColor + 1] = finalColor->g;
+			rects[i * Indices::Total + Indices::TopLeftColor + 2] = finalColor->b;
+			rects[i * Indices::Total + Indices::TopLeftColor + 3] = alpha;
+			rects[i * Indices::Total + Indices::TopLeftAngle] = angle;
 
 			// Bottom Left
-			rects[i * 28 + 7] = -thickness;
-			rects[i * 28 + 8] = shrinkDecays[i].Get();
-			rects[i * 28 + 9] = finalColor->r;
-			rects[i * 28 + 10] = finalColor->g;
-			rects[i * 28 + 11] = finalColor->b;
-			rects[i * 28 + 12] = alpha;
-			rects[i * 28 + 13] = angle;
+			rects[i * Indices::Total + Indices::BottomLeftCoords] = -thickness;
+			rects[i * Indices::Total + Indices::BottomLeftCoords + 1] = shrinkDecays[i].Get();
+			rects[i * Indices::Total + Indices::BottomLeftColor] = finalColor->r;
+			rects[i * Indices::Total + Indices::BottomLeftColor + 1] = finalColor->g;
+			rects[i * Indices::Total + Indices::BottomLeftColor + 2] = finalColor->b;
+			rects[i * Indices::Total + Indices::BottomLeftColor + 3] = alpha;
+			rects[i * Indices::Total + Indices::BottomLeftAngle] = angle;
 
 			// Bottom Right
-			rects[i * 28 + 14] = thickness;
-			rects[i * 28 + 15] = shrinkDecays[i].Get();
-			rects[i * 28 + 16] = finalColor->r;
-			rects[i * 28 + 17] = finalColor->g;
-			rects[i * 28 + 18] = finalColor->b;
-			rects[i * 28 + 19] = alpha;
-			rects[i * 28 + 20] = angle;
+			rects[i * Indices::Total + Indices::BottomRightCoords] = thickness;
+			rects[i * Indices::Total + Indices::BottomRightCoords + 1] = shrinkDecays[i].Get();
+			rects[i * Indices::Total + Indices::BottomRightColor] = finalColor->r;
+			rects[i * Indices::Total + Indices::BottomRightColor + 1] = finalColor->g;
+			rects[i * Indices::Total + Indices::BottomRightColor + 2] = finalColor->b;
+			rects[i * Indices::Total + Indices::BottomRightColor + 3] = alpha;
+			rects[i * Indices::Total + Indices::BottomRightAngle] = angle;
 
 			// Top Right
-			rects[i * 28 + 21] = thickness;
-			rects[i * 28 + 22] = 0.0f;
-			rects[i * 28 + 23] = finalColor->r;
-			rects[i * 28 + 24] = finalColor->g;
-			rects[i * 28 + 25] = finalColor->b;
-			rects[i * 28 + 26] = alpha;
-			rects[i * 28 + 27] = angle;
+			rects[i * Indices::Total + Indices::TopRightCoords] = thickness;
+			rects[i * Indices::Total + Indices::TopRightCoords + 1] = 0.0f;
+			rects[i * Indices::Total + Indices::TopRightColor] = finalColor->r;
+			rects[i * Indices::Total + Indices::TopRightColor + 1] = finalColor->g;
+			rects[i * Indices::Total + Indices::TopRightColor + 2] = finalColor->b;
+			rects[i * Indices::Total + Indices::TopRightColor + 3] = alpha;
+			rects[i * Indices::Total + Indices::TopRightAngle] = angle;
 		}
 	}
 
@@ -237,7 +237,7 @@ void FFTRenderer::OnLoop(
 	}
 
 	vbo->Bind();
-	vbo->BufferData(rects, bufferLength * 28, GL_DYNAMIC_DRAW);
+	vbo->BufferData(rects, bufferLength * Indices::Total, GL_DYNAMIC_DRAW);
 	vbo->Unbind();
 }
 

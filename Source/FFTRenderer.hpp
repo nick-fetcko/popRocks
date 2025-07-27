@@ -78,6 +78,21 @@ public:
 	}
 
 private:
+	enum Indices {
+		TopLeftCoords = 0,
+		TopLeftColor = TopLeftCoords + 2,
+		TopLeftAngle = TopLeftColor + 4,
+		BottomLeftCoords = TopLeftAngle + 1,
+		BottomLeftColor = BottomLeftCoords + 2,
+		BottomLeftAngle = BottomLeftColor + 4,
+		BottomRightCoords = BottomLeftAngle + 1,
+		BottomRightColor = BottomRightCoords + 2,
+		BottomRightAngle = BottomRightColor + 4,
+		TopRightCoords = BottomRightAngle + 1,
+		TopRightColor = TopRightCoords + 2,
+		TopRightAngle = TopRightColor + 4,
+		Total = TopRightAngle + 1
+	};
 	const std::array<unsigned short, 6> *indexBuffer = &Buffers::SquareBuffer;
 
 	const float *floatBuffer = nullptr;
