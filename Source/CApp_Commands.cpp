@@ -45,8 +45,11 @@ void CApp::AddCommands() {
 				if (oldRenderer) {
 					if (auto lineRenderer = dynamic_cast<LineRenderer *>(oldRenderer))
 						renderer = new FFTLineRenderer(std::move(*lineRenderer));
-					else
+					else {
+						// Clean up the line before moving
+						oldRenderer->OnDestroy();
 						renderer = new FFTLineRenderer(std::move(*oldRenderer));
+					}
 				} else {
 					renderer = new FFTLineRenderer(&dynamicGain, &albumArt);
 					renderer->OnInit(windowWidth, windowHeight);
@@ -62,6 +65,7 @@ void CApp::AddCommands() {
 				if (args.size() == 1) {
 					auto oldRenderer = renderer;
 					if (oldRenderer) {
+						oldRenderer->OnDestroy();
 						renderer = new FFTRenderer(std::move(*oldRenderer));
 					} else {
 						renderer = new FFTRenderer(&dynamicGain, &albumArt);
@@ -90,8 +94,10 @@ void CApp::AddCommands() {
 				if (oldRenderer) {
 					if (auto lineRenderer = dynamic_cast<LineRenderer *>(oldRenderer))
 						renderer = new OscilloscopeRenderer(std::move(*lineRenderer));
-					else
+					else {
+						oldRenderer->OnDestroy();
 						renderer = new OscilloscopeRenderer(std::move(*oldRenderer));
+					}
 				} else {
 					renderer = new OscilloscopeRenderer(&dynamicGain, &albumArt);
 					renderer->OnInit(windowWidth, windowHeight);

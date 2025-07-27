@@ -347,6 +347,7 @@ void CApp::OnInit() {
 }
 
  CApp::~CApp() {
+	 delete renderer;
 	 delete[] buffer;
 	 delete audioSink;
 
@@ -640,6 +641,8 @@ void CApp::OnDestroy() {
 	albumArt.RemoveColorChangeListener(this);
 
 	controls.OnDestroy();
+
+	renderer->OnDestroy();
 
 	// Make sure to free our shader resources
 	context.reset();

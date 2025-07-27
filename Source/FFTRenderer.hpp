@@ -23,6 +23,8 @@ public:
 
 	FFTRenderer(Renderer &&right);
 
+	void OnDestroy() override;
+
 	virtual ~FFTRenderer();
 
 	bool IsFloatingPoint() const override { return true; }

@@ -103,6 +103,9 @@ const float Volume::GetInverseVolume() const {
 }
 
 void Volume::OnDestroy() {
+	ring.OnDestroy();
+	outlineRing.OnDestroy();
+
 	text.OnDestroy();
 	TTF_CloseFont(font);
 }

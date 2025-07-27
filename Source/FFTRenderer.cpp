@@ -15,6 +15,12 @@ FFTRenderer::FFTRenderer(Renderer &&right) : Renderer(std::move(right)) {
 	SetBufferLength(bufferLength, true);
 }
 
+void FFTRenderer::OnDestroy() {
+	vao.reset();
+	vbo.reset();
+	eab.reset();
+}
+
 FFTRenderer::~FFTRenderer() {
 	delete[] rects;
 	delete[] shrinkDecays;

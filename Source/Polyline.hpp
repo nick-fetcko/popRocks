@@ -42,6 +42,12 @@ public:
 		return *this;
 	}
 
+	void OnDestroy() {
+		vao.reset();
+		vbo.reset();
+		eab.reset();
+	}
+
 	virtual ~Polyline() {
 		delete[] vertexBuffer;
 		delete[] indexBuffer;

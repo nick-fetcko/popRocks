@@ -22,6 +22,10 @@ public:
 		line = std::move(other.line);
 	}
 
+	void OnDestroy() override {
+		line.OnDestroy();
+	}
+
 	virtual ~LineRenderer() {
 		delete[] points;
 	}

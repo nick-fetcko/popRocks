@@ -38,6 +38,8 @@ public:
 		initialized = true;
 	}
 
+	virtual void OnDestroy() = 0;
+
 	virtual void OnResize(
 		int windowWidth,
 		int windowHeight
