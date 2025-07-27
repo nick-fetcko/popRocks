@@ -34,6 +34,7 @@ public:
 		float hStep,
 		Context &context,
 		const Colour<float> &color,
+		float frameCount,
 		float maxHeardSample = 0.0f,
 		bool resetGain = false
 	) override {

@@ -508,6 +508,7 @@ void CApp::OnLoop(const Delta &time) {
 		hStep,
 		*context,
 		GetColor(),
+		frameCount,
 		maxHeardSample,
 		resetGain
 	);

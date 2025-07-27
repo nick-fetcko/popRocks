@@ -74,6 +74,7 @@ void FFTRenderer::OnLoop(
 	float hStep,
 	Context &context,
 	const Colour<float> &color,
+	float frameCount,
 	float maxHeardSample,
 	bool resetGain
 ) {
@@ -158,7 +159,7 @@ void FFTRenderer::OnLoop(
 			fadeDecays[i].Update(time);
 
 			float thickness = std::ceil(std::max((albumArt->GetRadius() * Maths::PI<float>) / bufferLength, 1.0f));
-			auto angle = (((((static_cast<float>(i) / bufferLength * 360.0f)) / distribution) * 360.0f));
+			auto angle = (((((static_cast<float>(i) / bufferLength * 360.0f) - frameCount) / distribution) * 360.0f));
 			angle *= Maths::DEG2RAD<float>;
 
 			// Top left
