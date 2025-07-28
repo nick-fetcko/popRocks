@@ -9,7 +9,6 @@
 
 #include "MathCPP/Duration.hpp"
 
-#include "CConsole.h"
 #include "CApp.h"
 #include "FFTRenderer.hpp"
 
@@ -28,7 +27,11 @@ int main(int argc, char *argv[]) {
 	app.OnInit();
 
 	if(argc > 1) {
-		CConsole::Console.Print(std::string("File prepared: ").append(std::string(argv[1])), MSG_DIAG);
+		LoggableClass loggableClass;
+		Logger logger;
+		logger.SetObject(&loggableClass);
+
+		logger.LogDebug("File prepared: ", argv[1]);
 		auto ascii = std::string(argv[1]);
 		app.LoadFile(std::wstring(ascii.begin(), ascii.end()));
 	}
@@ -103,7 +106,6 @@ int main(int argc, char *argv[]) {
 			app.FadeControls(true);
 		}
 
-		CConsole::Console.Read();
 		app.OnLoop(time.Update());
 	}
 

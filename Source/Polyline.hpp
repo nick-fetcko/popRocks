@@ -20,11 +20,11 @@
 #include "OpenGL/Context.hpp"
 #include "OpenGL/VertexArray.hpp"
 
-#include "CConsole.h"
+#include "Utils/Logger.hpp"
 
 using namespace Fetcko;
 
-class Polyline {
+class Polyline : public LoggableClass {
 public:
 	enum class Join { None, Miter };
 
@@ -111,7 +111,7 @@ public:
 	void Loop() {
 		if constexpr (J == Join::Miter) {
 			if (lastPoints.back() != firstPoints.front()) {
-				CConsole::Console.Print("Last and first points don't match! Adding an additional point.", MSG_ALERT);
+				logger.LogWarning("Last and first points don't match! Adding an additional point.");
 				auto first = firstPoints[0];
 				AddPoint<J>(std::move(first));
 			}

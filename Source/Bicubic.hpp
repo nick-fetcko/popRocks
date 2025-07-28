@@ -5,8 +5,6 @@
 
 #include <SDL_image.h>
 
-#include "CConsole.h"
-
 // Derived from https://blog.demofox.org/2015/08/15/resizing-images-with-bicubic-interpolation/
 class Bicubic {
 public:

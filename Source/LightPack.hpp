@@ -13,13 +13,16 @@
 
 #include "MathCPP/Colour.hpp"
 
+#include "Utils/Logger.hpp"
+
 #include "Mappings.h"
 
 using namespace std::literals::chrono_literals;
 
 using namespace MathsCPP;
+using namespace Fetcko;
 
-class LightPack {
+class LightPack : public LoggableClass{
 public:
 	// Grab 1 out of every CaptureFreq _frames_
 	inline constexpr static uint8_t CaptureFreq = 16;

@@ -274,5 +274,5 @@ void FFTRenderer::PrintMax() const {
 	}
 
 	stream << "max = " << max;
-	CConsole::Console.Print(stream.str(), MSG_DIAG);
+	logger.LogDebug(stream.str());
 }

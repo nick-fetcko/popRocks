@@ -12,16 +12,19 @@
 #include <SDL_image.h>
 
 #include "MathCPP/Colour.hpp"
+
 #include "OpenGL/Context.hpp"
 #include "OpenGL/VertexArray.hpp"
 #include "OpenGL/Buffer.hpp"
+
+#include "Utils/Logger.hpp"
 
 #include "ColorChangeListener.hpp"
 
 using namespace MathsCPP;
 using namespace Fetcko;
 
-class AlbumArt {
+class AlbumArt : public LoggableClass {
 public:
 	static constexpr bool IsSupported(const std::string_view &lowercaseExtension) {
 		for (const auto &extension : SupportedExtensions)

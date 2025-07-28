@@ -19,7 +19,6 @@
 
 #include "MathCPP/Colour.hpp"
 
-#include "CConsole.h"
 #include "Buffer.hpp"
 #include "FFTLineRenderer.hpp"
 #include "FFTRenderer.hpp"
@@ -117,7 +116,7 @@ CApp::CApp() : albumArt(context), controls(&albumArt), circleLine(12.0f) {
 
 	// If we close the console, make sure to
 	// clean up before exit
-	CConsole::Console.SetOnClose([this] {
+	Logger::SetOnClose([this] {
 		OnDestroy();
 	});
 
@@ -225,8 +224,6 @@ float CApp::GetScale(SDL_Window *window, int *w, int *h) {
 }
 
 void CApp::OnInit() {
-	CConsole::Console.OnInit();
-
 	SetBufferLength(2048);
 
 	// We only sample halfway to the
@@ -239,7 +236,7 @@ void CApp::OnInit() {
 	// https://tgui.eu/tutorials/latest-stable/dpi-scaling/
 	SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
 
-	CConsole::Console.Print("SDL_Init() returned " + std::to_string(SDL_Init(SDL_INIT_EVERYTHING)), MSG_DIAG);
+	logger.LogDebug("SDL_Init() returned ", SDL_Init(SDL_INIT_EVERYTHING));
 	auto ret = IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG | IMG_INIT_WEBP);
 
 	std::stringstream stream;
@@ -247,7 +244,7 @@ void CApp::OnInit() {
 	if (ret & IMG_INIT_JPG) stream << "JPG ";
 	if (ret & IMG_INIT_PNG) stream << "PNG ";
 	if (ret & IMG_INIT_WEBP) stream << "WEBP";
-	CConsole::Console.Print(stream.str(), MSG_DIAG);
+	logger.LogDebug(stream.str());
 
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
@@ -273,10 +270,10 @@ void CApp::OnInit() {
 		SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
 	);
 	if (!SDL_GL_CreateContext(sdlWindow))
-		CConsole::Console.Print(std::string("Could not create OpenGL context: ") + SDL_GetError(), MSG_ERROR);
+		logger.LogError("Could not create OpenGL context: ", SDL_GetError());
 
-	CConsole::Console.Print("gladLoadGL() returned " + std::to_string(gladLoadGL()), MSG_DIAG);
-	CConsole::Console.Print(std::string("OpenGL Version: ") + reinterpret_cast<const char*>(glGetString(GL_VERSION)), MSG_DIAG);
+	logger.LogDebug("gladLoadGL() returned ", gladLoadGL());
+	logger.LogDebug("OpenGL Version: ", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
 
 	// Prefer adaptive sync over regular vsync
 	if (SDL_GL_SetSwapInterval(-1) == -1)
@@ -323,14 +320,14 @@ void CApp::OnInit() {
 	GetScale(sdlWindow, &windowWidth, &windowHeight);
 
 	if (!BASS_PluginLoad("bassflac.dll", 0))
-		CConsole::Console.Print("Could not load FLAC plugin! Error code " + std::to_string(BASS_ErrorGetCode()), MSG_ERROR);
+		logger.LogError("Could not load FLAC plugin! Error code ", BASS_ErrorGetCode());
 	if (!BASS_PluginLoad("bassape.dll", 0))
-		CConsole::Console.Print("Could not load APE plugin! Error code " + std::to_string(BASS_ErrorGetCode()), MSG_ERROR);
+		logger.LogError("Could not load APE plugin! Error code ", BASS_ErrorGetCode());
 	if (!BASS_PluginLoad("basswv.dll", 0))
-		CConsole::Console.Print("Could not load WavPack plugin! Error code " + std::to_string(BASS_ErrorGetCode()), MSG_ERROR);
+		logger.LogError("Could not load WavPack plugin! Error code ", BASS_ErrorGetCode());
 
 	if (BASS_Init(device, freq, 0, 0, nullptr) != TRUE)
-		CConsole::Console.Print("Could not initialize audio device!", MSG_ERROR);
+		logger.LogError("Could not initialize audio device!");
 
 	lightPack.OnInit();
 	albumArt.OnInit(windowWidth, windowHeight, scale);
@@ -585,7 +582,7 @@ void CApp::OnLoop(const Delta &time) {
 	} else if (auto &cue = controls.GetPlaylist().GetCue();
 		(!controls.GetExclusiveIndicator().IsExclusive() || cue) && elapsed >= controls.GetCurrentSongLength()) {
 		if (auto next = controls.GetPlaylist().Next()) {
-			CConsole::Console.Print("Reached the end of the current song and loading the next", MSG_DIAG);
+			logger.LogDebug("Reached the end of the current song and loading the next");
 
 			LoadFile(next->path, true);
 
@@ -633,8 +630,6 @@ void CApp::OnDestroy() {
 		listening = false;
 	}
 
-	CConsole::Console.OnCleanup();
-
 	lightPack.OnDestroy();
 	albumArt.OnDestroy();
 
@@ -650,6 +645,8 @@ void CApp::OnDestroy() {
 	BASS_WASAPI_Free();
 	BASS_Free();
 	IMG_Quit();
+
+	Logger::OnDestroy();
 }
 
 HSTREAM CApp::OpenWithFlags(const std::filesystem::path &path, const std::string &extension, DWORD flags) {
@@ -682,15 +679,15 @@ void CApp::Open(const std::filesystem::path &path, const std::string &extension,
 				BASS_WASAPI_GetInfo(&wasapiInfo);
 				if (wasapiInfo.freq == channelInfo.freq) {
 					keyboardHook = SetWindowsHookExA(WH_KEYBOARD_LL, LowLevelKeyboardProc, NULL, 0);
-					CConsole::Console.Print("Channel and device frequencies (" + std::to_string(wasapiInfo.freq) + ") match!", MSG_DIAG);
+					logger.LogDebug("Channel and device frequencies (", wasapiInfo.freq, ") match!");
 
 					return;
 				} else {
-					CConsole::Console.Print("Could not initialize exclusive mode! Error code " + std::to_string(BASS_ErrorGetCode()), MSG_ERROR);
+					logger.LogError("Could not initialize exclusive mode! Error code ", BASS_ErrorGetCode());
 					exclusive = false;
 				}
 			} else {
-				CConsole::Console.Print("Could not initialize exclusive mode! Error code " + std::to_string(BASS_ErrorGetCode()), MSG_ERROR);
+				logger.LogError("Could not initialize exclusive mode! Error code ", BASS_ErrorGetCode());
 				exclusive = false;
 			}
 		} else {
@@ -737,7 +734,7 @@ void CApp::Unmute() {
 	// Unmute system volume if it's muted
 	if (BASS_WASAPI_GetMute(1) == TRUE) {
 		if (BASS_WASAPI_SetMute(1, FALSE) == FALSE)
-			CConsole::Console.Print("Could not unmute system volume!", MSG_ALERT);
+			logger.LogWarning("Could not unmute system volume!");
 	}
 }
 
@@ -758,7 +755,7 @@ void CApp::LoadBeats(
 	if (nextDetector->GetState() > BeatDetect::State::Idle) {
 		auto temp = nextDetector;
 
-		CConsole::Console.Print("Ping-ponging beat detectors", MSG_DIAG);
+		logger.LogDebug("Ping-ponging beat detectors");
 		nextDetector = beatDetect;
 		beatDetect = temp;
 	} else {
@@ -767,7 +764,7 @@ void CApp::LoadBeats(
 			channelInfo.freq,
 			channelInfo.chans,
 			[this, path] {
-				CConsole::Console.Print("Beat detection finished for the current song in the playlist (" + path.stem().u8string() + ")!", MSG_DIAG);
+				logger.LogDebug("Beat detection finished for the current song in the playlist (", path.stem().u8string(), ")!");
 				beatDetect->SeekTo(controls.GetCurrentPosition());
 			},
 			cue ? cue->GetCurrentTrack()->startTime : static_cast<std::optional<double>>(std::nullopt),
@@ -789,7 +786,7 @@ void CApp::LoadBeats(
 			nextChannelInfo.chans,
 			[this, next, nextDetector] {
 				if (nextDetector->IsDetecting())
-					CConsole::Console.Print("Beat detection finished for the next song in the playlist (" + next->path.stem().u8string() + ")!", MSG_DIAG);
+					logger.LogDebug("Beat detection finished for the next song in the playlist (", next->path.stem().u8string(), ")!");
 			},
 			next->startTime > DBL_EPSILON ? next->startTime : static_cast<std::optional<double>>(std::nullopt),
 			controls.GetNextSongLength()
@@ -798,7 +795,7 @@ void CApp::LoadBeats(
 }
 
 void CApp::ResetBeatDetection() {
-	CConsole::Console.Print("Resetting beat detectors", MSG_DIAG);
+	logger.LogDebug("Resetting beat detectors");
 	for (auto &detector : beatDetectors) {
 		detector.Reset();
 	}
@@ -1004,18 +1001,17 @@ void CApp::Seek(double seconds) {
 	auto pos = BASS_ChannelGetPosition(streamHandle, BASS_POS_BYTE);
 	auto absolute = BASS_ChannelBytes2Seconds(streamHandle, pos + bytes);
 
-	CConsole::Console.Print(
-		"Seeking by " +
-			std::to_string(seconds) +
-			" seconds (" +
-			std::to_string(absolute) +
-			")",
-		MSG_DIAG
+	logger.LogDebug(
+		"Seeking by ",
+		seconds,
+		" seconds (",
+		absolute,
+		")"
 	);
 
 	if (BASS_ChannelSetPosition(streamHandle, pos + bytes, BASS_POS_BYTE) == FALSE) {
 		auto code = BASS_ErrorGetCode();
-		CConsole::Console.Print("Seek failed! Error code " + std::to_string(code), MSG_ERROR);
+		logger.LogError("Seek failed! Error code ", code);
 	} else {
 		// Refresh our times
 		controls.SetElapsedSeconds(-1);
@@ -1034,7 +1030,7 @@ void CApp::SeekTo(double seconds) {
 			BASS_POS_BYTE
 	) == FALSE) {
 		auto code = BASS_ErrorGetCode();
-		CConsole::Console.Print("Seek failed! Error code " + std::to_string(code), MSG_ERROR);
+		logger.LogError("Seek failed! Error code ", code);
 	} else {
 		// Refresh our times
 		controls.SetElapsedSeconds(-1);
@@ -1170,7 +1166,7 @@ void CApp::LoadPreset(std::size_t index) {
 	if (const auto &presets = Preset::GetPresets(); presets.size() > index) {
 		const auto &preset = presets.at(index);
 
-		CConsole::Console.Print("Loading preset '" + preset.GetName() + "'", MSG_DIAG);
+		logger.LogDebug("Loading preset '", preset.GetName(), "'");
 
 		SetBufferLength(preset.GetBufferSize());
 		SetDecayTime(preset.GetDecayTime());
@@ -1184,7 +1180,7 @@ void CApp::LoadPreset(std::size_t index) {
 
 void CApp::OnColorChanged(const MathsCPP::Colour<float> &color, bool silent) {
 	if (!silent)
-		CConsole::Console.Print("Color changed!", MSG_DIAG);
+		logger.LogDebug("Color changed!");
 
 	// Simple, linear function
 	//SetGamma(2.8f - color.ToHsv().s * 2.0f);

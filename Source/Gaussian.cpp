@@ -1,5 +1,9 @@
 #include "Gaussian.hpp"
 
+#include <cmath>
+#include <thread>
+#include <vector>
+
 #define MULTITHREADED 1
 
 Gaussian::Gaussian(int kernelSize, double sigma) :

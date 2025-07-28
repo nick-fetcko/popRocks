@@ -23,11 +23,13 @@
 #include "FFtw3.h"
 
 #include "MathCPP/Duration.hpp"
+
 #include "OpenGL/Context.hpp"
+
+#include "Utils/Logger.hpp"
 
 #include "AlbumArt.hpp"
 #include "BeatDetect.hpp"
-#include "CConsole.h"
 #include "ColorChangeListener.hpp"
 #include "Controls.hpp"
 #include "DynamicGain.hpp"
@@ -49,7 +51,7 @@ class MyAudioSink;
 
 DWORD CALLBACK InWasapiProc(void*, DWORD, void*);
 
-class CApp : public ColorChangeListener {
+class CApp : public ColorChangeListener, public LoggableClass {
 public:
 	CApp();
 	~CApp();

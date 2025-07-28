@@ -8,13 +8,15 @@
 #include "MathCPP/Maths.hpp"
 #include "MathCPP/Duration.hpp"
 
+#include "Utils/Logger.hpp"
+
 #include "Buffer.hpp"
-#include "CConsole.h"
 #include "Renderer.hpp"
 
 using namespace MathsCPP;
+using namespace Fetcko;
 
-class FFTRenderer : public Renderer {
+class FFTRenderer : public Renderer, public LoggableClass {
 public:
 	FFTRenderer(
 		const DynamicGain<float> *dynamicGain,

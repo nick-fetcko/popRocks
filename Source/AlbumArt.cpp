@@ -8,7 +8,6 @@
 
 #include "Bicubic.hpp"
 #include "Buffer.hpp"
-#include "CConsole.h"
 #include "Gaussian.hpp"
 #include "Hash.hpp"
 #include "Settings.hpp"
@@ -96,7 +95,7 @@ void AlbumArt::OnResize(int windowWidth, int windowHeight, float scale) {
 		this->scale = scale;
 		radius *= scale;
 
-		CConsole::Console.Print("Scale changed! New radius is " + std::to_string(radius), MSG_DIAG);
+		logger.LogDebug("Scale changed! New radius is ", radius);
 
 		UpdateVertexCoords();
 
@@ -503,12 +502,11 @@ void AlbumArt::LoadFromSurface(SDL_Surface *surface, bool scaled) {
 				if (this->histogram.empty()) {
 					this->histogram.emplace(*iter);
 				} else if (std::abs(this->histogram.begin()->h - iter->h) > 25.0) {
-					CConsole::Console.Print(
-						"Placing in histogram because hue is " +
-							std::to_string(iter->h) +
-							" vs last bin's hue of " +
-							std::to_string(this->histogram.begin()->h),
-						MSG_DIAG
+					logger.LogDebug(
+						"Placing in histogram because hue is ",
+						iter->h,
+						" vs last bin's hue of ",
+						this->histogram.begin()->h
 					);
 					this->histogram.emplace(*iter);
 				}
@@ -619,7 +617,7 @@ bool AlbumArt::Load(const std::filesystem::path &fileName, const std::filesystem
 		auto contents = Fetcko::Utils::GetStringFromFile(found);
 		auto hash = hash_32_fnv1a_const(contents.c_str(), contents.size());
 		if (hash == lastHash) {
-			CConsole::Console.Print("External art has already been loaded for this album", MSG_DIAG);
+			logger.LogDebug("External art has already been loaded for this album");
 			albumLoaded = true;
 			albumWidth = lastWidth;
 			albumHeight = lastHeight;
@@ -633,19 +631,19 @@ bool AlbumArt::Load(const std::filesystem::path &fileName, const std::filesystem
 		auto surface = IMG_Load(utf8.c_str());
 
 		if (!surface) {
-			CConsole::Console.Print("Could not load external album art from file " + utf8, MSG_ERROR);
+			logger.LogError("Could not load external album art from file " + utf8);
 			return false;
 		} else if (!force && surface->w < albumWidth && surface->h < albumHeight) {
-			CConsole::Console.Print("External album art is smaller than what's already loaded", MSG_ALERT);
+			logger.LogWarning("External album art is smaller than what's already loaded");
 			SDL_FreeSurface(surface);
 			return false;
 		} else if (albumWidth != 0 && albumHeight != 0) {
-			CConsole::Console.Print("External album art is larger than embedded. Using it instead.", MSG_DIAG);
+			logger.LogDebug("External album art is larger than embedded. Using it instead.");
 		}
 
 		LoadFromSurface(surface);
 	} else {
-		CConsole::Console.Print(L"Could not load external album art for " + fileName.wstring(), MSG_ALERT);
+		logger.LogWarning("Could not load external album art for " + fileName.u8string());
 		return false;
 	}
 
@@ -655,7 +653,7 @@ bool AlbumArt::Load(const std::filesystem::path &fileName, const std::filesystem
 bool AlbumArt::Load(const std::string &mimeType, const void *data, std::size_t length) {
 	auto hash = hash_32_fnv1a_const(reinterpret_cast<const char *>(data), length);
 	if (hash == lastEmbeddedHash) {
-		CConsole::Console.Print("Embedded art has already been loaded for this album", MSG_DIAG);
+		logger.LogDebug("Embedded art has already been loaded for this album");
 		albumLoaded = true;
 		albumWidth = lastWidth;
 		albumHeight = lastHeight;
@@ -673,10 +671,10 @@ bool AlbumArt::Load(const std::string &mimeType, const void *data, std::size_t l
 
 	auto surface = IMG_LoadTyped_RW(file, 1, type.c_str());
 	if (!surface) {
-		CConsole::Console.Print("Could not load embedded album art!", MSG_ERROR);
+		logger.LogError("Could not load embedded album art!");
 		return false;
 	} else if (surface->w < albumWidth && surface->h < albumHeight) {
-		CConsole::Console.Print("Embedded album art is smaller than what's already loaded", MSG_ALERT);
+		logger.LogWarning("Embedded album art is smaller than what's already loaded");
 		SDL_FreeSurface(surface);
 		return false;
 	}
@@ -707,7 +705,7 @@ void AlbumArt::NextBin(bool silent) {
 			bool found = true;
 			for (const auto &bin : previousBins) {
 				if (std::abs(binIter->second.h - bin->second.h) < 20.0f) {
-					CConsole::Console.Print("Skipping bin at hue " + std::to_string(bin->second.h), MSG_DIAG);
+					logger.LogDebug("Skipping bin at hue ", bin->second.h);
 					found = false;
 					break;
 				}
@@ -781,9 +779,7 @@ void AlbumArt::UpdateBin(bool silent) {
 }
 
 void AlbumArt::PrintBin() {
-	std::stringstream stream;
-	stream << "Setting bin to hue " << binIter->h << ", saturation " << binIter->s << ", value " << binIter->v << " with count of " << binIter->count;
-	CConsole::Console.Print(stream.str(), MSG_DIAG);
+	logger.LogDebug("Setting bin to hue ", binIter->h, ", saturation ", binIter->s, ", value ", binIter->v, " with count of ", binIter->count);
 }
 
 void AlbumArt::AddColorChangeListener(ColorChangeListener *listener) { 
@@ -847,6 +843,6 @@ void AlbumArt::Scale(bool force) {
 		std::unique_lock lock(mutex);
 		surfaceToLoad = resized;
 
-		CConsole::Console.Print("Image resizing took " + std::to_string(Duration<Microseconds>(end - start).AsSeconds()) + " seconds", MSG_DIAG);
+		logger.LogDebug("Image resizing took " + std::to_string(Duration<Microseconds>(end - start).AsSeconds()) + " seconds");
 	}).detach();
 }

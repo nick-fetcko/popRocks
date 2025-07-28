@@ -8,7 +8,7 @@ void CApp::AddCommands() {
 	// Command template:
 	/*
 	{
-		L"command", [&](const std::vector<std::wstring> &args) {
+		"command", [&](const std::vector<std::string> &args) {
 			// args[0] is the command itself
 			// args[1..n - 1] are the actual arguments
 
@@ -18,12 +18,12 @@ void CApp::AddCommands() {
 	*/
 
 	// Give console our commands
-	CConsole::Console.AddCommands({
+	Logger::AddCommands({
 		{
-			L"load", [&](const std::vector<std::wstring> &args) {
+			"load", [&](const std::vector<std::string> &args) {
 				auto temp = args[1];
 
-				for (std::wstring::iterator iter = temp.begin(); iter != temp.end(); iter++) {
+				for (std::string::iterator iter = temp.begin(); iter != temp.end(); iter++) {
 					if (*iter == L'\"')
 						iter = temp.erase(iter);
 
@@ -34,12 +34,12 @@ void CApp::AddCommands() {
 			}
 		},
 		{
-			L"play", [&](const std::vector<std::wstring> &args) {
+			"play", [&](const std::vector<std::string> &args) {
 				PlayPreparedFile();
 			}
 		},
 		{
-			L"fftline", [&](const std::vector<std::wstring> &args) {
+			"fftline", [&](const std::vector<std::string> &args) {
 				auto oldRenderer = renderer;
 
 				if (oldRenderer) {
@@ -61,7 +61,7 @@ void CApp::AddCommands() {
 			}
 		},
 		{
-			L"fft", [&](const std::vector<std::wstring> &args) {
+			"fft", [&](const std::vector<std::string> &args) {
 				if (args.size() == 1) {
 					auto oldRenderer = renderer;
 					if (oldRenderer) {
@@ -82,13 +82,13 @@ void CApp::AddCommands() {
 					try {
 						SetFftLength(std::stoi(args[1]));
 					} catch (std::exception &e) {
-						CConsole::Console.Print(std::string("Could not set FFT length: ") + e.what(), MSG_ERROR);
+						logger.LogError("Could not set FFT length: ", e.what());
 					}
 				}
 			}
 		},
 		{
-			L"osc", [&](const std::vector<std::wstring> &args) {
+			"osc", [&](const std::vector<std::string> &args) {
 				auto oldRenderer = renderer;
 
 				if (oldRenderer) {
@@ -109,7 +109,7 @@ void CApp::AddCommands() {
 			}
 		},
 		{
-			L"color", [&](const std::vector<std::wstring> &args) {
+			"color", [&](const std::vector<std::string> &args) {
 				if (args.size() >= 4) {
 					try {
 						SetColor(
@@ -118,7 +118,7 @@ void CApp::AddCommands() {
 							std::stoi(args[3])
 						);
 					} catch (std::exception &e) {
-						CConsole::Console.Print(std::string("Could not set color: ") + e.what(), MSG_ERROR);
+						logger.LogError("Could not set color: ", e.what());
 					}
 				} else {
 					overrideColor = false;
@@ -126,157 +126,157 @@ void CApp::AddCommands() {
 			}
 		},
 		{
-			L"light intensity", [&](const std::vector<std::wstring> &args) {
+			"light intensity", [&](const std::vector<std::string> &args) {
 				lightPack.SetLightType(LightPack::LightType::Intensity);
-				CConsole::Console.Print("Set to light intensity", MSG_DIAG);
+				logger.LogDebug("Set to light intensity");
 			}
 		},
 		{
-			L"light color intensity", [&](const std::vector<std::wstring> &args) {
+			"light color intensity", [&](const std::vector<std::string> &args) {
 				lightPack.SetLightType(LightPack::LightType::ColorIntensity);
-				CConsole::Console.Print("Setting to light color intensity", MSG_DIAG);
+				logger.LogDebug("Setting to light color intensity");
 			}
 		},
 		{
-			L"light color", [&](const std::vector<std::wstring> &args) {
+			"light color", [&](const std::vector<std::string> &args) {
 				lightPack.SetLightType(LightPack::LightType::Color);
-				CConsole::Console.Print("Set to light color", MSG_DIAG);
+				logger.LogDebug("Set to light color");
 			}
 		},
 		{
-			L"mapping default", [&](const std::vector<std::wstring> &args) {
+			"mapping default", [&](const std::vector<std::string> &args) {
 				lightPack.SetMapping(Mappings::DEFAULT);
-				CConsole::Console.Print("Set to default", MSG_DIAG);
+				logger.LogDebug("Set to default");
 			}
 		},
 		{
-			L"mapping mine", [&](const std::vector<std::wstring> &args) {
+			"mapping mine", [&](const std::vector<std::string> &args) {
 				lightPack.SetMapping(Mappings::MINE);
-				CConsole::Console.Print("Set to mine", MSG_DIAG);
+				logger.LogDebug("Set to mine");
 			}
 		},
 		{
-			L"mapping btt", [&](const std::vector<std::wstring> &args) {
+			"mapping btt", [&](const std::vector<std::string> &args) {
 				lightPack.SetMapping(Mappings::BOTTOM_TO_TOP);
-				CConsole::Console.Print("Set to bottom to top", MSG_DIAG);
+				logger.LogDebug("Set to bottom to top");
 			}
 		},
 		{
-			L"mapping ttb", [&](const std::vector<std::wstring> &args) {
+			"mapping ttb", [&](const std::vector<std::string> &args) {
 				lightPack.SetMapping(Mappings::TOP_TO_BOTTOM);
-				CConsole::Console.Print("Set to top to bottom", MSG_DIAG);
+				logger.LogDebug("Set to top to bottom");
 			}
 		},
 		{
-			L"FOCUS_AREA_SUBBASS", [&](const std::vector<std::wstring> &args) {
+			"FOCUS_AREA_SUBBASS", [&](const std::vector<std::string> &args) {
 				lightPack.SetFocusArea(
 					LightPack::FocusArea::SubBass
 				);
-				CConsole::Console.Print("Setting focus area to subbass", MSG_DIAG);
+				logger.LogDebug("Setting focus area to subbass");
 			}
 		},
 		{
-			L"FOCUS_AREA_BASS_AND_MID", [&](const std::vector<std::wstring> &args) {
+			"FOCUS_AREA_BASS_AND_MID", [&](const std::vector<std::string> &args) {
 				lightPack.SetFocusArea(
 					LightPack::FocusArea::BassAndMid
 				);
-				CConsole::Console.Print("Setting focus area to bass and mid", MSG_DIAG);
+				logger.LogDebug("Setting focus area to bass and mid");
 			}
 		},
 		{
-			L"FOCUS_AREA_HALF_NYQUIST", [&](const std::vector<std::wstring> &args) {
+			"FOCUS_AREA_HALF_NYQUIST", [&](const std::vector<std::string> &args) {
 				lightPack.SetFocusArea(
 					LightPack::FocusArea::HalfNyquist
 				);
-				CConsole::Console.Print("Setting focus area to half Nyquist", MSG_DIAG);
+				logger.LogDebug("Setting focus area to half Nyquist");
 			}
 		},
 		{
-			L"FOCUS_AREA_NYQUIST", [&](const std::vector<std::wstring> &args) {
+			"FOCUS_AREA_NYQUIST", [&](const std::vector<std::string> &args) {
 				lightPack.SetFocusArea(
 					LightPack::FocusArea::Nyquist
 				);
-				CConsole::Console.Print("Setting focus area to Nyquist", MSG_DIAG);
+				logger.LogDebug("Setting focus area to Nyquist");
 			}
 		},
 		{
-			L"FOCUS_AREA_SUPER_BASS", [&](const std::vector<std::wstring> &args) {
+			"FOCUS_AREA_SUPER_BASS", [&](const std::vector<std::string> &args) {
 				lightPack.SetFocusArea(
 					LightPack::FocusArea::SuperBass
 				);
-				CConsole::Console.Print("Setting focus area to SUPER bass", MSG_DIAG);
+				logger.LogDebug("Setting focus area to SUPER bass");
 			}
 		},
 		{
-			L"FOCUS_AREA_BASS_MID_AND_A_LITTLE_HIGH_END", [&](const std::vector<std::wstring> &args) {
+			"FOCUS_AREA_BASS_MID_AND_A_LITTLE_HIGH_END", [&](const std::vector<std::string> &args) {
 				lightPack.SetFocusArea(
 					LightPack::FocusArea::BassMidAndHigh
 				);
-				CConsole::Console.Print("Setting focus area to bass, mid, and a little high end", MSG_DIAG);
+				logger.LogDebug("Setting focus area to bass, mid, and a little high end");
 			}
 		},
 		{
-			L"FOCUS_AREA_BASS", [&](const std::vector<std::wstring> &args) {
+			"FOCUS_AREA_BASS", [&](const std::vector<std::string> &args) {
 				lightPack.SetFocusArea(
 					LightPack::FocusArea::Bass
 				);
-				CConsole::Console.Print("Setting focus area to bass", MSG_DIAG);
+				logger.LogDebug("Setting focus area to bass");
 			}
 		},
 		{
-			L"listen", [&](const std::vector<std::wstring> &args) {
+			"listen", [&](const std::vector<std::string> &args) {
 				Listen();
-				CConsole::Console.Print("Now listening to primary recording device", MSG_DIAG);
+				logger.LogDebug("Now listening to primary recording device");
 			}
 		},
 		{
-			L"x", [&](const std::vector<std::wstring> &args) {
+			"x", [&](const std::vector<std::string> &args) {
 				if (auto fftRenderer = dynamic_cast<FFTRenderer*>(renderer))
 					fftRenderer->ToggleXRot();
 			}
 		},
 		{
-			L"y", [&](const std::vector<std::wstring> &args) {
+			"y", [&](const std::vector<std::string> &args) {
 				if (auto fftRenderer = dynamic_cast<FFTRenderer *>(renderer))
 					fftRenderer->ToggleYRot();
 			}
 		},
 		{
-			L"z", [&](const std::vector<std::wstring> &args) {
+			"z", [&](const std::vector<std::string> &args) {
 				if (auto fftRenderer = dynamic_cast<FFTRenderer *>(renderer))
 					fftRenderer->ToggleZRot();
 			}
 		},
 		{
-			L"dist", [&](const std::vector<std::wstring> &args) {
+			"dist", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
 						if (auto fftRenderer = dynamic_cast<FFTRenderer *>(renderer))
 							fftRenderer->SetDistribution(std::stof(args[1]));
 					} catch (std::exception &e) {
-						CConsole::Console.Print(std::string("Could not set distribution: ") + e.what(), MSG_ERROR);
+						logger.LogError("Could not set distribution: ", e.what());
 					}
 				}
 			}
 		},
 		{
-			L"buffer", [&](const std::vector<std::wstring> &args) {
+			"buffer", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
 						SetBufferLength(std::stoi(args[1]));
 					} catch (std::exception &e) {
-						CConsole::Console.Print(std::string("Could not set buffer length: ") + e.what(), MSG_ERROR);
+						logger.LogError("Could not set buffer length: ", e.what());
 					}
 				}
 			}
 		},
 		{
-			L"rot", [&](const std::vector<std::wstring> &args) {
+			"rot", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
 						SetRotationSpeed(std::stof(args[1]));
 					} catch (std::exception &e) {
-						CConsole::Console.Print(std::string("Could not set rotation speed: ") + e.what(), MSG_ERROR);
+						logger.LogError("Could not set rotation speed: ", e.what());
 					}
 				} else {
 					SetRotating(!GetRotating());
@@ -284,7 +284,7 @@ void CApp::AddCommands() {
 			}
 		},
 		{
-			L"decay", [&](const std::vector<std::wstring> &args) {
+			"decay", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
 						SetDecayTime(
@@ -293,13 +293,13 @@ void CApp::AddCommands() {
 							}
 						);
 					} catch (std::exception &e) {
-						CConsole::Console.Print(std::string("Could not set decay: ") + e.what(), MSG_ERROR);
+						logger.LogError("Could not set decay: ", e.what());
 					}
 				}
 			}
 		},
 		{
-			L"fade", [&](const std::vector<std::wstring> &args) {
+			"fade", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
 						SetFadeTime(
@@ -308,38 +308,38 @@ void CApp::AddCommands() {
 							}
 						);
 					} catch (std::exception &e) {
-						CConsole::Console.Print(std::string("Could not set fade: ") + e.what(), MSG_ERROR);
+						logger.LogError("Could not set fade: ", e.what());
 					}
 				}
 			}
 		},
 		{
-			L"gain", [&](const std::vector<std::wstring> &args) {
+			"gain", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
 						SetGain(
 							std::stof(args[1])
 						);
 					} catch (std::exception &e) {
-						CConsole::Console.Print(std::string("Could not set gain: ") + e.what(), MSG_ERROR);
+						logger.LogError("Could not set gain: ", e.what());
 					}
 				}
 			}
 		},
 		{
-			L"tri", [&](const std::vector<std::wstring> &args) {
+			"tri", [&](const std::vector<std::string> &args) {
 				if (auto fftRenderer = dynamic_cast<FFTRenderer *>(renderer))
 					fftRenderer->SetIndexBuffer(&Buffers::TriangleBuffer);
 			}
 		},
 		{
-			L"squ", [&](const std::vector<std::wstring> &args) {
+			"squ", [&](const std::vector<std::string> &args) {
 				if (auto fftRenderer = dynamic_cast<FFTRenderer *>(renderer))
 					fftRenderer->SetIndexBuffer(&Buffers::SquareBuffer);
 			}
 		},
 		{
-			L"strobe", [&](const std::vector<std::wstring> &args) {
+			"strobe", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
 						SetStrobeFrequency(
@@ -348,7 +348,7 @@ void CApp::AddCommands() {
 							}
 						);
 					} catch (std::exception &e) {
-						CConsole::Console.Print(std::string("Could not set strobe frequency: ") + e.what(), MSG_ERROR);
+						logger.LogError("Could not set strobe frequency: ", e.what());
 					}
 				} else {
 					SetStrobe(!GetStrobe());
@@ -356,46 +356,46 @@ void CApp::AddCommands() {
 			}
 		},
 		{
-			L"rpm", [&](const std::vector<std::wstring> &args) {
+			"rpm", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
 						SetRotationSpeed(std::stof(args[1]) * (360.0f / 60.0f) /* 6 */);
 					} catch (std::exception &e) {
-						CConsole::Console.Print(std::string("Could not set RPM: ") + e.what(), MSG_ERROR);
+						logger.LogError("Could not set RPM: ", e.what());
 					}
 				}
 			}
 		},
 		{
-			L"smooth", [&](const std::vector<std::wstring> &args) {
+			"smooth", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
 						uint8_t smooth = std::clamp(std::stoi(args[1]), 0, 255);
 						lightPack.SetSmooth(smooth);
 					} catch (std::exception &e) {
-						CConsole::Console.Print(std::string("Could not set smooth: ") + e.what(), MSG_ERROR);
+						logger.LogError("Could not set smooth: ", e.what());
 					}
 				}
 			}
 		},
 		{
-			L"gamma", [&](const std::vector<std::wstring> &args) {
+			"gamma", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
 						lightPack.SetGamma(std::stof(args[1]));
 					} catch (std::exception &e) {
-						CConsole::Console.Print(std::string("Could not set gamma: ") + e.what(), MSG_ERROR);
+						logger.LogError("Could not set gamma: ", e.what());
 					}
 				}
 			}
 		},
 		{
-			L"blur", [&](const std::vector<std::wstring> &args) {
+			"blur", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
 						SetBlurIntensity(std::stof(args[1]));
 					} catch (std::exception &e) {
-						CConsole::Console.Print(std::string("Could not set blur factor: ") + e.what(), MSG_ERROR);
+						logger.LogError("Could not set blur factor: ", e.what());
 					}
 				} else {
 					ToggleBlur();
@@ -403,7 +403,7 @@ void CApp::AddCommands() {
 			}
 		},
 		{
-			L"radius", [&](const std::vector<std::wstring> &args) {
+			"radius", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
 						auto radius = std::stof(args[1]);
@@ -412,13 +412,13 @@ void CApp::AddCommands() {
 						albumArt.Scale(true);
 						controls.GetVolume().SetRadius(radius);
 					} catch (std::exception &e) {
-						CConsole::Console.Print(std::string("Could not set radius: ") + e.what(), MSG_ERROR);
+						logger.LogError("Could not set radius: ", e.what());
 					}
 				}
 			}
 		},
 		{
-			L"bpm", [&](const std::vector<std::wstring> &args) {
+			"bpm", [&](const std::vector<std::string> &args) {
 				for (auto &detector : beatDetectors)
 					detector.ToggleDetection();
 
@@ -434,41 +434,41 @@ void CApp::AddCommands() {
 			}
 		},
 		{
-			L"width", [&](const std::vector<std::wstring> &args) {
+			"width", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
 						if (auto lineRenderer = dynamic_cast<LineRenderer*>(renderer))
 							lineRenderer->SetWidth(std::stof(args[1]));
 					}
 					catch (std::exception &e) {
-						CConsole::Console.Print(std::string("Could not set width: ") + e.what(), MSG_ERROR);
+						logger.LogError("Could not set width: ", e.what());
 					}
 				}
 			}
 		},
 		{
-			L"rgb", [&](const std::vector<std::wstring> &args) {
+			"rgb", [&](const std::vector<std::string> &args) {
 				lightPack.SetMethod(LightPack::Method::RGB);
 			}
 		},
 		{
-			L"hsv", [&](const std::vector<std::wstring> &args) {
+			"hsv", [&](const std::vector<std::string> &args) {
 				lightPack.SetMethod(LightPack::Method::HSV);
 			}
 		},
 		{
-			L"sat", [&](const std::vector<std::wstring> &args) {
+			"sat", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
 						lightPack.SetSaturationMultiplier(std::stof(args[1]));
 					} catch (std::exception &e) {
-						CConsole::Console.Print(std::string("Could not set saturation multiplier: ") + e.what(), MSG_ERROR);
+						logger.LogError("Could not set saturation multiplier: ", e.what());
 					}
 				}
 			}
 		},
 		{
-			L"pulse", [&](const std::vector<std::wstring> &args) {
+			"pulse", [&](const std::vector<std::string> &args) {
 				if (args.size() == 1) {
 					renderer->TogglePulse();
 				} else {
@@ -479,7 +479,7 @@ void CApp::AddCommands() {
 							}
 						);
 					} catch (std::exception &e) {
-						CConsole::Console.Print(std::string("Could not set pulse time: ") + e.what(), MSG_ERROR);
+						logger.LogError("Could not set pulse time: ", e.what());
 					}
 				}
 			}

@@ -3,7 +3,9 @@
 #include <filesystem>
 
 #include "Serial/Json.hpp"
+#include "Utils/Logger.hpp"
 
+using namespace Fetcko;
 using namespace serial;
 
 class Settings {

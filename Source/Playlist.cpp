@@ -47,7 +47,7 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 
 	Metadata metadata;
 
-	class Loader : public TagLoader {
+	class Loader : public TagLoader, public LoggableClass {
 	public:
 		void LoadFromTags(const std::map<std::string, std::string> &tags) override {
 			if (auto title = tags.find("title"); title != tags.end())
@@ -60,7 +60,7 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 					index = std::stoll(Fetcko::Utils::Split(track->second, '/')[0]);
 				}
 				catch (std::exception &e) {
-					CConsole::Console.Print("Track number '" + track->second + "' is not a number: " + e.what(), MSG_ALERT);
+					logger.LogWarning("Track number '", track->second, "' is not a number: ", e.what());
 				}
 			}
 			auto disc = tags.find("discnumber");
@@ -71,7 +71,7 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 					this->disc = std::stoll(Fetcko::Utils::Split(disc->second, '/')[0]);
 				}
 				catch (std::exception &e) {
-					CConsole::Console.Print("Disc number '" + disc->second + "' is not a number: " + e.what(), MSG_ALERT);
+					logger.LogWarning("Disc number '", disc->second + "' is not a number: ", e.what());
 				}
 			}
 		}

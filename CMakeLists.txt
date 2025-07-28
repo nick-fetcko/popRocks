@@ -45,7 +45,6 @@ set(_poprocks_cpp_headers
 	Source/Bicubic.hpp
 	Source/Buffer.hpp
 	Source/CApp.h
-	Source/CConsole.h
 	Source/ColorChangeListener.hpp
 	Source/Controls.hpp
 	Source/Cue.hpp
@@ -80,7 +79,6 @@ set(_poprocks_cpp_sources
 	Source/main.cpp
 	Source/CApp.cpp
 	Source/CApp_Commands.cpp
-	Source/CConsole.cpp
 	Source/Controls.cpp
 	Source/Cue.cpp
 	Source/FFTRenderer.cpp

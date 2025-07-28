@@ -36,7 +36,7 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 		if (line[0] == "FILE") {
 			// tracks + .cue not supported
 			if (!filePath.empty()) {
-				CConsole::Console.Print("tracks + .cue not supported! Ignoring .cue file", MSG_ALERT);
+				logger.LogWarning("tracks + .cue not supported! Ignoring .cue file");
 				return std::nullopt;
 			}
 

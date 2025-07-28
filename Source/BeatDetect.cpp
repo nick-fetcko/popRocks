@@ -45,7 +45,7 @@ bool BeatDetect::IsDetecting() const { return detectBpm; }
 
 void BeatDetect::Cancel() {
 	if (!canceled && thread.joinable()) {
-		CConsole::Console.Print("Canceling beat detection thread", MSG_DIAG);
+		logger.LogDebug("Canceling beat detection thread");
 
 		// Only set our state to idle
 		// if we actually canceled
@@ -131,7 +131,7 @@ inline void BeatDetect::_OnLoad(
 		else if (beatRootProcessor.getFFTSize() >= 256)
 			flags |= BASS_DATA_FFT256;
 		else
-			CConsole::Console.Print("Beatroot is asking for an FFT size of " + std::to_string(beatRootProcessor.getFFTSize()) + ", which isn't supported", MSG_ERROR);
+			logger.LogError("Beatroot is asking for an FFT size of ", beatRootProcessor.getFFTSize(), ", which isn't supported");
 
 		float **bufferWrapper = new float *[1];
 		bufferWrapper[0] = new float[beatRootProcessor.getFFTSize() * 2 /* real and imaginary parts */ * chans];
@@ -194,7 +194,7 @@ inline void BeatDetect::_OnLoad(
 		if (!canceled) {
 			auto end = std::chrono::system_clock::now();
 
-			CConsole::Console.Print("Populating BeatRoot took " + std::to_string(Duration<Microseconds>(end - start).AsSeconds()) + " seconds", MSG_DIAG);
+			logger.LogDebug("Populating BeatRoot took ", Duration<Microseconds>(end - start).AsSeconds(), " seconds");
 
 			start = end;
 
@@ -202,19 +202,18 @@ inline void BeatDetect::_OnLoad(
 
 			end = std::chrono::system_clock::now();
 
-			CConsole::Console.Print("BeatRoot processing took " + std::to_string(Duration<Microseconds>(end - start).AsSeconds()) + " seconds", MSG_DIAG);
+			logger.LogDebug("BeatRoot processing took ", Duration<Microseconds>(end - start).AsSeconds(), " seconds");
 
 			// Calculate BPM
 			if (!eventList.empty()) {
 				auto [min, average, max] = GetTimeBetweenBeats();
 
-				CConsole::Console.Print(
-					"Song's estimated BPM is " +
-					std::to_string(static_cast<int>(1.0 / average * 60.0)) +
-					" based on " +
-					std::to_string(eventList.size()) +
-					" beats",
-					MSG_DIAG
+				logger.LogDebug(
+					"Song's estimated BPM is ",
+					static_cast<int>(1.0 / average * 60.0),
+					" based on ",
+					eventList.size(),
+					" beats"
 				);
 
 				eventListIter = eventList.begin();
@@ -230,7 +229,7 @@ inline void BeatDetect::_OnLoad(
 				// 3Oh!3's "Photofinnish" also requires a higher expiry time, but 50 is adequate here.
 				// Should we try 50 before 100? We'd probably waste too much time at that point. The goal
 				// here is to detect beats as quickly as possible.
-				CConsole::Console.Print("No beats detected. Trying again with a hop time of 10ms...", MSG_ALERT);
+				logger.LogWarning("No beats detected. Trying again with a hop time of 10ms...");
 
 				lock.unlock();
 
@@ -239,7 +238,7 @@ inline void BeatDetect::_OnLoad(
 				// Return so we don't try to free the stream twice
 				return;
 			} else if (!parameters) {
-				CConsole::Console.Print("No beats detected even with a smaller hop size! Increasing expiry time next...", MSG_ALERT);
+				logger.LogWarning("No beats detected even with a smaller hop size! Increasing expiry time next...");
 
 				lock.unlock();
 
@@ -250,7 +249,7 @@ inline void BeatDetect::_OnLoad(
 				// Return so we don't try to free the stream twice
 				return;
 			} else {
-				CConsole::Console.Print("No beats detected with a smaller hop size and larger expiry time!", MSG_ERROR);
+				logger.LogError("No beats detected with a smaller hop size and larger expiry time!");
 			}
 
 			state = State::Loaded;

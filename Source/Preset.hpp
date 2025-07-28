@@ -4,7 +4,9 @@
 
 #include "MathCPP/Duration.hpp"
 #include "Serial/Json.hpp"
+#include "Utils/Logger.hpp"
 
+using namespace Fetcko;
 using namespace MathsCPP;
 using namespace serial;
 

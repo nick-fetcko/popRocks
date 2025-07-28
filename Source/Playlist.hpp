@@ -7,15 +7,19 @@
 #include <string_view>
 #include <vector>
 
+#include "Utils/Logger.hpp"
+#include "Utils/Utils.hpp"
+
 #include "Buffer.hpp"
 #include "Cue.hpp"
 #include "Hash.hpp"
 #include "Metadata.hpp"
 #include "TagLoader.hpp"
 #include "Text.hpp"
-#include "Utils.hpp"
 
-class Playlist {
+using namespace Fetcko;
+
+class Playlist : public LoggableClass {
 public:
 	struct Track {
 		std::filesystem::path path;

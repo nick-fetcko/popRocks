@@ -6,13 +6,15 @@
 #include <locale>
 #include <string>
 
-#include "CConsole.h"
-#include "Utils.hpp"
+#include "Utils/Logger.hpp"
+#include "Utils/Utils.hpp"
+
+using namespace Fetcko;
 
 // https://wyday.com/cuesharp/specification.php
 // https://en.wikipedia.org/wiki/Cue_sheet_%28computing%29
 
-class Cue {
+class Cue : public LoggableClass {
 private:
 	struct Track {
 		std::string title;

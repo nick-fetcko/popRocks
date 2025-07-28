@@ -6,8 +6,6 @@
 #include <Shlobj.h>
 #endif
 
-#include "CConsole.h"
-
 Settings Settings::settings = Settings::Load();
 
 std::filesystem::path Settings::GetPath() {
@@ -42,6 +40,8 @@ std::filesystem::path Settings::GetPath() {
 Settings Settings::Load() {
 	Settings ret;
 
+	LoggableClass errorLog(typeid(Settings).name());
+
 	if (auto path = GetPath(); !path.empty()) {
 		std::ifstream inFile(path, std::ios::in);
 
@@ -58,7 +58,7 @@ Settings Settings::Load() {
 			// they'd like to.
 			ret.Save();
 		} catch (std::exception &e) {
-			CConsole::Console.Print(std::string("Could not load settings due to ") + e.what(), MSG_ALERT);
+			errorLog.LogWarning("Could not load settings due to ", e.what());
 		}
 	}
 

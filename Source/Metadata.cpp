@@ -43,7 +43,7 @@ void Metadata::OnLoad(
 
 					tagLoader->LoadFromTags(tags);
 				} else {
-					CConsole::Console.Print("Could not fully populate tags!", MSG_ERROR);
+					logger.LogError("Could not fully populate tags!");
 				}
 			}
 		}
@@ -51,7 +51,7 @@ void Metadata::OnLoad(
 
 	// If title is STILL empty, use the filename
 	if (!tagLoader->HasTitle()) {
-		CConsole::Console.Print("Using filename in lieu of title", MSG_ALERT);
+		logger.LogWarning("Using filename in lieu of title");
 		tagLoader->SetTitle(path.stem().u8string());
 	}
 
@@ -75,7 +75,7 @@ void Metadata::OnLoad(
 			if (atom) {
 				atom->ReadData();
 				if (albumArt->Load(atom->mimeType, atom->data, atom->dataSize))
-					CConsole::Console.Print("Found iTunes-style embedded album art", MSG_DIAG);
+					logger.LogDebug("Found iTunes-style embedded album art");
 			}
 		}
 	}

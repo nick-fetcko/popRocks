@@ -3,13 +3,16 @@
 #include <bass.h>
 #include <bassflac.h>
 
+#include "Utils/Logger.hpp"
+
 #include "AlbumArt.hpp"
-#include "CConsole.h"
 #include "ID3V2.hpp"
 #include "MP4.hpp"
 #include "TagLoader.hpp"
 
-class Metadata {
+using namespace Fetcko;
+
+class Metadata : public LoggableClass {
 public:
 	void OnLoad(
 		const std::filesystem::path &path,

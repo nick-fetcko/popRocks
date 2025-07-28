@@ -2,7 +2,6 @@
 
 #include <fstream>
 
-#include "CConsole.h"
 #include "Utils.hpp"
 
 const std::vector<Preset> Preset::Presets = Preset::Load();
@@ -10,7 +9,9 @@ const std::vector<Preset> Preset::Presets = Preset::Load();
 std::vector<Preset> Preset::Load() {
 	std::vector<Preset> ret;
 
-	std::ifstream inFile(Fetcko::Utils::GetResource("Presets.json"));
+	std::ifstream inFile(Utils::GetResource("Presets.json"));
+
+	LoggableClass errorLog(typeid(Preset).name());
 
 	try {
 		Node json;
@@ -22,7 +23,7 @@ std::vector<Preset> Preset::Load() {
 			ret.emplace_back(std::move(node.second));
 		}
 	} catch (std::exception &e) {
-		CConsole::Console.Print(std::string("Could not parse presets: ") + e.what(), MSG_ERROR);
+		errorLog.LogError("Could not parse presets: ", e.what());
 	}
 
 	return ret;

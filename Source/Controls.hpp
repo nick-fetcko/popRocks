@@ -12,7 +12,10 @@
 #include <event.h>
 
 #include "MathCPP/Duration.hpp"
+
 #include "OpenGL/Context.hpp"
+
+#include "Utils/Logger.hpp"
 
 #include "AlbumArt.hpp"
 #include "AutoFader.hpp"
@@ -25,8 +28,9 @@
 #include "Volume.hpp"
 
 using namespace MathsCPP;
+using namespace Fetcko;
 
-class Controls : public TagLoader, public AutoFader {
+class Controls : public TagLoader, public AutoFader, public LoggableClass {
 public:
 	constexpr static inline float SeekbarSize = 25.0f;
 

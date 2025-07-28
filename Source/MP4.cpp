@@ -2,8 +2,6 @@
 
 #include "ID3V2.hpp"
 
-#include "CConsole.h"
-
 MP4::Atom::Atom(std::ifstream &file) : file(file) {
 
 }

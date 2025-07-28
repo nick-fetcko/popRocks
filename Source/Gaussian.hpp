@@ -6,8 +6,6 @@
 #include <SDL_image.h>
 #include "MathCPP/Maths.hpp"
 
-#include "CConsole.h"
-
 using namespace MathsCPP;
 
 // This was derived from a combination of 

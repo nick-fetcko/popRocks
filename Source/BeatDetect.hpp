@@ -1,19 +1,22 @@
 #pragma once
 
 #include <mutex>
+#include <optional>
 #include <thread>
 
 #include <bass.h>
 
 #include "MathCPP/Duration.hpp"
 
+#include "Utils/Logger.hpp"
+
 #include "BeatRootProcessor.h"
-#include "CConsole.h"
 
 using namespace MathsCPP;
+using namespace Fetcko;
 
 // In a prior life, these 2 words caused much anxiety
-class BeatDetect {
+class BeatDetect : public LoggableClass {
 public:
 	enum class State {
 		Idle,

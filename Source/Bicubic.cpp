@@ -1,5 +1,9 @@
 #include "Bicubic.hpp"
 
+#include <cmath>
+#include <thread>
+#include <vector>
+
 #define MULTITHREADED 1
 
 SDL_Surface *Bicubic::ResizeImage(SDL_Surface *surface, float scale) {

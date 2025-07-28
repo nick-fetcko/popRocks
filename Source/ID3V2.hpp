@@ -5,9 +5,12 @@
 #include <locale>
 #include <map>
 
-#include "Utils.hpp"
+#include "Utils/Logger.hpp"
+#include "Utils/Utils.hpp"
 
-class ID3V2 {
+using namespace Fetcko;
+
+class ID3V2 : public LoggableClass{
 public:
 	// https://mutagen-specs.readthedocs.io/en/latest/id3/id3v2.4.0-structure.html#id3v2-frame-overview
 	enum class Encoding : uint8_t {

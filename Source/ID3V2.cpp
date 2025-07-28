@@ -1,7 +1,5 @@
 #include "ID3V2.hpp"
 
-#include "CConsole.h"
-
 // ===============================================
 // ================ ID3V2::Header ================
 // ===============================================
@@ -212,7 +210,7 @@ std::map<std::string, std::string> ID3V2::Read(const char **tag, bool textOnly) 
 			if (frame.id.empty() || frame.id[0] == '\0') // we hit padding
 				break;
 
-			CConsole::Console.Print("Skipping frame " + frame.id, MSG_DIAG);
+			logger.LogDebug("Skipping frame ", frame.id);
 		}
 	}
 

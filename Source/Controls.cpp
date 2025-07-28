@@ -2,7 +2,6 @@
 
 #include <sstream>
 
-#include "CConsole.h"
 #include "Hash.hpp"
 
 // FIXME: KurintoSans covers a good span of Unicode characters, but not all.
@@ -35,7 +34,7 @@ inline void Controls::OpenFont() {
 		exclusiveIndicator.OnInit(font);
 		volume.OnInit(FontFile);
 	} else {
-		CConsole::Console.Print("Could not open font!", MSG_ERROR);
+		logger.LogError("Could not open font!");
 	}
 }
 
@@ -63,7 +62,7 @@ void Controls::OnInit(int windowWidth, int windowHeight, float scale) {
 	if (ret == 0)
 		OpenFont();
 	else
-		CConsole::Console.Print("Could not initialize SDL_ttf!", MSG_ERROR);
+		logger.LogError("Could not initialize SDL_ttf!");
 
 	playlist.OnInit(windowWidth, windowHeight, font, scale);
 	albumArt->AddColorChangeListener(&volume);
@@ -94,7 +93,7 @@ QWORD Controls::OnLoad(HSTREAM streamHandle) {
 			streamHandle,
 			totalBytes
 		);
-		CConsole::Console.Print("Song is " + std::to_string(currentFileLength) + " seconds long", MSG_DIAG);
+		logger.LogDebug("Song is ", currentFileLength, " seconds long");
 	}
 
 	titleText.SetText("");

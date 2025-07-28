@@ -13,8 +13,6 @@
 #pragma comment (lib, "AdvApi32.lib")
 #endif
 
-#include "CConsole.h"
-
 LightPack::LightPack() {
 	// Purple
 	intensityColors[0].r = 255;
@@ -59,7 +57,7 @@ void LightPack::OnInit() {
 		while (running) {
 			{
 				if (queue.size() > 16)
-					CConsole::Console.Print("LightPack is running over a second late!", MSG_ALERT);
+					logger.LogWarning("LightPack is running over a second late!");
 
 				if (queue.size()) {
 					if (auto &front = queue.front())
@@ -100,14 +98,14 @@ bool LightPack::CanConnect() {
 
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData)) {
-		CConsole::Console.Print("Could not initialize WSA!", MSG_ERROR);
+		logger.LogError("Could not initialize WSA!");
 		return false;
 	}
 
 	PADDRINFOA addr;
 
 	if (getaddrinfo("localhost", "3636", NULL, &addr)) {
-		CConsole::Console.Print("Could not get address info!", MSG_ERROR);
+		logger.LogError("Could not get address info!");
 		return false;
 	}
 
@@ -168,21 +166,21 @@ void LightPack::_OnInit() {
 				// Get previous settings first
 				auto gammaString = WriteString("getgamma\r\n");
 				gammaString->erase(gammaString->size() - 2); // Trim the lazy way
-				CConsole::Console.Print(*gammaString, MSG_DIAG);
+				logger.LogDebug(*gammaString);
 				previousGamma = std::stof(
 					gammaString->substr(gammaString->find(':') + 1)
 				);
 
 				auto smoothString = WriteString("getsmooth\r\n");
 				smoothString->erase(smoothString->size() - 2); // Trim the lazy way
-				CConsole::Console.Print(*smoothString, MSG_DIAG);
+				logger.LogDebug(*smoothString);
 				previousSmooth = std::stoi(
 					smoothString->substr(smoothString->find(':') + 1)
 				);
 
 				auto countLeds = WriteString("getcountleds\r\n");
 				countLeds->erase(countLeds->size() - 2); // Trim the lazy way
-				CConsole::Console.Print(*countLeds, MSG_DIAG);
+				logger.LogDebug(*countLeds);
 				numberOfLights = std::stoi(
 					countLeds->substr(countLeds->find(':') + 1)
 				);
@@ -196,17 +194,15 @@ void LightPack::_OnInit() {
 				// Set our preferred settings right away,
 				// let the user change them later
 				auto ret = WriteString("setbrightness:100\r\n");
-				CConsole::Console.Print("setbrightness:100 = " + ret->substr(0, ret->size() - 2), MSG_DIAG);
+				logger.LogDebug("setbrightness:100 = ", ret->substr(0, ret->size() - 2));
 				ret = WriteString("setgamma:1\r\n");
-				CConsole::Console.Print("setgamma:1 = " + ret->substr(0, ret->size() - 2), MSG_DIAG);
+				logger.LogDebug("setgamma:1 = ", ret->substr(0, ret->size() - 2));
 				ret = WriteString("setsmooth:0\r\n");
-				CConsole::Console.Print("setsmooth:0 = " + ret->substr(0, ret->size() - 2), MSG_DIAG);
-
+				logger.LogDebug("setsmooth:0 = ", ret->substr(0, ret->size() - 2));
 			} else {
 				if (firstTry) {
-					CConsole::Console.Print(
-						"Could not open a socket to LightPack host. Retrying until we can...",
-						MSG_ALERT
+					logger.LogWarning(
+						"Could not open a socket to LightPack host. Retrying until we can..."
 					);
 
 					firstTry = false;
@@ -215,17 +211,15 @@ void LightPack::_OnInit() {
 					RetryConnection();
 			}
 		} else {
-			CConsole::Console.Print(
-				std::string("Could not connect to LightPack host. Error: ").append(SDLNet_GetError()) + ". Retrying in 5 seconds...",
-				MSG_ALERT
+			logger.LogWarning(
+				"Could not connect to LightPack host. Error: ", SDLNet_GetError(), ". Retrying in 5 seconds..."
 			);
 			if (running)
 				RetryConnection();
 		}
 	} else {
-		CConsole::Console.Print(
-			std::string("Could not initialize SDL_Net! Error: ").append(SDLNet_GetError()),
-			MSG_ERROR
+		logger.LogError(
+			"Could not initialize SDL_Net! Error: ", SDLNet_GetError()
 		);
 	}
 }
@@ -449,12 +443,12 @@ void LightPack::SetGamma(float gamma, bool silent) {
 
 	if (!tcpsock) return;
 
-	queue.emplace([gamma, silent](LightPack *lp) {
+	queue.emplace([gamma, silent, this](LightPack *lp) {
 		std::unique_lock lock(lp->mutex);
 
 		std::stringstream stream;
 		stream << "setgamma:" << std::fixed << std::setprecision(2) << std::setfill('0') << gamma;
-		if (!silent) CConsole::Console.Print(stream.str(), MSG_DIAG);
+		if (!silent) logger.LogDebug(stream.str());
 		stream << "\r\n";
 		lp->WriteString(stream.str());
 	});
