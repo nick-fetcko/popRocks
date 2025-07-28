@@ -585,9 +585,20 @@ void CApp::OnLoop(const Delta &time) {
 			logger.LogDebug("Reached the end of the current song and loading the next");
 
 			LoadFile(next->path, true);
+			SeekTo(next->startTime);
 
-			if (next->startTime > DBL_EPSILON)
-				SeekTo(next->startTime);
+			// This is a very specific edge case
+			//
+			// It would probably be safe to call BASS_ChannelPlay()
+			// indiscriminately, but the intent is clearer this way:
+			//
+			// If we're not in exclusive mode and rolling around
+			// back to the beginning of a single file with a cue
+			// sheet, we need to restart playback.
+			if (next->startTime < DBL_EPSILON &&
+				!controls.GetExclusiveIndicator().IsExclusive() &&
+				controls.GetPlaylist().GetCue())
+				BASS_ChannelPlay(streamHandle, TRUE);
 		} else {
 			if (controls.GetExclusiveIndicator().IsExclusive())
 				StopExclusive(FALSE);
@@ -811,7 +822,7 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 	// just try to get updated tags from
 	// the cue sheet and run beat detection
 	// on the new song
-	if (path == loadedFile) {
+	if (path == loadedFile && controls.GetPlaylist().GetCue()) {
 		controls.LoadFromCue();
 
 		for (auto &detector : beatDetectors)
