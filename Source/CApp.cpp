@@ -340,6 +340,8 @@ void CApp::OnInit() {
 			SDL_ShowCursor(in ? SDL_ENABLE : SDL_DISABLE);
 	});
 
+	spindle.OnInit(albumArt.GetRadius() / SpindleSize);
+
 	OnResize(windowWidth, windowHeight, scale);
 }
 
@@ -567,13 +569,25 @@ void CApp::OnLoop(const Delta &time) {
 
 	// Draw album art OVER the accumulation buffer
 	// since we don't want it getting blurry
-
 	albumArt.OnLoop(
 		windowWidth / 2.0f,
 		windowHeight / 2.0f,
 		frameCount,
 		*context
 	);
+
+	// 45 RPM = 270
+	// 33 RPM = 198
+	// 33.34 RPM = 200.04
+	if (rotationSpeed == 270.0f || (rotationSpeed >= 198.0f && rotationSpeed <= 200.05f)) {
+		if (spindle.GetRadius() != albumArt.GetRadius() / SpindleSize)
+			spindle.SetRadius(albumArt.GetRadius() / SpindleSize);
+
+		context->Use("basic"_hash);
+		context->Color(0.0f, 0.0f, 0.0f, 1.0f);
+		spindle.OnLoop(windowWidth / 2.0f, windowHeight / 2.0f, *context);
+		context->Use("texture"_hash);
+	}
 
 	// Render the controls over the accumulation buffer, too
 	auto elapsed = controls.OnLoop(time, streamHandle, *context, [this](float alpha) { SetColor(alpha); });
@@ -657,6 +671,8 @@ void CApp::OnDestroy() {
 	controls.OnDestroy();
 
 	renderer->OnDestroy();
+
+	spindle.OnDestroy();
 
 	// Make sure to free our shader resources
 	context.reset();

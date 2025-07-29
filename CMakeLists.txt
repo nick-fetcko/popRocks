@@ -45,6 +45,7 @@ set(_poprocks_cpp_headers
 	Source/Bicubic.hpp
 	Source/Buffer.hpp
 	Source/CApp.h
+	Source/Circle.hpp
 	Source/ColorChangeListener.hpp
 	Source/Controls.hpp
 	Source/Cue.hpp

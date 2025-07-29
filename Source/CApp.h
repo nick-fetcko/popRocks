@@ -30,6 +30,7 @@
 
 #include "AlbumArt.hpp"
 #include "BeatDetect.hpp"
+#include "Circle.hpp"
 #include "ColorChangeListener.hpp"
 #include "Controls.hpp"
 #include "DynamicGain.hpp"
@@ -193,7 +194,7 @@ private:
 	float gain = 20.0f;
 
 	// In degrees per second
-	float rotationSpeed = 5.0f;
+	float rotationSpeed = 6.0f;
 
 	bool strobe = false;
 	Duration<Microseconds> strobeAccum;
@@ -249,4 +250,7 @@ private:
 	std::unique_ptr<Context> context;
 
 	bool playing = false;
+
+	Circle spindle;
+	constexpr static float SpindleSize = 20.0f;
 };
