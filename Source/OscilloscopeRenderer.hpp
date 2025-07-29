@@ -54,6 +54,11 @@ public:
 					minPoint = point.y;
 			}
 		}
+
+		// TODO: Move this to the LineRenderer
+		// Center / scale points within our album art circle
+		for (auto i = 0; i < bufferLength; ++i)
+			points[i].y = ((points[i].y - minPoint) / (maxPoint - minPoint)) * (albumArt->GetRadius() * 2) + albumArt->GetRadius() * -1;
 	}
 
 	void Draw(
@@ -62,10 +67,6 @@ public:
 		const Colour<float> &color,
 		Context &context
 	) override {
-		// Center / scale points within our album art circle
-		for (auto i = 0; i < bufferLength; ++i)
-			points[i].y = ((points[i].y - minPoint) / (maxPoint - minPoint)) * (albumArt->GetRadius() * 2) + albumArt->GetRadius() * -1;
-
 		context.Use("basic"_hash);
 
 		SetColor(color, 1.0f, context);

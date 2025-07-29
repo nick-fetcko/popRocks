@@ -506,16 +506,18 @@ void CApp::OnLoop(const Delta &time) {
 	if (renderer->IsFloatingPoint())
 		lightPack.NextSamples(floatBuffer, bufferLength);
 
-	renderer->OnLoop(
-		time,
-		fileLoaded,
-		hStep,
-		*context,
-		GetColor(),
-		frameCount,
-		maxHeardSample,
-		resetGain
-	);
+	if (playing) {
+		renderer->OnLoop(
+			time,
+			fileLoaded,
+			hStep,
+			*context,
+			GetColor(),
+			frameCount,
+			maxHeardSample,
+			resetGain
+		);
+	}
 
 	//}
 
@@ -599,13 +601,17 @@ void CApp::OnLoop(const Delta &time) {
 			// sheet, we need to restart playback.
 			if (next->startTime < DBL_EPSILON &&
 				!controls.GetExclusiveIndicator().IsExclusive() &&
-				controls.GetPlaylist().GetCue())
+				controls.GetPlaylist().GetCue()) {
 				BASS_ChannelPlay(streamHandle, TRUE);
+				playing = true;
+			}
 		} else {
 			if (controls.GetExclusiveIndicator().IsExclusive())
 				StopExclusive(FALSE);
 			else
 				Stop(FALSE);
+
+			playing = false;
 		}
 	}
 
@@ -722,6 +728,8 @@ void CApp::Stop(BOOL reset) {
 
 	if (reset == TRUE)
 		BASS_StreamFree(streamHandle);
+
+	playing = false;
 }
 
 void CApp::StopExclusive() {
@@ -741,6 +749,8 @@ void CApp::StopExclusive(BOOL reset) {
 		BASS_StreamFree(streamHandle);
 		wasapiInfo = { 0 };
 	}
+
+	playing = false;
 }
 
 void CApp::Unmute() {
@@ -956,6 +966,8 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 			BASS_ChannelPlay(this->streamHandle, false);
 		}
 
+		playing = true;
+
 		fileLoaded = true;
 		loadedFile = path;
 		loadedFileExtension = extension;
@@ -1067,15 +1079,21 @@ void CApp::TogglePlaying() {
 			SeekTo(0.0);
 
 		if (controls.GetExclusiveIndicator().IsExclusive()) {
-			if (BASS_WASAPI_IsStarted())
+			if (BASS_WASAPI_IsStarted()) {
 				BASS_WASAPI_Stop(FALSE);
-			else
+				playing = false;
+			} else {
 				BASS_WASAPI_Start();
+				playing = true;
+			}
 		} else {
-			if (BASS_ChannelIsActive(streamHandle) != BASS_ACTIVE_PLAYING)
+			if (BASS_ChannelIsActive(streamHandle) != BASS_ACTIVE_PLAYING) {
 				BASS_ChannelPlay(streamHandle, FALSE);
-			else
+				playing = true;
+			} else {
 				BASS_ChannelPause(streamHandle);
+				playing = false;
+			}
 		}
 	}
 }
@@ -1168,9 +1186,13 @@ void CApp::OnMouseClicked(const Vector2i &mousePos) {
 		if (controls.GetExclusiveIndicator().IsExclusive()) {
 			Unmute();
 			BASS_WASAPI_Start();
+
+			playing = true;
 		} else {
 			BASS_Start();
 			BASS_ChannelPlay(streamHandle, false);
+
+			playing = true;
 		}
 	}
 }

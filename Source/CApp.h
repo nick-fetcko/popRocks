@@ -247,4 +247,6 @@ private:
 	float scale = 1.0f;
 
 	std::unique_ptr<Context> context;
+
+	bool playing = false;
 };
