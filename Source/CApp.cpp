@@ -432,6 +432,8 @@ inline void CApp::AdvanceToNextTrack() {
 }
 
 void CApp::OnLoop(const Delta &time) {
+	Logger::ProcessCommands();
+
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
