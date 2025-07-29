@@ -55,24 +55,37 @@ int main(int argc, char *argv[]) {
 					}
 					break;
 				case SDL_KEYDOWN:
-					if (event.key.keysym.sym == SDLK_RIGHT)
+					if (event.key.keysym.sym == SDLK_AUDIONEXT || 
+						(event.key.keysym.sym == SDLK_d && (event.key.keysym.mod & KMOD_CTRL)) ||
+						(event.key.keysym.sym == SDLK_RIGHT && (event.key.keysym.mod & KMOD_CTRL)))
+						app.NextTrack();
+					else if (event.key.keysym.sym == SDLK_AUDIOPREV ||
+						(event.key.keysym.sym == SDLK_a && (event.key.keysym.mod & KMOD_CTRL)) ||
+						(event.key.keysym.sym == SDLK_LEFT && (event.key.keysym.mod & KMOD_CTRL)))
+						app.PreviousTrack();
+					else if ((event.key.keysym.sym == SDLK_VOLUMEUP ||
+						(event.key.keysym.sym == SDLK_w && (event.key.keysym.mod & KMOD_CTRL)) ||
+						(event.key.keysym.sym == SDLK_UP && (event.key.keysym.mod & KMOD_CTRL))) &&
+						app.GetControls().GetExclusiveIndicator().IsExclusive())
+						app.GetControls().GetVolume().VolumeUp();
+					else if ((event.key.keysym.sym == SDLK_VOLUMEDOWN ||
+						(event.key.keysym.sym == SDLK_s && (event.key.keysym.mod & KMOD_CTRL)) ||
+						(event.key.keysym.sym == SDLK_DOWN && (event.key.keysym.mod & KMOD_CTRL))) &&
+						app.GetControls().GetExclusiveIndicator().IsExclusive())
+						app.GetControls().GetVolume().VolumeDown();
+					else if (event.key.keysym.sym == SDLK_RIGHT || 
+						event.key.keysym.sym == SDLK_d)
 						app.GetAlbumArt().NextBin();
-					else if (event.key.keysym.sym == SDLK_LEFT)
+					else if (event.key.keysym.sym == SDLK_LEFT ||
+						event.key.keysym.sym == SDLK_a)
 						app.GetAlbumArt().PreviousBin();
-					else if (event.key.keysym.sym == SDLK_UP)
+					else if (event.key.keysym.sym == SDLK_UP ||
+						event.key.keysym.sym == SDLK_w)
 						app.GetAlbumArt().ResetBin();
 					else if (event.key.keysym.sym == SDLK_p) {
 						if (auto fftRenderer = dynamic_cast<const FFTRenderer *>(app.GetRenderer()))
 							fftRenderer->PrintMax();
-					} else if (event.key.keysym.sym == SDLK_AUDIONEXT)
-						app.NextTrack();
-					else if (event.key.keysym.sym == SDLK_AUDIOPREV)
-						app.PreviousTrack();
-					else if (event.key.keysym.sym == SDLK_VOLUMEUP && app.GetControls().GetExclusiveIndicator().IsExclusive())
-						app.GetControls().GetVolume().VolumeUp();
-					else if (event.key.keysym.sym == SDLK_VOLUMEDOWN && app.GetControls().GetExclusiveIndicator().IsExclusive())
-						app.GetControls().GetVolume().VolumeDown();
-					else if (event.key.keysym.sym == SDLK_SPACE || event.key.keysym.sym == SDLK_AUDIOPLAY)
+					} else if (event.key.keysym.sym == SDLK_SPACE || event.key.keysym.sym == SDLK_AUDIOPLAY)
 						app.TogglePlaying();
 					else if (event.key.keysym.sym == SDLK_RETURN && event.key.keysym.mod & KMOD_ALT)
 						app.ToggleFullscreen();
