@@ -40,7 +40,7 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 				return std::nullopt;
 			}
 
-			filePath = path.parent_path() / line[1];
+			auto originalFilePath = filePath = path.parent_path() / line[1];
 
 			// Some .cue files still point to the original .wav
 			// and not the compressed version.
@@ -48,6 +48,17 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 			auto iter = supportedExtensions.begin();
 			while (!std::filesystem::exists(filePath) && iter != supportedExtensions.end())
 				filePath.replace_extension(*(iter++));
+
+			// If we still can't find the audio file,
+			// assume the .cue is old / malformed / unneeded
+			//
+			// Example: A .cue was split into multiple tracks,
+			//          but the original, unsplit cue still
+			//          exists in the folder.
+			if (!std::filesystem::exists(filePath)) {
+				logger.LogWarning("Could not find audio file ", originalFilePath, " referenced in .cue file! Ignoring...");
+				return std::nullopt;
+			}
 
 			inFileSection = true;
 		} else if (inFileSection) {
