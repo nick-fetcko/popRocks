@@ -537,14 +537,14 @@ void CApp::OnLoop(const Delta &time) {
 	if (resetGain) resetGain = false;
 
 	//++frameCount;
-	if (rotating) {
+	if (rotating && playing) {
 		auto changeInSeconds = static_cast<float>(time.change.AsSeconds());
 		frameCount += changeInSeconds * rotationSpeed;
 		while (frameCount >= 360.0f)
 			frameCount -= 360.0f;
 	}
 
-	if (strobe) {
+	if (strobe && playing) {
 		strobeAccum += time.change;
 		if (strobeAccum >= strobeFrequency) {
 			albumArt.NextBin(true);
