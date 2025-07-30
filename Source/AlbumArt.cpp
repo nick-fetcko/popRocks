@@ -16,7 +16,7 @@
 using namespace MathsCPP;
 
 AlbumArt::AlbumArt(std::unique_ptr<Context> &context) : context(context) {
-
+	radius = 200.0f;
 }
 
 void AlbumArt::OnInit(int windowWidth, int windowHeight, float scale) {
@@ -29,40 +29,7 @@ void AlbumArt::OnInit(int windowWidth, int windowHeight, float scale) {
 		});
 	}
 
-	std::vector<float> buffer(362 * 4);
-
-	buffer[0] = 0;
-	buffer[1] = 0;
-
-	buffer[2] = buffer[3] = 0.5;
-
-	float degInRad;
-	for (int i = 1; i <= 360; i++) {
-		degInRad = i * Maths::DEG2RAD<float>;
-
-		buffer[(i * 4)] = sin(degInRad) * radius;
-		buffer[(i * 4) + 1] = cos(degInRad) * radius;
-
-		buffer[(i * 4) + 2] = 0.5f + 0.5f * sin(degInRad);
-		buffer[(i * 4) + 3] = 0.5f + 0.5f * cos(degInRad);
-	}
-
-	buffer[361 * 4] = buffer[4];
-	buffer[361 * 4 + 1] = buffer[5];
-
-	buffer[361 * 4 + 2] = buffer[6];
-	buffer[361 * 4 + 3] = buffer[7];
-
-	vao = std::make_unique<VertexArray>();
-	vbo = std::make_unique<ArrayBuffer>();
-
-	vao->Bind();
-	vbo->Bind();
-	vao->AddAttribute(VertexArray::Attribute(0, 2, 4 * sizeof(float)));
-	vao->AddAttribute(VertexArray::Attribute(1, 2, 4 * sizeof(float), 2 * sizeof(float)));
-	vbo->BufferData(buffer);
-	vbo->Unbind();
-	vao->Unbind();
+	Circle::OnInit(radius);
 
 	squareVao = std::make_unique<VertexArray>();
 	squareVbo = std::make_unique<ArrayBuffer>();
@@ -104,54 +71,13 @@ void AlbumArt::OnResize(int windowWidth, int windowHeight, float scale) {
 }
 
 void AlbumArt::UpdateVertexCoords() {
-	float degInRad = 0.0f;
-	float data[2];
-
-	vbo->Bind();
-	for (int i = 1; i <= 360; i++) {
-		degInRad = i * Maths::DEG2RAD<float>;
-		data[0] = sin(degInRad) * radius;
-		data[1] = cos(degInRad) * radius;
-
-		vbo->BufferSubData(i * 4, sizeof(data), data);
-		if (i == 1) vbo->BufferSubData(361 * 4, sizeof(data), data);
-	}
-	vbo->Unbind();
+	Circle::UpdateVertexCoords();
 
 	if (context) {
 		context->With("rotate"_hash, [this](Context::Shader &shader) {
 			shader.program.Uniform1f("radius", radius);
 		});
 	}
-}
-
-void AlbumArt::UpdateTextureCoords() {
-	float degInRad = 0.0f;
-	float data[2];
-
-	vbo->Bind();
-	for (int i = 1; i <= 360; i++) {
-		degInRad = i * Maths::DEG2RAD<float>;
-
-		// Switch dimensions based on which is larger
-		//
-		// This prefers "filling out" the circle over
-		// letterboxing / pillarboxing inside of it
-		if (albumWidth > albumHeight) {
-			data[0] = 0.5f + 0.5f * sin(degInRad) / aspectRatio;
-			data[1] = 0.5f + 0.5f * cos(degInRad);
-		} else if (albumHeight > albumWidth) {
-			data[0] = 0.5f + 0.5f * sin(degInRad);
-			data[1] = 0.5f + 0.5f * cos(degInRad) * aspectRatio;
-		} else { // If they're equal, we're 1:1
-			data[0] = 0.5f + 0.5f * sin(degInRad);
-			data[1] = 0.5f + 0.5f * cos(degInRad);
-		}
-
-		vbo->BufferSubData(i * 4 + 2, sizeof(data), data);
-		if (i == 1) vbo->BufferSubData(361 * 4 + 2, sizeof(data), data);
-	}
-	vbo->Unbind();
 }
 
 void AlbumArt::OnLoop(GLfloat x, GLfloat y, float frameCount, Context &context) {
@@ -194,9 +120,7 @@ void AlbumArt::OnLoop(GLfloat x, GLfloat y, float frameCount, Context &context) 
 
 		glBindTexture(GL_TEXTURE_2D, album);
 
-		vao->Bind();
-		vbo->DrawArrays(GL_TRIANGLE_FAN, 0, 362);
-		vao->Unbind();
+		Circle::OnLoop(0, 0, context);
 
 		glDisable(GL_TEXTURE_2D);
 		
@@ -248,14 +172,13 @@ int AlbumArt::DrawSquare(int x, int y, int height, GLfloat alpha, Context &conte
 }
 
 void AlbumArt::OnDestroy() {
+	Circle::OnDestroy();
+
 	if (lastSurface)
 		SDL_FreeSurface(lastSurface);
 
 	glDeleteTextures(1, &album);
 	album = 0;
-
-	vao.reset();
-	vbo.reset();
 
 	squareVao.reset();
 	squareVbo.reset();
@@ -585,7 +508,7 @@ void AlbumArt::LoadFromSurface(SDL_Surface *surface, bool scaled) {
 	scaledAlbumHeight = surface->h;
 	aspectRatio = static_cast<float>(surface->w) / surface->h;
 
-	UpdateTextureCoords();
+	UpdateTextureCoords(albumWidth, albumHeight, aspectRatio);
 
 	// [16Jul2025] We now want to keep the un-scaled surface
 	//             around as it might need rescaling when the
@@ -788,11 +711,6 @@ void AlbumArt::AddColorChangeListener(ColorChangeListener *listener) {
 
 void AlbumArt::RemoveColorChangeListener(ColorChangeListener *listener) {
 	colorChangeListeners.erase(listener);
-}
-
-void AlbumArt::SetRadius(float radius) {
-	this->radius = radius;
-	UpdateVertexCoords();
 }
 
 void AlbumArt::Scale(bool force) {

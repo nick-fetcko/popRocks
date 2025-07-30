@@ -251,6 +251,6 @@ private:
 
 	bool playing = false;
 
-	Circle spindle;
+	Circle<Circles::Plain> spindle;
 	constexpr static float SpindleSize = 20.0f;
 };

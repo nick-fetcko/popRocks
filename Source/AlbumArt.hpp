@@ -19,12 +19,13 @@
 
 #include "Utils/Logger.hpp"
 
+#include "Circle.hpp"
 #include "ColorChangeListener.hpp"
 
 using namespace MathsCPP;
 using namespace Fetcko;
 
-class AlbumArt : public LoggableClass {
+class AlbumArt : public Circle<Circles::Textured>, public LoggableClass {
 public:
 	static constexpr bool IsSupported(const std::string_view &lowercaseExtension) {
 		for (const auto &extension : SupportedExtensions)
@@ -41,7 +42,7 @@ public:
 	void OnInit(int windowWidth, int windowHeight, float scale = 1.0f);
 	void OnResize(int windowWidth, int windowHeight, float scale = 1.0f);
 	void OnLoop(GLfloat x, GLfloat y, float frameCount, Context &context);
-	void OnDestroy();
+	void OnDestroy() override;
 
 	// fileName is the path to the _song_
 	//
@@ -85,9 +86,6 @@ public:
 
 	const float &GetAspectRatio() const { return aspectRatio; }
 
-	void SetRadius(float radius);
-	const float &GetRadius() const { return radius; }
-
 	void Scale(bool force = false);
 
 private:
@@ -98,13 +96,10 @@ private:
 	// This frees the surface once it's done
 	void LoadFromSurface(SDL_Surface *surface, bool scaled = false);
 
-	void UpdateVertexCoords();
-	void UpdateTextureCoords();
+	void UpdateVertexCoords() override;
 
 	void UpdateBin(bool silent = false);
 	void PrintBin();
-
-	float radius = 200.0f;
 
 	GLuint album = 0;
 	int albumWidth = 0, albumHeight = 0;
@@ -158,9 +153,6 @@ private:
 	std::mutex mutex;
 
 	float scale = 1.0f;
-
-	std::unique_ptr<VertexArray> vao;
-	std::unique_ptr<ArrayBuffer> vbo;
 
 	std::unique_ptr<VertexArray> squareVao;
 	std::unique_ptr<ArrayBuffer> squareVbo;
