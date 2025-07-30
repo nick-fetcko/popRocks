@@ -53,10 +53,7 @@ public:
 				minPoint = points[i].y;
 		}
 
-		// TODO: Move this to the LineRenderer
-		// Center / scale points within our album art circle
-		for (auto i = 0; i < bufferLength; ++i)
-			points[i].y = ((points[i].y - minPoint) / (maxPoint - minPoint)) * (albumArt->GetRadius() * 2) + albumArt->GetRadius() * -1;
+		CenterPoints();
 	}
 
 	void Draw(

@@ -44,6 +44,12 @@ public:
 	}
 
 protected:
+	inline void CenterPoints() {
+		// Center / scale points within our album art circle
+		for (auto i = 0; i < bufferLength; ++i)
+			points[i].y = ((points[i].y - minPoint) / (maxPoint - minPoint)) * (albumArt->GetRadius() * 2) + albumArt->GetRadius() * -1;
+	}
+
 	Vector2f *points = nullptr;
 	Polyline line = Polyline(4.0f);
 
