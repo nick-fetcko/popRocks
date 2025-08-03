@@ -6,12 +6,7 @@
 
 Controls::Controls(AlbumArt *const albumArt) : 
 	albumArt(albumArt), 
-	FontFiles({
-			"KurintoSans-Rg.ttf",
-			"KurintoSansAux-Rg.ttf",
-			"KurintoSansJP-Rg.ttf",
-			"KurintoSansKR-Rg.ttf"
-	}) {
+	FontRoot("KurintoSans") {
 
 }
 
@@ -21,7 +16,7 @@ inline void Controls::OpenFont(Context *context) {
 	else {
 		font = new OpenGLFont();
 		font->OnInit(
-			FontFiles,
+			FontRoot,
 			static_cast<FT_UInt>(18 * scale)
 		);
 	}
@@ -34,7 +29,7 @@ inline void Controls::OpenFont(Context *context) {
 		albumText.OnInit(font, context);
 		fpsCounter.OnInit(font, context);
 		exclusiveIndicator.OnInit(font, context);
-		volume.OnInit(FontFiles, context);
+		volume.OnInit(FontRoot, context);
 	} else {
 		logger.LogError("Could not open font!");
 	}

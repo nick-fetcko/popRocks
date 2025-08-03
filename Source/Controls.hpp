@@ -94,7 +94,7 @@ private:
 
 	ExclusiveIndicator exclusiveIndicator;
 
-	const std::vector<std::string> FontFiles;
+	const std::string FontRoot;
 
 	float scale = 1.0f;
 

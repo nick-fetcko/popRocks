@@ -2,13 +2,13 @@
 
 #include "Hash.hpp"
 
-void Volume::OnInit(const std::vector<std::string> &fontFiles, Context *context) {
+void Volume::OnInit(const std::string &fontRoot, Context *context) {
 	ring.SetWidth(radius / 10);
 	outlineRing.SetWidth(radius / 10 + (radius / 25) * 2);
 	font = new OpenGLFont();
-	font->OnInit(fontFiles, static_cast<int>(radius / 2));
+	font->OnInit(fontRoot, static_cast<int>(radius / 2));
 	outlineFont = new OpenGLFont();
-	outlineFont->OnInit(fontFiles, static_cast<int>(radius / 2), static_cast<int>(radius / 25));
+	outlineFont->OnInit(fontRoot, static_cast<int>(radius / 2), static_cast<int>(radius / 25));
 
 	text.OnInit(font, context);
 	outlineText.OnInit(outlineFont, context);

@@ -12,14 +12,16 @@ void Text::OnInit(OpenGLFont *font, Context *context) {
 
 Vector2i Text::MeasureText(const std::string &text) const {
 	Vector2i ret;
-	auto bounds = font->MeasureText(text, 1.0f);
-	ret.x = bounds.width;
-	ret.y = bounds.height;
+	if (font && font->HasFaces()) {
+		auto bounds = font->MeasureText(text, 1.0f);
+		ret.x = bounds.width;
+		ret.y = bounds.height;
+	}
 	return ret;
 }
 
 void Text::SetText(const std::string &text, bool force) {
-	if ((this->text == text && !force) || !font) return;
+	if ((this->text == text && !force) || !font || !font->HasFaces()) return;
 
 	this->text = text;
 

@@ -20,7 +20,7 @@ public:
 
 	virtual ~Volume() = default;
 
-	void OnInit(const std::vector<std::string> &fontFiles, Context *context);
+	void OnInit(const std::string &fontRoot, Context *context);
 
 	void OnLoop(int x, int y, const Delta &time, Context &context);
 
