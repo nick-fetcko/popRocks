@@ -2,7 +2,6 @@
 
 #include <string>
 
-#include <SDL_ttf.h>
 #include <glad/glad.h>
 
 #include "MathCPP/Colour.hpp"
@@ -10,6 +9,7 @@
 
 #include "OpenGL/Buffer.hpp"
 #include "OpenGL/Context.hpp"
+#include "OpenGL/OpenGLFont.hpp"
 #include "OpenGL/VertexArray.hpp"
 
 using namespace MathsCPP;
@@ -17,8 +17,8 @@ using namespace Fetcko;
 
 class Text {
 public:
-	void OnInit(TTF_Font *font);
-	void OnLoop(int x, int y, Context &context) const;
+	void OnInit(OpenGLFont *font, Context *context);
+	void OnLoop(int x, int y) const;
 	void OnDestroy();
 
 	Vector2i MeasureText(const std::string &text) const;
@@ -31,19 +31,22 @@ public:
 
 	void SetColor(const Colour<float> &color) { this->color = color; }
 
+	std::unique_ptr<Framebuffer> &GetCached() { return cached; };
+
+	const OpenGLFont::Bounds &GetBounds() const { return bounds; }
+
 private:
-	TTF_Font *font = nullptr;
+	Context *context = nullptr;
+	OpenGLFont *font = nullptr;
 
 	GLuint texture = 0;
+	OpenGLFont::Bounds bounds;
+	std::unique_ptr<Framebuffer> cached;
 
 	std::string text;
 
 	Vector2i size = { 0, 0 };
 	Colour<float> color = { 1.0f, 1.0f, 1.0f, 1.0f };
-
-	std::unique_ptr<VertexArray> vao;
-	std::unique_ptr<ArrayBuffer> vbo;
-	std::unique_ptr<ElementBuffer> eab;
 
 	float *buffer = nullptr;
 };

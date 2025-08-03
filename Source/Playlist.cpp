@@ -218,10 +218,11 @@ inline void Playlist::UpdateSize() {
 	vbo->Unbind();
 }
 
-void Playlist::OnInit(int windowWidth, int windowHeight, TTF_Font *font, float scale) {
+void Playlist::OnInit(int windowWidth, int windowHeight, OpenGLFont *font, Context *context, float scale) {
 	this->windowWidth = windowWidth;
 	this->windowHeight = windowHeight;
 	this->font = font;
+	this->context = context;
 	this->scale = scale;
 
 	vao = std::make_unique<VertexArray>();
@@ -246,9 +247,9 @@ void Playlist::OnResize(int windowWidth, int windowHeight, float scale) {
 	if (this->scale != scale && !titles.empty()) {
 		size = { 0, 0 };
 		for (auto &title : titles) {
-			title.OnInit(font);
+			title.OnInit(font, context);
 
-			size.y += title.GetSize().y;
+			size.y += title.GetBounds().height;
 			if (title.GetSize().x > size.x)
 				size.x = title.GetSize().x;
 		}
@@ -347,7 +348,7 @@ std::optional<Playlist::Track> Playlist::OnMouseClicked(const Vector2i &mousePos
 				std::distance(cue->GetCurrentTrack(), cue->GetTracks().end()) :
 				std::distance(currentFile, files.end());
 
-		if (auto index = (mousePos.y - pos.y) / titles.begin()->GetSize().y; index < distance) {
+		if (auto index = (mousePos.y - pos.y) / titles.begin()->GetBounds().height; index < distance) {
 			if (mousePos.x >= pos.x && mousePos.x <= pos.x + titles[offset + index].GetSize().x) {
 				if (!files.empty()) {
 					currentFile += index;

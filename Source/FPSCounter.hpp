@@ -5,6 +5,7 @@
 #include <glad/glad.h>
 
 #include "OpenGL/Context.hpp"
+#include "OpenGL/OpenGLFont.hpp"
 
 #include "Text.hpp"
 
@@ -13,8 +14,8 @@ using namespace std::literals::chrono_literals;
 
 class FPSCounter {
 public:
-	void OnInit(TTF_Font *font) {
-		text.OnInit(font);
+	void OnInit(OpenGLFont *font, Context *context) {
+		text.OnInit(font, context);
 	}
 
 	void OnFrame() {
@@ -35,7 +36,7 @@ public:
 	}
 
 	void Draw(Context &context) {
-		text.OnLoop(Margin, Margin, context);
+		text.OnLoop(Margin, Margin);
 	}
 
 	void OnDestroy() {

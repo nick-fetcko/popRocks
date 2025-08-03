@@ -7,7 +7,6 @@
 
 #include <bass.h>
 #include <glad/glad.h>
-#include <SDL_ttf.h>
 
 #include <event.h>
 
@@ -20,6 +19,7 @@
 #include "AlbumArt.hpp"
 #include "AutoFader.hpp"
 #include "Buffer.hpp"
+#include "Context.hpp"
 #include "ExclusiveIndicator.hpp"
 #include "FPSCounter.hpp"
 #include "Playlist.hpp"
@@ -36,8 +36,8 @@ public:
 
 	Controls(AlbumArt *const albumArt);
 
-	void OnInit(int windowWidth, int windowHeight, float scale = 1.0f);
-	void OnResize(int windowWidth, int windowHeight, float scale = 1.0f);
+	void OnInit(int windowWidth, int windowHeight, Context &context, float scale = 1.0f);
+	void OnResize(int windowWidth, int windowHeight, Context &context, float scale = 1.0f);
 
 	QWORD OnLoad(HSTREAM streamHandle);
 	void LoadFromCue();
@@ -67,14 +67,14 @@ public:
 	ExclusiveIndicator &GetExclusiveIndicator() { return exclusiveIndicator; }
 
 private:
-	inline void OpenFont();
+	inline void OpenFont(Context *context);
 	std::string FormatSeconds(int seconds) const;
 
 	AlbumArt * const albumArt = nullptr;
 
 	int windowWidth = 0, windowHeight = 0;
 
-	TTF_Font *font = nullptr;
+	OpenGLFont *font = nullptr;
 	Text elapsedText;
 	Text remainingText;
 	Text titleText;
@@ -94,7 +94,7 @@ private:
 
 	ExclusiveIndicator exclusiveIndicator;
 
-	const std::filesystem::path FontFile;
+	const std::vector<std::string> FontFiles;
 
 	float scale = 1.0f;
 

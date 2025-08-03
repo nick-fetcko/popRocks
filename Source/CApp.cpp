@@ -18,6 +18,7 @@
 #include <basswasapi.h>
 
 #include "MathCPP/Colour.hpp"
+#include "OpenGL/OpenGLFont.hpp"
 
 #include "Buffer.hpp"
 #include "FFTLineRenderer.hpp"
@@ -304,6 +305,11 @@ void CApp::OnInit() {
 		Utils::GetResource("fragment-rotate.glsl"),
 		"rotate"_hash
 	);
+	context->AddShader(
+		Utils::GetResource("vertex-font.glsl"),
+		Utils::GetResource("fragment-font.glsl"),
+		"font"_hash
+	);
 
 	// Cache our uniforms
 	for (auto &[hash, shader] : *context) {
@@ -333,7 +339,7 @@ void CApp::OnInit() {
 	albumArt.OnInit(windowWidth, windowHeight, scale);
 	renderer->OnInit(windowWidth, windowHeight);
 	albumArt.AddColorChangeListener(this);
-	controls.OnInit(windowWidth, windowHeight, scale);
+	controls.OnInit(windowWidth, windowHeight, *context, scale);
 
 	controls.SetFadeCallback([this](bool in) {
 		if (SDL_GetWindowFlags(sdlWindow) & SDL_WINDOW_FULLSCREEN_DESKTOP)
@@ -413,7 +419,7 @@ void CApp::OnResize(int width, int height, float scale) {
 	glClear(GL_ACCUM_BUFFER_BIT);
 
 	renderer->OnResize(windowWidth, windowHeight);
-	controls.OnResize(windowWidth, windowHeight, scale);
+	controls.OnResize(windowWidth, windowHeight, *context, scale);
 }
 
 const Colour<float> &CApp::GetColor() const {

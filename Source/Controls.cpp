@@ -4,41 +4,43 @@
 
 #include "Hash.hpp"
 
-// FIXME: KurintoSans covers a good span of Unicode characters, but not all.
-//        For example: it has all the kana, but no kanji
-//
-//        We should swap it out with the other language variants (e.g. CJK)
-//        as needed, but SDL_ttf isn't really designed to support this as we
-//        might need multiple fonts present in the _same string_ if there
-//        are a mix of Latin and other language characters.
-//
-//        A homegrown font implementation similar to https://learnopengl.com/In-Practice/Text-Rendering
-//        would be ideal here, as we can use a different font _per character_.
-Controls::Controls(AlbumArt *const albumArt) : albumArt(albumArt), FontFile(Fetcko::Utils::GetResource("KurintoSans-Rg.ttf")) {
+Controls::Controls(AlbumArt *const albumArt) : 
+	albumArt(albumArt), 
+	FontFiles({
+			"KurintoSans-Rg.ttf",
+			"KurintoSansAux-Rg.ttf",
+			"KurintoSansJP-Rg.ttf",
+			"KurintoSansKR-Rg.ttf"
+	}) {
 
 }
 
-inline void Controls::OpenFont() {
+inline void Controls::OpenFont(Context *context) {
 	if (font)
-		TTF_SetFontSize(font, static_cast<int>(18 * scale));
-	else
-		font = TTF_OpenFont(FontFile.u8string().c_str(), static_cast<int>(18 * scale));
+		font->SetFontSize(static_cast<int>(18 * scale));
+	else {
+		font = new OpenGLFont();
+		font->OnInit(
+			FontFiles,
+			static_cast<FT_UInt>(18 * scale)
+		);
+	}
 
 	if (font) {
-		elapsedText.OnInit(font);
-		remainingText.OnInit(font);
-		titleText.OnInit(font);
-		artistText.OnInit(font);
-		albumText.OnInit(font);
-		fpsCounter.OnInit(font);
-		exclusiveIndicator.OnInit(font);
-		volume.OnInit(FontFile);
+		elapsedText.OnInit(font, context);
+		remainingText.OnInit(font, context);
+		titleText.OnInit(font, context);
+		artistText.OnInit(font, context);
+		albumText.OnInit(font, context);
+		fpsCounter.OnInit(font, context);
+		exclusiveIndicator.OnInit(font, context);
+		volume.OnInit(FontFiles, context);
 	} else {
 		logger.LogError("Could not open font!");
 	}
 }
 
-void Controls::OnInit(int windowWidth, int windowHeight, float scale) {
+void Controls::OnInit(int windowWidth, int windowHeight, Context &context, float scale) {
 	this->windowWidth = windowWidth;
 	this->windowHeight = windowHeight;
 	this->scale = scale;
@@ -57,24 +59,19 @@ void Controls::OnInit(int windowWidth, int windowHeight, float scale) {
 	eab->BufferData<std::size(Buffers::SquareBuffer)>(Buffers::SquareBuffer);
 	eab->Unbind();
 
-	auto ret = TTF_Init();
+	OpenFont(&context);
 
-	if (ret == 0)
-		OpenFont();
-	else
-		logger.LogError("Could not initialize SDL_ttf!");
-
-	playlist.OnInit(windowWidth, windowHeight, font, scale);
+	playlist.OnInit(windowWidth, windowHeight, font, &context, scale);
 	albumArt->AddColorChangeListener(&volume);
 }
 
-void Controls::OnResize(int windowWidth, int windowHeight, float scale) {
+void Controls::OnResize(int windowWidth, int windowHeight, Context &context, float scale) {
 	this->windowWidth = windowWidth;
 	this->windowHeight = windowHeight;
 
 	if (scale != this->scale) {
 		this->scale = scale;
-		OpenFont();
+		OpenFont(&context);
 
 		// Note: albumArt's radius _must_ be updated
 		//       first.
@@ -218,24 +215,22 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 					),
 					windowWidth - elapsedText.GetSize().x - margin
 				),
-				windowHeight - yOffset - elapsedText.GetSize().y,
-				context
+				windowHeight - yOffset - elapsedText.GetSize().y
 			);
 
 			remainingText.OnLoop(
 				windowWidth - remainingText.GetSize().x - margin,
-				windowHeight - yOffset / 2 - remainingText.GetSize().y / 2,
-				context
+				windowHeight - yOffset / 2 - remainingText.GetSize().y / 2
 			);
 
 			int xOffset = 0;
 
 			int albumHeight =
-				(albumText.GetSize().y +
-				 artistText.GetSize().y +
-				 titleText.GetSize().y);
+				(albumText.GetBounds().height +
+				 artistText.GetBounds().height +
+				 titleText.GetBounds().height);
 
-			yOffset += elapsedText.GetSize().y * 2 /* put an empty line between */ + margin;
+			yOffset += elapsedText.GetBounds().height * 2 /* put an empty line between */ + margin;
 			if (albumArt->Loaded()) {
 
 				// Album art is 4x the total height of the text 
@@ -262,22 +257,19 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 			if (!albumText.Empty()) {
 				albumText.OnLoop(
 					margin + xOffset,
-					windowHeight - (yOffset += albumText.GetSize().y),
-					context
+					windowHeight - (yOffset += albumText.GetBounds().height)
 				);
 			}
 			if (!artistText.Empty()) {
 				artistText.OnLoop(
 					margin + xOffset,
-					windowHeight - (yOffset += artistText.GetSize().y),
-					context
+					windowHeight - (yOffset += artistText.GetBounds().height)
 				);
 			}
 			if (!titleText.Empty()) {
 				titleText.OnLoop(
 					margin + xOffset,
-					windowHeight - (yOffset += titleText.GetSize().y),
-					context
+					windowHeight - (yOffset += titleText.GetBounds().height)
 				);
 			}
 
@@ -348,8 +340,8 @@ void Controls::OnDestroy() {
 	volume.OnDestroy();
 	exclusiveIndicator.OnDestroy();
 
-	TTF_CloseFont(font);
-	TTF_Quit();
+	font->OnDestroy();
+	delete font;
 }
 
 std::string Controls::FormatSeconds(int seconds) const {

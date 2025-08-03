@@ -32,7 +32,7 @@ public:
 		std::function<HSTREAM(const std::filesystem::path &, const std::string &, DWORD)> openWithFlags
 	);
 
-	void OnInit(int windowWidth, int windowHeight, TTF_Font *font, float scale = 1.0f);
+	void OnInit(int windowWidth, int windowHeight, OpenGLFont *font, Context *context, float scale = 1.0f);
 	void OnResize(int windowWidth, int windowHeight, float scale = 1.0f);
 	void OnDestroy();
 
@@ -131,10 +131,10 @@ private:
 				<< title;
 
 			Text text;
-			text.OnInit(font);
+			text.OnInit(font, context);
 			text.SetText(stream.str());
 
-			size.y += text.GetSize().y;
+			size.y += text.GetBounds().height;
 			if (text.GetSize().x > size.x)
 				size.x = text.GetSize().x;
 
@@ -184,17 +184,17 @@ private:
 		std::size_t maxIndex = static_cast<std::size_t>(
 			titles.empty() ?
 				0 :
-				(maxHeight - pos.y) / titles.begin()->GetSize().y
+				(maxHeight - pos.y) / titles.begin()->GetBounds().height
 		);
 
 		auto distance = static_cast<int32_t>(
 			std::distance(tracks.begin(), current)
 		);
-		pos.y -= titles.begin()->GetSize().y * distance;
+		pos.y -= titles.begin()->GetBounds().height * distance;
 
 		auto iter = tracks.begin();
 		for (const auto &[i, title] : Fetcko::Utils::Enumerate(titles)) {
-			if (pos.y + title.GetSize().y > maxHeight)
+			if (pos.y + title.GetBounds().height > maxHeight)
 				return;
 
 			if (iter == current)
@@ -202,7 +202,7 @@ private:
 			else
 				context.Color(0.6f, 0.6f, 0.6f, alpha - (static_cast<float>(i - distance) / maxIndex));
 
-			title.OnLoop(pos.x, pos.y, context);
+			title.OnLoop(pos.x, pos.y);
 
 			// Reduce the height as we near the end of the playlist
 			if (i == titles.size() - 2 && pos.y < maxHeight) {
@@ -214,7 +214,7 @@ private:
 				vbo->Unbind();
 			}
 
-			pos.y += title.GetSize().y;
+			pos.y += title.GetBounds().height;
 
 			++iter;
 		}
@@ -225,7 +225,8 @@ private:
 	std::vector<std::filesystem::path>::iterator currentFile = files.end();
 
 	int windowWidth = 0, windowHeight = 0;
-	TTF_Font *font = nullptr;
+	OpenGLFont *font = nullptr;
+	Context *context = nullptr;
 	std::vector<Text> titles;
 
 	Vector2i pos{ 0, 0 };

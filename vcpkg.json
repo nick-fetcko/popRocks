@@ -12,6 +12,6 @@
     },
     "sdl2-mixer",
     "sdl2-net",
-    "sdl2-ttf"
+    "freetype"
   ]
 }

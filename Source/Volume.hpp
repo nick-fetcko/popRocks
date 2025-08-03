@@ -20,7 +20,7 @@ public:
 
 	virtual ~Volume() = default;
 
-	void OnInit(const std::filesystem::path &fontFile);
+	void OnInit(const std::vector<std::string> &fontFiles, Context *context);
 
 	void OnLoop(int x, int y, const Delta &time, Context &context);
 
@@ -46,7 +46,7 @@ private:
 
 	float radius = 200.0f;
 
-	TTF_Font *font = nullptr, *outlineFont = nullptr;
+	OpenGLFont *font = nullptr, *outlineFont = nullptr;
 
 	bool volumeControl = true;
 

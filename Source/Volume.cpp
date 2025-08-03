@@ -2,17 +2,16 @@
 
 #include "Hash.hpp"
 
-void Volume::OnInit(const std::filesystem::path &fontFile) {
-	auto string = fontFile.u8string();
-
+void Volume::OnInit(const std::vector<std::string> &fontFiles, Context *context) {
 	ring.SetWidth(radius / 10);
 	outlineRing.SetWidth(radius / 10 + (radius / 25) * 2);
-	font = TTF_OpenFont(string.c_str(), static_cast<int>(radius / 2));
-	outlineFont = TTF_OpenFont(string.c_str(), static_cast<int>(radius / 2));
+	font = new OpenGLFont();
+	font->OnInit(fontFiles, static_cast<int>(radius / 2));
+	outlineFont = new OpenGLFont();
+	outlineFont->OnInit(fontFiles, static_cast<int>(radius / 2), static_cast<int>(radius / 25));
 
-	TTF_SetFontOutline(outlineFont, static_cast<int>(radius / 25));
-	text.OnInit(font);
-	outlineText.OnInit(outlineFont);
+	text.OnInit(font, context);
+	outlineText.OnInit(outlineFont, context);
 	outlineText.SetColor(Colour<float>::Black);
 	UpdateVolume();
 }
@@ -20,11 +19,12 @@ void Volume::OnInit(const std::filesystem::path &fontFile) {
 void Volume::OnLoop(int x, int y, const Delta &time, Context &context) {
 	AutoFader::OnLoop(time);
 
-	context.Color(color.r, color.g, color.b, alpha);
 	//glTranslatef(x, y, 0);
 
-	outlineText.OnLoop(x - outlineText.GetSize().x / 2, y - outlineText.GetSize().y / 2, context);
-	text.OnLoop(x - text.GetSize().x / 2, y - text.GetSize().y / 2, context);
+	context.Color(0.0f, 0.0f, 0.0f, alpha);
+	outlineText.OnLoop(x - text.GetSize().x / 2, y - text.GetSize().y / 2);
+	context.Color(color.r, color.g, color.b, alpha);
+	text.OnLoop(x - text.GetSize().x / 2, y - text.GetSize().y / 2);
 	/*
 	glColor4f(1.0f, 1.0f, 1.0f, alpha);
 
@@ -67,9 +67,9 @@ void Volume::OnLoop(int x, int y, const Delta &time, Context &context) {
 
 void Volume::SetRadius(float radius) {
 	this->radius = radius;
-	TTF_SetFontSize(font, static_cast<int>(radius / 2));
-	TTF_SetFontSize(outlineFont, static_cast<int>(radius / 2));
-	TTF_SetFontOutline(outlineFont, static_cast<int>(std::max(1.0f, radius / 25.0f)));
+	font->SetFontSize(static_cast<int>(radius / 2));
+	outlineFont->SetFontSize(static_cast<int>(radius / 2));
+	outlineFont->SetOutlineRadius(static_cast<int>(std::max(1.0f, radius / 25.0f)));
 	ring.SetWidth(radius / 10);
 	outlineRing.SetWidth(radius / 10 + (radius / 25) * 2);
 	UpdateVolume(true);
@@ -107,7 +107,9 @@ void Volume::OnDestroy() {
 	outlineRing.OnDestroy();
 
 	text.OnDestroy();
-	TTF_CloseFont(font);
+
+	delete font;
+	delete outlineFont;
 }
 
 void Volume::OnColorChanged(const Colour<float> &color, bool silent) {

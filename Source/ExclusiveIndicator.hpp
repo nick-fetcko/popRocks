@@ -1,14 +1,15 @@
 #pragma once
 
 #include "OpenGL/Context.hpp"
+#include "OpenGL/OpenGLFont.hpp"
 
 #include "Settings.hpp"
 #include "Text.hpp"
 
 class ExclusiveIndicator {
 public:
-	void OnInit(TTF_Font *font) {
-		text.OnInit(font);
+	void OnInit(OpenGLFont *font, Context *context) {
+		text.OnInit(font, context);
 		text.SetText("Exclusive");
 	}
 
@@ -23,7 +24,7 @@ public:
 		else
 			context.Color(0.5f, 0.5f, 0.5f, alpha);
 
-		text.OnLoop(x, y - text.GetSize().y / 2, context);
+		text.OnLoop(x, y - text.GetSize().y / 2);
 	}
 
 	void OnDestroy() {

@@ -14,7 +14,6 @@
 
 #include <glad/glad.h>
 #include <SDL_net.h>
-#include <SDL_ttf.h>
 
 #include <Mmdeviceapi.h>
 

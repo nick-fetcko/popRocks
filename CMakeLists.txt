@@ -1,6 +1,6 @@
 # 3.26.0 required for copy_directory_if_different
 cmake_minimum_required(VERSION 3.26.0 FATAL_ERROR)
-project(popRocks VERSION 0.0.1 LANGUAGES C CXX)
+project(popRocks VERSION 0.1.0 LANGUAGES C CXX)
 
 # Allows usage of configure time content
 include(FetchContent)
@@ -22,7 +22,7 @@ endif()
 #	vcpkg install sdl2-image[libjpeg-turbo]:x64-windows
 #	vcpkg install sdl2-net:x64-windows
 #	vcpkg install fftw3:x64-windows
-#	vcpkg install sdl2-ttf:x64-windows
+#	vcpkg install freetype:x64-windows
 #
 #	fftw3 requires 3 configuration / build steps (for different precisions)
 find_package(SDL2 CONFIG REQUIRED)
@@ -30,8 +30,8 @@ find_package(SDL2_mixer CONFIG REQUIRED)
 find_package(JPEG REQUIRED)
 find_package(SDL2_image CONFIG REQUIRED)
 find_package(SDL2_net CONFIG REQUIRED)
-find_package(SDL2_ttf CONFIG REQUIRED)
 find_package(FFTW3 CONFIG REQUIRED)
+find_package(Freetype CONFIG REQUIRED)
 
 add_subdirectory(MathCPP)
 add_subdirectory(Serial/src)
@@ -43,7 +43,6 @@ set(_poprocks_cpp_headers
 	Source/AutoFader.hpp
 	Source/BeatDetect.hpp
 	Source/Bicubic.hpp
-	Source/Buffer.hpp
 	Source/CApp.h
 	Source/Circle.hpp
 	Source/ColorChangeListener.hpp
@@ -55,7 +54,6 @@ set(_poprocks_cpp_headers
 	Source/FFTRenderer.hpp
 	Source/FPSCounter.hpp
 	Source/Gaussian.hpp
-	Source/Hash.hpp
 	Source/ID3V2.hpp
 	Source/LightPack.hpp
 	Source/LineRenderer.hpp
@@ -199,7 +197,7 @@ set_target_properties(basswasapi PROPERTIES
 	IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswasapi/lib/basswasapi.lib"
 	)
 
-target_link_libraries(popRocks PRIVATE MathsCPP Utils ${OPENGL_LIBRARIES} OpenGL SDL2::SDL2 SDL2::SDL2main SDL2_mixer::SDL2_mixer SDL2_image::SDL2_image SDL2_net::SDL2_net SDL2_ttf::SDL2_ttf bass bassflac bassape basswv basswasapi FFTW3::fftw3 serial ${JPEG_LIBRARIES})
+target_link_libraries(popRocks PRIVATE MathsCPP Utils ${OPENGL_LIBRARIES} OpenGL SDL2::SDL2 SDL2::SDL2main SDL2_mixer::SDL2_mixer SDL2_image::SDL2_image SDL2_net::SDL2_net freetype bass bassflac bassape basswv basswasapi FFTW3::fftw3 serial ${JPEG_LIBRARIES})
 target_include_directories(popRocks PRIVATE ${JPEG_INCLUDE_DIR})
 
 add_custom_command(TARGET popRocks POST_BUILD
