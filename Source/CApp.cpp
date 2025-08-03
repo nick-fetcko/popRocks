@@ -844,7 +844,7 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 	auto extension = path.extension().u8string();
 	std::transform(extension.begin(), extension.end(), extension.begin(), tolower);
 
-	auto originalPath = extension.empty() ? path : "";
+	auto originalPath = std::filesystem::is_directory(path) ? path : "";
 
 	// If we're still in the same file,
 	// just try to get updated tags from
