@@ -8,7 +8,9 @@
 *.pdb
 *.user
 *.metagen
+*.aps
 .DS_Store
 desktop.ini
 
 Build/
+Icon/
