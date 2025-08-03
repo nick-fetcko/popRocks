@@ -32,6 +32,7 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 	bool inTrackSection = false;
 
 	Track track;
+	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
 	for (const auto &line : lines) {
 		if (line[0] == "FILE") {
 			// tracks + .cue not supported
@@ -40,7 +41,7 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 				return std::nullopt;
 			}
 
-			auto originalFilePath = filePath = path.parent_path() / line[1];
+			auto originalFilePath = filePath = path.parent_path() / converter.from_bytes(line[1]);
 
 			// Some .cue files still point to the original .wav
 			// and not the compressed version.
