@@ -871,13 +871,19 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 			detector.Reset();
 
 		if (std::filesystem::is_directory(path) || controls.GetPlaylist().IsCue(extension)) {
-			path = controls.GetPlaylist().OnLoad(
-				path,
-				extension,
-				[this](const std::filesystem::path &path, const std::string &extension, DWORD flags) {
-					return OpenWithFlags(path, extension, flags); 
-				}
-			)->path;
+			if (auto ret = controls.GetPlaylist().OnLoad(
+					path,
+					extension,
+					[this](const std::filesystem::path &path, const std::string &extension, DWORD flags) {
+						return OpenWithFlags(path, extension, flags);
+					}
+				)
+			) {
+				path = ret->path;
+			} else {
+				logger.LogError("Could not load playlist ", path);
+				return;
+			}
 
 			extension = path.extension().u8string();
 			std::transform(extension.begin(), extension.end(), extension.begin(), tolower);
