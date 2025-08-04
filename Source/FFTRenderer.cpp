@@ -1,18 +1,23 @@
 #include "FFTRenderer.hpp"
 
-#include "Hash.hpp"
+#include "Utils/Hash.hpp"
+
+#include "Settings.hpp"
 
 FFTRenderer::FFTRenderer(
 	const DynamicGain<float> *dynamicGain,
 	const AlbumArt *albumArt) :
 	Renderer(dynamicGain, albumArt),
 	indexBuffer(&Buffers::SquareBuffer) {
-
+	SetDecayTime(Settings::settings.GetDecayTime());
+	SetFadeTime(Settings::settings.GetFadeTime());
 }
 
 FFTRenderer::FFTRenderer(Renderer &&right) : Renderer(std::move(right)) {
 	SetBuffer(buffer, fullBufferLength, true);
 	SetBufferLength(bufferLength, true);
+	SetDecayTime(Settings::settings.GetDecayTime());
+	SetFadeTime(Settings::settings.GetFadeTime());
 }
 
 void FFTRenderer::OnDestroy() {
@@ -72,8 +77,35 @@ bool FFTRenderer::SetBuffer(const uint8_t *const buffer, std::size_t len, bool f
 }
 
 void FFTRenderer::SetBufferLength(std::size_t bufferLength, bool changed) {
-	if (changed)
+	if (changed) {
 		Renderer::SetBufferLength(bufferLength, changed);
+
+		vao = std::make_unique<VertexArray>();
+		vbo = std::make_unique<ArrayBuffer>();
+		eab = std::make_unique<ElementBuffer>();
+
+		vao->Bind();
+		vbo->Bind();
+		vao->AddAttribute(VertexArray::Attribute(0, 2, 7 * sizeof(float)));
+		vao->AddAttribute(VertexArray::Attribute(1, 4, 7 * sizeof(float), 2 * sizeof(float)));
+		vao->AddAttribute(VertexArray::Attribute(2, 1, 7 * sizeof(float), 6 * sizeof(float)));
+		vbo->Unbind();
+		vao->Unbind();
+
+		std::vector<unsigned short> indices(bufferLength * 6);
+		for (std::size_t i = 0; i < bufferLength; ++i) {
+			indices[i * 6] = Buffers::SquareBuffer[0] + (4 * i);
+			indices[i * 6 + 1] = Buffers::SquareBuffer[1] + (4 * i);
+			indices[i * 6 + 2] = Buffers::SquareBuffer[2] + (4 * i);
+			indices[i * 6 + 3] = Buffers::SquareBuffer[3] + (4 * i);
+			indices[i * 6 + 4] = Buffers::SquareBuffer[4] + (4 * i);
+			indices[i * 6 + 5] = Buffers::SquareBuffer[5] + (4 * i);
+		}
+
+		eab->Bind();
+		eab->BufferData(indices);
+		eab->Unbind();
+	}
 }
 
 void FFTRenderer::OnLoop(
@@ -206,34 +238,6 @@ void FFTRenderer::OnLoop(
 			rects[i * Indices::Total + Indices::TopRightColor + 3] = alpha;
 			rects[i * Indices::Total + Indices::TopRightAngle] = angle;
 		}
-	}
-
-	if (!vao) {
-		vao = std::make_unique<VertexArray>();
-		vbo = std::make_unique<ArrayBuffer>();
-		eab = std::make_unique<ElementBuffer>();
-
-		vao->Bind();
-		vbo->Bind();
-		vao->AddAttribute(VertexArray::Attribute(0, 2, 7 * sizeof(float)));
-		vao->AddAttribute(VertexArray::Attribute(1, 4, 7 * sizeof(float), 2 * sizeof(float)));
-		vao->AddAttribute(VertexArray::Attribute(2, 1, 7 * sizeof(float), 6 * sizeof(float)));
-		vbo->Unbind();
-		vao->Unbind();
-
-		std::vector<unsigned short> indices(bufferLength * 6);
-		for (std::size_t i = 0; i < bufferLength; ++i) {
-			indices[i * 6] = Buffers::SquareBuffer[0] + (4 * i);
-			indices[i * 6 + 1] = Buffers::SquareBuffer[1] + (4 * i);
-			indices[i * 6 + 2] = Buffers::SquareBuffer[2] + (4 * i);
-			indices[i * 6 + 3] = Buffers::SquareBuffer[3] + (4 * i);
-			indices[i * 6 + 4] = Buffers::SquareBuffer[4] + (4 * i);
-			indices[i * 6 + 5] = Buffers::SquareBuffer[5] + (4 * i);
-		}
-
-		eab->Bind();
-		eab->BufferData(indices);
-		eab->Unbind();
 	}
 
 	vbo->Bind();

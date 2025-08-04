@@ -100,6 +100,31 @@ void Settings::SetWindowY(int windowY) {
 	Save();
 }
 
+void Settings::SetBufferLength(std::size_t bufferLength) {
+	this->bufferLength = bufferLength;
+	Save();
+}
+
+void Settings::SetDecayTime(Duration<Microseconds> decayTime) {
+	this->decayTime = decayTime;
+	Save();
+}
+
+void Settings::SetFadeTime(Duration<Microseconds> fadeTime) {
+	this->fadeTime = fadeTime;
+	Save();
+}
+
+void Settings::SetPulse(bool pulse) {
+	this->pulse = pulse;
+	Save();
+}
+
+void Settings::SetPulseTime(Duration<Microseconds> pulseTime) {
+	this->pulseTime = pulseTime;
+	Save();
+}
+
 void Settings::Save() {
 	if (auto path = GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
@@ -164,6 +189,33 @@ const Node &operator>>(const Node &node, Settings &settings) {
 	if (node.has("windowY"))
 		node["windowY"]->get(settings.windowY);
 
+	if (node.has("bufferSize"))
+		node["bufferSize"]->get(settings.bufferLength);
+	if (node.has("decayTime")) {
+		settings.decayTime = Duration<Microseconds>(
+			std::chrono::duration<double>(
+				node["decayTime"]->get<double>()
+			)
+		);
+	}
+	if (node.has("fadeTime")) {
+		settings.fadeTime = Duration<Microseconds>(
+			std::chrono::duration<double>(
+				node["fadeTime"]->get<double>()
+			)
+		);
+	}
+
+	if (node.has("pulse"))
+		node["pulse"]->get(settings.pulse);
+	if (node.has("pulseTime")) {
+		settings.pulseTime = Duration<Microseconds>(
+			std::chrono::duration<double>(
+				node["pulseTime"]->get<double>()
+			)
+		);
+	}
+
 	return node;
 }
 
@@ -175,6 +227,11 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["windowHeight"]->set(settings.windowHeight);
 	node["windowX"]->set(settings.windowX);
 	node["windowY"]->set(settings.windowY);
+	node["bufferSize"]->set(settings.bufferLength);
+	node["decayTime"]->set(settings.decayTime.AsSeconds());
+	node["fadeTime"]->set(settings.fadeTime.AsSeconds());
+	node["pulse"]->set(settings.pulse);
+	node["pulseTime"]->set(settings.pulseTime.AsSeconds());
 
 	return node;
 }

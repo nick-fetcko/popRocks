@@ -4,10 +4,16 @@
 
 #include <SDL_video.h>
 
+#include "MathCPP/Duration.hpp"
+
 #include "Serial/Json.hpp"
+
 #include "Utils/Logger.hpp"
 
+using namespace std::chrono_literals;
+
 using namespace Fetcko;
+using namespace MathsCPP;
 using namespace serial;
 
 class Settings {
@@ -44,6 +50,21 @@ public:
 	const int &GetWindowY() const { return windowY; }
 	void SetWindowY(int windowY);
 
+	const std::size_t &GetBufferLength() { return bufferLength; }
+	void SetBufferLength(std::size_t bufferLength);
+
+	const Duration<Microseconds> &GetDecayTime() { return decayTime; }
+	void SetDecayTime(Duration<Microseconds> decayTime);
+
+	const Duration<Microseconds> &GetFadeTime() { return fadeTime; }
+	void SetFadeTime(Duration<Microseconds> fadeTime);
+
+	const bool &GetPulse() const { return pulse; }
+	void SetPulse(bool pulse);
+
+	const Duration<Microseconds> &GetPulseTime() { return pulseTime; }
+	void SetPulseTime(Duration<Microseconds> pulseTime);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -66,4 +87,12 @@ private:
 
 	int windowX = SDL_WINDOWPOS_CENTERED;
 	int windowY = SDL_WINDOWPOS_CENTERED;
+
+	std::size_t bufferLength = 2048;
+	
+	Duration<Microseconds> decayTime = 0.5s;
+	Duration<Microseconds> fadeTime = 0.5s;
+
+	bool pulse = false;
+	Duration<Microseconds> pulseTime = 0.1s;
 };

@@ -10,6 +10,7 @@
 
 #include "AlbumArt.hpp"
 #include "DynamicGain.hpp"
+#include "Settings.hpp"
 
 using namespace Fetcko;
 
@@ -18,8 +19,9 @@ public:
 	Renderer(
 		const DynamicGain<float> *dynamicGain,
 		const AlbumArt * const albumArt
-	) : albumArt(albumArt) {
-		this->dynamicGain = dynamicGain;
+	) : albumArt(albumArt), dynamicGain(dynamicGain) {
+		pulse = Settings::settings.GetPulse();
+		pulseTime = Settings::settings.GetPulseTime();
 	}
 
 	virtual ~Renderer() {
@@ -86,9 +88,13 @@ public:
 	}
 
 	void TogglePulse() { pulse = !pulse; }
-	void SetPulse(bool pulse) { this->pulse = pulse; }
+	void SetPulse(bool pulse) { 
+		this->pulse = pulse;
+		Settings::settings.SetPulse(pulse);
+	}
 	void SetPulseTime(Duration<Microseconds> time) {
 		pulseTime = time;
+		Settings::settings.SetPulseTime(time);
 	}
 
 protected:

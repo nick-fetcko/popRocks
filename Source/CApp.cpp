@@ -146,6 +146,7 @@ void CApp::SetBufferLength(std::size_t bufferLength) {
 	auto changed = bufferLength != this->bufferLength;
 	if (changed) {
 		this->bufferLength = bufferLength;
+		Settings::settings.SetBufferLength(bufferLength);
 
 		hStep = static_cast<float>(windowWidth) / bufferLength;
 		
@@ -225,15 +226,6 @@ float CApp::GetScale(SDL_Window *window, int *w, int *h) {
 }
 
 void CApp::OnInit() {
-	SetBufferLength(2048);
-
-	// We only sample halfway to the
-	// Nyquist at start. This gives
-	// us 4096 samples but our buffer
-	// length is only 2048. The highest
-	// bins are largely empty, anyway.
-	SetFftLength(8192);
-
 	// https://tgui.eu/tutorials/latest-stable/dpi-scaling/
 	SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
 
@@ -324,6 +316,16 @@ void CApp::OnInit() {
 		}
 		shader.program.Uniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
 	}
+
+	// Initialize our buffers now that we have an OpenGL context
+	SetBufferLength(Settings::settings.GetBufferLength());
+
+	// We only sample halfway to the
+	// Nyquist at start. This gives
+	// us 4096 samples but our buffer
+	// length is only 2048. The highest
+	// bins are largely empty, anyway.
+	SetFftLength(8192);
 
 	// This updates the scale variable for us
 	GetScale(sdlWindow, &windowWidth, &windowHeight);
@@ -1030,11 +1032,15 @@ void CApp::SetDecayTime(Duration<Microseconds> time) {
 	if (auto fftRenderer = dynamic_cast<FFTRenderer *>(renderer))
 		fftRenderer->SetDecayTime(time);
 
+	Settings::settings.SetDecayTime(time);
+
 	SetBufferLength(bufferLength);
 }
 void CApp::SetFadeTime(Duration<Microseconds> time) {
 	if (auto fftRenderer = dynamic_cast<FFTRenderer *>(renderer))
 		fftRenderer->SetFadeTime(time);
+
+	Settings::settings.SetFadeTime(time);
 
 	SetBufferLength(bufferLength);
 }
