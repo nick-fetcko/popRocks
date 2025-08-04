@@ -262,10 +262,13 @@ void CApp::OnInit() {
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
 
+	windowWidth = Settings::settings.GetWindowWidth();
+	windowHeight = Settings::settings.GetWindowHeight();
+
 	sdlWindow = SDL_CreateWindow(
 		"popRocks",
-		SDL_WINDOWPOS_CENTERED,
-		SDL_WINDOWPOS_CENTERED,
+		Settings::settings.GetWindowX(),
+		Settings::settings.GetWindowY(),
 		windowWidth,
 		windowHeight,
 		SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
@@ -404,6 +407,10 @@ HSTREAM CApp::GetStreamHandle() const {
 void CApp::OnResize(int width, int height, float scale) {
 	windowWidth = width;
 	windowHeight = height;
+
+	Settings::settings.SetWindowWidth(width);
+	Settings::settings.SetWindowHeight(height);
+
 	hStep = static_cast<float>(windowWidth) / bufferLength;
 
 	context->SetProjection(glm::ortho(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f));

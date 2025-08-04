@@ -26,11 +26,11 @@ int main(int argc, char *argv[]) {
 
 	app.OnInit();
 
-	if(argc > 1) {
-		LoggableClass loggableClass;
-		Logger logger;
-		logger.SetObject(&loggableClass);
+	LoggableClass loggableClass;
+	Logger logger;
+	logger.SetObject(&loggableClass);
 
+	if(argc > 1) {
 		logger.LogDebug("File prepared: ", argv[1]);
 		auto ascii = std::string(argv[1]);
 		app.LoadFile(std::wstring(ascii.begin(), ascii.end()));
@@ -52,6 +52,10 @@ int main(int argc, char *argv[]) {
 						auto scale = app.GetScale(window, &w, &h);
 
 						app.OnResize(w, h, scale);
+					} else if (event.window.event == SDL_WINDOWEVENT_MOVED) {
+						Settings::settings.SetWindowX(event.window.data1);
+						Settings::settings.SetWindowY(event.window.data2);
+						logger.LogDebug("Window moved to (", event.window.data1, ", ", event.window.data2, ")");
 					}
 					break;
 				case SDL_KEYDOWN:

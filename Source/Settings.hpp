@@ -2,6 +2,8 @@
 
 #include <filesystem>
 
+#include <SDL_video.h>
+
 #include "Serial/Json.hpp"
 #include "Utils/Logger.hpp"
 
@@ -30,6 +32,18 @@ public:
 	const ColorSelection &GetColorSelection() const { return colorSelection; }
 	void SetColorSelection(ColorSelection colorSelection);
 
+	const int &GetWindowWidth() const { return windowWidth; }
+	void SetWindowWidth(int windowWidth);
+
+	const int &GetWindowHeight() const { return windowHeight; }
+	void SetWindowHeight(int windowHeight);
+
+	const int &GetWindowX() const { return windowX; }
+	void SetWindowX(int windowX);
+
+	const int &GetWindowY() const { return windowY; }
+	void SetWindowY(int windowY);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -46,4 +60,10 @@ private:
 	float volume = 1.0f;
 	bool exclusive = true;
 	ColorSelection colorSelection;
+
+	int windowWidth = 1920;
+	int windowHeight = 1080;
+
+	int windowX = SDL_WINDOWPOS_CENTERED;
+	int windowY = SDL_WINDOWPOS_CENTERED;
 };

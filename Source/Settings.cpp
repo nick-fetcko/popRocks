@@ -80,6 +80,26 @@ void Settings::SetColorSelection(ColorSelection colorSelection) {
 	Save();
 }
 
+void Settings::SetWindowWidth(int windowWidth) {
+	this->windowWidth = windowWidth;
+	Save();
+}
+
+void Settings::SetWindowHeight(int windowHeight) {
+	this->windowHeight = windowHeight;
+	Save();
+}
+
+void Settings::SetWindowX(int windowX) {
+	this->windowX = windowX;
+	Save();
+}
+
+void Settings::SetWindowY(int windowY) {
+	this->windowY = windowY;
+	Save();
+}
+
 void Settings::Save() {
 	if (auto path = GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
@@ -134,6 +154,16 @@ const Node &operator>>(const Node &node, Settings &settings) {
 	if (node.has("colorSelection"))
 		node["colorSelection"]->get(settings.colorSelection);
 
+	if (node.has("windowWidth"))
+		node["windowWidth"]->get(settings.windowWidth);
+	if (node.has("windowHeight"))
+		node["windowHeight"]->get(settings.windowHeight);
+
+	if (node.has("windowX"))
+		node["windowX"]->get(settings.windowX);
+	if (node.has("windowY"))
+		node["windowY"]->get(settings.windowY);
+
 	return node;
 }
 
@@ -141,6 +171,10 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["volume"]->set(settings.volume);
 	node["exclusive"]->set(settings.exclusive);
 	node["colorSelection"]->set(settings.colorSelection);
+	node["windowWidth"]->set(settings.windowWidth);
+	node["windowHeight"]->set(settings.windowHeight);
+	node["windowX"]->set(settings.windowX);
+	node["windowY"]->set(settings.windowY);
 
 	return node;
 }

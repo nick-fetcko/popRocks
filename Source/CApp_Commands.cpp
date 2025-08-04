@@ -536,6 +536,17 @@ void CApp::AddCommands() {
 					}
 				}
 			}
+		},
+		{
+			"resetwindow", [&](const std::vector<std::string> &args) {
+				Settings::settings.SetWindowWidth(1920);
+				Settings::settings.SetWindowHeight(1080);
+				Settings::settings.SetWindowX(SDL_WINDOWPOS_CENTERED);
+				Settings::settings.SetWindowY(SDL_WINDOWPOS_CENTERED);
+
+				SDL_SetWindowSize(sdlWindow, Settings::settings.GetWindowWidth(), Settings::settings.GetWindowHeight());
+				SDL_SetWindowPosition(sdlWindow, Settings::settings.GetWindowX(), Settings::settings.GetWindowY());
+			}
 		}
 	});
 }
