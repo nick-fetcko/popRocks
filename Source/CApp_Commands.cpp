@@ -17,6 +17,11 @@ void CApp::AddCommands() {
 	},
 	*/
 
+	constexpr auto IsDefault = [](std::string string) {
+		std::transform(string.begin(), string.end(), string.begin(), tolower);
+		return string == "default";
+	};
+
 	// Give console our commands
 	Logger::AddCommands({
 		{
@@ -80,7 +85,10 @@ void CApp::AddCommands() {
 					delete oldRenderer;
 				} else {
 					try {
-						SetFftLength(std::stoi(args[1]));
+						if (IsDefault(args[1]))
+							SetFftLength(8192);
+						else
+							SetFftLength(std::stoi(args[1]));
 					} catch (std::exception &e) {
 						logger.LogError("Could not set FFT length: ", e.what());
 					}
@@ -251,8 +259,12 @@ void CApp::AddCommands() {
 			"dist", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
-						if (auto fftRenderer = dynamic_cast<FFTRenderer *>(renderer))
-							fftRenderer->SetDistribution(std::stof(args[1]));
+						if (auto fftRenderer = dynamic_cast<FFTRenderer *>(renderer)) {
+							if (IsDefault(args[1]))
+								fftRenderer->SetDistribution(360.0f);
+							else
+								fftRenderer->SetDistribution(std::stof(args[1]));
+						}
 					} catch (std::exception &e) {
 						logger.LogError("Could not set distribution: ", e.what());
 					}
@@ -263,7 +275,10 @@ void CApp::AddCommands() {
 			"buffer", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
-						SetBufferLength(std::stoi(args[1]));
+						if (IsDefault(args[1]))
+							SetBufferLength(2048);
+						else
+							SetBufferLength(std::stoi(args[1]));
 					} catch (std::exception &e) {
 						logger.LogError("Could not set buffer length: ", e.what());
 					}
@@ -274,7 +289,10 @@ void CApp::AddCommands() {
 			"rot", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
-						SetRotationSpeed(std::stof(args[1]));
+						if (IsDefault(args[1]))
+							SetRotationSpeed(6.0f);
+						else
+							SetRotationSpeed(std::stof(args[1]));
 					} catch (std::exception &e) {
 						logger.LogError("Could not set rotation speed: ", e.what());
 					}
@@ -287,11 +305,14 @@ void CApp::AddCommands() {
 			"decay", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
-						SetDecayTime(
-							std::chrono::duration<double> {
-								std::stod(args[1])
-							}
-						);
+						if (IsDefault(args[1]))
+							SetDecayTime(0.5s);
+						else
+							SetDecayTime(
+								std::chrono::duration<double> {
+									std::stod(args[1])
+								}
+							);
 					} catch (std::exception &e) {
 						logger.LogError("Could not set decay: ", e.what());
 					}
@@ -302,11 +323,14 @@ void CApp::AddCommands() {
 			"fade", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
-						SetFadeTime(
-							std::chrono::duration<double> {
-								std::stod(args[1])
-							}
-						);
+						if (IsDefault(args[1]))
+							SetFadeTime(0.5s);
+						else
+							SetFadeTime(
+								std::chrono::duration<double> {
+									std::stod(args[1])
+								}
+							);
 					} catch (std::exception &e) {
 						logger.LogError("Could not set fade: ", e.what());
 					}
@@ -317,9 +341,12 @@ void CApp::AddCommands() {
 			"gain", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
-						SetGain(
-							std::stof(args[1])
-						);
+						if (IsDefault(args[1]))
+							SetGain(20.0f);
+						else
+							SetGain(
+								std::stof(args[1])
+							);
 					} catch (std::exception &e) {
 						logger.LogError("Could not set gain: ", e.what());
 					}
@@ -342,11 +369,14 @@ void CApp::AddCommands() {
 			"strobe", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
-						SetStrobeFrequency(
-							std::chrono::duration<double> {
-								std::stod(args[1])
-							}
-						);
+						if (IsDefault(args[1]))
+							SetStrobeFrequency(1s);
+						else
+							SetStrobeFrequency(
+								std::chrono::duration<double> {
+									std::stod(args[1])
+								}
+							);
 					} catch (std::exception &e) {
 						logger.LogError("Could not set strobe frequency: ", e.what());
 					}
@@ -359,7 +389,10 @@ void CApp::AddCommands() {
 			"rpm", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
-						SetRotationSpeed(std::stof(args[1]) * (360.0f / 60.0f) /* 6 */);
+						if (IsDefault(args[1]))
+							SetRotationSpeed(6.0f); // 1 RPM
+						else
+							SetRotationSpeed(std::stof(args[1]) * (360.0f / 60.0f) /* 6 */);
 					} catch (std::exception &e) {
 						logger.LogError("Could not set RPM: ", e.what());
 					}
@@ -370,8 +403,12 @@ void CApp::AddCommands() {
 			"smooth", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
-						uint8_t smooth = std::clamp(std::stoi(args[1]), 0, 255);
-						lightPack.SetSmooth(smooth);
+						if (IsDefault(args[1])) {
+							lightPack.SetSmooth(0);
+						} else {
+							uint8_t smooth = std::clamp(std::stoi(args[1]), 0, 255);
+							lightPack.SetSmooth(smooth);
+						}
 					} catch (std::exception &e) {
 						logger.LogError("Could not set smooth: ", e.what());
 					}
@@ -382,7 +419,10 @@ void CApp::AddCommands() {
 			"gamma", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
-						lightPack.SetGamma(std::stof(args[1]));
+						if (IsDefault(args[1]))
+							lightPack.SetGamma(1.0f);
+						else
+							lightPack.SetGamma(std::stof(args[1]));
 					} catch (std::exception &e) {
 						logger.LogError("Could not set gamma: ", e.what());
 					}
@@ -393,7 +433,10 @@ void CApp::AddCommands() {
 			"blur", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
-						SetBlurIntensity(std::stof(args[1]));
+						if (IsDefault(args[1]))
+							SetBlurIntensity(0.88f);
+						else
+							SetBlurIntensity(std::stof(args[1]));
 					} catch (std::exception &e) {
 						logger.LogError("Could not set blur factor: ", e.what());
 					}
@@ -406,7 +449,7 @@ void CApp::AddCommands() {
 			"radius", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
-						auto radius = std::stof(args[1]);
+						auto radius = IsDefault(args[1]) ? 200.0f : std::stof(args[1]);
 
 						albumArt.SetRadius(radius);
 						albumArt.Scale(true);
@@ -437,8 +480,12 @@ void CApp::AddCommands() {
 			"width", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
-						if (auto lineRenderer = dynamic_cast<LineRenderer*>(renderer))
-							lineRenderer->SetWidth(std::stof(args[1]));
+						if (auto lineRenderer = dynamic_cast<LineRenderer *>(renderer)) {
+							if (IsDefault(args[1]))
+								lineRenderer->SetWidth(4.0f);
+							else
+								lineRenderer->SetWidth(std::stof(args[1]));
+						}
 					}
 					catch (std::exception &e) {
 						logger.LogError("Could not set width: ", e.what());
@@ -460,7 +507,10 @@ void CApp::AddCommands() {
 			"sat", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
-						lightPack.SetSaturationMultiplier(std::stof(args[1]));
+						if (IsDefault(args[1]))
+							lightPack.SetSaturationMultiplier(1.25f);
+						else
+							lightPack.SetSaturationMultiplier(std::stof(args[1]));
 					} catch (std::exception &e) {
 						logger.LogError("Could not set saturation multiplier: ", e.what());
 					}
@@ -473,11 +523,14 @@ void CApp::AddCommands() {
 					renderer->TogglePulse();
 				} else {
 					try {
-						renderer->SetPulseTime(
-							std::chrono::duration<double> {
-								std::stod(args[1])
-							}
-						);
+						if (IsDefault(args[1]))
+							renderer->SetPulseTime(0.1s);
+						else
+							renderer->SetPulseTime(
+								std::chrono::duration<double> {
+									std::stod(args[1])
+								}
+							);
 					} catch (std::exception &e) {
 						logger.LogError("Could not set pulse time: ", e.what());
 					}
