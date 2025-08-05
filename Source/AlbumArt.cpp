@@ -16,7 +16,7 @@
 using namespace MathsCPP;
 
 AlbumArt::AlbumArt(std::unique_ptr<Context> &context) : context(context) {
-	radius = 200.0f;
+	radius = Settings::settings.GetRadius();
 }
 
 void AlbumArt::OnInit(int windowWidth, int windowHeight, float scale) {
@@ -68,6 +68,11 @@ void AlbumArt::OnResize(int windowWidth, int windowHeight, float scale) {
 
 		Scale(true);
 	}
+}
+
+void AlbumArt::SetRadius(float radius) {
+	Circle::SetRadius(radius);
+	Settings::settings.SetRadius(radius);
 }
 
 void AlbumArt::UpdateVertexCoords() {

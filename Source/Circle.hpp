@@ -73,7 +73,7 @@ public:
 		vbo.reset();
 	}
 
-	void SetRadius(float radius) {
+	virtual void SetRadius(float radius) {
 		this->radius = radius;
 		UpdateVertexCoords();
 	}

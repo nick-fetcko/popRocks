@@ -2,6 +2,7 @@
 
 #include "Renderer.hpp"
 #include "Polyline.hpp"
+#include "Settings.hpp"
 
 class LineRenderer : public Renderer {
 public:
@@ -41,6 +42,7 @@ public:
 
 	void SetWidth(float width) {
 		line.SetWidth(width);
+		Settings::settings.SetWidth(width);
 	}
 
 protected:
@@ -51,7 +53,7 @@ protected:
 	}
 
 	Vector2f *points = nullptr;
-	Polyline line = Polyline(4.0f);
+	Polyline line = Polyline(Settings::settings.GetWidth());
 
 	float minPoint = std::numeric_limits<float>::max();
 	float maxPoint = std::numeric_limits<float>::lowest();

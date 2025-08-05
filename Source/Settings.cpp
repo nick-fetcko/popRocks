@@ -125,6 +125,51 @@ void Settings::SetPulseTime(Duration<Microseconds> pulseTime) {
 	Save();
 }
 
+void Settings::SetRotating(bool rotating) {
+	this->rotating = rotating;
+	Save();
+}
+
+void Settings::SetRotationSpeed(float rotationSpeed) {
+	this->rotationSpeed = rotationSpeed;
+	Save();
+}
+
+void Settings::SetRadius(float radius) {
+	this->radius = radius;
+	Save();
+}
+
+void Settings::SetDetectBpm(bool detectBpm) {
+	this->detectBpm = detectBpm;
+	Save();
+}
+
+void Settings::SetWidth(float width) {
+	this->width = width;
+	Save();
+}
+
+void Settings::SetRenderer(const std::string &renderer) {
+	this->renderer = renderer;
+	Save();
+}
+
+void Settings::SetPresetIndex(std::size_t presetIndex) {
+	this->presetIndex = presetIndex;
+	Save();
+}
+
+void Settings::SetSmooth(uint8_t smooth) {
+	this->smooth = smooth;
+	Save();
+}
+
+void Settings::SetGamma(float gamma) {
+	this->gamma = gamma;
+	Save();
+}
+
 void Settings::Save() {
 	if (auto path = GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
@@ -216,6 +261,31 @@ const Node &operator>>(const Node &node, Settings &settings) {
 		);
 	}
 
+	if (node.has("rotating"))
+		node["rotating"]->get(settings.rotating);
+	if (node.has("rotationSpeed"))
+		node["rotationSpeed"]->get(settings.rotationSpeed);
+
+	if (node.has("radius"))
+		node["radius"]->get(settings.radius);
+
+	if (node.has("detectBpm"))
+		node["detectBpm"]->get(settings.detectBpm);
+
+	if (node.has("width"))
+		node["width"]->get(settings.width);
+
+	if (node.has("renderer"))
+		node["renderer"]->get(settings.renderer);
+
+	if (node.has("presetIndex"))
+		node["presetIndex"]->get(settings.presetIndex);
+
+	if (node.has("smooth"))
+		node["smooth"]->get(settings.smooth);
+	if (node.has("gamma"))
+		node["gamma"]->get(settings.gamma);
+		
 	return node;
 }
 
@@ -232,6 +302,15 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["fadeTime"]->set(settings.fadeTime.AsSeconds());
 	node["pulse"]->set(settings.pulse);
 	node["pulseTime"]->set(settings.pulseTime.AsSeconds());
+	node["rotating"]->set(settings.rotating);
+	node["rotationSpeed"]->set(settings.rotationSpeed);
+	node["radius"]->set(settings.radius);
+	node["detectBpm"]->set(settings.detectBpm);
+	node["width"]->set(settings.width);
+	node["renderer"]->set(settings.renderer);
+	node["presetIndex"]->set(settings.presetIndex);
+	node["smooth"]->set(settings.smooth);
+	node["gamma"]->set(settings.gamma);
 
 	return node;
 }

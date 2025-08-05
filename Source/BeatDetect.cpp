@@ -36,9 +36,9 @@ void BeatDetect::SeekTo(double time) {
 	}
 }
 
-void BeatDetect::ToggleDetection() {
+void BeatDetect::SetDetecting(bool detecting) {
 	std::unique_lock lock(mutex);
-	detectBpm = !detectBpm;
+	detectBpm = detecting;
 }
 
 bool BeatDetect::IsDetecting() const { return detectBpm; }

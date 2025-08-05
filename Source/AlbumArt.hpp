@@ -88,6 +88,8 @@ public:
 
 	void Scale(bool force = false);
 
+	void SetRadius(float radius) override;
+
 private:
 	constexpr inline static std::array<std::string_view, 3> SupportedExtensions = { ".jpg", ".png", ".webp" };
 

@@ -118,3 +118,61 @@ protected:
 	bool pulse = false;
 	Duration<Microseconds> pulseTime = 0.1s;
 };
+
+class RendererFactory {
+public:
+	static void Register(
+		std::string renderer,
+		std::function<Renderer *(
+			const DynamicGain<float> *,
+			const AlbumArt *,
+			Renderer *,
+			std::optional<int>,
+			std::optional<int>,
+			uint8_t *,
+			std::optional<std::size_t>,
+			std::optional<std::size_t>
+		)> f
+	) {
+		builders.emplace(std::make_pair(renderer, f));
+	}
+	static Renderer *Build(
+		std::string renderer,
+		const DynamicGain<float> *dynamicGain,
+		const AlbumArt *albumArt,
+		Renderer *oldRenderer = nullptr,
+		std::optional<int> windowWidth = std::nullopt,
+		std::optional<int> windowHeight = std::nullopt,
+		uint8_t *buffer = nullptr,
+		std::optional<std::size_t> maxLength = std::nullopt,
+		std::optional<std::size_t> bufferLength = std::nullopt
+	) {
+		return builders.at(renderer)(
+			dynamicGain,
+			albumArt,
+			oldRenderer,
+			windowWidth,
+			windowHeight,
+			buffer,
+			maxLength,
+			bufferLength
+		);
+	}
+
+private:
+	static inline std::map<
+		std::string, 
+		std::function<
+			Renderer *(
+				const DynamicGain<float> *,
+				const AlbumArt *,
+				Renderer *,
+				std::optional<int>,
+				std::optional<int>,
+				uint8_t *,
+				std::optional<std::size_t>,
+				std::optional<std::size_t>
+			)
+		>
+	> builders;
+};

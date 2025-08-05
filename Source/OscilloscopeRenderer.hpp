@@ -90,4 +90,40 @@ public:
 
 private:
 	const short *shortBuffer = nullptr;
+
+	static inline bool Register() {
+		RendererFactory::Register("osc", [](
+			const DynamicGain<float> *dynamicGain,
+			const AlbumArt *albumArt,
+			Renderer *oldRenderer = nullptr,
+			std::optional<int> windowWidth = std::nullopt,
+			std::optional<int> windowHeight = std::nullopt,
+			uint8_t *buffer = nullptr,
+			std::optional<std::size_t> maxLength = std::nullopt,
+			std::optional<std::size_t> bufferLength = std::nullopt) {
+			Renderer *ret = nullptr;
+			if (oldRenderer) {
+				if (auto lineRenderer = dynamic_cast<LineRenderer *>(oldRenderer))
+					ret = new OscilloscopeRenderer(std::move(*lineRenderer));
+				else {
+					oldRenderer->OnDestroy();
+					ret = new OscilloscopeRenderer(std::move(*oldRenderer));
+				}
+
+				delete oldRenderer;
+			} else if (windowWidth) {
+				ret = new OscilloscopeRenderer(dynamicGain, albumArt);
+				ret->OnInit(*windowWidth, *windowHeight);
+				ret->SetBuffer(buffer, *maxLength);
+				ret->SetBufferLength(*bufferLength, true);
+			} else {
+				ret = new OscilloscopeRenderer(dynamicGain, albumArt);
+			}
+
+			return ret;
+		});
+
+		return true;
+	}
+	static inline bool registered = Register();
 };

@@ -113,7 +113,11 @@ DWORD CALLBACK OutputWasapiProc(void *buffer, DWORD length, void *user) {
 // ======================= CApp ========================
 // =====================================================
 CApp::CApp() : albumArt(context), controls(&albumArt), circleLine(12.0f) {
-	renderer = new FFTRenderer(&dynamicGain, &albumArt);
+	renderer = RendererFactory::Build(
+		Settings::settings.GetRenderer(),
+		&dynamicGain,
+		&albumArt
+	);
 
 	// If we close the console, make sure to
 	// clean up before exit
@@ -201,6 +205,15 @@ void CApp::SetFftLength(std::size_t length) {
 	}
 
 	UpdateMaxBufferLength();
+}
+
+void CApp::SetRotating(bool rotating) { 
+	this->rotating = rotating;
+	Settings::settings.SetRotating(rotating);
+}
+void CApp::SetRotationSpeed(float speed) { 
+	this->rotationSpeed = speed;
+	Settings::settings.SetRotationSpeed(speed);
 }
 
 void CApp::PrepareFile(std::wstring file) {
@@ -1251,6 +1264,8 @@ void CApp::LoadPreset(std::size_t index) {
 		renderer->SetPulseTime(preset.GetPulseTime());
 
 		presetIndex = index;
+
+		Settings::settings.SetPresetIndex(index);
 	}
 }
 

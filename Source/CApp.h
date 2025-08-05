@@ -77,8 +77,8 @@ public:
 	void SetBufferLength(std::size_t bufferLength);
 	void SetFftLength(std::size_t fftLength);
 
-	void SetRotating(bool rotating) { this->rotating = rotating; }
-	void SetRotationSpeed(float speed) { this->rotationSpeed = speed; }
+	void SetRotating(bool rotating);
+	void SetRotationSpeed(float speed);
 	bool GetRotating() const { return rotating; }
 
 	void SetDecayTime(Duration<Microseconds> time);
@@ -183,7 +183,7 @@ private:
 	std::thread listenThread;
 
 	float frameCount = 0.0f;
-	bool rotating = false;
+	bool rotating = Settings::settings.GetRotating();
 
 	std::size_t fftLength = 0;
 	uint32_t fftFlag = BASS_DATA_FFT8192;
@@ -193,7 +193,7 @@ private:
 	float gain = 20.0f;
 
 	// In degrees per second
-	float rotationSpeed = 6.0f;
+	float rotationSpeed = Settings::settings.GetRotationSpeed();
 
 	bool strobe = false;
 	Duration<Microseconds> strobeAccum;
@@ -237,7 +237,7 @@ private:
 
 	float exclusiveBufferSize = 0.25f; // in seconds
 
-	std::size_t presetIndex = 0;
+	std::size_t presetIndex = Settings::settings.GetPresetIndex();
 
 	std::atomic<bool> advanceOnNextLoop = false;
 	std::atomic<bool> stopWasapiOnNextLoop = false;

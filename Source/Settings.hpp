@@ -65,6 +65,33 @@ public:
 	const Duration<Microseconds> &GetPulseTime() { return pulseTime; }
 	void SetPulseTime(Duration<Microseconds> pulseTime);
 
+	const bool &GetRotating() const { return rotating; }
+	void SetRotating(bool rotating);
+
+	const float &GetRotationSpeed() const { return rotationSpeed; }
+	void SetRotationSpeed(float rotationSpeed);
+
+	const float &GetRadius() const { return radius; }
+	void SetRadius(float radius);
+
+	const bool &GetDetectBpm() const { return detectBpm; }
+	void SetDetectBpm(bool detectBpm);
+
+	const float &GetWidth() const { return width; }
+	void SetWidth(float width);
+
+	const std::string &GetRenderer() const { return renderer; }
+	void SetRenderer(const std::string &renderer);
+
+	const std::size_t &GetPresetIndex() const { return presetIndex; }
+	void SetPresetIndex(std::size_t presetIndex);
+
+	const uint8_t &GetSmooth() const { return smooth; }
+	void SetSmooth(uint8_t smooth);
+
+	const float &GetGamma() const { return gamma; }
+	void SetGamma(float gamma);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -95,4 +122,20 @@ private:
 
 	bool pulse = false;
 	Duration<Microseconds> pulseTime = 0.1s;
+
+	bool rotating = false;
+	float rotationSpeed = 6.0f;
+
+	float radius = 200;
+
+	bool detectBpm = false;
+
+	float width = 4.0f;
+
+	std::string renderer = "fft";
+
+	std::size_t presetIndex = 0;
+
+	uint8_t smooth = 0;
+	float gamma = 1.0f;
 };

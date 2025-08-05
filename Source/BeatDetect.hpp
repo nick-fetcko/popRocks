@@ -11,6 +11,7 @@
 #include "Utils/Logger.hpp"
 
 #include "BeatRootProcessor.h"
+#include "Settings.hpp"
 
 using namespace MathsCPP;
 using namespace Fetcko;
@@ -37,7 +38,7 @@ public:
 
 	void SeekTo(double time);
 
-	void ToggleDetection();
+	void SetDetecting(bool detecting);
 
 	bool IsDetecting() const;
 
@@ -61,7 +62,7 @@ private:
 
 	inline std::tuple<double, double, double> GetTimeBetweenBeats() const;
 
-	bool detectBpm = false;
+	bool detectBpm = Settings::settings.GetDetectBpm();
 
 	EventList eventList;
 	EventList::iterator eventListIter = eventList.end();

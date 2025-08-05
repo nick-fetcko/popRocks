@@ -122,4 +122,35 @@ private:
 	std::unique_ptr<VertexArray> vao;
 	std::unique_ptr<ArrayBuffer> vbo;
 	std::unique_ptr<ElementBuffer> eab;
+
+	static inline bool Register() {
+		RendererFactory::Register("fft", [] (
+			const DynamicGain<float> *dynamicGain,
+			const AlbumArt *albumArt,
+			Renderer *oldRenderer = nullptr,
+			std::optional<int> windowWidth = std::nullopt,
+			std::optional<int> windowHeight = std::nullopt,
+			uint8_t *buffer = nullptr,
+			std::optional<std::size_t> maxLength = std::nullopt,
+			std::optional<std::size_t> bufferLength = std::nullopt) {
+			Renderer *ret = nullptr;
+			if (oldRenderer) {
+				oldRenderer->OnDestroy();
+				ret = new FFTRenderer(std::move(*oldRenderer));
+				delete oldRenderer;
+			} else if (windowWidth) {
+				ret = new FFTRenderer(dynamicGain, albumArt);
+				ret->OnInit(*windowWidth, *windowHeight);
+				ret->SetBuffer(buffer, *maxLength);
+				ret->SetBufferLength(*bufferLength, true);
+			} else {
+				ret = new FFTRenderer(dynamicGain, albumArt);
+			}
+
+			return ret;
+		});
+
+		return true;
+	}
+	static inline bool registered = Register();
 };

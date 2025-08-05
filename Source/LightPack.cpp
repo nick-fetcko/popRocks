@@ -13,6 +13,8 @@
 #pragma comment (lib, "AdvApi32.lib")
 #endif
 
+#include "Settings.hpp"
+
 LightPack::LightPack() {
 	// Purple
 	intensityColors[0].r = 255;
@@ -191,14 +193,18 @@ void LightPack::_OnInit() {
 				WriteString("apikey:\r\n");
 				WriteString("lock\r\n");
 
-				// Set our preferred settings right away,
-				// let the user change them later
+				// Set user-defined settings
 				auto ret = WriteString("setbrightness:100\r\n");
 				logger.LogDebug("setbrightness:100 = ", ret->substr(0, ret->size() - 2));
-				ret = WriteString("setgamma:1\r\n");
-				logger.LogDebug("setgamma:1 = ", ret->substr(0, ret->size() - 2));
-				ret = WriteString("setsmooth:0\r\n");
-				logger.LogDebug("setsmooth:0 = ", ret->substr(0, ret->size() - 2));
+
+				std::stringstream gamma;
+				gamma << "setgamma:" << std::fixed << std::setprecision(2) << std::setfill('0') << Settings::settings.GetGamma();
+				ret = WriteString(gamma.str() + "\r\n");
+				logger.LogDebug(gamma.str() + " = ", ret->substr(0, ret->size() - 2));
+
+				auto smooth = "setsmooth:" + std::to_string(static_cast<int>(Settings::settings.GetSmooth()));
+				ret = WriteString(smooth + "\r\n");
+				logger.LogDebug(smooth + " = ", ret->substr(0, ret->size() - 2));
 			} else {
 				if (firstTry) {
 					logger.LogWarning(
@@ -425,6 +431,8 @@ void LightPack::SetMapping(const int *mapping) {
 }
 
 void LightPack::SetSmooth(uint8_t smooth) {
+	Settings::settings.SetSmooth(smooth);
+
 	std::unique_lock lock(mutex);
 
 	if (!tcpsock) return;
@@ -439,6 +447,8 @@ void LightPack::SetSmooth(uint8_t smooth) {
 }
 
 void LightPack::SetGamma(float gamma, bool silent) {
+	if (!silent) Settings::settings.SetGamma(gamma);
+
 	std::unique_lock lock(mutex);
 
 	if (!tcpsock) return;

@@ -45,44 +45,40 @@ void CApp::AddCommands() {
 		},
 		{
 			"fftline", [&](const std::vector<std::string> &args) {
-				auto oldRenderer = renderer;
+				renderer = RendererFactory::Build(
+					args[0],
+					&dynamicGain,
+					&albumArt,
+					renderer,
+					windowWidth,
+					windowHeight,
+					buffer,
+					maxLength,
+					bufferLength
+				);
 
-				if (oldRenderer) {
-					if (auto lineRenderer = dynamic_cast<LineRenderer *>(oldRenderer))
-						renderer = new FFTLineRenderer(std::move(*lineRenderer));
-					else {
-						// Clean up the line before moving
-						oldRenderer->OnDestroy();
-						renderer = new FFTLineRenderer(std::move(*oldRenderer));
-					}
-				} else {
-					renderer = new FFTLineRenderer(&dynamicGain, &albumArt);
-					renderer->OnInit(windowWidth, windowHeight);
-					renderer->SetBuffer(buffer, maxLength);
-					renderer->SetBufferLength(bufferLength, true);
-				}
-
-				delete oldRenderer;
+				Settings::settings.SetRenderer(args[0]);
 			}
 		},
 		{
 			"fft", [&](const std::vector<std::string> &args) {
 				if (args.size() == 1) {
-					auto oldRenderer = renderer;
-					if (oldRenderer) {
-						oldRenderer->OnDestroy();
-						renderer = new FFTRenderer(std::move(*oldRenderer));
-					} else {
-						renderer = new FFTRenderer(&dynamicGain, &albumArt);
-						renderer->OnInit(windowWidth, windowHeight);
-						renderer->SetBuffer(buffer, maxLength);
-						renderer->SetBufferLength(bufferLength, true);
-					}
+					renderer = RendererFactory::Build(
+						args[0],
+						&dynamicGain,
+						&albumArt,
+						renderer,
+						windowWidth,
+						windowHeight,
+						buffer,
+						maxLength,
+						bufferLength
+					);
+
+					Settings::settings.SetRenderer(args[0]);
 
 					// Presets only really affect the FFT renderer for now
 					LoadPreset(presetIndex);
-
-					delete oldRenderer;
 				} else {
 					try {
 						if (IsDefault(args[1]))
@@ -97,23 +93,19 @@ void CApp::AddCommands() {
 		},
 		{
 			"osc", [&](const std::vector<std::string> &args) {
-				auto oldRenderer = renderer;
+				renderer = RendererFactory::Build(
+					args[0],
+					&dynamicGain,
+					&albumArt,
+					renderer,
+					windowWidth,
+					windowHeight,
+					buffer,
+					maxLength,
+					bufferLength
+				);
 
-				if (oldRenderer) {
-					if (auto lineRenderer = dynamic_cast<LineRenderer *>(oldRenderer))
-						renderer = new OscilloscopeRenderer(std::move(*lineRenderer));
-					else {
-						oldRenderer->OnDestroy();
-						renderer = new OscilloscopeRenderer(std::move(*oldRenderer));
-					}
-				} else {
-					renderer = new OscilloscopeRenderer(&dynamicGain, &albumArt);
-					renderer->OnInit(windowWidth, windowHeight);
-					renderer->SetBuffer(buffer, maxLength);
-					renderer->SetBufferLength(bufferLength, true);
-				}
-
-				delete oldRenderer;
+				Settings::settings.SetRenderer(args[0]);
 			}
 		},
 		{
@@ -463,7 +455,9 @@ void CApp::AddCommands() {
 		{
 			"bpm", [&](const std::vector<std::string> &args) {
 				for (auto &detector : beatDetectors)
-					detector.ToggleDetection();
+					detector.SetDetecting(!detector.IsDetecting());
+
+				Settings::settings.SetDetectBpm(beatDetect->IsDetecting());
 
 				if (beatDetect->IsDetecting() && !loadedFile.empty()) {
 					for (auto &detector : beatDetectors)
