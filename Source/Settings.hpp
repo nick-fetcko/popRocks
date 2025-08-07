@@ -92,6 +92,12 @@ public:
 	const float &GetGamma() const { return gamma; }
 	void SetGamma(float gamma);
 
+	const bool &GetBlur() const { return blur; }
+	void SetBlur(bool blur);
+
+	const float &GetBlurIntensity() const { return blurIntensity; }
+	void SetBlurIntensity(float blurIntensity);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -138,4 +144,7 @@ private:
 
 	uint8_t smooth = 0;
 	float gamma = 1.0f;
+
+	bool blur = false;
+	float blurIntensity = 0.5f;
 };

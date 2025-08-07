@@ -204,10 +204,10 @@ private:
 
 	std::atomic<bool> shuttingDown = false;
 
-	bool blur = false;
+	bool blur = Settings::settings.GetBlur();
 
 	// How many _seconds_ it takes for the blur to fade out
-	float blurIntensity = 0.5f;
+	float blurIntensity = Settings::settings.GetBlurIntensity();
 	
 	bool resetGain = false;
 

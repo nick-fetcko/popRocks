@@ -170,6 +170,16 @@ void Settings::SetGamma(float gamma) {
 	Save();
 }
 
+void Settings::SetBlur(bool blur) {
+	this->blur = blur;
+	Save();
+}
+
+void Settings::SetBlurIntensity(float blurIntensity) {
+	this->blurIntensity = blurIntensity;
+	Save();
+}
+
 void Settings::Save() {
 	if (auto path = GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
@@ -285,6 +295,11 @@ const Node &operator>>(const Node &node, Settings &settings) {
 		node["smooth"]->get(settings.smooth);
 	if (node.has("gamma"))
 		node["gamma"]->get(settings.gamma);
+
+	if (node.has("blur"))
+		node["blur"]->get(settings.blur);
+	if (node.has("blurIntensity"))
+		node["blurIntensity"]->get(settings.blurIntensity);
 		
 	return node;
 }
@@ -311,6 +326,8 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["presetIndex"]->set(settings.presetIndex);
 	node["smooth"]->set(settings.smooth);
 	node["gamma"]->set(settings.gamma);
+	node["blur"]->set(settings.blur);
+	node["blurIntensity"]->set(settings.blurIntensity);
 
 	return node;
 }

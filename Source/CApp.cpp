@@ -455,6 +455,10 @@ void CApp::OnResize(int width, int height, float scale) {
 	if (blur) {
 		blurFbo = std::make_unique<Framebuffer>(windowWidth, windowHeight);
 		lastFrame = std::make_unique<Framebuffer>(windowWidth, windowHeight);
+
+		context->With("blur"_hash, [this](Context::Shader &shader) {
+			shader.program.Uniform1f("intensity", blurIntensity);
+		});
 	}
 }
 
@@ -1122,6 +1126,7 @@ void CApp::SetStrobeFrequency(Duration<Microseconds> freq) {
 void CApp::ToggleBlur() {
 	blur = !blur;
 	logger.LogDebug("Turning blur ", blur ? "on" : "off");
+	Settings::settings.SetBlur(blur);
 	if (blur) {
 		blurFbo = std::make_unique<Framebuffer>(windowWidth, windowHeight);
 		lastFrame = std::make_unique<Framebuffer>(windowWidth, windowHeight);
@@ -1137,6 +1142,7 @@ void CApp::ToggleBlur() {
 
 void CApp::SetBlurIntensity(float intensity) {
 	blurIntensity = intensity;
+	Settings::settings.SetBlurIntensity(intensity);
 
 	context->With("blur"_hash, [this](Context::Shader &shader) {
 		shader.program.Uniform1f("intensity", blurIntensity);
