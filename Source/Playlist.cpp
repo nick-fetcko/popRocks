@@ -121,7 +121,7 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 			// Ignore HFS attribute files (filenames that start with "._")
 			(filename.size() <= 1 || filename[0] != '.' || filename[1] != '_')
 		) {
-			auto streamHandle = openWithFlags(iter.path(), extension, BASS_STREAM_PRESCAN);
+			auto streamHandle = openWithFlags(iter.path(), extension, 0);
 
 			Loader loader;
 			metadata.OnLoad(iter.path(), extension, streamHandle, &loader);
