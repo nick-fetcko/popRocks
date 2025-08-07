@@ -146,6 +146,9 @@ private:
 	inline void LoadBeats(HSTREAM streamHandle, std::filesystem::path path);
 	void ResetBeatDetection();
 
+	// FIXME: Put this somewhere else, but I don't want SDL as a dependency to OpenGL
+	void SaveAsPNG(const Framebuffer &framebuffer, const std::filesystem::path &path);
+
 	int windowWidth = 1920;
 	int windowHeight = 1080;
 
@@ -203,7 +206,8 @@ private:
 
 	bool blur = false;
 
-	float blurIntensity = 0.88f;
+	// How many _seconds_ it takes for the blur to fade out
+	float blurIntensity = 0.5f;
 	
 	bool resetGain = false;
 
@@ -252,4 +256,7 @@ private:
 
 	Circle<Circles::Plain> spindle;
 	constexpr static float SpindleSize = 20.0f;
+
+	std::unique_ptr<Framebuffer> blurFbo;
+	std::unique_ptr<Framebuffer> lastFrame;
 };

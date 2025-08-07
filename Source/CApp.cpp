@@ -318,16 +318,28 @@ void CApp::OnInit() {
 		Utils::GetResource("fragment-font.glsl"),
 		"font"_hash
 	);
+	context->AddShader(
+		Utils::GetResource("vertex-blur.glsl"),
+		Utils::GetResource("fragment-blur.glsl"),
+		"blur"_hash
+	);
 
 	// Cache our uniforms
 	for (auto &[hash, shader] : *context) {
 		shader.program.CacheUniformLocation("projection");
-		shader.program.CacheUniformLocation("color");
+
+		if (hash != "blur"_hash) {
+			shader.program.CacheUniformLocation("color");
+			shader.program.Uniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
+		} else {
+			shader.program.CacheUniformLocation("timeDelta");
+			shader.program.CacheUniformLocation("intensity");
+		}
+
 		if (hash == "rotate"_hash) {
 			shader.program.CacheUniformLocation("screenSize");
 			shader.program.CacheUniformLocation("radius");
 		}
-		shader.program.Uniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
 	}
 
 	// Initialize our buffers now that we have an OpenGL context
@@ -437,11 +449,13 @@ void CApp::OnResize(int width, int height, float scale) {
 
 	glViewport(0, 0, windowWidth, windowHeight);
 
-	glClearAccum(0.0, 0.0, 0.0, 1.0);
-	glClear(GL_ACCUM_BUFFER_BIT);
-
 	renderer->OnResize(windowWidth, windowHeight);
 	controls.OnResize(windowWidth, windowHeight, *context, scale);
+
+	if (blur) {
+		blurFbo = std::make_unique<Framebuffer>(windowWidth, windowHeight);
+		lastFrame = std::make_unique<Framebuffer>(windowWidth, windowHeight);
+	}
 }
 
 const Colour<float> &CApp::GetColor() const {
@@ -459,6 +473,22 @@ void CApp::SetColor(float alpha) const {
 
 inline void CApp::AdvanceToNextTrack() {
 	advanceOnNextLoop = true;
+}
+
+void CApp::SaveAsPNG(const Framebuffer &framebuffer, const std::filesystem::path &path) {
+	auto surface = SDL_CreateRGBSurface(
+		0,
+		windowWidth,
+		windowHeight,
+		32,
+		0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000
+	);
+
+	auto pixels = framebuffer.GetBitmap();
+	memcpy(surface->pixels, pixels.data(), windowWidth * windowHeight * 4);
+	auto ret = IMG_SavePNG(surface, path.u8string().c_str());
+
+	SDL_FreeSurface(surface);
 }
 
 void CApp::OnLoop(const Delta &time) {
@@ -581,19 +611,44 @@ void CApp::OnLoop(const Delta &time) {
 			strobeAccum -= strobeFrequency;
 		}
 	}
-			
-	renderer->Draw(time, frameCount, GetColor(), *context);
 
-	if (!shuttingDown)
-		lightPack.OnLoop((albumArt.Loaded() && !overrideColor) ? albumArt.GetColor() : visColor);
+	if (blur) {
+		blurFbo->Bind();
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		// Don't try to blend into the blank background
+		glDisable(GL_BLEND);
+		
+		context->Use("blur"_hash);
+		context->GetShaderProgram().Uniform1f("timeDelta", playing ? time.change.AsSeconds() : 0.0f);
+
+		lastFrame->Draw(0, 0, *context);
+
+		glEnable(GL_BLEND);
+	}
+	
+	renderer->Draw(time, frameCount, GetColor(), *context);
 
 	if (blur) {
 		glDisable(GL_BLEND);
-		glAccum(GL_MULT, blurIntensity);
-		glAccum(GL_ACCUM, 1 - blurIntensity);
-		glAccum(GL_RETURN, 1.0);
+
+		context->LoadIdentity();
+		blurFbo->Unbind();
+		
+		context->Color(1.0f, 1.0f, 1.0f, 1.0f);
+
+		lastFrame->Bind();
+		glClear(GL_COLOR_BUFFER_BIT);
+		blurFbo->Draw(0, 0, *context);
+		lastFrame->Unbind();
 		glEnable(GL_BLEND);
+		
+		lastFrame->Draw(0, 0, *context);
 	}
+
+	if (!shuttingDown)
+		lightPack.OnLoop((albumArt.Loaded() && !overrideColor) ? albumArt.GetColor() : visColor);
 
 	// Draw album art OVER the accumulation buffer
 	// since we don't want it getting blurry
@@ -701,6 +756,9 @@ void CApp::OnDestroy() {
 	renderer->OnDestroy();
 
 	spindle.OnDestroy();
+
+	blurFbo.reset();
+	lastFrame.reset();
 
 	// Make sure to free our shader resources
 	context.reset();
@@ -1063,10 +1121,26 @@ void CApp::SetStrobeFrequency(Duration<Microseconds> freq) {
 
 void CApp::ToggleBlur() {
 	blur = !blur;
+	logger.LogDebug("Turning blur ", blur ? "on" : "off");
+	if (blur) {
+		blurFbo = std::make_unique<Framebuffer>(windowWidth, windowHeight);
+		lastFrame = std::make_unique<Framebuffer>(windowWidth, windowHeight);
+
+		context->With("blur"_hash, [this](Context::Shader &shader) {
+			shader.program.Uniform1f("intensity", blurIntensity);
+		});
+	} else {
+		blurFbo.reset();
+		lastFrame.reset();
+	}
 }
 
 void CApp::SetBlurIntensity(float intensity) {
 	blurIntensity = intensity;
+
+	context->With("blur"_hash, [this](Context::Shader &shader) {
+		shader.program.Uniform1f("intensity", blurIntensity);
+	});
 }
 
 void CApp::Seek(double seconds) {
