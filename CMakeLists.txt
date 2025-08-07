@@ -52,6 +52,7 @@ set(_poprocks_cpp_headers
 	Source/ExclusiveIndicator.hpp
 	Source/FFTLineRenderer.hpp
 	Source/FFTRenderer.hpp
+	Source/FLAC.hpp
 	Source/FPSCounter.hpp
 	Source/Gaussian.hpp
 	Source/ID3V2.hpp
