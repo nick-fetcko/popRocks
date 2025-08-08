@@ -1,6 +1,7 @@
 #include "Playlist.hpp"
 
 #include "FLAC.hpp"
+#include "MP3.hpp"
 
 Playlist::Sorter::iterator Playlist::GuessDisc(Sorter &sorter, std::size_t index) {
 	std::size_t discGuess = 1;
@@ -125,14 +126,18 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 		) {
 			Loader loader;
 
-			if (extension != ".flac") {
+			if (extension == ".flac") {
+				FLAC flac;
+
+				loader.LoadFromTags(flac.GetTags(iter.path()));
+			} else if (extension == ".mp3") {
+				MP3 mp3;
+
+				loader.LoadFromTags(mp3.GetTags(iter.path()));
+			} else {
 				auto streamHandle = openWithFlags(iter.path(), extension, 0);
 				metadata.OnLoad(iter.path(), extension, streamHandle, &loader);
 				BASS_StreamFree(streamHandle);
-			} else {
-				FLAC flac;
-				
-				loader.LoadFromTags(flac.GetTags(iter.path()));
 			}
 
 			Sorter::iterator discSorter = sorter.end();

@@ -42,6 +42,9 @@ public:
 
 		bool HasExtendedHeader() const;
 
+		bool IsValid() const;
+		bool IsFooter() const;
+
 	private:
 		ID3V2 &parent;
 	};
@@ -160,7 +163,6 @@ public:
 	ExtendedHeader *extendedHeader = nullptr;
 	std::map<std::string, Frame> frames;
 	uint8_t *padding = nullptr;
-	uint8_t *footer = nullptr;
 
 	std::size_t currentOffset = 0;
 

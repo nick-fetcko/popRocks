@@ -39,6 +39,22 @@ bool ID3V2::Header::HasExtendedHeader() const {
 	return ret;
 }
 
+bool ID3V2::Header::IsValid() const {
+	return id[0] == 'I' &&
+		id[1] == 'D' &&
+		id[2] == '3' &&
+		majorVersion >= 2 &&
+		majorVersion <= 4;
+}
+
+bool ID3V2::Header::IsFooter() const {
+	return id[0] == '3' &&
+		id[1] == 'D' &&
+		id[2] == 'I' &&
+		majorVersion >= 2 &&
+		majorVersion <= 4;
+}
+
 // ===============================================
 // ================= ID3V2::Art ==================
 // ===============================================
@@ -210,7 +226,7 @@ std::map<std::string, std::string> ID3V2::Read(const char **tag, bool textOnly) 
 			if (frame.id.empty() || frame.id[0] == '\0') // we hit padding
 				break;
 
-			logger.LogDebug("Skipping frame ", frame.id);
+			logger.LogInfo("Skipping frame ", frame.id);
 		}
 	}
 
@@ -312,6 +328,16 @@ std::string ID3V2::ToUTF8(const char *tag, uint32_t size, Encoding encoding) {
 		// be null-terminated, but I've found
 		// multiple examples of no terminator
 		chars[size * sizeof(wchar_t) - (rounded ? 1 : 0)] = '\0';
+
+		// I've encountered a single malformed file
+		// (MisterWives' "Reflection") that wrongly
+		// encodes the TALB tag. It claims to be Latin1,
+		// but is UTF-16. Furthermore: its BOM isn't 
+		// 0xFFFE, but rather 0xFF00FE.
+		if (chars[0] == '\0') {
+			delete[] chars;
+			return "";
+		}
 
 		auto ret = std::string(chars, chars + size * sizeof(wchar_t));
 		delete[] chars;
