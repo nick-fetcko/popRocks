@@ -54,13 +54,18 @@ void MP4::Atom::ReadData() {
 	// bytes in "data" atoms
 	file.seekg(4, std::ios::cur);
 
-	mimeType = "image/";
 	switch (flags[2]) {
+	case 0:
+		mimeType = "application/octet-stream";
+		break;
+	case 1:
+		mimeType = "text/plain";
+		break;
 	case 13:
-		mimeType += "jpeg";
+		mimeType = "image/jpeg";
 		break;
 	case 14:
-		mimeType += "png";
+		mimeType = "image/png";
 		break;
 	default:
 		break;
@@ -73,6 +78,8 @@ void MP4::Atom::ReadData() {
 	//		3 bytes for flag
 	//		4 bytes reserved
 	dataSize = size - 16;
+
+	delete[] data;
 
 	data = new uint8_t[dataSize];
 	file.read(reinterpret_cast<char *>(data), dataSize);
@@ -148,4 +155,46 @@ std::optional<MP4::Atom> MP4::SeekToAtom(const std::string &name, const std::opt
 	}
 
 	return std::nullopt;
+}
+
+std::map<std::string, std::string> MP4::GetTags() {
+	std::map<std::string, std::string> ret;
+
+	auto atom = GetAtomAtPath({ "moov", "udta", "meta", "ilst" });
+
+	int64_t size = atom->size;
+	auto pos = file.tellg();
+	
+	while (file.tellg() < pos + size) {
+		atom->Read();
+		if (!atom->IsValid()) {
+			file.seekg(-(atom->GetBytes() * 2), std::ios::cur);
+
+			atom->Read();
+			atom->ReadExtras();
+		}
+
+		if (auto iter = RelevantAtoms.find(atom->name); iter != RelevantAtoms.end()) {
+			// "data" atom comes next
+			atom->Read();
+			atom->ReadData();
+
+			if (atom->flags[2] == 1) { // text/plain
+				ret[iter->second] = std::string(atom->data, atom->data + atom->dataSize);
+			} else if (atom->flags[2] == 0) { // application/octet-stream
+				for (uint32_t i = 0; i < atom->dataSize; ++i) {
+					if (atom->data[i] != 0) {
+						ret[iter->second] = std::to_string(static_cast<uint16_t>(atom->data[i]));
+
+						// We only care about the _first_ non-zero for now.
+						// Just getting "disc 1" is fine... we don't need
+						// "disc 1 of x"
+						break;
+					}
+				}
+			}
+		} else file.seekg(atom->size - atom->GetBytes(), std::ios::cur);
+	}
+
+	return ret;
 }

@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
@@ -55,7 +56,17 @@ public:
 
 	std::optional<Atom> GetAtomAtPath(const std::vector<std::string> &path);
 
+	std::map<std::string, std::string> GetTags();
+
 private:
+	static inline const std::map<std::string, std::string> RelevantAtoms = {
+		{ "©art", "artist" },
+		{ "©alb", "album" },
+		{ "©nam", "title"},
+		{ "disk", "discnumber" },
+		{ "trkn", "tracknumber" }
+	};
+
 	std::optional<Atom> SeekToAtom(const std::string &name, const std::optional<Atom> &parent = std::nullopt);
 
 	std::ifstream file;
