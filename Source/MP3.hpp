@@ -28,7 +28,7 @@ private:
 	};
 
 public:
-	std::map<std::string, std::string> GetTags(const std::filesystem::path &path) {
+	std::map<std::string, std::string> GetTags(const std::filesystem::path &path, bool textOnly = true) {
 		std::map<std::string, std::string> ret;
 
 		std::ifstream inFile(path, std::ios::in | std::ios::binary);
@@ -64,7 +64,7 @@ public:
 			char *tag = new char[id3v2.header.size];
 			ptr = tag;
 			inFile.read(tag, id3v2.header.size);
-			ret = id3v2.Read(const_cast<const char **>(&ptr));
+			ret = id3v2.Read(const_cast<const char **>(&ptr), textOnly);
 			delete[] tag;
 		}
 
