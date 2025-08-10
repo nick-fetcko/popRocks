@@ -40,6 +40,7 @@ add_subdirectory(Utils)
 
 set(_poprocks_cpp_headers
 	Source/AlbumArt.hpp
+	Source/APE.hpp
 	Source/AutoFader.hpp
 	Source/BeatDetect.hpp
 	Source/Bicubic.hpp

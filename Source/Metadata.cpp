@@ -1,5 +1,7 @@
 #include "Metadata.hpp"
 
+#include "APE.hpp"
+
 void Metadata::OnLoad(
 	const std::filesystem::path &path,
 	const std::string &extension,
@@ -7,6 +9,22 @@ void Metadata::OnLoad(
 	TagLoader *tagLoader,
 	AlbumArt *albumArt
 ) {
+	if (extension == ".ape") {
+		APE ape;
+
+		auto tags = ape.GetTags(path, false);
+		tagLoader->LoadFromTags(tags);
+		if (auto art = ape.GetItems().find("art"); art != ape.GetItems().end()) {
+			albumArt->Load(
+				art->second.mimeType,
+				art->second.data,
+				art->second.size
+			);
+		}
+		
+		return;
+	}
+
 	// Prefer ID3v2, since it doesn't have a character limit
 	auto id3v2 = BASS_ChannelGetTags(streamHandle, BASS_TAG_ID3V2);
 	if (id3v2) {

@@ -1,5 +1,6 @@
 #include "Playlist.hpp"
 
+#include "APE.hpp"
 #include "FLAC.hpp"
 #include "MP3.hpp"
 #include "MP4.hpp"
@@ -139,6 +140,10 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 				MP4 mp4(iter.path());
 
 				loader.LoadFromTags(mp4.GetTags());
+			} else if (extension == ".ape") {
+				APE ape;
+
+				loader.LoadFromTags(ape.GetTags(iter.path()));
 			} else {
 				auto streamHandle = openWithFlags(iter.path(), extension, 0);
 				metadata.OnLoad(iter.path(), extension, streamHandle, &loader);
