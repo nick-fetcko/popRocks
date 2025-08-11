@@ -205,7 +205,7 @@ std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder) con
 			std::transform(filename.begin(), filename.end(), filename.begin(), tolower);
 
 			if ((filename.find("cover") == 0 ||
-				filename.find("front") == 0 ||
+				filename.find("front") != std::string::npos ||
 				filename.find("folder") == 0) &&
 				!foundPreferred) {
 				found = entry.path();
