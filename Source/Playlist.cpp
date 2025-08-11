@@ -4,6 +4,7 @@
 #include "FLAC.hpp"
 #include "MP3.hpp"
 #include "MP4.hpp"
+#include "WV.hpp"
 
 Playlist::Sorter::iterator Playlist::GuessDisc(Sorter &sorter, std::size_t index) {
 	std::size_t discGuess = 1;
@@ -133,17 +134,21 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 
 				loader.LoadFromTags(flac.GetTags(iter.path()));
 			} else if (extension == ".mp3") {
-				MP3 mp3;
+				MP3 mp3(iter.path());
 
-				loader.LoadFromTags(mp3.GetTags(iter.path()));
+				loader.LoadFromTags(mp3.GetTags());
 			} else if (extension == ".mp4" || extension == ".m4a") {
 				MP4 mp4(iter.path());
 
 				loader.LoadFromTags(mp4.GetTags());
 			} else if (extension == ".ape") {
-				APE ape;
+				APE ape(iter.path());
 
-				loader.LoadFromTags(ape.GetTags(iter.path()));
+				loader.LoadFromTags(ape.GetTags());
+			} else if (extension == ".wv") {
+				WV wv(iter.path());
+
+				loader.LoadFromTags(wv.GetTags());
 			} else {
 				auto streamHandle = openWithFlags(iter.path(), extension, 0);
 				metadata.OnLoad(iter.path(), extension, streamHandle, &loader);

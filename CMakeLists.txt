@@ -61,6 +61,7 @@ set(_poprocks_cpp_headers
 	Source/LineRenderer.hpp
 	Source/Mappings.h
 	Source/Metadata.hpp
+	Source/MetadataReader.hpp
 	Source/MP3.hpp
 	Source/MP4.hpp
 	Source/OscilloscopeRenderer.hpp
@@ -73,6 +74,7 @@ set(_poprocks_cpp_headers
 	Source/TagLoader.hpp
 	Source/Text.hpp
 	Source/Volume.hpp
+	Source/WV.hpp
 	)
 set(_poprocks_cpp_sources
 	Source/AlbumArt.cpp

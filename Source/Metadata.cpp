@@ -1,6 +1,7 @@
 #include "Metadata.hpp"
 
 #include "APE.hpp"
+#include "WV.hpp"
 
 void Metadata::OnLoad(
 	const std::filesystem::path &path,
@@ -10,9 +11,9 @@ void Metadata::OnLoad(
 	AlbumArt *albumArt
 ) {
 	if (extension == ".ape") {
-		APE ape;
+		APE ape(path);
 
-		auto tags = ape.GetTags(path, false);
+		auto tags = ape.GetTags(false);
 		tagLoader->LoadFromTags(tags);
 		if (auto art = ape.GetItems().find("art"); art != ape.GetItems().end()) {
 			albumArt->Load(
@@ -22,6 +23,20 @@ void Metadata::OnLoad(
 			);
 		}
 		
+		return;
+	} else if (extension == ".wv") {
+		WV wv(path);
+
+		auto tags = wv.GetTags(false);
+		tagLoader->LoadFromTags(tags);
+		if (auto art = wv.GetItems().find("art"); art != wv.GetItems().end()) {
+			albumArt->Load(
+				art->second.mimeType,
+				art->second.data,
+				art->second.size
+			);
+		}
+
 		return;
 	}
 

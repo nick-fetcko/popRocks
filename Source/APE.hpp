@@ -1,18 +1,18 @@
 #pragma once
 
 #include <cstdint>
-#include <filesystem>
-#include <fstream>
 #include <map>
 #include <string>
+
+#include "MetadataReader.hpp"
 
 // https://mutagen-specs.readthedocs.io/en/latest/apev2/apev2.html
 //
 // Embedded cover art seems largely undocumented, so I used
 // MusicBee to embed art into an APE file and based my
 // implementation off of what it did.
-class APE {
-private:
+class APE : public MetadataReader {
+protected:
 	struct ApeTagEx {
 		uint64_t preamble;
 		uint32_t version;
@@ -63,7 +63,7 @@ private:
 		{ "Media", "discnumber" }
 	};
 
-	inline static void GetKey(std::ifstream &inFile, std::string &key) {
+	inline void GetKey(std::string &key) {
 		char c = 0;
 		inFile.read(&c, 1);
 		while (c) {
@@ -75,12 +75,15 @@ private:
 	std::map<std::string, ApeTagItem> items;
 
 public:
-	std::map<std::string, std::string> GetTags(const std::filesystem::path &path, bool textOnly = true) {
+	APE(const std::filesystem::path &path) : MetadataReader(path) {
+		// APE tags are always at the end
+		inFile.seekg(0, std::ios::end);
+	}
+
+	std::map<std::string, std::string> GetTags(bool textOnly = true) {
 		std::map<std::string, std::string> ret;
 
-		std::ifstream inFile(path, std::ios::in | std::ios::binary);
-
-		inFile.seekg(-sizeof(ApeTagEx), std::ios::end);
+		inFile.seekg(-sizeof(ApeTagEx), std::ios::cur);
 
 		ApeTagEx footer;
 
@@ -97,11 +100,11 @@ public:
 					ApeTagItem item;
 					inFile.read(reinterpret_cast<char *>(&item), sizeof(uint32_t) * 2);
 
-					GetKey(inFile, item.key);
+					GetKey(item.key);
 
 					if (!textOnly && item.key.find("Cover Art") != std::string::npos) {
 						// Filename is null terminated, just like keys
-						GetKey(inFile, item.mimeType);
+						GetKey(item.mimeType);
 						item.size -= item.mimeType.length();
 						item.data = new uint8_t[item.size];
 
