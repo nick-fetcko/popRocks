@@ -147,7 +147,7 @@ private:
 	void ResetBeatDetection();
 
 	// FIXME: Put this somewhere else, but I don't want SDL as a dependency to OpenGL
-	void SaveAsPNG(const Framebuffer &framebuffer, const std::filesystem::path &path);
+	void SaveAsPNG(const FramebufferObject &framebuffer, const std::filesystem::path &path);
 
 	int windowWidth = 1920;
 	int windowHeight = 1080;
@@ -257,6 +257,6 @@ private:
 	Circle<Circles::Plain> spindle;
 	constexpr static float SpindleSize = 20.0f;
 
-	std::unique_ptr<Framebuffer> blurFbo;
-	std::unique_ptr<Framebuffer> lastFrame;
+	std::unique_ptr<MultisampledFramebufferObject> blurFbo;
+	std::unique_ptr<MultisampledFramebufferObject> lastFrame;
 };

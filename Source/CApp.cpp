@@ -264,8 +264,8 @@ void CApp::OnInit() {
 	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
 	windowWidth = Settings::settings.GetWindowWidth();
 	windowHeight = Settings::settings.GetWindowHeight();
@@ -337,6 +337,7 @@ void CApp::OnInit() {
 		} else {
 			shader.program.CacheUniformLocation("timeDelta");
 			shader.program.CacheUniformLocation("intensity");
+			shader.program.CacheUniformLocation("screenSize");
 		}
 
 		if (hash == "rotate"_hash) {
@@ -450,14 +451,18 @@ void CApp::OnResize(int width, int height, float scale) {
 		shader.program.Uniform2f("screenSize", width, height);
 	});
 
+	context->With("blur"_hash, [width, height](Context::Shader &shader) {
+		shader.program.Uniform2f("screenSize", width, height);
+	});
+
 	glViewport(0, 0, windowWidth, windowHeight);
 
 	renderer->OnResize(windowWidth, windowHeight);
 	controls.OnResize(windowWidth, windowHeight, *context, scale);
 
 	if (blur) {
-		blurFbo = std::make_unique<Framebuffer>(windowWidth, windowHeight);
-		lastFrame = std::make_unique<Framebuffer>(windowWidth, windowHeight);
+		blurFbo = std::make_unique<MultisampledFramebufferObject>(windowWidth, windowHeight);
+		lastFrame = std::make_unique<MultisampledFramebufferObject>(windowWidth, windowHeight);
 
 		context->With("blur"_hash, [this](Context::Shader &shader) {
 			shader.program.Uniform1f("intensity", blurIntensity);
@@ -482,7 +487,7 @@ inline void CApp::AdvanceToNextTrack() {
 	advanceOnNextLoop = true;
 }
 
-void CApp::SaveAsPNG(const Framebuffer &framebuffer, const std::filesystem::path &path) {
+void CApp::SaveAsPNG(const FramebufferObject &framebuffer, const std::filesystem::path &path) {
 	auto surface = SDL_CreateRGBSurface(
 		0,
 		windowWidth,
@@ -630,7 +635,7 @@ void CApp::OnLoop(const Delta &time) {
 		context->Use("blur"_hash);
 		context->GetShaderProgram().Uniform1f("timeDelta", playing ? time.change.AsSeconds() : 0.0f);
 
-		lastFrame->Draw(0, 0, *context);
+		lastFrame->DrawMultisampled(0, 0, *context);
 
 		glEnable(GL_BLEND);
 	}
@@ -645,13 +650,11 @@ void CApp::OnLoop(const Delta &time) {
 		
 		context->Color(1.0f, 1.0f, 1.0f, 1.0f);
 
-		lastFrame->Bind();
 		glClear(GL_COLOR_BUFFER_BIT);
-		blurFbo->Draw(0, 0, *context);
-		lastFrame->Unbind();
+		blurFbo->Draw(0, 0, *context, lastFrame.get());
 		glEnable(GL_BLEND);
 		
-		lastFrame->Draw(0, 0, *context);
+		blurFbo->Draw(0, 0, *context);
 	}
 
 	if (!shuttingDown)
@@ -1131,8 +1134,8 @@ void CApp::ToggleBlur() {
 	logger.LogDebug("Turning blur ", blur ? "on" : "off");
 	Settings::settings.SetBlur(blur);
 	if (blur) {
-		blurFbo = std::make_unique<Framebuffer>(windowWidth, windowHeight);
-		lastFrame = std::make_unique<Framebuffer>(windowWidth, windowHeight);
+		blurFbo = std::make_unique<MultisampledFramebufferObject>(windowWidth, windowHeight);
+		lastFrame = std::make_unique<MultisampledFramebufferObject>(windowWidth, windowHeight);
 
 		context->With("blur"_hash, [this](Context::Shader &shader) {
 			shader.program.Uniform1f("intensity", blurIntensity);

@@ -31,7 +31,7 @@ public:
 
 	void SetColor(const Colour<float> &color) { this->color = color; }
 
-	std::unique_ptr<Framebuffer> &GetCached() { return cached; };
+	std::unique_ptr<FramebufferObject> &GetCached() { return cached; };
 
 	const OpenGLFont::Bounds &GetBounds() const { return bounds; }
 
@@ -41,7 +41,7 @@ private:
 
 	GLuint texture = 0;
 	OpenGLFont::Bounds bounds;
-	std::unique_ptr<Framebuffer> cached;
+	std::unique_ptr<FramebufferObject> cached;
 
 	std::string text;
 
