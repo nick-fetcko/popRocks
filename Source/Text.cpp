@@ -45,8 +45,6 @@ void Text::SetText(const std::string &text, bool force) {
 	}
 
 	size = { bounds.width, bounds.renderedHeight + font->GetDescender() / 2 };
-
-	glDisable(GL_TEXTURE_2D);
 }
 
 void Text::OnDestroy() {
@@ -57,7 +55,6 @@ void Text::OnDestroy() {
 void Text::OnLoop(int x, int y) const {
 	if (!font || Empty()) return;
 
-	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, texture);
 
 	context->Translate(x, y, 0.0f);
@@ -66,6 +63,4 @@ void Text::OnLoop(int x, int y) const {
 	font->RenderCached(cached, context->GetProjection(), *context);
 
 	context->LoadIdentity();
-
-	glDisable(GL_TEXTURE_2D);
 }

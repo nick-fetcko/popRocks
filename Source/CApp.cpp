@@ -326,6 +326,9 @@ void CApp::OnInit() {
 
 	// Cache our uniforms
 	for (auto &[hash, shader] : *context) {
+		// by calling program.Use() instead of context->Use()
+		// we avoid changing the currentProgram
+		shader.program.Use();
 		shader.program.CacheUniformLocation("projection");
 
 		if (hash != "blur"_hash) {

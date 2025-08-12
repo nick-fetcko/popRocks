@@ -108,7 +108,6 @@ void AlbumArt::OnLoop(GLfloat x, GLfloat y, float frameCount, Context &context) 
 
 	if (albumLoaded) {
 		context.Color(1.0f, 1.0f, 1.0f, 1.0f);
-		glEnable(GL_TEXTURE_2D);
 
 		context.Translate(
 			x,
@@ -127,8 +126,6 @@ void AlbumArt::OnLoop(GLfloat x, GLfloat y, float frameCount, Context &context) 
 
 		Circle::OnLoop(0, 0, context);
 
-		glDisable(GL_TEXTURE_2D);
-		
 		context.LoadIdentity();
 	}
 }
@@ -151,7 +148,6 @@ int AlbumArt::DrawSquare(int x, int y, int height, GLfloat alpha, Context &conte
 		
 		context.Color(1.0f, 1.0f, 1.0f, alpha);
 
-		glEnable(GL_TEXTURE_2D);
 		context.Translate(
 			static_cast<GLfloat>(x),
 			static_cast<GLfloat>(y),
@@ -166,7 +162,6 @@ int AlbumArt::DrawSquare(int x, int y, int height, GLfloat alpha, Context &conte
 		squareEab->Unbind();
 		squareVao->Unbind();
 
-		glDisable(GL_TEXTURE_2D);
 		context.LoadIdentity();
 
 		// Return our width
@@ -247,7 +242,6 @@ std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder) con
 }
 
 void AlbumArt::LoadFromSurface(SDL_Surface *surface, bool scaled) {
-	glEnable(GL_TEXTURE_2D);
 	glDeleteTextures(1, &album);
 	glGenTextures(1, &album);
 	glBindTexture(GL_TEXTURE_2D, album);
@@ -256,7 +250,6 @@ void AlbumArt::LoadFromSurface(SDL_Surface *surface, bool scaled) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_FALSE);
 
 	albumWidth = surface->w;
 	albumHeight = surface->h;
@@ -521,8 +514,6 @@ void AlbumArt::LoadFromSurface(SDL_Surface *surface, bool scaled) {
 	// 
 //	if (lastSurface)
 //		SDL_FreeSurface(lastSurface);
-
-	glDisable(GL_TEXTURE_2D);
 
 	albumLoaded = true;
 }
