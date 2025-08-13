@@ -160,6 +160,10 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 				BASS_StreamFree(streamHandle);
 			}
 
+			// If title is STILL empty, use the filename
+			if (!loader.HasTitle())
+				loader.SetTitle(iter.path().stem().u8string());
+
 			Sorter::iterator discSorter = sorter.end();
 
 			// We _do_ want to make a copy here,
