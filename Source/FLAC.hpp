@@ -7,10 +7,12 @@
 
 #include "Utils/Utils.hpp"
 
+#include "MetadataReader.hpp"
+
 using namespace Fetcko;
 
-class FLAC {
-private:
+class FLAC : public MetadataReader {
+protected:
 	struct MetadataBlock {
 		uint8_t type = 0;
 		uint8_t length[3] = { 0 };
@@ -31,10 +33,47 @@ private:
 		uint32_t commentListLength = 0;
 	};
 
-public:
-	std::map<std::string, std::string> GetTags(const std::filesystem::path &path) {
-		std::ifstream inFile(path, std::ios::in | std::ios::binary);
+	std::map<std::string, std::string> GetVorbisTags(bool textOnly = true) {
+		VorbisCommentBlock commentBlock;
 
+		inFile.read(reinterpret_cast<char *>(&commentBlock.vendorLength), sizeof(uint32_t));
+
+		char *vendorString = new char[commentBlock.vendorLength];
+		inFile.read(vendorString, commentBlock.vendorLength);
+		commentBlock.vendorString = std::string(vendorString, vendorString + commentBlock.vendorLength);
+		delete[] vendorString;
+
+		inFile.read(reinterpret_cast<char *>(&commentBlock.commentListLength), sizeof(uint32_t));
+
+		std::map<std::string, std::string> ret;
+		for (uint32_t i = 0; i < commentBlock.commentListLength; ++i) {
+			uint32_t commentLength = 0;
+			inFile.read(reinterpret_cast<char *>(&commentLength), sizeof(uint32_t));
+
+			// We're assuming anything > 10,000 bytes is not text data
+			if (!textOnly || (textOnly && commentLength < 10000)) {
+				char *commentString = new char[commentLength];
+				inFile.read(commentString, commentLength);
+
+				if (auto split = Utils::Split(std::string(commentString, commentString + commentLength), '=');
+					split.size() > 1) {
+					std::transform(split[0].begin(), split[0].end(), split[0].begin(), tolower);
+					ret[split[0]] = split[1];
+				}
+
+				delete[] commentString;
+			} else inFile.seekg(commentLength, std::ios::cur);
+		}
+
+		return ret;
+	}
+
+public:
+	FLAC(const std::filesystem::path &path) : MetadataReader(path) {
+
+	}
+
+	std::map<std::string, std::string> GetTags(bool textOnly = true) override {
 		// Make sure first 4 bytes are "fLaC"
 		uint32_t fourCC = 0;
 		inFile.read(reinterpret_cast<char *>(&fourCC), sizeof(uint32_t));
@@ -45,35 +84,7 @@ public:
 			while (!block.IsLast()) {
 				inFile.read(reinterpret_cast<char *>(&block), sizeof(MetadataBlock));
 				if ((block.type & 0x7F) == 4) { // VORBIS_COMMENT
-					VorbisCommentBlock commentBlock;
-
-					inFile.read(reinterpret_cast<char *>(&commentBlock.vendorLength), sizeof(uint32_t));
-
-					char *vendorString = new char[commentBlock.vendorLength];
-					inFile.read(vendorString, commentBlock.vendorLength);
-					commentBlock.vendorString = std::string(vendorString, vendorString + commentBlock.vendorLength);
-					delete[] vendorString;
-
-					inFile.read(reinterpret_cast<char *>(&commentBlock.commentListLength), sizeof(uint32_t));
-
-					std::map<std::string, std::string> ret;
-					for (uint32_t i = 0; i < commentBlock.commentListLength; ++i) {
-						uint32_t commentLength = 0;
-						inFile.read(reinterpret_cast<char *>(&commentLength), sizeof(uint32_t));
-
-						char *commentString = new char[commentLength];
-						inFile.read(commentString, commentLength);
-
-						if (auto split = Utils::Split(std::string(commentString, commentString + commentLength), '=');
-							split.size() > 1) {
-							std::transform(split[0].begin(), split[0].end(), split[0].begin(), tolower);
-							ret[split[0]] = split[1];
-						}
-
-						delete[] commentString;
-					}
-
-					return ret;
+					return GetVorbisTags(textOnly);
 				} else {
 					auto length = block.GetLength();
 					inFile.seekg(length, std::ios::cur);

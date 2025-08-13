@@ -57,7 +57,7 @@ public:
 
 	}
 
-	std::map<std::string, std::string> GetTags(bool textOnly = true) {
+	std::map<std::string, std::string> GetTags(bool textOnly = true) override {
 		std::map<std::string, std::string> ret;
 
 		ID3V2 id3v2;

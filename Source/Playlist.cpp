@@ -4,6 +4,7 @@
 #include "FLAC.hpp"
 #include "MP3.hpp"
 #include "MP4.hpp"
+#include "OGG.hpp"
 #include "WV.hpp"
 
 Playlist::Sorter::iterator Playlist::GuessDisc(Sorter &sorter, std::size_t index) {
@@ -130,9 +131,9 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 			Loader loader;
 
 			if (extension == ".flac") {
-				FLAC flac;
+				FLAC flac(iter.path());
 
-				loader.LoadFromTags(flac.GetTags(iter.path()));
+				loader.LoadFromTags(flac.GetTags());
 			} else if (extension == ".mp3") {
 				MP3 mp3(iter.path());
 
@@ -149,6 +150,10 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 				WV wv(iter.path());
 
 				loader.LoadFromTags(wv.GetTags());
+			} else if (extension == ".ogg") {
+				OGG ogg(iter.path());
+
+				loader.LoadFromTags(ogg.GetTags());
 			} else {
 				auto streamHandle = openWithFlags(iter.path(), extension, 0);
 				metadata.OnLoad(iter.path(), extension, streamHandle, &loader);

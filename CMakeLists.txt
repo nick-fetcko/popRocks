@@ -64,6 +64,7 @@ set(_poprocks_cpp_headers
 	Source/MetadataReader.hpp
 	Source/MP3.hpp
 	Source/MP4.hpp
+	Source/OGG.hpp
 	Source/OscilloscopeRenderer.hpp
 	Source/Playlist.hpp
 	Source/Polyline.hpp
