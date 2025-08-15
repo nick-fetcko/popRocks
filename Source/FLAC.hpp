@@ -33,10 +33,14 @@ protected:
 		uint32_t commentListLength = 0;
 	};
 
-	std::map<std::string, std::string> GetVorbisTags(bool textOnly = true) {
+	std::map<std::string, std::string> GetVorbisTags(bool textOnly = true, std::size_t maxLength = 0, std::optional<std::function<std::size_t()>> readHeader = std::nullopt) {
+		std::size_t length = 0;
+
 		VorbisCommentBlock commentBlock;
 
 		inFile.read(reinterpret_cast<char *>(&commentBlock.vendorLength), sizeof(uint32_t));
+		length += sizeof(uint32_t);
+		length += commentBlock.vendorLength;
 
 		char *vendorString = new char[commentBlock.vendorLength];
 		inFile.read(vendorString, commentBlock.vendorLength);
@@ -44,21 +48,38 @@ protected:
 		delete[] vendorString;
 
 		inFile.read(reinterpret_cast<char *>(&commentBlock.commentListLength), sizeof(uint32_t));
+		length += sizeof(uint32_t);
 
 		std::map<std::string, std::string> ret;
 		for (uint32_t i = 0; i < commentBlock.commentListLength; ++i) {
 			uint32_t commentLength = 0;
 			inFile.read(reinterpret_cast<char *>(&commentLength), sizeof(uint32_t));
+			length += sizeof(uint32_t);
 
 			// We're assuming anything > 10,000 bytes is not text data
 			if (!textOnly || (textOnly && commentLength < 10000)) {
 				char *commentString = new char[commentLength];
-				inFile.read(commentString, commentLength);
 
-				if (auto split = Utils::Split(std::string(commentString, commentString + commentLength), '=');
+				if (maxLength > 0 && length + commentLength > maxLength) {
+					auto remaining = maxLength - length;
+					inFile.read(commentString, remaining);
+					length = 0;
+					if (readHeader)
+						maxLength = (*readHeader)();
+					inFile.read(&commentString[remaining], commentLength - remaining);
+					length += commentLength - remaining;
+				} else {
+					inFile.read(commentString, commentLength);
+					length += commentLength;
+				}
+
+				if (auto split = Utils::SplitOnce(std::string(commentString, commentString + commentLength), '=');
 					split.size() > 1) {
 					std::transform(split[0].begin(), split[0].end(), split[0].begin(), tolower);
-					ret[split[0]] = split[1];
+					if (split[0] == "metadata_block_picture")
+						ret["art"] = split[1];
+					else
+						ret[split[0]] = split[1];
 				}
 
 				delete[] commentString;

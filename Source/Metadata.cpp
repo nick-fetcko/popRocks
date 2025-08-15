@@ -1,6 +1,7 @@
 #include "Metadata.hpp"
 
 #include "APE.hpp"
+#include "OGG.hpp"
 #include "WV.hpp"
 
 void Metadata::OnLoad(
@@ -34,6 +35,22 @@ void Metadata::OnLoad(
 				art->second.mimeType,
 				art->second.data,
 				art->second.size
+			);
+		}
+
+		return;
+	} else if (extension == ".ogg") {
+		OGG ogg(path);
+
+		auto tags = ogg.GetTags(false);
+		tagLoader->LoadFromTags(tags);
+		if (auto art = tags.find("art"); art != tags.end()) {
+			auto [mimeType, data] = ogg.GetArt(art->second);
+
+			albumArt->Load(
+				mimeType,
+				data.data(),
+				data.size()
 			);
 		}
 

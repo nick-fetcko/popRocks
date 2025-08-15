@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Utils/Base64.hpp"
+
 #include "FLAC.hpp"
 
 // https://xiph.org/ogg/doc/framing.html
@@ -20,6 +22,7 @@ private:
 			pageSegments = std::move(other.pageSegments);
 			segmentTable = std::move(other.segmentTable);
 			other.segmentTable = nullptr;
+			segmentLength = std::move(other.segmentLength);
 		}
 
 		uint32_t capturePattern = 0;
@@ -31,6 +34,7 @@ private:
 		uint32_t pageChecksum = 0;
 		uint8_t pageSegments = 0;
 		uint8_t *segmentTable = nullptr;
+		std::size_t segmentLength = 0;
 
 		~PageHeader() {
 			delete[] segmentTable;
@@ -53,14 +57,28 @@ private:
 
 	struct IdentificationHeader {
 		VorbisHeader header;
-		uint32_t version;
-		uint8_t channels;
-		uint32_t samplingRate;
-		int32_t maxBitrate;
-		int32_t nominalBitrate;
-		int32_t minBitrate;
-		uint8_t blockSize; // 2 4-bit values
-		uint8_t framingFlag; // spec erroneously claims this is 1 _bit_, not 1 _byte_
+		uint32_t version = 0;
+		uint8_t channels = 0;
+		uint32_t samplingRate = 0;
+		int32_t maxBitrate = 0;
+		int32_t nominalBitrate = 0;
+		int32_t minBitrate = 0;
+		uint8_t blockSize = 0; // 2 4-bit values
+		uint8_t framingFlag = 0; // spec erroneously claims this is 1 _bit_, not 1 _byte_
+	};
+
+	struct MetadataBlockPicture {
+		uint32_t type = 0;
+		uint32_t mediaTypeLength = 0;
+		std::string mediaType;
+		uint32_t descriptionStringLength = 0;
+		std::string description;
+		uint32_t width = 0;
+		uint32_t height = 0;
+		uint32_t depth = 0;
+		uint32_t numColors = 0;
+		uint32_t dataLength = 0;
+		std::vector<uint8_t> data;
 	};
 
 	std::optional<PageHeader> ReadPageHeader() {
@@ -80,6 +98,10 @@ private:
 			pageHeader.segmentTable = new uint8_t[pageHeader.pageSegments];
 			inFile.read(reinterpret_cast<char *>(pageHeader.segmentTable), pageHeader.pageSegments);
 
+			pageHeader.segmentLength = 0;
+			for (uint8_t i = 0; i < pageHeader.pageSegments; ++i)
+				pageHeader.segmentLength += pageHeader.segmentTable[i];
+
 			return pageHeader;
 		}
 
@@ -92,10 +114,12 @@ public:
 	}
 
 	std::map<std::string, std::string> GetTags(bool textOnly = true) override {
-		while(ReadPageHeader()) {
+		while(auto header = ReadPageHeader()) {
 			VorbisHeader vorbisHeader;
 			inFile.read(reinterpret_cast<char *>(&vorbisHeader), sizeof(VorbisHeader));
 			if (vorbisHeader.IsValid()) {
+				header->segmentLength -= sizeof(VorbisHeader);
+
 				// the identification header is type 1,
 				// the comment header type 3
 				// and the setup header type 5 
@@ -112,11 +136,70 @@ public:
 					inFile.read(reinterpret_cast<char *>(&identificationHeader.blockSize), sizeof(identificationHeader.blockSize));
 					inFile.read(reinterpret_cast<char *>(&identificationHeader.framingFlag), sizeof(identificationHeader.framingFlag));
 				} else if (vorbisHeader.type == 3) {
-					return GetVorbisTags(textOnly);
+					return GetVorbisTags(textOnly, header->segmentLength, [this] { 
+						auto header = ReadPageHeader();
+						return header ? header->segmentLength : 0; 
+					});
 				}
 			} else inFile.seekg(-sizeof(VorbisHeader), std::ios::cur);
 		}
 
 		return {};
+	}
+
+	std::pair<std::string, std::vector<uint8_t>> GetArt(const std::string &base64) {
+		auto decoded = Base64::Decode(base64);
+
+		uint8_t *ptr = decoded.data();
+		MetadataBlockPicture picture;
+
+		memcpy(&picture.type, ptr, sizeof(picture.type));
+		picture.type = Utils::LittleEndian(picture.type);
+		ptr += sizeof(picture.type);
+
+		memcpy(&picture.mediaTypeLength, ptr, sizeof(picture.mediaTypeLength));
+		picture.mediaTypeLength = Utils::LittleEndian(picture.mediaTypeLength);
+		ptr += sizeof(picture.mediaTypeLength);
+
+		char *mediaType = new char[picture.mediaTypeLength];
+		memcpy(mediaType, ptr, picture.mediaTypeLength);
+		picture.mediaType = std::string(mediaType, mediaType + picture.mediaTypeLength);
+		ptr += picture.mediaTypeLength;
+		delete[] mediaType;
+
+		memcpy(&picture.descriptionStringLength, ptr, sizeof(picture.descriptionStringLength));
+		picture.descriptionStringLength = Utils::LittleEndian(picture.descriptionStringLength);
+		ptr += sizeof(picture.descriptionStringLength);
+
+		char *description = new char[picture.descriptionStringLength];
+		memcpy(description, ptr, picture.descriptionStringLength);
+		picture.description = std::string(description, description + picture.descriptionStringLength);
+		ptr += picture.descriptionStringLength;
+		delete[] description;
+
+		memcpy(&picture.width, ptr, sizeof(picture.width));
+		picture.width = Utils::LittleEndian(picture.width);
+		ptr += sizeof(picture.width);
+
+		memcpy(&picture.height, ptr, sizeof(picture.height));
+		picture.height = Utils::LittleEndian(picture.height);
+		ptr += sizeof(picture.height);
+
+		memcpy(&picture.depth, ptr, sizeof(picture.depth));
+		picture.depth = Utils::LittleEndian(picture.depth);
+		ptr += sizeof(picture.depth);
+
+		memcpy(&picture.numColors, ptr, sizeof(picture.numColors));
+		picture.numColors = Utils::LittleEndian(picture.numColors);
+		ptr += sizeof(picture.numColors);
+
+		memcpy(&picture.dataLength, ptr, sizeof(picture.dataLength));
+		picture.dataLength = Utils::LittleEndian(picture.dataLength);
+		ptr += sizeof(picture.dataLength);
+
+		picture.data.resize(picture.dataLength);
+		memcpy(picture.data.data(), ptr, picture.dataLength);
+
+		return { picture.mediaType, picture.data };
 	}
 };
