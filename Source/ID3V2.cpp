@@ -30,7 +30,7 @@ ID3V2::ExtendedHeader *ID3V2::Header::Read(const char **tag) {
 
 	parent.currentOffset += (*tag - start);
 
-	return HasExtendedHeader() ? new ExtendedHeader() : nullptr;
+	return (IsValid() && HasExtendedHeader() ? new ExtendedHeader() : nullptr);
 }
 
 bool ID3V2::Header::HasExtendedHeader() const {

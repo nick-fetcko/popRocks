@@ -7,6 +7,7 @@
 
 #include "Utils/Utils.hpp"
 
+#include "ID3V2.hpp"
 #include "MetadataReader.hpp"
 
 using namespace Fetcko;
@@ -98,6 +99,21 @@ public:
 		// Make sure first 4 bytes are "fLaC"
 		uint32_t fourCC = 0;
 		inFile.read(reinterpret_cast<char *>(&fourCC), sizeof(uint32_t));
+
+		// FLACs with ID3 tags are technically out of spec,
+		// but Exact Audio Copy will happily generate them.
+		//
+		// We'll just skip ID3 tags if we find them.
+		if ((fourCC & 0x00FFFFFF) == 0x334449) { // ID3 (in Little Endian)
+			inFile.seekg(2, std::ios::cur); // revisionNumber + flags
+
+			uint32_t size;
+			inFile.read(reinterpret_cast<char *>(&size), sizeof(uint32_t));
+			ID3V2::Fix32Bit(&size);
+
+			inFile.seekg(size, std::ios::cur);
+			inFile.read(reinterpret_cast<char *>(&fourCC), sizeof(uint32_t));
+		}
 
 		if (fourCC == 0x43614C66) { // fLaC (in Little Endian)
 			MetadataBlock block;
