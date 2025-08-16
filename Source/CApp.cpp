@@ -960,6 +960,17 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 		return;
 	}
 
+	albumArt.Reset(visColor);
+
+	overrideColor = false;
+
+	// If we try to load an image directly,
+	// use that as the album art
+	if (AlbumArt::IsSupported(extension)) {
+		albumArt.Load(path, originalPath, true);
+		return;
+	}
+
 	if (!fromPlaylist) {
 		// If we're not in a playlist, _reset_
 		// any current beat detectors.
@@ -996,17 +1007,6 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 		// current beat detectors
 		for (auto &detector : beatDetectors)
 			detector.Cancel();
-	}
-
-	albumArt.Reset(visColor);
-
-	overrideColor = false;
-
-	// If we try to load an image directly,
-	// use that as the album art
-	if (AlbumArt::IsSupported(extension)) {
-		albumArt.Load(path, originalPath, true);
-		return;
 	}
 
 	if (fileLoaded && !controls.GetExclusiveIndicator().IsExclusive()) {
