@@ -23,6 +23,7 @@ class Playlist : public LoggableClass {
 public:
 	struct Track {
 		std::filesystem::path path;
+		std::string title;
 		double startTime = 0.0;
 	};
 
@@ -84,7 +85,7 @@ private:
 		}
 	};
 
-	std::optional<std::filesystem::path> FindCue(const std::filesystem::path &path);
+	std::vector<std::filesystem::path> FindCue(const std::filesystem::path &path);
 
 	inline void UpdateSize();
 
@@ -116,7 +117,7 @@ private:
 			// also display disc number
 			if (numberOfDiscs > 1) {
 				stream
-					<< title.disc
+					<< static_cast<std::size_t>(title.disc)
 					<< "-";
 			}
 				

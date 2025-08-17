@@ -39,14 +39,26 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 ) {
 	Clear();
 
-	if (auto file = FindCue(path); file || IsCue(extension)) {
+	if (auto files = FindCue(path); !files.empty() || IsCue(extension)) {
 		cue = std::make_unique<Cue>();
 
-		if (cue->OnLoad(file ? *file : path)) {
+		bool loaded = true;
+		if (!files.empty()) {
+			for (const auto &[i, file] : Utils::Enumerate(files)) {
+				loaded = loaded && cue->OnLoad(file, i != 0);
+			}
+		} else {
+			loaded = cue->OnLoad(path).has_value();
+		}
+
+		if (loaded) {
 			LoadTitles(cue->GetTracks());
 			this->path = path;
 
-			return Track{ cue->GetFilePath(), cue->GetTracks().empty() ? 0.0 : cue->GetTracks().begin()->startTime };
+			if (cue->GetTracks().empty())
+				return Track{ cue->GetFilePath(), cue->GetFilePath().stem().u8string(), 0.0};
+			else
+				return Track{ cue->GetTracks().begin()->filePath, cue->GetTracks().begin()->title, cue->GetTracks().begin()->startTime };
 		} else {
 			cue.reset();
 		}
@@ -322,8 +334,11 @@ std::optional<Playlist::Track> Playlist::Current() {
 
 std::optional<Playlist::Track> Playlist::Previous() {
 	if (files.empty()) {
-		if (cue)
-			return Track{ cue->GetFilePath(), cue->Previous().startTime };
+		if (cue) {
+			const auto &previous = cue->Previous();
+
+			return Track{ previous.filePath, previous.title, previous.startTime };
+		}
 
 		return std::nullopt;
 	}
@@ -336,8 +351,11 @@ std::optional<Playlist::Track> Playlist::Previous() {
 
 std::optional<Playlist::Track> Playlist::Next() {
 	if (files.empty()) {
-		if (cue)
-			return Track{ cue->GetFilePath(), cue->Next().startTime };
+		if (cue) {
+			const auto &next = cue->Next();
+
+			return Track{ next.filePath, next.title, next.startTime };
+		}
 
 		return std::nullopt;
 	}
@@ -352,8 +370,11 @@ std::optional<Playlist::Track> Playlist::Next() {
 
 const std::optional<Playlist::Track> Playlist::Next() const {
 	if (files.empty()) {
-		if (cue)
-			return Track{ cue->GetFilePath(), const_cast<const Cue *>(cue.get())->Next().startTime };
+		if (cue) {
+			const auto &next = const_cast<const Cue *>(cue.get())->Next();
+
+			return Track{ next.filePath, next.title, next.startTime };
+		}
 	}
 
 	if (currentFile == files.end() || currentFile + 1 == files.end())
@@ -390,7 +411,9 @@ std::optional<Playlist::Track> Playlist::OnMouseClicked(const Vector2i &mousePos
 					currentFile += index;
 					return currentFile == files.end() ? Track{ *(--currentFile) } : Track{ *currentFile };
 				} else if (cue) {
-					return Track{ cue->GetFilePath(), cue->TrackAtOffset(index).startTime };
+					const auto &track = cue->TrackAtOffset(index);
+
+					return Track{ track.filePath, track.title, track.startTime };
 				} else return std::nullopt;
 			}
 		}
@@ -402,16 +425,18 @@ std::optional<Playlist::Track> Playlist::OnMouseClicked(const Vector2i &mousePos
 const std::unique_ptr<Cue> &Playlist::GetCue() const { return cue; }
 const std::filesystem::path &Playlist::GetPath() const { return path; }
 
-std::optional<std::filesystem::path> Playlist::FindCue(const std::filesystem::path &path) {
-	if (!std::filesystem::is_directory(path))
-		return std::nullopt;
+std::vector<std::filesystem::path> Playlist::FindCue(const std::filesystem::path &path) {
+	std::vector<std::filesystem::path> ret;
 
-	for (const auto &iter : std::filesystem::directory_iterator(path)) {
+	if (!std::filesystem::is_directory(path))
+		return ret;
+
+	for (const auto &iter : std::filesystem::recursive_directory_iterator(path)) {
 		auto extension = iter.path().extension().u8string();
 		std::transform(extension.begin(), extension.end(), extension.begin(), tolower);
 		if (IsCue(extension))
-			return iter.path();
+			ret.emplace_back(iter.path());
 	}
 
-	return std::nullopt;
+	return ret;
 }

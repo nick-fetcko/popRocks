@@ -2,9 +2,14 @@
 
 #include "Playlist.hpp"
 
-std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &path) {
-	tracks.clear();
-	currentTrack = tracks.end();
+std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &path, bool append) {
+	if (!append) {
+		tracks.clear();
+		currentTrack = tracks.end();
+	} else {
+		filePath.clear();
+		++discIndex;
+	}
 
 	std::ifstream inFile(path, std::ios::in);
 
@@ -32,6 +37,7 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 	bool inTrackSection = false;
 
 	Track track;
+	track.disc = discIndex;
 	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
 	for (const auto &line : lines) {
 		if (line[0] == "FILE") {
@@ -42,6 +48,7 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 			}
 
 			auto originalFilePath = filePath = path.parent_path() / converter.from_bytes(line[1]);
+			track.filePath = filePath;
 
 			// Some .cue files still point to the original .wav
 			// and not the compressed version.
@@ -68,6 +75,8 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 					// Finalize the previous track
 					tracks.emplace_back(std::move(track));
 					track = Track();
+					track.filePath = filePath;
+					track.disc = discIndex;
 					track.index = static_cast<uint8_t>(std::stoi(line[1]));
 				} else if (line[0] == "TITLE") {
 					track.title = line[1];
@@ -160,7 +169,7 @@ const double Cue::GetCurrentTrackEnd(double fileLength) const {
 	if (currentTrack == tracks.end() || tracks.empty())
 		return 0.0;
 
-	if (auto next = currentTrack + 1; next != tracks.end())
+	if (auto next = currentTrack + 1; next != tracks.end() && next->filePath == currentTrack->filePath)
 		return next->startTime;
 	else
 		return fileLength;

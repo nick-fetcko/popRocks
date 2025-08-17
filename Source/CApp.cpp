@@ -894,12 +894,20 @@ void CApp::LoadBeats(
 		nextDetector = beatDetect;
 		beatDetect = temp;
 	} else {
+		auto fileName = cue ?
+			cue->GetCurrentTrack()->title :
+			path.stem().u8string();
+
 		beatDetect->OnLoad(
 			streamHandle,
 			channelInfo.freq,
 			channelInfo.chans,
-			[this, path] {
-				logger.LogDebug("Beat detection finished for the current song in the playlist (", path.stem().u8string(), ")!");
+			[this, fileName] {
+				logger.LogDebug(
+					"Beat detection finished for the current song in the playlist (",
+					fileName,
+					")!"
+				);
 				beatDetect->SeekTo(controls.GetCurrentPosition());
 			},
 			cue ? cue->GetCurrentTrack()->startTime : static_cast<std::optional<double>>(std::nullopt),
@@ -920,8 +928,13 @@ void CApp::LoadBeats(
 			nextChannelInfo.freq,
 			nextChannelInfo.chans,
 			[this, next, nextDetector] {
-				if (nextDetector->IsDetecting())
-					logger.LogDebug("Beat detection finished for the next song in the playlist (", next->path.stem().u8string(), ")!");
+				if (nextDetector->IsDetecting()) {
+					logger.LogDebug(
+						"Beat detection finished for the next song in the playlist (",
+						next->title.empty() ? next->path.stem().u8string() : next->title,
+						")!"
+					);
+				}
 			},
 			next->startTime > DBL_EPSILON ? next->startTime : static_cast<std::optional<double>>(std::nullopt),
 			controls.GetNextSongLength()
@@ -1262,8 +1275,7 @@ void CApp::PreviousTrack() {
 
 		LoadFile(prev->path, true);
 
-		if (prev->startTime > DBL_EPSILON)
-			SeekTo(prev->startTime);
+		SeekTo(prev->startTime);
 	}
 }
 

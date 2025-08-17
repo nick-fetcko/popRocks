@@ -28,6 +28,8 @@ private:
 
 		double startTime = 0.0;
 
+		std::filesystem::path filePath;
+
 		friend std::ostream &operator<<(std::ostream &left, const Track &right) {
 			left << right.title;
 			return left;
@@ -35,7 +37,7 @@ private:
 	};
 
 public:
-	std::optional<std::filesystem::path> OnLoad(const std::filesystem::path &path);
+	std::optional<std::filesystem::path> OnLoad(const std::filesystem::path &path, bool append = false);
 
 	const Track &Next() const;
 	const Track &Next();
@@ -123,4 +125,6 @@ private:
 
 	std::vector<Track> tracks;
 	std::vector<Track>::iterator currentTrack;
+
+	uint8_t discIndex = 1;
 };
