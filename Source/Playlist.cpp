@@ -405,7 +405,9 @@ std::optional<Playlist::Track> Playlist::OnMouseClicked(const Vector2i &mousePos
 				std::distance(cue->GetCurrentTrack(), cue->GetTracks().end()) :
 				std::distance(currentFile, files.end());
 
-		if (auto index = (mousePos.y - pos.y) / titles.begin()->GetBounds().height; index < distance) {
+		// If our offset is not 0, we need to account for the previous track
+		if (auto index = (mousePos.y - pos.y) / titles.begin()->GetBounds().height - (offset != 0 ? 1 : 0);
+			index < distance) {
 			if (mousePos.x >= pos.x && mousePos.x <= pos.x + titles[offset + index].GetSize().x) {
 				if (!files.empty()) {
 					currentFile += index;

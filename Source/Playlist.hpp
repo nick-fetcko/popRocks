@@ -182,6 +182,10 @@ private:
 		context.Use("texture"_hash);
 		context.LoadIdentity();
 
+		// Add a line for our previous track
+		if (current != tracks.begin())
+			pos.y += em.y;
+
 		std::size_t maxIndex = static_cast<std::size_t>(
 			titles.empty() ?
 				0 :
@@ -200,6 +204,8 @@ private:
 
 			if (iter == current)
 				context.Color(1.0f, 1.0f, 1.0f, alpha);
+			else if (current != tracks.begin() && iter == current - 1)
+				context.Color(0.6f, 0.6f, 0.6f, 0.4f * alpha);
 			else
 				context.Color(0.6f, 0.6f, 0.6f, alpha - (static_cast<float>(i - distance) / maxIndex));
 
