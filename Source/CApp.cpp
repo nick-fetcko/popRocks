@@ -1268,7 +1268,12 @@ void CApp::NextTrack() {
 }
 
 void CApp::PreviousTrack() {
-	if (auto prev = controls.GetPlaylist().Previous()) {
+	// Go to the beginning of the current track
+	// if we're further than 5 seconds in
+	if (auto current = controls.GetPlaylist().Current();
+		current && controls.GetCurrentPosition() >= 5.0) {
+		SeekTo(current->startTime);	
+	} else if (auto prev = controls.GetPlaylist().Previous()) {
 		// Since we have the _next_ track preloaded
 		// for beat detection, we need to reset
 		ResetBeatDetection();
@@ -1276,7 +1281,7 @@ void CApp::PreviousTrack() {
 		LoadFile(prev->path, true);
 
 		SeekTo(prev->startTime);
-	}
+	} else SeekTo(0.0);
 }
 
 void CApp::OnMouseClicked(const Vector2i &mousePos) {
