@@ -113,6 +113,8 @@ public:
 	void PreviousTrack();
 
 	void OnMouseClicked(const Vector2i &mousePos);
+	bool OnMouseDown(const Vector2i &mousePos);
+	void OnMouseDragged(const Vector2i &mousePos);
 
 	void LoadPreset(std::size_t index);
 
@@ -145,6 +147,8 @@ private:
 
 	inline void LoadBeats(HSTREAM streamHandle, std::filesystem::path path);
 	void ResetBeatDetection();
+
+	inline bool SeekToMousePos(const Vector2i &mousePos, bool ignoreY = false);
 
 	// FIXME: Put this somewhere else, but I don't want SDL as a dependency to OpenGL
 	void SaveAsPNG(const FramebufferObject &framebuffer, const std::filesystem::path &path);

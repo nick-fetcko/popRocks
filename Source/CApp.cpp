@@ -1284,6 +1284,21 @@ void CApp::PreviousTrack() {
 	} else SeekTo(0.0);
 }
 
+inline bool CApp::SeekToMousePos(const Vector2i &mousePos, bool ignoreY) {
+	if (ignoreY || mousePos.y >= windowHeight - Controls::SeekbarSize * scale) {
+		double time = (static_cast<double>(mousePos.x) / windowWidth) * controls.GetCurrentSongLength();
+
+		if (auto &cue = controls.GetPlaylist().GetCue())
+			time += cue->GetCurrentTrack()->startTime;
+
+		SeekTo(time);
+
+		return true;
+	}
+
+	return false;
+}
+
 void CApp::OnMouseClicked(const Vector2i &mousePos) {
 	// Playlist::OnMouseClicked automatically advances
 	// our playlist to the clicked position, so we have
@@ -1291,14 +1306,7 @@ void CApp::OnMouseClicked(const Vector2i &mousePos) {
 	// that happens.
 	const auto next = const_cast<const Playlist &>(controls.GetPlaylist()).Next();
 
-	if (mousePos.y >= windowHeight - Controls::SeekbarSize * scale) {
-		double time = (static_cast<double>(mousePos.x) / windowWidth) * controls.GetCurrentSongLength();
-
-		if (auto &cue = controls.GetPlaylist().GetCue())
-			time += cue->GetCurrentTrack()->startTime;
-
-		SeekTo(time);
-	} else if (auto file = controls.GetPlaylist().OnMouseClicked(mousePos)) {
+	if (auto file = controls.GetPlaylist().OnMouseClicked(mousePos)) {
 		// If we didn't select the _next_ song in the playlist,
 		// we need to reset beat detection.
 		if (!next || file->path != next->path)
@@ -1352,6 +1360,14 @@ void CApp::OnMouseClicked(const Vector2i &mousePos) {
 			playing = true;
 		}
 	}
+}
+
+bool CApp::OnMouseDown(const Vector2i &mousePos) {
+	return SeekToMousePos(mousePos);
+}
+
+void CApp::OnMouseDragged(const Vector2i &mousePos) {
+	SeekToMousePos(mousePos, true);
 }
 
 void CApp::LoadPreset(std::size_t index) {

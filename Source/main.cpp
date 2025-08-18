@@ -38,6 +38,7 @@ int main(int argc, char *argv[]) {
 
 	Delta time;
 	Vector2i mousePos{ 0, 0 };
+	bool mouseButtonDown = false;
 	
 	while(running) {
 		while(SDL_PollEvent(&event)) {
@@ -103,10 +104,20 @@ int main(int argc, char *argv[]) {
 				case SDL_MOUSEMOTION:
 					mousePos.x = static_cast<int32_t>(event.motion.x * app.GetScale());
 					mousePos.y = static_cast<int32_t>(event.motion.y * app.GetScale());
+
+					if (mouseButtonDown) {
+						app.OnMouseDragged(mousePos);
+					}
+					break;
+				case SDL_MOUSEBUTTONDOWN:
+					if (event.button.button == SDL_BUTTON_LEFT && app.OnMouseDown(mousePos)) {
+						mouseButtonDown = true;
+					}
 					break;
 				case SDL_MOUSEBUTTONUP:
 					if (event.button.button == SDL_BUTTON_LEFT) {
 						app.OnMouseClicked(mousePos);
+						mouseButtonDown = false;
 					}
 					break;
 				case SDL_DROPFILE: {
