@@ -48,6 +48,8 @@ public:
 		this->fadeCallback = std::move(callback); 
 	}
 
+	const float &GetAlpha() const { return alpha; }
+
 protected:
 	std::chrono::seconds waitTime = 2s;
 

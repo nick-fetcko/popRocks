@@ -36,6 +36,7 @@
 #include "FPSCounter.hpp"
 #include "LightPack.hpp"
 #include "Mappings.h"
+#include "Menu.hpp"
 #include "Metadata.hpp"
 #include "Playlist.hpp"
 #include "Polyline.hpp"
@@ -43,6 +44,8 @@
 #include "Renderer.hpp"
 #include "Text.hpp"
 #include "Volume.hpp"
+
+#define GUI 1
 
 using namespace MathsCPP;
 using namespace Fetcko;
@@ -124,6 +127,8 @@ public:
 
 	void StopExclusive();
 
+	void UpdateUi() { updateUi = 1; }
+
 private:
 	void AddCommands();
 
@@ -136,7 +141,7 @@ private:
 
 	void SeekTo(double seconds);
 
-	inline void SwapBuffers();
+	inline void SwapBuffers(const Delta &time);
 
 	HSTREAM OpenWithFlags(const std::filesystem::path &path, const std::string &extension, DWORD flags);
 	
@@ -263,4 +268,11 @@ private:
 
 	std::unique_ptr<MultisampledFramebufferObject> blurFbo;
 	std::unique_ptr<MultisampledFramebufferObject> lastFrame;
+
+	Menu menu;
+
+	uint8_t updateUi = 0;
+
+	std::unique_ptr<MultisampledFramebufferObject> uiFbo;
+	double uiAccum = 0.0;
 };

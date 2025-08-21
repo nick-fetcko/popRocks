@@ -7,6 +7,8 @@
 #include <bass.h>
 #include <bassflac.h>
 
+#include <backends/imgui_impl_sdl2.h>
+
 #include "MathCPP/Duration.hpp"
 
 #include "CApp.h"
@@ -39,9 +41,19 @@ int main(int argc, char *argv[]) {
 	Delta time;
 	Vector2i mousePos{ 0, 0 };
 	bool mouseButtonDown = false;
+
+#if GUI
+	auto &io = ImGui::GetIO();
+#endif
 	
 	while(running) {
 		while(SDL_PollEvent(&event)) {
+#if GUI
+			ImGui_ImplSDL2_ProcessEvent(&event);
+			if (io.WantCaptureKeyboard || io.WantCaptureMouse)
+				app.UpdateUi();
+#endif
+
 			switch(event.type) {
 				case SDL_QUIT:
 					running = false;
@@ -110,12 +122,20 @@ int main(int argc, char *argv[]) {
 					}
 					break;
 				case SDL_MOUSEBUTTONDOWN:
-					if (event.button.button == SDL_BUTTON_LEFT && app.OnMouseDown(mousePos)) {
+					if (event.button.button == SDL_BUTTON_LEFT && app.OnMouseDown(mousePos)
+#if GUI
+						&& !io.WantCaptureMouse
+#endif
+						) {
 						mouseButtonDown = true;
 					}
 					break;
 				case SDL_MOUSEBUTTONUP:
-					if (event.button.button == SDL_BUTTON_LEFT) {
+					if (event.button.button == SDL_BUTTON_LEFT
+#if GUI
+						&& !io.WantCaptureMouse
+#endif
+						) {
 						app.OnMouseClicked(mousePos);
 						mouseButtonDown = false;
 					}

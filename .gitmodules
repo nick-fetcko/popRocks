@@ -10,3 +10,9 @@
 [submodule "OpenGL"]
 	path = OpenGL
 	url = https://github.com/nick-fetcko/OpenGL
+[submodule "imgui"]
+	path = imgui
+	url = https://github.com/ocornut/imgui
+[submodule "nativefiledialog-extended"]
+	path = nativefiledialog-extended
+	url = https://github.com/btzy/nativefiledialog-extended

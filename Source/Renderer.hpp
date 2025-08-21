@@ -87,7 +87,10 @@ public:
 		this->numberOfChannels = numberOfChannels;
 	}
 
-	void TogglePulse() { pulse = !pulse; }
+	void TogglePulse() { 
+		pulse = !pulse; 
+		Settings::settings.SetPulse(pulse);
+	}
 	void SetPulse(bool pulse) { 
 		this->pulse = pulse;
 		Settings::settings.SetPulse(pulse);

@@ -79,6 +79,8 @@ public:
 	void SetMethod(Method method);
 	void SetSaturationMultiplier(float saturationMultiplier);
 
+	const bool IsActive() const { return lightBin; }
+
 private:
 	void _OnInit();
 	void RetryConnection();

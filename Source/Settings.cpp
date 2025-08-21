@@ -155,6 +155,21 @@ void Settings::SetRenderer(const std::string &renderer) {
 	Save();
 }
 
+void Settings::SetLightPackVisualizationType(const std::string &lightPackVisualizationType) {
+	this->lightPackVisualizationType = lightPackVisualizationType;
+	Save();
+}
+
+void Settings::SetLightPackMapping(const std::string &lightPackMapping) {
+	this->lightPackMapping = lightPackMapping;
+	Save();
+}
+
+void Settings::SetLightPackFocusArea(const std::string &lightPackFocusArea) {
+	this->lightPackFocusArea = lightPackFocusArea;
+	Save();
+}
+
 void Settings::SetPresetIndex(std::size_t presetIndex) {
 	this->presetIndex = presetIndex;
 	Save();
@@ -287,6 +302,12 @@ const Node &operator>>(const Node &node, Settings &settings) {
 
 	if (node.has("renderer"))
 		node["renderer"]->get(settings.renderer);
+	if (node.has("lightPackVisualizationType"))
+		node["lightPackVisualizationType"]->get(settings.lightPackVisualizationType);
+	if (node.has("lightPackMapping"))
+		node["lightPackMapping"]->get(settings.lightPackMapping);
+	if (node.has("lightPackFocusArea"))
+		node["lightPackFocusArea"]->get(settings.lightPackFocusArea);
 
 	if (node.has("presetIndex"))
 		node["presetIndex"]->get(settings.presetIndex);
@@ -328,6 +349,9 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["gamma"]->set(settings.gamma);
 	node["blur"]->set(settings.blur);
 	node["blurIntensity"]->set(settings.blurIntensity);
+	node["lightPackVisualizationType"]->set(settings.lightPackVisualizationType);
+	node["lightPackMapping"]->set(settings.lightPackMapping);
+	node["lightPackFocusArea"]->set(settings.lightPackFocusArea);
 
 	return node;
 }

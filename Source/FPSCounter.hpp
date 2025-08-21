@@ -16,6 +16,7 @@ class FPSCounter {
 public:
 	void OnInit(OpenGLFont *font, Context *context) {
 		text.OnInit(font, context);
+		this->context = context;
 	}
 
 	void OnFrame() {
@@ -35,8 +36,8 @@ public:
 		lastFrame = std::move(now);
 	}
 
-	void Draw(Context &context) {
-		text.OnLoop(Margin, Margin);
+	void Draw() {
+		text.OnLoop(Margin, Margin + context->GetYOffset());
 	}
 
 	void OnDestroy() {
@@ -46,13 +47,15 @@ public:
 	Vector2i GetSize() {
 		auto ret = text.GetSize();
 		ret.x += Margin * 2;
-		ret.y += Margin * 2;
+		ret.y += Margin * 2 + context->GetYOffset();
 
 		return ret;
 	}
 
 private:
 	constexpr static int Margin = 12;
+
+	Context *context = nullptr;
 
 	std::chrono::steady_clock::time_point lastFrame = std::chrono::steady_clock::now();
 

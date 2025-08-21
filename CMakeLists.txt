@@ -37,6 +37,7 @@ add_subdirectory(MathCPP)
 add_subdirectory(Serial/src)
 add_subdirectory(OpenGL)
 add_subdirectory(Utils)
+add_subdirectory(nativefiledialog-extended)
 
 set(_poprocks_cpp_headers
 	Source/AlbumArt.hpp
@@ -60,6 +61,7 @@ set(_poprocks_cpp_headers
 	Source/LightPack.hpp
 	Source/LineRenderer.hpp
 	Source/Mappings.h
+	Source/Menu.hpp
 	Source/Metadata.hpp
 	Source/MetadataReader.hpp
 	Source/MP3.hpp
@@ -128,11 +130,55 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/third_party FILES
 	${_beatroot_sources}
 	)
 
+set(_imgui_dir
+	imgui)
+
+set(_imgui_headers
+	${_imgui_dir}/imconfig.h
+	${_imgui_dir}/imgui.h
+	${_imgui_dir}/imgui_internal.h
+	${_imgui_dir}/imstb_rectpack.h
+	${_imgui_dir}/imstb_textedit.h
+	${_imgui_dir}/imstb_truetype.h
+	${_imgui_dir}/misc/cpp/imgui_stdlib.h
+	)
+
+set(_imgui_sources
+	${_imgui_dir}/imgui.cpp
+	${_imgui_dir}/imgui_demo.cpp
+	${_imgui_dir}/imgui_draw.cpp
+	${_imgui_dir}/imgui_tables.cpp
+	${_imgui_dir}/imgui_widgets.cpp
+	${_imgui_dir}/misc/cpp/imgui_stdlib.cpp
+	)
+
+set(_imgui_backend_headers
+	${_imgui_dir}/backends/imgui_impl_opengl3_loader.h
+	${_imgui_dir}/backends/imgui_impl_opengl3.h
+	${_imgui_dir}/backends/imgui_impl_sdl2.h
+	)
+
+set(_imgui_backend_sources
+	${_imgui_dir}/backends/imgui_impl_opengl3.cpp
+	${_imgui_dir}/backends/imgui_impl_sdl2.cpp
+	)
+
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES
+	${_imgui_headers}
+	${_imgui_backend_headers}
+	${_imgui_sources}
+	${_imgui_backend_sources}
+	)
+
 add_executable(popRocks
 	${_beatroot_headers}
 	${_poprocks_cpp_headers}
+	${_imgui_headers}
+	${_imgui_backend_headers}
 	${_beatroot_sources}
 	${_poprocks_cpp_sources}
+	${_imgui_sources}
+	${_imgui_backend_sources}
 	)
 
 if (WIN32)
@@ -146,6 +192,8 @@ endif()
 target_include_directories(popRocks PUBLIC 
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 	${_beatroot_dir}
+	${_imgui_dir}
+	${_imgui_dir}/misc/cpp
 	Serial/src
 	)
 target_compile_features(popRocks PUBLIC cxx_std_17)
@@ -203,7 +251,7 @@ set_target_properties(basswasapi PROPERTIES
 	IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswasapi/lib/basswasapi.lib"
 	)
 
-target_link_libraries(popRocks PRIVATE MathsCPP Utils ${OPENGL_LIBRARIES} OpenGL SDL2::SDL2 SDL2::SDL2main SDL2_mixer::SDL2_mixer SDL2_image::SDL2_image SDL2_net::SDL2_net freetype bass bassflac bassape basswv basswasapi FFTW3::fftw3 serial ${JPEG_LIBRARIES})
+target_link_libraries(popRocks PRIVATE MathsCPP Utils ${OPENGL_LIBRARIES} OpenGL SDL2::SDL2 SDL2::SDL2main SDL2_mixer::SDL2_mixer SDL2_image::SDL2_image SDL2_net::SDL2_net freetype bass bassflac bassape basswv basswasapi FFTW3::fftw3 serial nfd ${JPEG_LIBRARIES})
 target_include_directories(popRocks PRIVATE ${JPEG_INCLUDE_DIR})
 
 add_custom_command(TARGET popRocks POST_BUILD

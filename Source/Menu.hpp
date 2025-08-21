@@ -1,0 +1,415 @@
+#pragma once
+
+#include <filesystem>
+
+#include <imgui.h>
+#include <nfd.hpp>
+
+#include "Utils/Utils.hpp"
+
+#include "Playlist.hpp"
+
+using namespace Fetcko;
+
+class Menu {
+public:
+	Menu() {
+		NFD_Init();
+	}
+
+	void OnResize(int width, int height) {
+		this->width = width;
+	}
+
+	float OnLoop(const LightPack &lightPack, Context &context) {
+		ImGui::Begin(
+			"Menu",
+			nullptr,
+			ImGuiWindowFlags_NoTitleBar |
+			ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_NoScrollbar |
+			ImGuiWindowFlags_NoCollapse |
+			ImGuiWindowFlags_NoBackground |
+			ImGuiWindowFlags_MenuBar
+		);
+
+		ImGui::SetWindowPos({ 0.0f, 0.0f });
+		ImGui::SetWindowSize({ static_cast<float>(width), 0 });
+
+		ImGui::BeginMenuBar();
+
+		if (ImGui::BeginMenu("File")) {
+			if (ImGui::MenuItem("Open File", "Ctrl-O", false, true)) {
+				nfdnchar_t *outPath;
+
+				std::wstring extensions;
+				for (const auto &[i, extension] : Utils::Enumerate(Playlist::GetSupportedExtensions())) {
+					const auto noDot = extension.substr(1);
+					extensions += std::wstring(noDot.begin(), noDot.end()) + (i == Playlist::GetSupportedExtensions().size() - 1 ? L"" : L",");
+				}
+
+				nfdnfilteritem_t filters[2] = { { L"Music", extensions.c_str() }, { L"Cue", L"cue" }};
+				nfdopendialognargs_t args = { 0 };
+				args.filterList = filters;
+				args.filterCount = 2;
+				nfdresult_t result = NFD_OpenDialogN_With(&outPath, &args);
+				if (result == NFD_OKAY) {
+					if (onOpen) onOpen(outPath);
+					NFD_FreePathN(outPath);
+				}	
+			}
+
+			if (ImGui::MenuItem("Open Folder", "Ctrl-Shift-O", false, true)) {
+				nfdnchar_t *outPath;
+				nfdresult_t result = NFD_PickFolderN(&outPath, nullptr);
+				if (result == NFD_OKAY) {
+					if (onOpen) onOpen(outPath);
+					NFD_FreePathN(outPath);
+				}
+			}
+
+			ImGui::Separator();
+
+			if (ImGui::MenuItem("Quit", "Alt-F4", false, true)) {
+				if (onQuit)
+					onQuit();
+			}
+
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu("Visualizer Options")) {
+			if (ImGui::BeginMenu("Visualization Type")) {
+				fft = Settings::settings.GetRenderer() == "fft";
+				fftLine = Settings::settings.GetRenderer() == "fftline";
+				oscilloscope = Settings::settings.GetRenderer() == "osc";
+
+				if (ImGui::MenuItem("FFT", nullptr, &fft)) {
+					if (onVisualizationTypeChanged)
+						onVisualizationTypeChanged("fft");
+				} else if (ImGui::MenuItem("FFT Line", nullptr, &fftLine)) {
+					if (onVisualizationTypeChanged)
+						onVisualizationTypeChanged("fftline");
+				} else if (ImGui::MenuItem("Oscilloscope", nullptr, &oscilloscope)) {
+					if (onVisualizationTypeChanged)
+						onVisualizationTypeChanged("osc");
+				}
+
+				ImGui::EndMenu();
+			}
+
+			ImGui::Separator();
+
+			bufferSize = Settings::settings.GetBufferLength();
+			if (ImGui::SliderInt("Buffer size", &bufferSize, 1, 4096)) {
+				if (onBufferSizeChanged)
+					onBufferSizeChanged(bufferSize);
+			}
+
+			decayTime = Settings::settings.GetDecayTime().AsSeconds();
+			if (ImGui::SliderFloat("Decay time", &decayTime, 0.01, 10, "%.2f")) {
+				if (onDecayTimeChanged)
+					onDecayTimeChanged(decayTime);
+			}
+
+			fadeTime = Settings::settings.GetFadeTime().AsSeconds();
+			if (ImGui::SliderFloat("Fade time", &fadeTime, 0.01, 10, "%.2f")) {
+				if (onFadeTimeChanged)
+					onFadeTimeChanged(fadeTime);
+			}
+
+			pulse = Settings::settings.GetPulse();
+			ImGui::BeginDisabled(!fft);
+			if (ImGui::MenuItem("Pulse", nullptr, &pulse)) {
+				if (onPulseChanged)
+					onPulseChanged(pulse);
+			}
+			ImGui::EndDisabled();
+
+			pulseTime = Settings::settings.GetPulseTime().AsSeconds();
+			ImGui::BeginDisabled(!pulse || !fft);
+			if (ImGui::SliderFloat("Pulse time", &pulseTime, 0.01, 10, "%.2f")) {
+				if (onPulseTimeChanged)
+					onPulseTimeChanged(pulseTime);
+			}
+			ImGui::EndDisabled();
+
+			ImGui::Separator();
+
+			rotate = Settings::settings.GetRotating();
+			if (ImGui::MenuItem("Rotate", nullptr, &rotate)) {
+				if (onRotatingChanged)
+					onRotatingChanged(!Settings::settings.GetRotating());
+			}
+
+			rpm = Settings::settings.GetRotationSpeed() / (360.0f / 60.0f);
+			ImGui::BeginDisabled(!rotate);
+			if (ImGui::SliderFloat("RPM", &rpm, 0.1f, 100.0f, "%.1f")) {
+				if (onRpmChanged)
+					onRpmChanged(rpm);
+			}
+			ImGui::EndDisabled();
+
+			ImGui::Separator();
+
+			detectBpm = Settings::settings.GetDetectBpm();
+			if (ImGui::MenuItem("Detect BPM", nullptr, &detectBpm)) {
+				if (onDetectBpmChanged)
+					onDetectBpmChanged(!Settings::settings.GetDetectBpm());
+			}
+
+			ImGui::Separator();
+
+			blur = Settings::settings.GetBlur();
+			if (ImGui::MenuItem("Blur", nullptr, &blur)) {
+				if (onBlurChanged)
+					onBlurChanged(!Settings::settings.GetBlur());
+			}
+
+			blurIntensity = Settings::settings.GetBlurIntensity();
+			ImGui::BeginDisabled(!blur);
+			if (ImGui::SliderFloat("Blur intensity", &blurIntensity, 0.01f, 2.0f, "%.2f")) {
+				if (onBlurIntensityChanged)
+					onBlurIntensityChanged(blurIntensity);
+			}
+			ImGui::EndDisabled();
+
+			ImGui::Separator();
+
+			radius = Settings::settings.GetRadius();
+			if (ImGui::SliderInt("Album art radius", &radius, 50, 720)) {
+				if (onRadiusChanged)
+					onRadiusChanged(radius);
+			}
+
+			lineWidth = Settings::settings.GetWidth();
+			ImGui::BeginDisabled(fft);
+			if (ImGui::SliderFloat("Line width", &lineWidth, 0.5, 10, "%.1f")) {
+				if (onLineWidthChanged)
+					onLineWidthChanged(lineWidth);
+			}
+			ImGui::EndDisabled();
+
+			ImGui::Separator();
+
+			if (ImGui::MenuItem("Reset window")) {
+				if (onResetWindow)
+					onResetWindow();
+			}
+
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu("LightPack Integration", lightPack.IsActive())) {
+			if (ImGui::BeginMenu("LightPack Visualization Type", lightPack.IsActive())) {
+				intensity = Settings::settings.GetLightPackVisualizationType() == "intensity";
+				color = Settings::settings.GetLightPackVisualizationType() == "color";
+				colorAndIntensity = Settings::settings.GetLightPackVisualizationType() == "colorintensity";
+
+				if (ImGui::MenuItem("Intensity", nullptr, &intensity)) {
+					if (onLightPackVisualizationTypeChanged)
+						onLightPackVisualizationTypeChanged("intensity");
+				} else if (ImGui::MenuItem("Color", nullptr, &color)) {
+					if (onLightPackVisualizationTypeChanged)
+						onLightPackVisualizationTypeChanged("color");
+				} else if (ImGui::MenuItem("Color + Intensity", nullptr, &colorAndIntensity)) {
+					if (onLightPackVisualizationTypeChanged)
+						onLightPackVisualizationTypeChanged("colorintensity");
+				}
+
+				ImGui::EndMenu();
+			}
+
+			if (ImGui::BeginMenu("LightPack Mapping", lightPack.IsActive())) {
+				default = Settings::settings.GetLightPackMapping() == "default";
+				mine = Settings::settings.GetLightPackMapping() == "mine";
+				topToBottom = Settings::settings.GetLightPackMapping() == "ttb";
+				bottomToTop = Settings::settings.GetLightPackMapping() == "btt";
+
+				if (ImGui::MenuItem("Default", nullptr, &default)) {
+					if (onLightPackMappingChanged)
+						onLightPackMappingChanged("default");
+				} else if (ImGui::MenuItem("Mine", nullptr, &mine)) {
+					if (onLightPackMappingChanged)
+						onLightPackMappingChanged("mine");
+				} else if (ImGui::MenuItem("Top-to-bottom", nullptr, &topToBottom)) {
+					if (onLightPackMappingChanged)
+						onLightPackMappingChanged("ttb");
+				} else if (ImGui::MenuItem("Bottom-to-top", nullptr, &bottomToTop)) {
+					if (onLightPackMappingChanged)
+						onLightPackMappingChanged("btt");
+				}
+
+				ImGui::EndMenu();
+			}
+
+			if (ImGui::BeginMenu("LightPack Focus Area", lightPack.IsActive())) {
+				superBass = Settings::settings.GetLightPackFocusArea() == "superbass";
+				subBass = Settings::settings.GetLightPackFocusArea() == "subbass";
+				bass = Settings::settings.GetLightPackFocusArea() == "bass";
+				bassAndMid = Settings::settings.GetLightPackFocusArea() == "bassandmid";
+				bassMidAndALittleHighEnd = Settings::settings.GetLightPackFocusArea() == "bassmidandalittlehighend";
+				halfNyquist = Settings::settings.GetLightPackFocusArea() == "halfnyquist";
+				nyquist = Settings::settings.GetLightPackFocusArea() == "nyquist";
+
+				if (ImGui::MenuItem("Super bass", nullptr, &superBass)) {
+					if (onLightPackFocusAreaChanged)
+						onLightPackFocusAreaChanged("superbass");
+				} else if (ImGui::MenuItem("Sub-bass", nullptr, &subBass)) {
+					if (onLightPackFocusAreaChanged)
+						onLightPackFocusAreaChanged("subbass");
+				} else if (ImGui::MenuItem("Bass", nullptr, &bass)) {
+					if (onLightPackFocusAreaChanged)
+						onLightPackFocusAreaChanged("bass");
+				} else if (ImGui::MenuItem("Bass and mid", nullptr, &bassAndMid)) {
+					if (onLightPackFocusAreaChanged)
+						onLightPackFocusAreaChanged("bassandmid");
+				} else if (ImGui::MenuItem("Bass, mid, and a little high end", nullptr, &bassMidAndALittleHighEnd)) {
+					if (onLightPackFocusAreaChanged)
+						onLightPackFocusAreaChanged("bassmidandalittlehighend");
+				} else if (ImGui::MenuItem("Half Nyquist", nullptr, &halfNyquist)) {
+					if (onLightPackFocusAreaChanged)
+						onLightPackFocusAreaChanged("halfnyquist");
+				} else if (ImGui::MenuItem("Nyquist", nullptr, &nyquist)) {
+					if (onLightPackFocusAreaChanged)
+						onLightPackFocusAreaChanged("nyquist");
+				}
+
+				ImGui::EndMenu();
+			}
+
+			ImGui::Separator();
+
+			smooth = Settings::settings.GetSmooth();
+			if (ImGui::SliderInt("Smooth", &smooth, 0, 255)) {
+				if (onSmoothChanged)
+					onSmoothChanged(smooth);
+			}
+
+			gamma = Settings::settings.GetGamma();
+			if (ImGui::SliderFloat("Gamma", &gamma, 0.1, 3, "%.2f")) {
+				if (onGammaChanged)
+					onGammaChanged(gamma);
+			}
+
+			ImGui::EndMenu();
+		}
+
+		if (auto height = ImGui::GetFrameHeight(); height != this->height) {
+			height = ImGui::GetFrameHeight();
+			context.SetYOffset(height);
+		}
+
+		ImGui::EndMenuBar();
+		ImGui::End();
+
+		return height;
+	}
+
+	void OnDestroy() {
+		NFD_Quit();
+	}
+
+	const int &GetHeight() const { return height; }
+
+	void SetOnOpen(std::function<void(const std::filesystem::path &)> f) { onOpen = f; }
+
+	void SetOnVisualizationTypeChanged(std::function<void(const std::string &)> f) { onVisualizationTypeChanged = f; }
+	void SetOnLightPackVisualizationTypeChanged(std::function<void(const std::string &)> f) { onLightPackVisualizationTypeChanged = f; }
+	void SetOnLightPackMappingChanged(std::function<void(const std::string &)> f) { onLightPackMappingChanged = f; }
+	void SetOnLightPackFocusAreaChanged(std::function<void(const std::string &)> f) { onLightPackFocusAreaChanged = f; }
+
+	void SetOnBlurChanged(std::function<void(bool)> f) { onBlurChanged = f; }
+	void SetOnRotatingChanged(std::function<void(bool)> f) { onRotatingChanged = f; }
+	void SetOnDetectBpmChanged(std::function<void(bool)> f) { onDetectBpmChanged = f; }
+
+	void SetOnPulseChanged(std::function<void(bool)> f) { onPulseChanged = f; }
+	void SetOnBlurIntensityChanged(std::function<void(float)> f) { onBlurIntensityChanged = f; }
+	void SetOnRpmChanged(std::function<void(float)> f) { onRpmChanged = f; }
+
+	void SetOnBufferSizeChanged(std::function<void(int)> f) { onBufferSizeChanged = f; }
+	void SetOnDecayTimeChanged(std::function<void(float)> f) { onDecayTimeChanged = f; }
+	void SetOnFadeTimeChanged(std::function<void(float)> f) { onFadeTimeChanged = f; }
+	void SetOnPulseTimeChanged(std::function<void(float)> f) { onPulseTimeChanged = f; }
+
+	void SetOnRadiusChanged(std::function<void(int)> f) { onRadiusChanged = f; }
+	void SetOnLineWidthChanged(std::function<void(float)> f) { onLineWidthChanged = f; }
+
+	void SetOnSmoothChanged(std::function<void(int)> f) { onSmoothChanged = f; }
+	void SetOnGammaChanged(std::function<void(float)> f) { onGammaChanged = f; }
+
+	void SetOnResetWindow(std::function<void()> f) { onResetWindow = f; }
+
+	void SetOnQuit(std::function<void()> f) { onQuit = f; }
+
+private:
+	int width = 0, height = 0;
+
+	bool fft = Settings::settings.GetRenderer() == "fft";
+	bool fftLine = Settings::settings.GetRenderer() == "fftline";
+	bool oscilloscope = Settings::settings.GetRenderer() == "osc";
+
+	bool intensity = Settings::settings.GetLightPackVisualizationType() == "intensity";
+	bool color = Settings::settings.GetLightPackVisualizationType() == "color";
+	bool colorAndIntensity = Settings::settings.GetLightPackVisualizationType() == "colorintensity";
+
+	bool default = Settings::settings.GetLightPackMapping() == "default";
+	bool mine = Settings::settings.GetLightPackMapping() == "mine";
+	bool topToBottom = Settings::settings.GetLightPackMapping() == "ttb";
+	bool bottomToTop = Settings::settings.GetLightPackMapping() == "btt";
+
+	bool superBass = Settings::settings.GetLightPackFocusArea() == "superbass";
+	bool subBass = Settings::settings.GetLightPackFocusArea() == "subbass";
+	bool bass = Settings::settings.GetLightPackFocusArea() == "bass";
+	bool bassAndMid = Settings::settings.GetLightPackFocusArea() == "bassandmid";
+	bool bassMidAndALittleHighEnd = Settings::settings.GetLightPackFocusArea() == "bassmidandalittlehighend";
+	bool halfNyquist = Settings::settings.GetLightPackFocusArea() == "halfnyquist";
+	bool nyquist = Settings::settings.GetLightPackFocusArea() == "nyquist";
+
+	bool rotate = Settings::settings.GetRotating();
+	bool detectBpm = Settings::settings.GetDetectBpm();
+	bool blur = Settings::settings.GetBlur();
+
+	float rpm = Settings::settings.GetRotationSpeed() / (360.0f / 60.0f);
+
+	float blurIntensity = Settings::settings.GetBlurIntensity();
+
+	int bufferSize = Settings::settings.GetBufferLength();
+
+	float decayTime = Settings::settings.GetDecayTime().AsSeconds();
+	float fadeTime = Settings::settings.GetFadeTime().AsSeconds();
+
+	bool pulse = Settings::settings.GetPulse();
+	float pulseTime = Settings::settings.GetPulseTime().AsSeconds();
+
+	int radius = Settings::settings.GetRadius();
+
+	float lineWidth = Settings::settings.GetWidth();
+
+	int smooth = Settings::settings.GetSmooth();
+	float gamma = Settings::settings.GetGamma();
+
+	std::function<void(const std::filesystem::path &)> onOpen;
+	std::function<void(bool)> onPulseChanged;
+	std::function<void(bool)> onBlurChanged;
+	std::function<void(bool)> onRotatingChanged;
+	std::function<void(bool)> onDetectBpmChanged;
+	std::function<void(const std::string &)> onVisualizationTypeChanged;
+	std::function<void(const std::string &)> onLightPackVisualizationTypeChanged;
+	std::function<void(const std::string &)> onLightPackMappingChanged;
+	std::function<void(const std::string &)> onLightPackFocusAreaChanged;
+	std::function<void(float)> onBlurIntensityChanged;
+	std::function<void(float)> onRpmChanged;
+	std::function<void(int)> onBufferSizeChanged;
+	std::function<void(float)> onDecayTimeChanged;
+	std::function<void(float)> onFadeTimeChanged;
+	std::function<void(float)> onPulseTimeChanged;
+	std::function<void(int)> onRadiusChanged;
+	std::function<void(float)> onLineWidthChanged;
+	std::function<void(int)> onSmoothChanged;
+	std::function<void(float)> onGammaChanged;
+
+	std::function<void()> onQuit;
+	std::function<void()> onResetWindow;
+};

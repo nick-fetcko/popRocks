@@ -45,6 +45,40 @@ LightPack::LightPack() {
 	intensityColors[5].r = 255;
 	intensityColors[5].g = 0;
 	intensityColors[5].b = 0;
+
+	const auto &type = Settings::settings.GetLightPackVisualizationType();
+	if (type == "intensity")
+		currentLightType = LightType::Intensity;
+	else if (type == "color")
+		currentLightType = LightType::Color;
+	else if (type == "colorintensity")
+		currentLightType = LightType::ColorIntensity;
+
+	const auto &mapping = Settings::settings.GetLightPackMapping();
+	if (mapping == "default")
+		currentMapping = Mappings::DEFAULT;
+	else if (mapping == "mine")
+		currentMapping = Mappings::MINE;
+	else if (mapping == "ttb")
+		currentMapping = Mappings::TOP_TO_BOTTOM;
+	else if (mapping == "btt")
+		currentMapping = Mappings::BOTTOM_TO_TOP;
+
+	const auto &focusArea = Settings::settings.GetLightPackFocusArea();
+	if (focusArea == "superbass")
+		SetFocusArea(FocusArea::SuperBass);
+	else if (focusArea == "subbass")
+		SetFocusArea(FocusArea::SubBass);
+	else if (focusArea == "bass")
+		SetFocusArea(FocusArea::Bass);
+	else if (focusArea == "bassandmid")
+		SetFocusArea(FocusArea::BassAndMid);
+	else if (focusArea == "bassmidandalittlehighend")
+		SetFocusArea(FocusArea::BassMidAndHigh);
+	else if (focusArea == "halfnyquist")
+		SetFocusArea(FocusArea::HalfNyquist);
+	else if (focusArea == "nyquist")
+		SetFocusArea(FocusArea::Nyquist);
 }
 
 LightPack::~LightPack() {
@@ -419,15 +453,54 @@ void LightPack::SetBufferLength(std::size_t bufferLength) {
 void LightPack::SetLightType(LightType type) {
 	std::unique_lock lock(mutex);
 	currentLightType = type;
+
+	Settings::settings.SetLightPackVisualizationType(
+		type == LightType::Intensity ?
+			"intensity" :
+			type == LightType::Color ?
+				"color" :
+				"colorintensity"
+	);
 }
 void LightPack::SetFocusArea(FocusArea focus) {
 	std::unique_lock lock(mutex);
 	focusArea = focus;
 	binsPerLight = bufferLength / static_cast<int>(focus) / numberOfLights;
+
+	// These might look like bitwise flags, but they aren't
+	// ... I just like powers of 2.
+#pragma warning(push)
+#pragma warning(disable:26813)
+	Settings::settings.SetLightPackFocusArea(
+		focus == FocusArea::SuperBass ?
+			"superbass" :
+			focus == FocusArea::SubBass ?
+				"subbass" :
+				focus == FocusArea::Bass ?
+					"bass" :
+					focus == FocusArea::BassAndMid ?
+						"bassandmid" :
+						focus == FocusArea::BassMidAndHigh ?
+							"bassmidandalittlehighend" :
+							focus == FocusArea::HalfNyquist ?
+								"halfnyquist" :
+								"nyquist"
+	);
+#pragma warning(pop)
 }
 void LightPack::SetMapping(const int *mapping) {
 	std::unique_lock lock(mutex);
 	currentMapping = mapping;
+
+	Settings::settings.SetLightPackMapping(
+		mapping == Mappings::DEFAULT ?
+			"default" :
+			mapping == Mappings::MINE ?
+				"mine" :
+				mapping == Mappings::TOP_TO_BOTTOM ?
+					"ttb" :
+					"btt"
+	);
 }
 
 void LightPack::SetSmooth(uint8_t smooth) {

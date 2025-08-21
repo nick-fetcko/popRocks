@@ -17,6 +17,10 @@
 
 #include <basswasapi.h>
 
+#include <imgui.h>
+#include <backends/imgui_impl_sdl2.h>
+#include <backends/imgui_impl_opengl3.h>
+
 #include "MathCPP/Colour.hpp"
 #include "OpenGL/OpenGLFont.hpp"
 
@@ -278,8 +282,169 @@ void CApp::OnInit() {
 		windowHeight,
 		SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
 	);
-	if (!SDL_GL_CreateContext(sdlWindow))
-		logger.LogError("Could not create OpenGL context: ", SDL_GetError());
+	if (auto context = SDL_GL_CreateContext(sdlWindow)) {
+#if GUI
+		// Setup Dear ImGui context
+		IMGUI_CHECKVERSION();
+		ImGui::CreateContext();
+		ImGuiIO &io = ImGui::GetIO();
+		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;	// Enable Keyboard Controls
+
+		// Setup Platform/Renderer backends
+		ImGui_ImplSDL2_InitForOpenGL(sdlWindow, context);
+		ImGui_ImplOpenGL3_Init();
+
+		menu.SetOnOpen([this](const std::filesystem::path &path) {
+			LoadFile(path);
+			ImGui::SetWindowFocus(nullptr);
+		});
+		menu.SetOnBufferSizeChanged([this](int bufferSize) {
+			SetBufferLength(bufferSize);
+		});
+		menu.SetOnDecayTimeChanged([this](float decayTime) {
+			SetDecayTime(
+				std::chrono::duration<double> {
+					decayTime
+				}
+			);
+		});
+		menu.SetOnFadeTimeChanged([this](float fadeTime) {
+			SetFadeTime(
+				std::chrono::duration<double> {
+					fadeTime
+				}
+			);
+		});
+		menu.SetOnPulseChanged([this](bool pulse) {
+			renderer->SetPulse(pulse);
+		});
+		menu.SetOnPulseTimeChanged([this](float pulseTime) {
+			renderer->SetPulseTime(
+				std::chrono::duration<double> {
+					pulseTime
+				}
+			);
+		});
+		menu.SetOnBlurChanged([this](bool blur) {
+			ToggleBlur();
+			ImGui::SetWindowFocus(nullptr);
+		});
+		menu.SetOnBlurIntensityChanged([this](float blurIntensity) {
+			SetBlurIntensity(blurIntensity);
+		});
+		menu.SetOnRotatingChanged([this](bool rotate) {
+			SetRotating(rotate);
+			ImGui::SetWindowFocus(nullptr);
+		});
+		menu.SetOnRpmChanged([this](float rpm) {
+			SetRotationSpeed(rpm * (360.0f / 60.0f) /* 6 */);
+		});
+		menu.SetOnDetectBpmChanged([this](bool detectBpm) {
+			for (auto &detector : beatDetectors)
+				detector.SetDetecting(detectBpm);
+
+			Settings::settings.SetDetectBpm(beatDetect->IsDetecting());
+
+			if (beatDetect->IsDetecting() && !loadedFile.empty()) {
+				for (auto &detector : beatDetectors)
+					detector.Cancel();
+
+				LoadBeats(
+					OpenWithFlags(loadedFile, loadedFileExtension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT),
+					loadedFile
+				);
+			}
+		});
+		menu.SetOnVisualizationTypeChanged([this](const std::string &visualizationType) {
+			renderer = RendererFactory::Build(
+				visualizationType,
+				&dynamicGain,
+				&albumArt,
+				renderer,
+				windowWidth,
+				windowHeight,
+				buffer,
+				maxLength,
+				bufferLength
+			);
+
+			Settings::settings.SetRenderer(visualizationType);
+
+			if (visualizationType == "fft") {
+				// Presets only really affect the FFT renderer for now
+				LoadPreset(presetIndex);
+			}
+		});
+		menu.SetOnLightPackVisualizationTypeChanged([this](const std::string &lightPackVisualizationType) {
+			lightPack.SetLightType(
+				lightPackVisualizationType == "intensity" ?
+					LightPack::LightType::Intensity :
+					lightPackVisualizationType == "color" ?
+						LightPack::LightType::Color :
+						LightPack::LightType::ColorIntensity
+			);
+		});
+		menu.SetOnLightPackMappingChanged([this](const std::string &lightPackMapping) {
+			lightPack.SetMapping(
+				lightPackMapping == "default" ?
+					Mappings::DEFAULT :
+					lightPackMapping == "mine" ?
+						Mappings::MINE :
+						lightPackMapping == "ttb" ?
+							Mappings::TOP_TO_BOTTOM :
+							Mappings::BOTTOM_TO_TOP
+			);
+		});
+		menu.SetOnLightPackFocusAreaChanged([this](const std::string &lightPackFocusArea) {
+			lightPack.SetFocusArea(
+				lightPackFocusArea == "superbass" ?
+					LightPack::FocusArea::SuperBass :
+					lightPackFocusArea == "subbass" ?
+						LightPack::FocusArea::SubBass :
+						lightPackFocusArea == "bass" ?
+							LightPack::FocusArea::Bass :
+							lightPackFocusArea == "bassandmid" ?
+								LightPack::FocusArea::BassAndMid :
+								lightPackFocusArea == "bassmidandalittlehighend" ?
+									LightPack::FocusArea::BassMidAndHigh :
+									lightPackFocusArea == "halfnyquist" ?
+										LightPack::FocusArea::HalfNyquist :
+										LightPack::FocusArea::Nyquist
+			);
+		});
+		menu.SetOnRadiusChanged([this](int radius) {
+			albumArt.SetRadius(radius);
+			albumArt.Scale(true);
+			controls.GetVolume().SetRadius(radius);
+		});
+		menu.SetOnLineWidthChanged([this](float lineWidth) {
+			if (auto lineRenderer = dynamic_cast<LineRenderer *>(renderer))
+				lineRenderer->SetWidth(lineWidth);
+		});
+		menu.SetOnSmoothChanged([this](int smooth) {
+			lightPack.SetSmooth(smooth);
+		});
+		menu.SetOnGammaChanged([this](float gamma) {
+			// Silent so it doesn't spam the console
+			// while the user is dragging
+			lightPack.SetGamma(gamma, true);
+		});
+		menu.SetOnResetWindow([this] {
+			Settings::settings.SetWindowWidth(1920);
+			Settings::settings.SetWindowHeight(1080);
+			Settings::settings.SetWindowX(SDL_WINDOWPOS_CENTERED);
+			Settings::settings.SetWindowY(SDL_WINDOWPOS_CENTERED);
+
+			SDL_SetWindowSize(sdlWindow, Settings::settings.GetWindowWidth(), Settings::settings.GetWindowHeight());
+			SDL_SetWindowPosition(sdlWindow, Settings::settings.GetWindowX(), Settings::settings.GetWindowY());
+		});
+		menu.SetOnQuit([this] {
+			SDL_Event event;
+			event.type = SDL_QUIT;
+			SDL_PushEvent(&event);
+		});
+#endif
+	} else logger.LogError("Could not create OpenGL context: ", SDL_GetError());
 
 	logger.LogDebug("gladLoadGL() returned ", gladLoadGL());
 	logger.LogDebug("OpenGL Version: ", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
@@ -444,7 +609,7 @@ void CApp::OnResize(int width, int height, float scale) {
 
 	hStep = static_cast<float>(windowWidth) / bufferLength;
 
-	context->SetProjection(glm::ortho(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f));
+	context->SetIdentity(glm::ortho(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f));
 	context->Apply();
 
 	context->With("rotate"_hash, [width, height](Context::Shader &shader) {
@@ -468,6 +633,18 @@ void CApp::OnResize(int width, int height, float scale) {
 			shader.program.Uniform1f("intensity", blurIntensity);
 		});
 	}
+
+#if GUI
+	uiFbo = std::make_unique<MultisampledFramebufferObject>(windowWidth, windowHeight);
+
+	menu.OnResize(width, height);
+
+	// Needs 3 frames:
+	// 1 to layout the menu
+	// 1 to measure the menu
+	// 1 extra to ensure we lose focus
+	updateUi = 3;
+#endif
 }
 
 const Colour<float> &CApp::GetColor() const {
@@ -512,7 +689,7 @@ void CApp::OnLoop(const Delta &time) {
 	context->Use("texture"_hash);
 
 	if (!fileLoaded && !listening) {
-		SwapBuffers();
+		SwapBuffers(time);
 		return;
 	}
 
@@ -683,7 +860,14 @@ void CApp::OnLoop(const Delta &time) {
 	}
 
 	// Render the controls over the accumulation buffer, too
-	auto elapsed = controls.OnLoop(time, streamHandle, *context, [this](float alpha) { SetColor(alpha); });
+	auto elapsed = controls.OnLoop(
+		time,
+		streamHandle,
+		*context,
+		[this](float alpha) {
+			SetColor(alpha); 
+		}
+	);
 
 	// If we reached the end of the song, try loading the next
 	// song in the playlist
@@ -730,11 +914,45 @@ void CApp::OnLoop(const Delta &time) {
 	if(beatDetect->OnLoop(elapsed - (controls.GetExclusiveIndicator().IsExclusive() ? exclusiveBufferSize : 0)))
 		albumArt.NextBin(true);
 
-	SwapBuffers();
+	SwapBuffers(time);
 }
 
-inline void CApp::SwapBuffers() {
+inline void CApp::SwapBuffers(const Delta &time) {
 	controls.GetFpsCounter().OnFrame();
+#if GUI
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplSDL2_NewFrame();
+	ImGui::NewFrame();
+
+	menu.OnLoop(lightPack, *context);
+
+	// Keep the UI in an FBO and only update it as needed
+	//
+	// Why?
+	// 
+	// The high overhead involved in caching the OpenGL context (+5% CPU usage on a 9950X)
+	// as part of ImGui_ImplOpenGL3_RenderDrawData() conflicts with my goal of ~1% CPU usage
+	if (updateUi && (uiAccum += time.change.AsSeconds()) >= 0.01667 /* Render UI at 60FPS */) {
+		uiFbo->Bind();
+		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+		uiFbo->Unbind();
+
+		// https://github.com/ocornut/imgui/issues/314#issuecomment-1750082073
+		// 
+		// Need to call this on the first *two* frames
+		if (updateUi > 1)
+			ImGui::SetWindowFocus(nullptr);
+
+		--updateUi;
+		uiAccum = 0.0;
+	} else ImGui::EndFrame();
+
+	context->Color(1.0f, 1.0f, 1.0f, 0.95f * controls.GetAlpha());
+	uiFbo->Draw(0, 0, *context);
+#endif
 	SDL_GL_SwapWindow(sdlWindow);
 }
 
@@ -772,6 +990,14 @@ void CApp::OnDestroy() {
 
 	// Make sure to free our shader resources
 	context.reset();
+
+	menu.OnDestroy();
+
+#if GUI
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplSDL2_Shutdown();
+	ImGui::DestroyContext();
+#endif
 
 	BASS_WASAPI_Free();
 	BASS_Free();

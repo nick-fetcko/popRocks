@@ -83,6 +83,15 @@ public:
 	const std::string &GetRenderer() const { return renderer; }
 	void SetRenderer(const std::string &renderer);
 
+	const std::string &GetLightPackVisualizationType() const { return lightPackVisualizationType; }
+	void SetLightPackVisualizationType(const std::string &lightPackVisualizationType);
+
+	const std::string &GetLightPackMapping() const { return lightPackMapping; }
+	void SetLightPackMapping(const std::string &lightPackMapping);
+
+	const std::string &GetLightPackFocusArea() const { return lightPackFocusArea; }
+	void SetLightPackFocusArea(const std::string &lightPackFocusArea);
+
 	const std::size_t &GetPresetIndex() const { return presetIndex; }
 	void SetPresetIndex(std::size_t presetIndex);
 
@@ -147,4 +156,8 @@ private:
 
 	bool blur = false;
 	float blurIntensity = 0.5f;
+
+	std::string lightPackVisualizationType = "intensity";
+	std::string lightPackMapping = "default";
+	std::string lightPackFocusArea = "bassandmid";
 };

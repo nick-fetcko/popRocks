@@ -268,9 +268,9 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 				);
 			}
 
-			fpsCounter.Draw(context);
+			fpsCounter.Draw();
 
-			auto aboveMetadata = windowHeight - yOffset - albumHeight / 2 - exclusiveIndicator.GetHeight() / 2;
+			auto aboveMetadata = windowHeight - yOffset - albumHeight / 2 - exclusiveIndicator.GetHeight() / 2 - context.GetYOffset();
 
 			playlist.OnLoop(fpsCounter.GetSize(), aboveMetadata - albumHeight / 8.0f, alpha, context);
 
