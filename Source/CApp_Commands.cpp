@@ -271,6 +271,9 @@ void CApp::AddCommands() {
 							SetBufferLength(2048);
 						else
 							SetBufferLength(std::stoi(args[1]));
+
+						// We deviated from a preset
+						LoadPreset(std::nullopt);
 					} catch (std::exception &e) {
 						logger.LogError("Could not set buffer length: ", e.what());
 					}
@@ -285,11 +288,17 @@ void CApp::AddCommands() {
 							SetRotationSpeed(6.0f);
 						else
 							SetRotationSpeed(std::stof(args[1]));
+
+						// We deviated from a preset
+						LoadPreset(std::nullopt);
 					} catch (std::exception &e) {
 						logger.LogError("Could not set rotation speed: ", e.what());
 					}
 				} else {
 					SetRotating(!GetRotating());
+
+					// We deviated from a preset
+					LoadPreset(std::nullopt);
 				}
 			}
 		},
@@ -305,6 +314,9 @@ void CApp::AddCommands() {
 									std::stod(args[1])
 								}
 							);
+
+						// We deviated from a preset
+						LoadPreset(std::nullopt);
 					} catch (std::exception &e) {
 						logger.LogError("Could not set decay: ", e.what());
 					}
@@ -323,6 +335,9 @@ void CApp::AddCommands() {
 									std::stod(args[1])
 								}
 							);
+
+						// We deviated from a preset
+						LoadPreset(std::nullopt);
 					} catch (std::exception &e) {
 						logger.LogError("Could not set fade: ", e.what());
 					}
@@ -385,6 +400,9 @@ void CApp::AddCommands() {
 							SetRotationSpeed(6.0f); // 1 RPM
 						else
 							SetRotationSpeed(std::stof(args[1]) * (360.0f / 60.0f) /* 6 */);
+
+						// We deviated from a preset
+						LoadPreset(std::nullopt);
 					} catch (std::exception &e) {
 						logger.LogError("Could not set RPM: ", e.what());
 					}
@@ -429,11 +447,17 @@ void CApp::AddCommands() {
 							SetBlurIntensity(0.88f);
 						else
 							SetBlurIntensity(std::stof(args[1]));
+
+						// We deviated from a preset
+						LoadPreset(std::nullopt);
 					} catch (std::exception &e) {
 						logger.LogError("Could not set blur factor: ", e.what());
 					}
 				} else {
 					ToggleBlur();
+
+					// We deviated from a preset
+					LoadPreset(std::nullopt);
 				}
 			}
 		},
@@ -515,6 +539,9 @@ void CApp::AddCommands() {
 			"pulse", [&](const std::vector<std::string> &args) {
 				if (args.size() == 1) {
 					renderer->TogglePulse();
+
+					// We deviated from a preset
+					LoadPreset(std::nullopt);
 				} else {
 					try {
 						if (IsDefault(args[1]))
@@ -525,6 +552,9 @@ void CApp::AddCommands() {
 									std::stod(args[1])
 								}
 							);
+
+						// We deviated from a preset
+						LoadPreset(std::nullopt);
 					} catch (std::exception &e) {
 						logger.LogError("Could not set pulse time: ", e.what());
 					}

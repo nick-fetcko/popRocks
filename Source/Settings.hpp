@@ -29,6 +29,8 @@ public:
 
 	static Settings settings;
 
+	static std::filesystem::path GetPath(const std::string &fileName = "Settings.json");
+
 	const float &GetVolume() const { return volume; }
 	void SetVolume(float volume);
 
@@ -92,8 +94,8 @@ public:
 	const std::string &GetLightPackFocusArea() const { return lightPackFocusArea; }
 	void SetLightPackFocusArea(const std::string &lightPackFocusArea);
 
-	const std::size_t &GetPresetIndex() const { return presetIndex; }
-	void SetPresetIndex(std::size_t presetIndex);
+	const std::optional<std::size_t> &GetPresetIndex() const { return presetIndex; }
+	void SetPresetIndex(std::optional<std::size_t> presetIndex);
 
 	const uint8_t &GetSmooth() const { return smooth; }
 	void SetSmooth(uint8_t smooth);
@@ -113,8 +115,6 @@ public:
 	friend const Node &operator>>(const Node &node, ColorSelection &colorSelection);
 	friend Node &operator<<(Node &node, const ColorSelection &colorSelection);
 private:
-	static std::filesystem::path GetPath();
-
 	static Settings Load();
 
 	void Save();
@@ -149,7 +149,7 @@ private:
 
 	std::string renderer = "fft";
 
-	std::size_t presetIndex = 0;
+	std::optional<std::size_t> presetIndex = std::nullopt;
 
 	uint8_t smooth = 0;
 	float gamma = 1.0f;

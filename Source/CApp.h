@@ -97,6 +97,7 @@ public:
 
 	void OnColorChanged(const MathsCPP::Colour<float> &color, bool silent = false) override;
 
+	void SetBlur(bool blur);
 	void ToggleBlur();
 	void SetBlurIntensity(float intensity);
 
@@ -119,7 +120,7 @@ public:
 	bool OnMouseDown(const Vector2i &mousePos);
 	void OnMouseDragged(const Vector2i &mousePos);
 
-	void LoadPreset(std::size_t index);
+	void LoadPreset(std::optional<std::size_t> index);
 
 	void AdvanceToNextTrack();
 
@@ -250,7 +251,7 @@ private:
 
 	float exclusiveBufferSize = 0.25f; // in seconds
 
-	std::size_t presetIndex = Settings::settings.GetPresetIndex();
+	std::optional<std::size_t> presetIndex = Settings::settings.GetPresetIndex();
 
 	std::atomic<bool> advanceOnNextLoop = false;
 	std::atomic<bool> stopWasapiOnNextLoop = false;

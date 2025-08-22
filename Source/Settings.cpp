@@ -8,7 +8,7 @@
 
 Settings Settings::settings = Settings::Load();
 
-std::filesystem::path Settings::GetPath() {
+std::filesystem::path Settings::GetPath(const std::string &fileName) {
 	std::filesystem::path ret;
 
 #ifdef _WIN32
@@ -31,7 +31,7 @@ std::filesystem::path Settings::GetPath() {
 		if (!std::filesystem::exists(ret))
 			std::filesystem::create_directory(ret);
 
-		ret /= "Settings.json";
+		ret /= fileName;
 	}
 
 	return ret;
@@ -170,7 +170,7 @@ void Settings::SetLightPackFocusArea(const std::string &lightPackFocusArea) {
 	Save();
 }
 
-void Settings::SetPresetIndex(std::size_t presetIndex) {
+void Settings::SetPresetIndex(std::optional<std::size_t> presetIndex) {
 	this->presetIndex = presetIndex;
 	Save();
 }

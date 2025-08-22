@@ -3,11 +3,13 @@
 #include <filesystem>
 
 #include <imgui.h>
+#include <imgui_stdlib.h>
 #include <nfd.hpp>
 
 #include "Utils/Utils.hpp"
 
 #include "Playlist.hpp"
+#include "Preset.hpp"
 
 using namespace Fetcko;
 
@@ -15,6 +17,10 @@ class Menu {
 public:
 	Menu() {
 		NFD_Init();
+	}
+
+	~Menu() {
+		delete[] presetSelections;
 	}
 
 	void OnResize(int width, int height) {
@@ -153,6 +159,7 @@ public:
 
 			ImGui::Separator();
 
+			// FIXME: Toggling this breaks beat detection in the _current_ song
 			detectBpm = Settings::settings.GetDetectBpm();
 			if (ImGui::MenuItem("Detect BPM", nullptr, &detectBpm)) {
 				if (onDetectBpmChanged)
@@ -199,6 +206,99 @@ public:
 			}
 
 			ImGui::EndMenu();
+		}
+
+		presetIndex = Settings::settings.GetPresetIndex();
+		if (ImGui::BeginMenu("Presets")) {
+			presetX = ImGui::GetWindowPos().x;
+			auto presets = Preset::GetPresets();
+			if (presets.size() != numPresets) {
+				delete[] presetSelections;
+				presetSelections = new bool[presets.size()];
+				numPresets = presets.size();
+			}
+			for (const auto &[i, preset] : Utils::Enumerate(presets)) {
+				presetSelections[i] = presetIndex && *presetIndex == i;
+				if (ImGui::MenuItem(preset.GetName().c_str(), nullptr, &presetSelections[i])) {
+					if (onPresetChanged)
+						onPresetChanged(i);
+				}
+
+				if (ImGui::BeginPopupContextItem()) {
+					ImGui::Text("Delete?");
+					if (ImGui::Button("No"))
+						ImGui::CloseCurrentPopup();
+					ImGui::SameLine();
+					if (ImGui::Button("Yes")) {
+						Preset::RemovePreset(i);
+
+						if (onPresetChanged && presetIndex) {
+							// If we deleted the _current_ preset,
+							// unselect it.
+							if (*presetIndex == i)
+								onPresetChanged(std::nullopt);
+
+							// If we deleted a preset _below_ the
+							// current one, shift the current one
+							else if (*presetIndex > i)
+								onPresetChanged(*presetIndex - 1);
+						}
+					}
+					ImGui::EndPopup();
+				}
+			}
+
+			ImGui::Separator();
+
+			if (ImGui::MenuItem("Save current settings as preset...")) {
+				currentPresetName.clear();
+				newPresetPopup = true;
+			}
+			
+			ImGui::EndMenu();
+		}
+
+		// See https://github.com/ocornut/imgui/issues/5684#issuecomment-1247928651
+		if (newPresetPopup) {
+			ImGui::SetNextWindowPos(ImVec2(presetX, context.GetYOffset()));
+			ImGui::OpenPopup("Enter preset name...");
+
+			bool open = true;
+			if (ImGui::BeginPopupModal("Enter preset name...", &open, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize)) {
+				
+				ImGui::InputText("Preset name", &currentPresetName);
+
+				if (ImGui::Button("Cancel"))
+					open = false;
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Save")) {
+					Preset preset(
+						currentPresetName,
+						Settings::settings.GetBufferLength(),
+						Settings::settings.GetDecayTime(),
+						Settings::settings.GetFadeTime(),
+						Settings::settings.GetPulse(),
+						Settings::settings.GetPulseTime(),
+						Settings::settings.GetRotating(),
+						Settings::settings.GetRotationSpeed(),
+						Settings::settings.GetBlur(),
+						Settings::settings.GetBlurIntensity()
+					);
+
+					Preset::AddPreset(std::move(preset));
+
+					if (onPresetChanged)
+						onPresetChanged(Preset::GetPresets().size() - 1);
+
+					open = false;
+				}
+
+				ImGui::EndPopup();
+			}
+
+			newPresetPopup = open;
 		}
 
 		if (ImGui::BeginMenu("LightPack Integration", lightPack.IsActive())) {
@@ -339,6 +439,8 @@ public:
 	void SetOnSmoothChanged(std::function<void(int)> f) { onSmoothChanged = f; }
 	void SetOnGammaChanged(std::function<void(float)> f) { onGammaChanged = f; }
 
+	void SetOnPresetChanged(std::function<void(std::optional<std::size_t>)> f) { onPresetChanged = f; }
+
 	void SetOnResetWindow(std::function<void()> f) { onResetWindow = f; }
 
 	void SetOnQuit(std::function<void()> f) { onQuit = f; }
@@ -390,6 +492,14 @@ private:
 	int smooth = Settings::settings.GetSmooth();
 	float gamma = Settings::settings.GetGamma();
 
+	std::optional<std::size_t> presetIndex = Settings::settings.GetPresetIndex();
+	std::size_t numPresets = 0;
+	bool *presetSelections = nullptr;
+
+	bool newPresetPopup = false;
+	int presetX = 0;
+	std::string currentPresetName;
+
 	std::function<void(const std::filesystem::path &)> onOpen;
 	std::function<void(bool)> onPulseChanged;
 	std::function<void(bool)> onBlurChanged;
@@ -409,6 +519,7 @@ private:
 	std::function<void(float)> onLineWidthChanged;
 	std::function<void(int)> onSmoothChanged;
 	std::function<void(float)> onGammaChanged;
+	std::function<void(std::optional<std::size_t>)> onPresetChanged;
 
 	std::function<void()> onQuit;
 	std::function<void()> onResetWindow;

@@ -300,6 +300,9 @@ void CApp::OnInit() {
 		});
 		menu.SetOnBufferSizeChanged([this](int bufferSize) {
 			SetBufferLength(bufferSize);
+
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
 		});
 		menu.SetOnDecayTimeChanged([this](float decayTime) {
 			SetDecayTime(
@@ -307,6 +310,9 @@ void CApp::OnInit() {
 					decayTime
 				}
 			);
+
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
 		});
 		menu.SetOnFadeTimeChanged([this](float fadeTime) {
 			SetFadeTime(
@@ -314,9 +320,15 @@ void CApp::OnInit() {
 					fadeTime
 				}
 			);
+
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
 		});
 		menu.SetOnPulseChanged([this](bool pulse) {
 			renderer->SetPulse(pulse);
+
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
 		});
 		menu.SetOnPulseTimeChanged([this](float pulseTime) {
 			renderer->SetPulseTime(
@@ -324,20 +336,35 @@ void CApp::OnInit() {
 					pulseTime
 				}
 			);
+
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
 		});
 		menu.SetOnBlurChanged([this](bool blur) {
 			ToggleBlur();
 			ImGui::SetWindowFocus(nullptr);
+
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
 		});
 		menu.SetOnBlurIntensityChanged([this](float blurIntensity) {
 			SetBlurIntensity(blurIntensity);
+
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
 		});
 		menu.SetOnRotatingChanged([this](bool rotate) {
 			SetRotating(rotate);
 			ImGui::SetWindowFocus(nullptr);
+
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
 		});
 		menu.SetOnRpmChanged([this](float rpm) {
 			SetRotationSpeed(rpm * (360.0f / 60.0f) /* 6 */);
+
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
 		});
 		menu.SetOnDetectBpmChanged([this](bool detectBpm) {
 			for (auto &detector : beatDetectors)
@@ -428,6 +455,9 @@ void CApp::OnInit() {
 			// Silent so it doesn't spam the console
 			// while the user is dragging
 			lightPack.SetGamma(gamma, true);
+		});
+		menu.SetOnPresetChanged([this](std::optional<std::size_t> preset) {
+			LoadPreset(preset);
 		});
 		menu.SetOnResetWindow([this] {
 			Settings::settings.SetWindowWidth(1920);
@@ -1368,8 +1398,9 @@ void CApp::SetStrobeFrequency(Duration<Microseconds> freq) {
 	strobeFrequency = freq;
 }
 
-void CApp::ToggleBlur() {
-	blur = !blur;
+void CApp::SetBlur(bool blur) {
+	this->blur = blur;
+
 	logger.LogDebug("Turning blur ", blur ? "on" : "off");
 	Settings::settings.SetBlur(blur);
 	if (blur) {
@@ -1383,6 +1414,10 @@ void CApp::ToggleBlur() {
 		blurFbo.reset();
 		lastFrame.reset();
 	}
+}
+
+void CApp::ToggleBlur() {
+	SetBlur(!blur);
 }
 
 void CApp::SetBlurIntensity(float intensity) {
@@ -1596,9 +1631,9 @@ void CApp::OnMouseDragged(const Vector2i &mousePos) {
 	SeekToMousePos(mousePos, true);
 }
 
-void CApp::LoadPreset(std::size_t index) {
-	if (const auto &presets = Preset::GetPresets(); presets.size() > index) {
-		const auto &preset = presets.at(index);
+void CApp::LoadPreset(std::optional<std::size_t> index) {
+	if (const auto &presets = Preset::GetPresets(); index && presets.size() > *index) {
+		const auto &preset = presets.at(*index);
 
 		logger.LogDebug("Loading preset '", preset.GetName(), "'");
 
@@ -1608,10 +1643,25 @@ void CApp::LoadPreset(std::size_t index) {
 		renderer->SetPulse(preset.GetPulse());
 		renderer->SetPulseTime(preset.GetPulseTime());
 
-		presetIndex = index;
+		auto rotating = preset.GetRotating();
 
-		Settings::settings.SetPresetIndex(index);
-	}
+		if (rotating)
+			SetRotating(*rotating);
+
+		if (rotating && *rotating)
+			SetRotationSpeed(preset.GetRotationSpeed());
+		else
+			SetRotationSpeed(6.0f /* default */);
+
+		auto blur = preset.GetBlur();
+		SetBlur(blur && *blur);
+		if (blur && *blur)
+			SetBlurIntensity(preset.GetBlurIntensity());
+	} else index = std::nullopt;
+
+	presetIndex = index;
+
+	Settings::settings.SetPresetIndex(index);
 }
 
 void CApp::OnColorChanged(const MathsCPP::Colour<float> &color, bool silent) {
