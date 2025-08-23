@@ -6,7 +6,7 @@
 
 #define MULTITHREADED 1
 
-SDL_Surface *Bicubic::ResizeImage(SDL_Surface *surface, float scale) {
+SDL_Surface *Bicubic::ResizeImage(SDL_Surface *surface, float scale, bool *running) {
 	SDL_Surface *ret = SDL_CreateRGBSurfaceWithFormat(
 		surface->flags,
 		static_cast<int>(std::ceil(surface->w * scale)),
@@ -24,16 +24,16 @@ SDL_Surface *Bicubic::ResizeImage(SDL_Surface *surface, float scale) {
 	std::vector<std::thread> threads(numThreads);
 
 	for (unsigned int t = 0; t < numThreads; ++t) {
-		threads[t] = std::thread([t, numThreads, ret, pixels, surface] {
+		threads[t] = std::thread([t, numThreads, ret, pixels, surface, running] {
 			for (int y = static_cast<int>(t * std::ceil(static_cast<float>(ret->h) / numThreads));
-				y < (t + 1) * std::ceil(static_cast<float>(ret->h) / numThreads) && y < ret->h;
+				y < (t + 1) * std::ceil(static_cast<float>(ret->h) / numThreads) && y < ret->h && *running;
 				++y) {
 #else
 			for (int y = 0; y < ret->h; ++y) {
 #endif
 				uint8_t *destPixel = pixels + y * ret->pitch;
 				float v = float(y) / float(ret->h - 1);
-				for (int x = 0; x < ret->w; ++x) {
+				for (int x = 0; x < ret->w && running; ++x) {
 					float u = float(x) / float(ret->w - 1);
 					auto sample = SampleBicubic(surface, u, v);
 

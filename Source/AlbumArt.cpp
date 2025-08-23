@@ -729,7 +729,20 @@ void AlbumArt::Scale(bool force) {
 
 	lastSurfaceUpdated = false;
 
-	std::thread([&] {
+	{
+		std::unique_lock lock(mutex);
+		scaling = false;
+	}
+
+	if (scaleThread.joinable())
+		scaleThread.join();
+
+	{
+		std::unique_lock lock(mutex);
+		scaling = true;
+	}
+
+	scaleThread = std::thread([&] {
 		// Wrap pixels in a new surface. This way, we can
 		// free the surface without losing the original
 		// pixel data.
@@ -750,15 +763,15 @@ void AlbumArt::Scale(bool force) {
 
 			auto w = lastSurface->w / 2;
 			SDL_Surface *next = nullptr;
-			while (w > radius * 2) {
-				auto blurred = gaussian.Blur(resized);
+			while (w > radius * 2 && scaling) {
+				auto blurred = gaussian.Blur(resized, &scaling);
 
-				resized = Bicubic::ResizeImage(blurred, static_cast<float>(w) / blurred->w);
+				resized = Bicubic::ResizeImage(blurred, static_cast<float>(w) / blurred->w, &scaling);
 
 				w /= 2;
 			}
 
-			resized = Bicubic::ResizeImage(resized, (radius * 2) / resized->w);
+			resized = Bicubic::ResizeImage(resized, (radius * 2) / resized->w, &scaling);
 
 			// [16Jul2025] We now want to keep the un-scaled surface
 			//             around as it might need rescaling when the
@@ -770,8 +783,10 @@ void AlbumArt::Scale(bool force) {
 		auto end = std::chrono::system_clock::now();
 
 		std::unique_lock lock(mutex);
-		surfaceToLoad = resized;
+		if (scaling) {
+			surfaceToLoad = resized;
 
-		logger.LogDebug("Image resizing took " + std::to_string(Duration<Microseconds>(end - start).AsSeconds()) + " seconds");
-	}).detach();
+			logger.LogDebug("Image resizing took " + std::to_string(Duration<Microseconds>(end - start).AsSeconds()) + " seconds");
+		}
+	});
 }

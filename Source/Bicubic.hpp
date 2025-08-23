@@ -8,7 +8,7 @@
 // Derived from https://blog.demofox.org/2015/08/15/resizing-images-with-bicubic-interpolation/
 class Bicubic {
 public:
-	static SDL_Surface *ResizeImage(SDL_Surface *surface, float scale);
+	static SDL_Surface *ResizeImage(SDL_Surface *surface, float scale, bool *running);
 
 private:
 	// t is a value that goes from 0 to 1 to interpolate in a C1 continuous way across uniformly sampled data points.

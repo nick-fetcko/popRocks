@@ -17,7 +17,7 @@ public:
 	Gaussian(int kernelSize = 3, double sigma = 1.0);
 	~Gaussian();
 
-	SDL_Surface *Blur(SDL_Surface *surface);
+	SDL_Surface *Blur(SDL_Surface *surface, bool *running);
 
 private:
 	void GenerateKernel(double **kernel);

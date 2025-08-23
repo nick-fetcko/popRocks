@@ -6,6 +6,7 @@
 #include <mutex>
 #include <set>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include <glad/glad.h>
@@ -161,4 +162,7 @@ private:
 	std::unique_ptr<ElementBuffer> squareEab;
 
 	std::unique_ptr<Context> &context;
+
+	std::thread scaleThread;
+	bool scaling = false;
 };

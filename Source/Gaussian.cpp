@@ -25,7 +25,7 @@ Gaussian::~Gaussian() {
 	}
 }
 
-SDL_Surface *Gaussian::Blur(SDL_Surface *surface) {
+SDL_Surface *Gaussian::Blur(SDL_Surface *surface, bool *running) {
 	SDL_Surface *ret = SDL_CreateRGBSurfaceWithFormat(
 		surface->flags,
 		surface->w,
@@ -41,15 +41,15 @@ SDL_Surface *Gaussian::Blur(SDL_Surface *surface) {
 	std::vector<std::thread> threads(numThreads);
 
 	for (unsigned int t = 0; t < numThreads; ++t) {
-		threads[t] = std::thread([this, t, numThreads, surface, ret, pixels] {
+		threads[t] = std::thread([this, t, numThreads, surface, ret, pixels, running] {
 			for (int row = static_cast<int>(t * std::ceil(static_cast<float>(surface->h) / numThreads));
-				row < (t + 1) * std::ceil(static_cast<float>(surface->h) / numThreads) && row < surface->h;
+				row < (t + 1) * std::ceil(static_cast<float>(surface->h) / numThreads) && row < surface->h && *running;
 				++row) {
 #else
 				for (int row = 0; row < surface->h; ++row) {
 #endif
-				for (int col = 0; col < surface->w; ++col) {
-					for (int k = 0; k < 3; k++) {
+				for (int col = 0; col < surface->w && running; ++col) {
+					for (int k = 0; k < 3 && running; k++) {
 						pixels[row * ret->pitch + 3 * col + k] = GetPixel(surface, col, row, k);
 					}
 				}
