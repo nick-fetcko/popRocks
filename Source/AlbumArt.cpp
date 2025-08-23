@@ -254,9 +254,21 @@ void AlbumArt::LoadFromSurface(SDL_Surface *surface, bool scaled) {
 	albumWidth = surface->w;
 	albumHeight = surface->h;
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, surface->format->BitsPerPixel == 32 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, surface->pixels);
+	uint8_t *pixels = nullptr;
+	if (surface->pitch == surface->w * surface->format->BytesPerPixel) {
+		pixels = reinterpret_cast<uint8_t *>(surface->pixels);
+	} else {
+		pixels = new uint8_t[surface->w * surface->h * surface->format->BytesPerPixel];
+		for (int y = 0; y < surface->h; ++y) {
+			memcpy(
+				&pixels[y * surface->w * surface->format->BytesPerPixel],
+				&(reinterpret_cast<uint8_t*>(surface->pixels))[y * surface->pitch],
+				surface->w * surface->format->BytesPerPixel
+			);
+		}
+	}
 
-	auto pixels = reinterpret_cast<uint8_t *>(surface->pixels);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, surface->format->BitsPerPixel == 32 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, pixels);
 
 	if (!scaled) {
 		// lastSurface is the last surface
@@ -322,7 +334,7 @@ void AlbumArt::LoadFromSurface(SDL_Surface *surface, bool scaled) {
 			while (histogram.empty()) {
 				for (auto x = 0; x < surface->w; x += hstep) {
 					for (auto y = 0; y < surface->h; y += vstep) {
-						auto index = y * surface->pitch + x * surface->format->BytesPerPixel;
+						auto index = y * surface->w + x * surface->format->BytesPerPixel;
 
 						color.r = pixels[index] / 255.0f;
 						color.g = pixels[index + 1] / 255.0f;
@@ -501,6 +513,9 @@ void AlbumArt::LoadFromSurface(SDL_Surface *surface, bool scaled) {
 			ResetBin();
 		}
 	}
+
+	if (pixels != surface->pixels)
+		delete[] pixels;
 
 	scaledAlbumWidth = surface->w;
 	scaledAlbumHeight = surface->h;
