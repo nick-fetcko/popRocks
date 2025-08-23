@@ -91,13 +91,17 @@ public:
 
 	void SetRadius(float radius) override;
 
+	void ReprocessColors();
+
+	std::vector<Colour<float>> GetSelectedColors() const;
+
 private:
 	constexpr inline static std::array<std::string_view, 3> SupportedExtensions = { ".jpg", ".png", ".webp" };
 
 	std::filesystem::path FindArt(const std::filesystem::path &folder) const;
 
 	// This frees the surface once it's done
-	void LoadFromSurface(SDL_Surface *surface, bool scaled = false);
+	void LoadFromSurface(SDL_Surface *surface, bool scaled = false, bool freeLastSurface = true);
 
 	void UpdateVertexCoords() override;
 

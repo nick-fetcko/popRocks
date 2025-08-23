@@ -27,7 +27,7 @@ public:
 		this->width = width;
 	}
 
-	float OnLoop(const LightPack &lightPack, Context &context) {
+	float OnLoop(const LightPack &lightPack, const AlbumArt &albumArt, Context &context) {
 		ImGui::Begin(
 			"Menu",
 			nullptr,
@@ -309,6 +309,78 @@ public:
 			ImGui::EndMenu();
 		}
 
+		if (ImGui::BeginMenu("Color Selection Options")) {
+			minPercentage = Settings::settings.GetColorSelection().minPercentage * 100;
+			if (ImGui::SliderInt("Minimum % of pixels vs. dominant color", &minPercentage, 1, 100)) {
+				if (onColorSelectionChanged) {
+					auto newColorSelection = Settings::settings.GetColorSelection();
+					newColorSelection.minPercentage = minPercentage / 100.0;
+					onColorSelectionChanged(newColorSelection);
+				}
+			}
+			minHueSeparation = Settings::settings.GetColorSelection().minHueSeparation;
+			if (ImGui::SliderInt("Minimum hue separation (in degrees)", &minHueSeparation, 1, 360)) {
+				if (onColorSelectionChanged) {
+					auto newColorSelection = Settings::settings.GetColorSelection();
+					newColorSelection.minHueSeparation = minHueSeparation;
+					onColorSelectionChanged(newColorSelection);
+				}
+			}
+			minValueSeparation = Settings::settings.GetColorSelection().minValueSeparation;
+			if (ImGui::SliderFloat("Minimum value separation (0 - 1)", &minValueSeparation, 0.0f, 1.0f)) {
+				if (onColorSelectionChanged) {
+					auto newColorSelection = Settings::settings.GetColorSelection();
+					newColorSelection.minValueSeparation = minValueSeparation;
+					onColorSelectionChanged(newColorSelection);
+				}
+			}
+			minimumDistance = Settings::settings.GetColorSelection().minRgbSeparation;
+			if (ImGui::SliderFloat("Minimum distance between RGB values (0 - 1)", &minimumDistance, 0.0f, 1.0f)) {
+				if (onColorSelectionChanged) {
+					auto newColorSelection = Settings::settings.GetColorSelection();
+					newColorSelection.minRgbSeparation = minimumDistance;
+					onColorSelectionChanged(newColorSelection);
+				}
+			}
+			minimumSaturation = Settings::settings.GetColorSelection().minSaturation;
+			if (ImGui::SliderFloat("Minimum saturation (0 - 1)", &minimumSaturation, 0.0f, 1.0f)) {
+				if (onColorSelectionChanged) {
+					auto newColorSelection = Settings::settings.GetColorSelection();
+					newColorSelection.minSaturation = minimumSaturation;
+					onColorSelectionChanged(newColorSelection);
+				}
+			}
+			minimumValue = Settings::settings.GetColorSelection().minValue;
+			if (ImGui::SliderFloat("Minimum value (0 - 1)", &minimumValue, 0.0f, 1.0f)) {
+				if (onColorSelectionChanged) {
+					auto newColorSelection = Settings::settings.GetColorSelection();
+					newColorSelection.minValue = minimumValue;
+					onColorSelectionChanged(newColorSelection);
+				}
+			}
+
+			ImGui::Separator();
+
+			ImGui::Text("Currently selected colors:");
+
+			auto selectedColors = albumArt.GetSelectedColors();
+			for (const auto &[i, color] : Utils::Enumerate(selectedColors)) {
+				ImGui::ColorButton(("Color " + std::to_string(i + 1)).c_str(), ImVec4(color.r, color.g, color.b, color.a));
+				if (i != selectedColors.size() - 1 && ((i + 1) % 20)) // about 20 colors fit in the existing menu's width
+					ImGui::SameLine();
+			}
+
+			ImGui::Separator();
+
+			if (ImGui::MenuItem("Reset to default...")) {
+				if (onColorSelectionChanged) {
+					onColorSelectionChanged(Settings::ColorSelection());
+				}
+			}
+
+			ImGui::EndMenu();
+		}
+
 		if (ImGui::BeginMenu("LightPack Integration", lightPack.IsActive())) {
 			if (ImGui::BeginMenu("LightPack Visualization Type", lightPack.IsActive())) {
 				intensity = Settings::settings.GetLightPackVisualizationType() == "intensity";
@@ -451,6 +523,8 @@ public:
 
 	void SetOnCurrentSongVisibleChanged(std::function<void(bool)> f) { onCurrentSongVisibleChanged = f; }
 
+	void SetOnColorSelectionChanged(std::function<void(const Settings::ColorSelection &)> f) { onColorSelectionChanged = f; }
+
 	void SetOnResetWindow(std::function<void()> f) { onResetWindow = f; }
 
 	void SetOnQuit(std::function<void()> f) { onQuit = f; }
@@ -512,6 +586,13 @@ private:
 
 	bool currentSongVisible = Settings::settings.GetCurrentSongVisible();
 
+	int minPercentage = Settings::settings.GetColorSelection().minPercentage * 100;
+	int minHueSeparation = Settings::settings.GetColorSelection().minHueSeparation;
+	float minValueSeparation = Settings::settings.GetColorSelection().minValueSeparation;
+	float minimumDistance = Settings::settings.GetColorSelection().minRgbSeparation;
+	float minimumSaturation = Settings::settings.GetColorSelection().minSaturation;
+	float minimumValue = Settings::settings.GetColorSelection().minValue;
+
 	std::function<void(const std::filesystem::path &)> onOpen;
 	std::function<void(bool)> onPulseChanged;
 	std::function<void(bool)> onBlurChanged;
@@ -533,6 +614,7 @@ private:
 	std::function<void(float)> onGammaChanged;
 	std::function<void(std::optional<std::size_t>)> onPresetChanged;
 	std::function<void(bool)> onCurrentSongVisibleChanged;
+	std::function<void(const Settings::ColorSelection &)> onColorSelectionChanged;
 
 	std::function<void()> onQuit;
 	std::function<void()> onResetWindow;

@@ -463,6 +463,10 @@ void CApp::OnInit() {
 		menu.SetOnCurrentSongVisibleChanged([this](bool currentSongVisible) {
 			controls.GetPlaylist().SetCurrentSongVisible(currentSongVisible);
 		});
+		menu.SetOnColorSelectionChanged([this](const Settings::ColorSelection &selection) {
+			Settings::settings.SetColorSelection(selection);
+			albumArt.ReprocessColors();
+		});
 		menu.SetOnResetWindow([this] {
 			Settings::settings.SetWindowWidth(1920);
 			Settings::settings.SetWindowHeight(1080);
@@ -958,7 +962,7 @@ inline void CApp::SwapBuffers(const Delta &time) {
 	ImGui_ImplSDL2_NewFrame();
 	ImGui::NewFrame();
 
-	menu.OnLoop(lightPack, *context);
+	menu.OnLoop(lightPack, albumArt, *context);
 
 	// Keep the UI in an FBO and only update it as needed
 	//

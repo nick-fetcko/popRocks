@@ -249,7 +249,12 @@ std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder) con
 	return found;
 }
 
-void AlbumArt::LoadFromSurface(SDL_Surface *surface, bool scaled) {
+void AlbumArt::ReprocessColors() {
+	if (lastSurface)
+		LoadFromSurface(lastSurface, false, false);
+}
+
+void AlbumArt::LoadFromSurface(SDL_Surface *surface, bool scaled, bool freeLastSurface) {
 	glDeleteTextures(1, &album);
 	glGenTextures(1, &album);
 	glBindTexture(GL_TEXTURE_2D, album);
@@ -282,11 +287,13 @@ void AlbumArt::LoadFromSurface(SDL_Surface *surface, bool scaled) {
 		// lastSurface is the last surface
 		// _before_ scaling, so only update
 		// it when we aren't scaling
-		if (lastSurface)
+		if (freeLastSurface && lastSurface)
 			SDL_FreeSurface(lastSurface);
 
 		lastSurface = surface;
-		lastSurfaceUpdated = true;
+
+		if (freeLastSurface)
+			lastSurfaceUpdated = true;
 
 		if (colorMethod == ColorMethod::Average) {
 			// Go through every pixel to find an "average" color
@@ -730,6 +737,16 @@ void AlbumArt::AddColorChangeListener(ColorChangeListener *listener) {
 
 void AlbumArt::RemoveColorChangeListener(ColorChangeListener *listener) {
 	colorChangeListeners.erase(listener);
+}
+
+std::vector<Colour<float>> AlbumArt::GetSelectedColors() const {
+	std::vector<Colour<float>> ret;
+
+	for (auto iter = histogram.rbegin(); iter != histogram.rend(); ++iter) {
+		ret.emplace_back(Colour<float>::FromHsv(iter->h, iter->s, iter->v));
+	}
+
+	return ret;
 }
 
 void AlbumArt::Scale(bool force) {

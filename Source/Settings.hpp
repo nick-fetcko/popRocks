@@ -21,7 +21,7 @@ public:
 	struct ColorSelection {
 		double minPercentage = 0.02;
 		double minSaturation = 0.1;
-		double minValue = 0.25;
+		double minValue = 0.1;
 		double minHueSeparation = 25.0;
 		double minValueSeparation = 0.1;
 		double minRgbSeparation = 0.70;
