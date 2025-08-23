@@ -172,6 +172,14 @@ int AlbumArt::DrawSquare(int x, int y, int height, GLfloat alpha, Context &conte
 }
 
 void AlbumArt::OnDestroy() {
+	{
+		std::unique_lock lock(mutex);
+		scaling = false;
+	}
+
+	if (scaleThread.joinable())
+		scaleThread.join();
+
 	Circle::OnDestroy();
 
 	if (lastSurface)
