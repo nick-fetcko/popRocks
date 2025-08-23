@@ -109,6 +109,9 @@ public:
 	const float &GetBlurIntensity() const { return blurIntensity; }
 	void SetBlurIntensity(float blurIntensity);
 
+	const bool &GetCurrentSongVisible() const { return currentSongVisible; }
+	void SetCurrentSongVisible(bool currentSongVisible);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -160,4 +163,6 @@ private:
 	std::string lightPackVisualizationType = "intensity";
 	std::string lightPackMapping = "default";
 	std::string lightPackFocusArea = "bassandmid";
+
+	bool currentSongVisible = false;
 };

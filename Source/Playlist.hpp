@@ -14,6 +14,7 @@
 #include "Cue.hpp"
 #include "Hash.hpp"
 #include "Metadata.hpp"
+#include "Settings.hpp"
 #include "TagLoader.hpp"
 #include "Text.hpp"
 
@@ -51,6 +52,11 @@ public:
 	void OnLoop(Vector2i pos, float maxHeight, float alpha, Context &context);
 
 	std::optional<Track> OnMouseClicked(const Vector2i &mousePos);
+
+	void SetCurrentSongVisible(bool currentSongVisible) { 
+		this->currentSongVisible = currentSongVisible;
+		Settings::settings.SetCurrentSongVisible(currentSongVisible);
+	}
 
 	const std::unique_ptr<Cue> &GetCue() const;
 	const std::filesystem::path &GetPath() const;
@@ -203,7 +209,7 @@ private:
 				return;
 
 			if (iter == current)
-				context.Color(1.0f, 1.0f, 1.0f, alpha);
+				context.Color(1.0f, 1.0f, 1.0f, currentSongVisible ? std::max(0.5f, alpha) : alpha);
 			else if (current != tracks.begin() && iter == current - 1)
 				context.Color(0.6f, 0.6f, 0.6f, 0.4f * alpha);
 			else
@@ -249,4 +255,6 @@ private:
 	std::unique_ptr<ElementBuffer> eab;
 
 	float height = 0.0f;
+
+	bool currentSongVisible = Settings::settings.GetCurrentSongVisible();
 };

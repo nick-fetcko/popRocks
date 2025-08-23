@@ -460,6 +460,9 @@ void CApp::OnInit() {
 		menu.SetOnPresetChanged([this](std::optional<std::size_t> preset) {
 			LoadPreset(preset);
 		});
+		menu.SetOnCurrentSongVisibleChanged([this](bool currentSongVisible) {
+			controls.GetPlaylist().SetCurrentSongVisible(currentSongVisible);
+		});
 		menu.SetOnResetWindow([this] {
 			Settings::settings.SetWindowWidth(1920);
 			Settings::settings.SetWindowHeight(1080);

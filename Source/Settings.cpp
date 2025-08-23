@@ -195,6 +195,11 @@ void Settings::SetBlurIntensity(float blurIntensity) {
 	Save();
 }
 
+void Settings::SetCurrentSongVisible(bool currentSongVisible) {
+	this->currentSongVisible = currentSongVisible;
+	Save();
+}
+
 void Settings::Save() {
 	if (auto path = GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
@@ -321,6 +326,9 @@ const Node &operator>>(const Node &node, Settings &settings) {
 		node["blur"]->get(settings.blur);
 	if (node.has("blurIntensity"))
 		node["blurIntensity"]->get(settings.blurIntensity);
+
+	if (node.has("currentSongVisible"))
+		node["currentSongVisible"]->get(settings.currentSongVisible);
 		
 	return node;
 }
@@ -352,6 +360,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["lightPackVisualizationType"]->set(settings.lightPackVisualizationType);
 	node["lightPackMapping"]->set(settings.lightPackMapping);
 	node["lightPackFocusArea"]->set(settings.lightPackFocusArea);
+	node["currentSongVisible"]->set(settings.currentSongVisible);
 
 	return node;
 }

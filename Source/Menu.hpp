@@ -300,6 +300,15 @@ public:
 			newPresetPopup = open;
 		}
 
+		if (ImGui::BeginMenu("Playlist Options")) {
+			currentSongVisible = Settings::settings.GetCurrentSongVisible();
+			if (ImGui::MenuItem("Current track always visible?", nullptr, &currentSongVisible)) {
+				if (onCurrentSongVisibleChanged)
+					onCurrentSongVisibleChanged(currentSongVisible);
+			}
+			ImGui::EndMenu();
+		}
+
 		if (ImGui::BeginMenu("LightPack Integration", lightPack.IsActive())) {
 			if (ImGui::BeginMenu("LightPack Visualization Type", lightPack.IsActive())) {
 				intensity = Settings::settings.GetLightPackVisualizationType() == "intensity";
@@ -440,6 +449,8 @@ public:
 
 	void SetOnPresetChanged(std::function<void(std::optional<std::size_t>)> f) { onPresetChanged = f; }
 
+	void SetOnCurrentSongVisibleChanged(std::function<void(bool)> f) { onCurrentSongVisibleChanged = f; }
+
 	void SetOnResetWindow(std::function<void()> f) { onResetWindow = f; }
 
 	void SetOnQuit(std::function<void()> f) { onQuit = f; }
@@ -499,6 +510,8 @@ private:
 	int presetX = 0;
 	std::string currentPresetName;
 
+	bool currentSongVisible = Settings::settings.GetCurrentSongVisible();
+
 	std::function<void(const std::filesystem::path &)> onOpen;
 	std::function<void(bool)> onPulseChanged;
 	std::function<void(bool)> onBlurChanged;
@@ -519,6 +532,7 @@ private:
 	std::function<void(int)> onSmoothChanged;
 	std::function<void(float)> onGammaChanged;
 	std::function<void(std::optional<std::size_t>)> onPresetChanged;
+	std::function<void(bool)> onCurrentSongVisibleChanged;
 
 	std::function<void()> onQuit;
 	std::function<void()> onResetWindow;
