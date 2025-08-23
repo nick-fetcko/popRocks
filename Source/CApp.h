@@ -151,7 +151,7 @@ private:
 	
 	inline void Unmute();
 
-	inline void LoadBeats(HSTREAM streamHandle, std::filesystem::path path);
+	inline void LoadBeats(HSTREAM streamHandle, std::filesystem::path path, bool pingPong = true);
 	void ResetBeatDetection();
 
 	inline bool SeekToMousePos(const Vector2i &mousePos, bool ignoreY = false);

@@ -159,7 +159,6 @@ public:
 
 			ImGui::Separator();
 
-			// FIXME: Toggling this breaks beat detection in the _current_ song
 			detectBpm = Settings::settings.GetDetectBpm();
 			if (ImGui::MenuItem("Detect BPM", nullptr, &detectBpm)) {
 				if (onDetectBpmChanged)

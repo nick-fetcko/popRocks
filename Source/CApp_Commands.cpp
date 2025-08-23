@@ -489,7 +489,8 @@ void CApp::AddCommands() {
 
 					LoadBeats(
 						OpenWithFlags(loadedFile, loadedFileExtension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT),
-						loadedFile
+						loadedFile,
+						false // don't ping-pong when we toggle
 					);
 				}
 			}

@@ -378,7 +378,8 @@ void CApp::OnInit() {
 
 				LoadBeats(
 					OpenWithFlags(loadedFile, loadedFileExtension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT),
-					loadedFile
+					loadedFile,
+					false // don't ping-pong when we toggle
 				);
 			}
 		});
@@ -1131,7 +1132,8 @@ void CApp::Unmute() {
 
 void CApp::LoadBeats(
 	HSTREAM streamHandle,
-	std::filesystem::path path // not a reference because we pass this to the callback lambda
+	std::filesystem::path path, // not a reference because we pass this to the callback lambda
+	bool pingPong
 ) {
 	// When we have a FLAC + .cue, we only
 	// want to analyze the current _song_,
@@ -1143,7 +1145,7 @@ void CApp::LoadBeats(
 
 	auto nextDetector = (beatDetect == &beatDetectors[0] ? &beatDetectors[1] : &beatDetectors[0]);
 
-	if (nextDetector->GetState() > BeatDetect::State::Idle) {
+	if (pingPong && nextDetector->GetState() > BeatDetect::State::Idle) {
 		auto temp = nextDetector;
 
 		logger.LogDebug("Ping-ponging beat detectors");
