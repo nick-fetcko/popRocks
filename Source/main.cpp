@@ -97,9 +97,10 @@ int main(int argc, char *argv[]) {
 						event.key.keysym.sym == SDLK_a)
 						app.GetAlbumArt().PreviousBin();
 					else if (event.key.keysym.sym == SDLK_UP ||
-						event.key.keysym.sym == SDLK_w)
+						event.key.keysym.sym == SDLK_w) {
+						auto lock = app.GetAlbumArt().Lock();
 						app.GetAlbumArt().ResetBin();
-					else if (event.key.keysym.sym == SDLK_p) {
+					} else if (event.key.keysym.sym == SDLK_p) {
 						if (auto fftRenderer = dynamic_cast<const FFTRenderer *>(app.GetRenderer()))
 							fftRenderer->PrintMax();
 					} else if (event.key.keysym.sym == SDLK_SPACE || event.key.keysym.sym == SDLK_AUDIOPLAY)

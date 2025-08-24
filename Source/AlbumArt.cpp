@@ -87,7 +87,7 @@ void AlbumArt::UpdateVertexCoords() {
 
 void AlbumArt::OnLoop(GLfloat x, GLfloat y, float frameCount, Context &context) {
 	// try_lock so we don't miss a frame or two
-	if (mutex.try_lock()) {
+	if (scalingMutex.try_lock()) {
 		if (surfaceToLoad) {
 			LoadFromSurface(surfaceToLoad, true);
 			surfaceToLoad = nullptr;
@@ -103,7 +103,7 @@ void AlbumArt::OnLoop(GLfloat x, GLfloat y, float frameCount, Context &context) 
 //			SDL_FreeSurface(lastSurface);
 //			lastSurface = nullptr;
 		}
-		mutex.unlock();
+		scalingMutex.unlock();
 	}
 
 	if (albumLoaded) {
@@ -173,12 +173,18 @@ int AlbumArt::DrawSquare(int x, int y, int height, GLfloat alpha, Context &conte
 
 void AlbumArt::OnDestroy() {
 	{
-		std::unique_lock lock(mutex);
+		std::unique_lock lock(scalingMutex);
 		scaling = false;
 	}
 
 	if (scaleThread.joinable())
 		scaleThread.join();
+	{
+		std::unique_lock lock(histogramMutex);
+		processingColors = false;		
+	}
+	if (colorProcessingThread.joinable())
+		colorProcessingThread.join();
 
 	Circle::OnDestroy();
 
@@ -250,66 +256,62 @@ std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder) con
 }
 
 void AlbumArt::ReprocessColors() {
-	if (lastSurface)
-		LoadFromSurface(lastSurface, false, false);
-}
-
-void AlbumArt::LoadFromSurface(SDL_Surface *surface, bool scaled, bool freeLastSurface) {
-	glDeleteTextures(1, &album);
-	glGenTextures(1, &album);
-	glBindTexture(GL_TEXTURE_2D, album);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-
-	albumWidth = surface->w;
-	albumHeight = surface->h;
-
-	uint8_t *pixels = nullptr;
-	if (surface->pitch == surface->w * surface->format->BytesPerPixel) {
-		pixels = reinterpret_cast<uint8_t *>(surface->pixels);
-	} else {
-		pixels = new uint8_t[surface->w * surface->h * surface->format->BytesPerPixel];
-		for (int y = 0; y < surface->h; ++y) {
-			memcpy(
-				&pixels[y * surface->w * surface->format->BytesPerPixel],
-				&(reinterpret_cast<uint8_t*>(surface->pixels))[y * surface->pitch],
-				surface->w * surface->format->BytesPerPixel
-			);
+	if (lastSurface) {
+		{
+			std::unique_lock lock(histogramMutex);
+			processingColors = false;
 		}
-	}
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, surface->format->BitsPerPixel == 32 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, pixels);
+		if (colorProcessingThread.joinable())
+			colorProcessingThread.join();
 
-	if (!scaled) {
-		// lastSurface is the last surface
-		// _before_ scaling, so only update
-		// it when we aren't scaling
-		if (freeLastSurface && lastSurface)
-			SDL_FreeSurface(lastSurface);
+		processingColors = true;
+		
+		colorProcessingThread = std::thread([this] {
+			auto destination = new Histogram();
 
-		lastSurface = surface;
+			auto pixels = GetPixels(lastSurface);
 
-		if (freeLastSurface)
-			lastSurfaceUpdated = true;
+			ProcessColors(destination, lastSurface, pixels);
 
-		if (colorMethod == ColorMethod::Average) {
-			// Go through every pixel to find an "average" color
-			uint64_t averageR = 0;
-			uint64_t averageG = 0;
-			uint64_t averageB = 0;
-			for (auto x = 0; x < surface->w; ++x) {
-				for (auto y = 0; y < surface->h; ++y) {
-					auto pos = y * surface->format->BytesPerPixel * surface->w + x * surface->format->BytesPerPixel;
+			if (pixels != lastSurface->pixels)
+				delete[] pixels;
 
-					averageR += pixels[pos];
-					averageG += pixels[pos + 1];
-					averageB += pixels[pos + 2];
+			{
+				std::unique_lock lock(histogramMutex);
+				if (processingColors) {
+					histogram = *destination;
+
+					selectedColors.clear();
+					for (auto iter = histogram.rbegin(); iter != histogram.rend(); ++iter)
+						selectedColors.emplace_back(Colour<float>::FromHsv(iter->h, iter->s, iter->v));
+
+					ResetBin(true);
 				}
 			}
 
+			delete destination;
+		});
+	}
+}
+
+void AlbumArt::ProcessColors(Histogram *destination, SDL_Surface *surface, const uint8_t *pixels) {
+	if (colorMethod == ColorMethod::Average) {
+		// Go through every pixel to find an "average" color
+		uint64_t averageR = 0;
+		uint64_t averageG = 0;
+		uint64_t averageB = 0;
+		for (auto x = 0; x < surface->w && processingColors; ++x) {
+			for (auto y = 0; y < surface->h && processingColors; ++y) {
+				auto pos = y * surface->format->BytesPerPixel * surface->w + x * surface->format->BytesPerPixel;
+
+				averageR += pixels[pos];
+				averageG += pixels[pos + 1];
+				averageB += pixels[pos + 2];
+			}
+		}
+
+		if (processingColors) {
 			Colour color(
 				(averageR / surface->w * surface->h) / 255.0f,
 				(averageG / surface->w * surface->h) / 255.0f,
@@ -324,210 +326,279 @@ void AlbumArt::LoadFromSurface(SDL_Surface *surface, bool scaled, bool freeLastS
 
 			for (const auto &listener : colorChangeListeners)
 				listener->OnColorChanged(averageColor);
-		} else {
-			std::map<float, Bin> histogram;
+		}
+	} else {
+		std::map<float, Bin> histogram;
 
-			Colour<float> color;
+		Colour<float> color;
 
-			// Still using nearest neighbor for this...
-			// should we wait until Scale() is done before
-			// loading the colors?
-			//
-			// n = 1, but "VA-11 HALL-A - Second Round"'s
-			// album art sets a precedent for still
-			// using nearest neighbor. Bicubic ultimately
-			// makes the dominant color darker.
-			//
-			// Until proven otherwise, color selection is
-			// wrapped in "if (!scaled)"
-			auto hstep = std::max(1, static_cast<int>(surface->w / (radius * 2)));
-			auto vstep = std::max(1, static_cast<int>(surface->h / (radius * 2)));
+		// Still using nearest neighbor for this...
+		// should we wait until Scale() is done before
+		// loading the colors?
+		//
+		// n = 1, but "VA-11 HALL-A - Second Round"'s
+		// album art sets a precedent for still
+		// using nearest neighbor. Bicubic ultimately
+		// makes the dominant color darker.
+		//
+		// Until proven otherwise, color selection is
+		// wrapped in "if (!scaled)"
+		auto hstep = std::max(1, static_cast<int>(surface->w / (radius * 2)));
+		auto vstep = std::max(1, static_cast<int>(surface->h / (radius * 2)));
 
-			double minSaturation = Settings::settings.GetColorSelection().minSaturation;
-			double minValue = Settings::settings.GetColorSelection().minValue;
+		double minSaturation = Settings::settings.GetColorSelection().minSaturation;
+		double minValue = Settings::settings.GetColorSelection().minValue;
 
-			while (histogram.empty()) {
-				for (auto x = 0; x < surface->w; x += hstep) {
-					for (auto y = 0; y < surface->h; y += vstep) {
-						auto index = y * surface->w + x * surface->format->BytesPerPixel;
+		while (histogram.empty()) {
+			for (auto x = 0; x < surface->w && processingColors; x += hstep) {
+				for (auto y = 0; y < surface->h && processingColors; y += vstep) {
+					auto index = (y * surface->w + x) * surface->format->BytesPerPixel;
 
-						color.r = pixels[index] / 255.0f;
-						color.g = pixels[index + 1] / 255.0f;
-						color.b = pixels[index + 2] / 255.0f;
+					color.r = pixels[index] / 255.0f;
+					color.g = pixels[index + 1] / 255.0f;
+					color.b = pixels[index + 2] / 255.0f;
 
-						auto hsv = color.ToHsv();
+					auto hsv = color.ToHsv();
 
-						// Round to the nearest 0.5
-						// That gives us 720 possible hues
-						//hsv.h = (std::round(hsv.h * 2)) / 2;
+					// Round to the nearest 0.5
+					// That gives us 720 possible hues
+					//hsv.h = (std::round(hsv.h * 2)) / 2;
 
-						// Round to the nearest _even_ number
-						// This only gives us 180 possible hues,
-						// but allows for fewer low-count bins
-						hsv.h = std::round(std::round(hsv.h) / 2) * 2;
+					// Round to the nearest _even_ number
+					// This only gives us 180 possible hues,
+					// but allows for fewer low-count bins
+					hsv.h = std::round(std::round(hsv.h) / 2) * 2;
 
-						// Exclude dark / low contrast colors
-						if (hsv.s >= minSaturation && hsv.v >= minValue) {
-							if (auto iter = histogram.find(hsv.h); iter != histogram.end()) {
-								++iter->second.count;
-								iter->second.s += hsv.s;
-								
-								/*
-								if (hsv.s > iter->second.s)
-									iter->second.s = hsv.s;
-								*/
+					// Exclude dark / low contrast colors
+					if (hsv.s >= minSaturation && hsv.v >= minValue) {
+						if (auto iter = histogram.find(hsv.h); iter != histogram.end()) {
+							++iter->second.count;
+							iter->second.s += hsv.s;
 
-								iter->second.v += hsv.v;
-							} else
-								histogram.emplace(std::make_pair(hsv.h, Bin(1, hsv.h, hsv.s, hsv.v)));
-						}
+							/*
+							if (hsv.s > iter->second.s)
+								iter->second.s = hsv.s;
+							*/
+
+							iter->second.v += hsv.v;
+						} else
+							histogram.emplace(std::make_pair(hsv.h, Bin(1, hsv.h, hsv.s, hsv.v)));
 					}
 				}
+			}
 
-				// If we found nothing above the minimums,
-				// disable them
-				if (histogram.empty() && minSaturation > DBL_EPSILON) {
-					minSaturation = 0.0;
-					minValue = 0.0;
-				} else
+			// If we found nothing above the minimums,
+			// disable them
+			if (histogram.empty() && minSaturation > DBL_EPSILON) {
+				minSaturation = 0.0;
+				minValue = 0.0;
+			} else
+				break;
+		}
+
+		destination->clear();
+
+		std::size_t maxCount = std::numeric_limits<std::size_t>::min();
+		for (const auto &[hue, bin] : histogram) {
+			if (!processingColors)
+				break;
+
+			if (bin.count > maxCount)
+				maxCount = bin.count;
+		}
+
+		const auto minPercentage = static_cast<std::size_t>(
+			maxCount * Settings::settings.GetColorSelection().minPercentage
+		);
+
+		for (auto &[hue, bin] : histogram) {
+			if (!processingColors)
+				break;
+
+			// Filter out anything < a percentage of our max
+			if (bin.count >= minPercentage) {
+				destination->emplace(
+					Bin(
+						bin.count,
+						bin.h,
+						bin.s / bin.count,
+						bin.v / bin.count
+					)
+				);
+			}
+		}
+
+		// This compares each bin to _every_ other bin in the histogram
+		/*
+		for (auto iter = this->histogram.begin(); iter != this->histogram.end();) {
+			bool erased = false;
+			for (auto compare = this->histogram.begin(); compare != this->histogram.end(); ++compare) {
+				// When hues are separated by less than a
+				// certain number of degrees, choose the
+				// one with the highest count and discard
+				// the other.
+				if (compare != iter &&
+					std::abs(iter->second.h - compare->second.h) < minSeparation &&
+					iter->first < compare->first
+				) {
+					iter = this->histogram.erase(iter);
+					erased = true;
 					break;
-			}
-
-			this->histogram.clear();
-
-			std::size_t maxCount = std::numeric_limits<std::size_t>::min();
-			for (const auto &[hue, bin] : histogram) {
-				if (bin.count > maxCount)
-					maxCount = bin.count;
-			}
-
-			const auto minPercentage = static_cast<std::size_t>(
-				maxCount * Settings::settings.GetColorSelection().minPercentage
-			);
-
-			for (auto &[hue, bin] : histogram) {
-				// Filter out anything < a percentage of our max
-				if (bin.count >= minPercentage) {
-					this->histogram.emplace(
-						Bin(
-							bin.count,
-							bin.h,
-							bin.s / bin.count,
-							bin.v / bin.count
-						)
-					);
 				}
 			}
+			if (!erased)
+				++iter;
+		}
+		*/
 
-			// This compares each bin to _every_ other bin in the histogram
-			/*
-			for (auto iter = this->histogram.begin(); iter != this->histogram.end();) {
-				bool erased = false;
-				for (auto compare = this->histogram.begin(); compare != this->histogram.end(); ++compare) {
-					// When hues are separated by less than a
-					// certain number of degrees, choose the
-					// one with the highest count and discard
-					// the other.
-					if (compare != iter &&
-						std::abs(iter->second.h - compare->second.h) < minSeparation &&
-						iter->first < compare->first
-					) {
-						iter = this->histogram.erase(iter);
-						erased = true;
-						break;
-					}
+		// This compares each bin to the last bin inserted into the histogram
+		/*
+		auto tempHistogram = this->histogram;
+		this->histogram.clear();
+		for (auto iter = tempHistogram.rbegin(); iter != tempHistogram.rend(); ++iter) {
+			if (this->histogram.empty()) {
+				this->histogram.emplace(*iter);
+			} else if (std::abs(this->histogram.begin()->h - iter->h) > 25.0) {
+				logger.LogDebug(
+					"Placing in histogram because hue is ",
+					iter->h,
+					" vs last bin's hue of ",
+					this->histogram.begin()->h
+				);
+				this->histogram.emplace(*iter);
+			}
+		}
+		*/
+
+		// This compares each bin to the other, already-selected bins
+		//
+		// This also doesn't just take hue into account.
+		// If we had to remove the minimum saturation / value filters,
+		// we also check for value separation.
+		auto tempHistogram = *destination;
+		destination->clear();
+		for (auto iter = tempHistogram.rbegin(); iter != tempHistogram.rend() && processingColors; ++iter) {
+			if (destination->empty()) {
+				destination->emplace(*iter);
+			} else {
+				bool found = true;
+				for (auto compare = destination->begin(); compare != destination->end(); ++compare) {
+					auto rgb = Colour<float>::FromHsv(iter->h, iter->s, iter->v);
+					auto rgbComp = Colour<float>::FromHsv(compare->h, compare->s, compare->v);
+
+					auto distance =
+						std::sqrt(
+							std::pow(rgbComp.r - rgb.r, 2) +
+							std::pow(rgbComp.g - rgb.g, 2) +
+							std::pow(rgbComp.b - rgb.b, 2)
+						);
+
+					// https://gamedev.stackexchange.com/a/4472
+					// 360 - 0 (in degrees) needs to be 0, not 360
+					if ((180 - abs(abs(iter->h - compare->h) - 180) < Settings::settings.GetColorSelection().minHueSeparation &&
+						distance < Settings::settings.GetColorSelection().minRgbSeparation) ||
+						(minSaturation <= DBL_EPSILON && std::abs(compare->v - iter->v) < Settings::settings.GetColorSelection().minValueSeparation))
+						found = false;
+
+					/*
+					if (180 - abs(abs(iter->h - compare->h) - 180) < Settings::settings.GetColorSelection().minHueSeparation ||
+						(minSaturation <= DBL_EPSILON && std::abs(compare->v - iter->v) < Settings::settings.GetColorSelection().minValueSeparation))
+						found = false;
+					*/
 				}
-				if (!erased)
-					++iter;
+				if (found)
+					destination->emplace(*iter);
 			}
-			*/
+		}
 
-			// This compares each bin to the last bin inserted into the histogram
-			/*
-			auto tempHistogram = this->histogram;
-			this->histogram.clear();
-			for (auto iter = tempHistogram.rbegin(); iter != tempHistogram.rend(); ++iter) {
-				if (this->histogram.empty()) {
-					this->histogram.emplace(*iter);
-				} else if (std::abs(this->histogram.begin()->h - iter->h) > 25.0) {
-					logger.LogDebug(
-						"Placing in histogram because hue is ",
-						iter->h,
-						" vs last bin's hue of ",
-						this->histogram.begin()->h
-					);
-					this->histogram.emplace(*iter);
-				}
-			}
-			*/
+		// FIXME: In This Moment's "Blood"'s red
+		//        is more pink right now, but
+		//        selecting the max saturation
+		//        instead of the average blows out
+		//        colors on other albums like 
+		//        "talking / Nana Hitsuji"
 
-			// This compares each bin to the other, already-selected bins
-			//
-			// This also doesn't just take hue into account.
-			// If we had to remove the minimum saturation / value filters,
-			// we also check for value separation.
-			auto tempHistogram = this->histogram;
-			this->histogram.clear();
-			for (auto iter = tempHistogram.rbegin(); iter != tempHistogram.rend(); ++iter) {
-				if (this->histogram.empty()) {
-					this->histogram.emplace(*iter);
-				} else {
-					bool found = true;
-					for (auto compare = this->histogram.begin(); compare != this->histogram.end(); ++compare) {
-						auto rgb = Colour<float>::FromHsv(iter->h, iter->s, iter->v);
-						auto rgbComp = Colour<float>::FromHsv(compare->h, compare->s, compare->v);
+		// If our histogram contains only a single color,
+		// add a darker / lighter variant of that color 
+		// for beat detection to toggle through
+		if (destination->size() == 1 && processingColors) {
+			auto deeperColor = *destination->begin();
 
-						auto distance =
-							std::sqrt(
-								std::pow(rgbComp.r - rgb.r, 2) +
-								std::pow(rgbComp.g - rgb.g, 2) +
-								std::pow(rgbComp.b - rgb.b, 2)
-							);
+			if (deeperColor.v >= 0.5)
+				deeperColor.v = std::clamp(deeperColor.v / 1.75f, 0.0f, 1.0f);
+			else
+				deeperColor.v = std::clamp(deeperColor.v * 1.75f, 0.0f, 1.0f);
 
-						// https://gamedev.stackexchange.com/a/4472
-						// 360 - 0 (in degrees) needs to be 0, not 360
-						if ((180 - abs(abs(iter->h - compare->h) - 180) < Settings::settings.GetColorSelection().minHueSeparation &&
-							distance < Settings::settings.GetColorSelection().minRgbSeparation) ||
-							(minSaturation <= DBL_EPSILON && std::abs(compare->v - iter->v) < Settings::settings.GetColorSelection().minValueSeparation))
-							found = false;
+			deeperColor.count -= 1;
 
-						/*
-						if (180 - abs(abs(iter->h - compare->h) - 180) < Settings::settings.GetColorSelection().minHueSeparation ||
-							(minSaturation <= DBL_EPSILON && std::abs(compare->v - iter->v) < Settings::settings.GetColorSelection().minValueSeparation))
-							found = false;
-						*/
-					}
-					if (found)
-						this->histogram.emplace(*iter);
-				}
-			}
-
-			// FIXME: In This Moment's "Blood"'s red
-			//        is more pink right now, but
-			//        selecting the max saturation
-			//        instead of the average blows out
-			//        colors on other albums like 
-			//        "talking / Nana Hitsuji"
-
-			// If our histogram contains only a single color,
-			// add a darker / lighter variant of that color 
-			// for beat detection to toggle through
-			if (this->histogram.size() == 1) {
-				auto deeperColor = *this->histogram.begin();
-
-				if (deeperColor.v >= 0.5)
-					deeperColor.v = std::clamp(deeperColor.v / 1.75f, 0.0f, 1.0f);
-				else
-					deeperColor.v = std::clamp(deeperColor.v * 1.75f, 0.0f, 1.0f);
-
-				deeperColor.count -= 1;
-
-				this->histogram.emplace(std::move(deeperColor));
-			}
-
-			ResetBin();
+			destination->emplace(std::move(deeperColor));
 		}
 	}
+}
+
+inline uint8_t *AlbumArt::GetPixels(SDL_Surface *surface) {
+	if (surface->pitch == surface->w * surface->format->BytesPerPixel) {
+		return reinterpret_cast<uint8_t *>(surface->pixels);
+	} else {
+		auto pixels = new uint8_t[surface->w * surface->h * surface->format->BytesPerPixel];
+		for (int y = 0; y < surface->h; ++y) {
+			memcpy(
+				&pixels[y * surface->w * surface->format->BytesPerPixel],
+				&((reinterpret_cast<uint8_t *>(surface->pixels))[y * surface->pitch]),
+				surface->w * surface->format->BytesPerPixel
+			);
+		}
+		return pixels;
+	}
+}
+
+void AlbumArt::LoadFromSurface(SDL_Surface *surface, bool scaled) {
+	glDeleteTextures(1, &album);
+	glGenTextures(1, &album);
+	glBindTexture(GL_TEXTURE_2D, album);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+
+	albumWidth = surface->w;
+	albumHeight = surface->h;
+
+	uint8_t *pixels = GetPixels(surface);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, surface->format->BitsPerPixel == 32 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, pixels);
+
+	if (!scaled) {
+		// lastSurface is the last surface
+		// _before_ scaling, so only update
+		// it when we aren't scaling
+		if (lastSurface)
+			SDL_FreeSurface(lastSurface);
+
+		lastSurface = surface;
+
+		lastSurfaceUpdated = true;
+
+		// If we have another thread processing colors,
+		// stop it first.
+		{
+			std::unique_lock lock(histogramMutex);
+			processingColors = false;
+		}
+
+		if (colorProcessingThread.joinable())
+			colorProcessingThread.join();
+
+		processingColors = true;
+
+		ProcessColors(&histogram, surface, pixels);
+		ResetBin();
+	}
+
+	selectedColors.clear();
+	for (auto iter = histogram.rbegin(); iter != histogram.rend(); ++iter)
+		selectedColors.emplace_back(Colour<float>::FromHsv(iter->h, iter->s, iter->v));
 
 	if (pixels != surface->pixels)
 		delete[] pixels;
@@ -570,6 +641,7 @@ bool AlbumArt::Load(const std::filesystem::path &fileName, const std::filesystem
 			albumLoaded = true;
 			albumWidth = lastWidth;
 			albumHeight = lastHeight;
+			std::unique_lock lock(histogramMutex);
 			UpdateBin(true);
 			return true;
 		}
@@ -606,6 +678,7 @@ bool AlbumArt::Load(const std::string &mimeType, const void *data, std::size_t l
 		albumLoaded = true;
 		albumWidth = lastWidth;
 		albumHeight = lastHeight;
+		std::unique_lock lock(histogramMutex);
 		UpdateBin(true);
 		return true;
 	}
@@ -648,6 +721,8 @@ void AlbumArt::Reset(const Colour<float> &color) {
 }
 
 void AlbumArt::NextBin(bool silent) {
+	std::unique_lock lock(histogramMutex);
+
 	if (!histogram.empty()) {
 		/*
 		while (++binIter != histogram.rend()) {
@@ -676,6 +751,8 @@ void AlbumArt::NextBin(bool silent) {
 	}
 }
 void AlbumArt::PreviousBin() {
+	std::unique_lock lock(histogramMutex);
+
 	if (!histogram.empty()) {
 		previousBins.pop_back();
 		if (previousBins.empty()) {
@@ -739,14 +816,8 @@ void AlbumArt::RemoveColorChangeListener(ColorChangeListener *listener) {
 	colorChangeListeners.erase(listener);
 }
 
-std::vector<Colour<float>> AlbumArt::GetSelectedColors() const {
-	std::vector<Colour<float>> ret;
-
-	for (auto iter = histogram.rbegin(); iter != histogram.rend(); ++iter) {
-		ret.emplace_back(Colour<float>::FromHsv(iter->h, iter->s, iter->v));
-	}
-
-	return ret;
+const std::vector<Colour<float>> &AlbumArt::GetSelectedColors() const {
+	return selectedColors;
 }
 
 void AlbumArt::Scale(bool force) {
@@ -755,7 +826,7 @@ void AlbumArt::Scale(bool force) {
 	lastSurfaceUpdated = false;
 
 	{
-		std::unique_lock lock(mutex);
+		std::unique_lock lock(scalingMutex);
 		scaling = false;
 	}
 
@@ -763,7 +834,7 @@ void AlbumArt::Scale(bool force) {
 		scaleThread.join();
 
 	{
-		std::unique_lock lock(mutex);
+		std::unique_lock lock(scalingMutex);
 		scaling = true;
 	}
 
@@ -807,7 +878,7 @@ void AlbumArt::Scale(bool force) {
 
 		auto end = std::chrono::system_clock::now();
 
-		std::unique_lock lock(mutex);
+		std::unique_lock lock(scalingMutex);
 		if (scaling) {
 			surfaceToLoad = resized;
 

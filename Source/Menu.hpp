@@ -27,7 +27,7 @@ public:
 		this->width = width;
 	}
 
-	float OnLoop(const LightPack &lightPack, const AlbumArt &albumArt, Context &context) {
+	float OnLoop(const LightPack &lightPack, AlbumArt &albumArt, Context &context) {
 		ImGui::Begin(
 			"Menu",
 			nullptr,
@@ -363,11 +363,14 @@ public:
 
 			ImGui::Text("Currently selected colors:");
 
-			auto selectedColors = albumArt.GetSelectedColors();
-			for (const auto &[i, color] : Utils::Enumerate(selectedColors)) {
-				ImGui::ColorButton(("Color " + std::to_string(i + 1)).c_str(), ImVec4(color.r, color.g, color.b, color.a));
-				if (i != selectedColors.size() - 1 && ((i + 1) % 20)) // about 20 colors fit in the existing menu's width
-					ImGui::SameLine();
+			{
+				auto lock = albumArt.Lock();
+				const auto &selectedColors = albumArt.GetSelectedColors();
+				for (const auto &[i, color] : Utils::Enumerate(selectedColors)) {
+					ImGui::ColorButton(("Color " + std::to_string(i + 1)).c_str(), ImVec4(color.r, color.g, color.b, color.a));
+					if (i != selectedColors.size() - 1 && ((i + 1) % 20)) // about 20 colors fit in the existing menu's width
+						ImGui::SameLine();
+				}
 			}
 
 			ImGui::Separator();

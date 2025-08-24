@@ -93,7 +93,9 @@ public:
 
 	void ReprocessColors();
 
-	std::vector<Colour<float>> GetSelectedColors() const;
+	const std::vector<Colour<float>> &GetSelectedColors() const;
+
+	std::unique_lock<std::mutex> Lock() { return std::move(std::unique_lock(histogramMutex)); }
 
 private:
 	constexpr inline static std::array<std::string_view, 3> SupportedExtensions = { ".jpg", ".png", ".webp" };
@@ -101,12 +103,14 @@ private:
 	std::filesystem::path FindArt(const std::filesystem::path &folder) const;
 
 	// This frees the surface once it's done
-	void LoadFromSurface(SDL_Surface *surface, bool scaled = false, bool freeLastSurface = true);
+	void LoadFromSurface(SDL_Surface *surface, bool scaled = false);
 
 	void UpdateVertexCoords() override;
 
 	void UpdateBin(bool silent = false);
 	void PrintBin();
+
+	inline uint8_t *GetPixels(SDL_Surface *surface);
 
 	GLuint album = 0;
 	int albumWidth = 0, albumHeight = 0;
@@ -145,6 +149,10 @@ private:
 	Histogram histogram;
 	Histogram::reverse_iterator binIter;
 
+	std::vector<Colour<float>> selectedColors;
+
+	void ProcessColors(Histogram *destination, SDL_Surface *surface, const uint8_t *pixels);
+
 	std::vector<Histogram::reverse_iterator> previousBins;
 
 	std::set<ColorChangeListener *> colorChangeListeners;
@@ -157,7 +165,8 @@ private:
 	std::atomic<bool> lastSurfaceUpdated = false;
 	SDL_Surface *surfaceToLoad = nullptr;
 
-	std::mutex mutex;
+	std::mutex scalingMutex;
+	std::mutex histogramMutex;
 
 	float scale = 1.0f;
 
@@ -169,4 +178,7 @@ private:
 
 	std::thread scaleThread;
 	bool scaling = false;
+
+	std::thread colorProcessingThread;
+	bool processingColors = false;
 };
