@@ -200,6 +200,11 @@ void Settings::SetCurrentSongVisible(bool currentSongVisible) {
 	Save();
 }
 
+void Settings::SetFftSize(int fftSize) {
+	this->fftSize = fftSize;
+	Save();
+}
+
 void Settings::Save() {
 	if (auto path = GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
@@ -329,6 +334,9 @@ const Node &operator>>(const Node &node, Settings &settings) {
 
 	if (node.has("currentSongVisible"))
 		node["currentSongVisible"]->get(settings.currentSongVisible);
+
+	if (node.has("fftSize"))
+		node["fftSize"]->get(settings.fftSize);
 		
 	return node;
 }
@@ -361,6 +369,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["lightPackMapping"]->set(settings.lightPackMapping);
 	node["lightPackFocusArea"]->set(settings.lightPackFocusArea);
 	node["currentSongVisible"]->set(settings.currentSongVisible);
+	node["fftSize"]->set(settings.fftSize);
 
 	return node;
 }

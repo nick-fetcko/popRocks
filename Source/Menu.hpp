@@ -105,6 +105,19 @@ public:
 				ImGui::EndMenu();
 			}
 
+			fftSize = Settings::settings.GetFftSize();
+			if (ImGui::BeginMenu("FFT Size", !oscilloscope)) {
+				for (const auto &size : { 256, 512, 1024, 4096, 8192, 16384 }) {
+					bool selected = (fftSize == size);
+					if (ImGui::MenuItem(std::to_string(size).c_str(), nullptr, &selected)) {
+						if (onFftSizeChanged)
+							onFftSizeChanged(size);
+					}
+				}
+
+				ImGui::EndMenu();
+			}
+
 			ImGui::Separator();
 
 			bufferSize = Settings::settings.GetBufferLength();
@@ -528,6 +541,8 @@ public:
 
 	void SetOnColorSelectionChanged(std::function<void(const Settings::ColorSelection &)> f) { onColorSelectionChanged = f; }
 
+	void SetOnFftSizeChanged(std::function<void(int)> f) { onFftSizeChanged = f; }
+
 	void SetOnResetWindow(std::function<void()> f) { onResetWindow = f; }
 
 	void SetOnQuit(std::function<void()> f) { onQuit = f; }
@@ -589,6 +604,8 @@ private:
 
 	bool currentSongVisible = Settings::settings.GetCurrentSongVisible();
 
+	int fftSize = Settings::settings.GetFftSize();
+
 	int minPercentage = Settings::settings.GetColorSelection().minPercentage * 100;
 	int minHueSeparation = Settings::settings.GetColorSelection().minHueSeparation;
 	float minValueSeparation = Settings::settings.GetColorSelection().minValueSeparation;
@@ -618,6 +635,7 @@ private:
 	std::function<void(std::optional<std::size_t>)> onPresetChanged;
 	std::function<void(bool)> onCurrentSongVisibleChanged;
 	std::function<void(const Settings::ColorSelection &)> onColorSelectionChanged;
+	std::function<void(int)> onFftSizeChanged;
 
 	std::function<void()> onQuit;
 	std::function<void()> onResetWindow;

@@ -112,6 +112,9 @@ public:
 	const bool &GetCurrentSongVisible() const { return currentSongVisible; }
 	void SetCurrentSongVisible(bool currentSongVisible);
 
+	const int &GetFftSize() const { return fftSize; }
+	void SetFftSize(int fftSize);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -165,4 +168,6 @@ private:
 	std::string lightPackFocusArea = "bassandmid";
 
 	bool currentSongVisible = false;
+
+	int fftSize = 8192;
 };

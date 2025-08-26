@@ -208,6 +208,8 @@ void CApp::SetFftLength(std::size_t length) {
 		fftFlag = BASS_DATA_FFT16384;
 	}
 
+	Settings::settings.SetFftSize(fftLength * 2);
+
 	UpdateMaxBufferLength();
 }
 
@@ -467,6 +469,9 @@ void CApp::OnInit() {
 			Settings::settings.SetColorSelection(selection);
 			albumArt.ReprocessColors();
 		});
+		menu.SetOnFftSizeChanged([this](int fftSize) {
+			SetFftLength(fftSize);
+		});
 		menu.SetOnResetWindow([this] {
 			Settings::settings.SetWindowWidth(1920);
 			Settings::settings.SetWindowHeight(1080);
@@ -557,7 +562,7 @@ void CApp::OnInit() {
 	// us 4096 samples but our buffer
 	// length is only 2048. The highest
 	// bins are largely empty, anyway.
-	SetFftLength(8192);
+	SetFftLength(Settings::settings.GetFftSize());
 
 	// This updates the scale variable for us
 	GetScale(sdlWindow, &windowWidth, &windowHeight);
