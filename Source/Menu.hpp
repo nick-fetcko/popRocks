@@ -397,6 +397,22 @@ public:
 			ImGui::EndMenu();
 		}
 
+		if (ImGui::BeginMenu("Device Options")) {
+			listening = Settings::settings.GetListening();
+			if (ImGui::MenuItem("Listen to primary input device", nullptr, &listening)) {
+				if (onListeningChanged)
+					onListeningChanged(listening);
+			}
+
+			loopback = Settings::settings.GetLoopback();
+			if (ImGui::MenuItem("Listen to primary output device", nullptr, &loopback)) {
+				if (onLoopbackChanged)
+					onLoopbackChanged(loopback);
+			}
+
+			ImGui::EndMenu();
+		}
+
 		if (ImGui::BeginMenu("LightPack Integration", lightPack.IsActive())) {
 			if (ImGui::BeginMenu("LightPack Visualization Type", lightPack.IsActive())) {
 				intensity = Settings::settings.GetLightPackVisualizationType() == "intensity";
@@ -543,6 +559,9 @@ public:
 
 	void SetOnFftSizeChanged(std::function<void(int)> f) { onFftSizeChanged = f; }
 
+	void SetOnListeningChanged(std::function<void(bool)> f) { onListeningChanged = f; }
+	void SetOnLoopbackChanged(std::function<void(bool)> f) { onLoopbackChanged = f; }
+
 	void SetOnResetWindow(std::function<void()> f) { onResetWindow = f; }
 
 	void SetOnQuit(std::function<void()> f) { onQuit = f; }
@@ -606,6 +625,9 @@ private:
 
 	int fftSize = Settings::settings.GetFftSize();
 
+	bool listening = Settings::settings.GetListening();
+	bool loopback = Settings::settings.GetLoopback();
+
 	int minPercentage = Settings::settings.GetColorSelection().minPercentage * 100;
 	int minHueSeparation = Settings::settings.GetColorSelection().minHueSeparation;
 	float minValueSeparation = Settings::settings.GetColorSelection().minValueSeparation;
@@ -636,6 +658,8 @@ private:
 	std::function<void(bool)> onCurrentSongVisibleChanged;
 	std::function<void(const Settings::ColorSelection &)> onColorSelectionChanged;
 	std::function<void(int)> onFftSizeChanged;
+	std::function<void(bool)> onListeningChanged;
+	std::function<void(bool)> onLoopbackChanged;
 
 	std::function<void()> onQuit;
 	std::function<void()> onResetWindow;

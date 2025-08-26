@@ -74,6 +74,7 @@ public:
 	void SetColor(int r, int g, int b);
 
 	void Listen(bool loopback = false);
+	inline void StopListening();
 
 	HSTREAM GetStreamHandle() const;
 

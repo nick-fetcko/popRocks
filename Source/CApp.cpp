@@ -472,6 +472,22 @@ void CApp::OnInit() {
 		menu.SetOnFftSizeChanged([this](int fftSize) {
 			SetFftLength(fftSize);
 		});
+		menu.SetOnListeningChanged([this](bool listening) {
+			if (listening)
+				Listen();
+			else
+				StopListening();
+
+			Settings::settings.SetListening(listening);
+		});
+		menu.SetOnLoopbackChanged([this](bool loopback) {
+			if (loopback)
+				Listen(true);
+			else
+				StopListening();
+
+			Settings::settings.SetLoopback(loopback);
+		});
 		menu.SetOnResetWindow([this] {
 			Settings::settings.SetWindowWidth(1920);
 			Settings::settings.SetWindowHeight(1080);
@@ -591,6 +607,11 @@ void CApp::OnInit() {
 	spindle.OnInit(albumArt.GetRadius() / SpindleSize);
 
 	OnResize(windowWidth, windowHeight, scale);
+
+	if (Settings::settings.GetListening())
+		Listen();
+	else if (Settings::settings.GetLoopback())
+		Listen(true);
 }
 
  CApp::~CApp() {
@@ -603,8 +624,8 @@ void CApp::OnInit() {
 	 if (plan) fftwf_destroy_plan(plan);
 }
 
-void CApp::Listen(bool loopback) {
-	if (listening) {
+ inline void CApp::StopListening() {
+	 if (listening) {
 		audioSink->done = true;
 		if (listenThread.joinable())
 			listenThread.join();
@@ -614,7 +635,13 @@ void CApp::Listen(bool loopback) {
 		fftwf_destroy_plan(plan);
 
 		delete audioSink;
-	}
+
+		listening = false;
+	 }
+}
+
+void CApp::Listen(bool loopback) {
+	StopListening();
 	//audioSink = new MyAudioSink();
 	//CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)RecordAudioStream, audioSink, 0, NULL);
 

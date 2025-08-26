@@ -205,6 +205,18 @@ void Settings::SetFftSize(int fftSize) {
 	Save();
 }
 
+void Settings::SetListening(bool listening) {
+	this->listening = listening;
+	if (listening) loopback = false;
+	Save();
+}
+
+void Settings::SetLoopback(bool loopback) {
+	this->loopback = loopback;
+	if (loopback) listening = false;
+	Save();
+}
+
 void Settings::Save() {
 	if (auto path = GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
@@ -337,6 +349,11 @@ const Node &operator>>(const Node &node, Settings &settings) {
 
 	if (node.has("fftSize"))
 		node["fftSize"]->get(settings.fftSize);
+
+	if (node.has("listening"))
+		node["listening"]->get(settings.listening);
+	if (node.has("loopback"))
+		node["loopback"]->get(settings.loopback);
 		
 	return node;
 }
@@ -370,6 +387,8 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["lightPackFocusArea"]->set(settings.lightPackFocusArea);
 	node["currentSongVisible"]->set(settings.currentSongVisible);
 	node["fftSize"]->set(settings.fftSize);
+	node["listening"]->set(settings.listening);
+	node["loopback"]->set(settings.loopback);
 
 	return node;
 }

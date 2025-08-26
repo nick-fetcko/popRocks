@@ -115,6 +115,12 @@ public:
 	const int &GetFftSize() const { return fftSize; }
 	void SetFftSize(int fftSize);
 
+	const bool &GetListening() const { return listening; };
+	void SetListening(bool listening);
+
+	const bool &GetLoopback() const { return loopback; }
+	void SetLoopback(bool loopback);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -170,4 +176,7 @@ private:
 	bool currentSongVisible = false;
 
 	int fftSize = 8192;
+
+	bool listening = false;
+	bool loopback = false;
 };
