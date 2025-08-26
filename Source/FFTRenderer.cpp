@@ -164,9 +164,10 @@ void FFTRenderer::OnLoop(
 
 		// If we're listening, skip normalization
 		auto scaledValue =
-			fileLoaded ?
-			((rawValue - min[i]) / (max[i] - min[i])) * height :
-			(rawValue / maxHeardSample) * height;
+			//fileLoaded ?
+			((rawValue - min[i]) / (max[i] - min[i])) * height //:
+			//rawValue * height;
+		;
 
 		shrinkDecays[i].Update(time);
 		if (scaledValue > shrinkDecays[i].Get()) {

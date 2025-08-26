@@ -73,7 +73,7 @@ public:
 
 	void SetColor(int r, int g, int b);
 
-	void Listen();
+	void Listen(bool loopback = false);
 
 	HSTREAM GetStreamHandle() const;
 
@@ -187,9 +187,9 @@ private:
 	IMMDevice *audioDevice = nullptr;
 	MyAudioSink *audioSink = nullptr;
 
-	double *in = nullptr;
-	fftw_complex *out = nullptr;
-    fftw_plan plan = nullptr;
+	float *in = nullptr;
+	fftwf_complex *out = nullptr;
+	fftwf_plan plan = nullptr;
 
 	bool listening = false;
 	float maxHeardSample = 0.0f;

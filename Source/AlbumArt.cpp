@@ -821,7 +821,7 @@ const std::vector<Colour<float>> &AlbumArt::GetSelectedColors() const {
 }
 
 void AlbumArt::Scale(bool force) {
-	if ((!lastSurface || !lastSurfaceUpdated) && !force) return;
+	if (!lastSurface || (!lastSurfaceUpdated && !force)) return;
 
 	lastSurfaceUpdated = false;
 

@@ -26,6 +26,8 @@ public:
 	}
 
 	HRESULT SetFormat(WAVEFORMATEX *format) {
+		nChannels = format->nChannels;
+
 		// Don't worry, everything is gonna happy <3
 		return S_OK;
 	}
@@ -40,7 +42,7 @@ public:
 		//buffer[0] = (*currentPos)*9000.0f;
 		//BASS_ERROR_HANDLE
 		//int ret = BASS_StreamPutData(streamHandle, pData, numFramesAvailable*sizeof(float)*2);
-		for(UINT32 i = 0; i < numFramesAvailable; ++i) {
+		for(UINT32 i = 0; i < numFramesAvailable * nChannels; ++i) {
 			buffer[currentBufferPos++] = *(currentPos++);
 			if(currentBufferPos == bufferLength)
 				currentBufferPos = 0;
@@ -58,8 +60,12 @@ public:
 
 	std::atomic<bool> done = false;
 
+	bool loopback = false;
+
 private:
 	std::size_t bufferLength = 0;
+
+	WORD nChannels = 2;
 };
 
 // Below was derived from
@@ -112,7 +118,7 @@ HRESULT RecordAudioStream(MyAudioSink *pMySink)
     EXIT_ON_ERROR(hr)
 
     hr = pEnumerator->GetDefaultAudioEndpoint(
-	eCapture, eConsole, &pDevice);
+	pMySink->loopback ? eRender : eCapture, eConsole, &pDevice);
     EXIT_ON_ERROR(hr)
 
     hr = pDevice->Activate(
@@ -132,7 +138,7 @@ HRESULT RecordAudioStream(MyAudioSink *pMySink)
 
     hr = pAudioClient->Initialize(
                          AUDCLNT_SHAREMODE_SHARED,
-                         0,
+						 pMySink->loopback ? AUDCLNT_STREAMFLAGS_LOOPBACK : 0,
                          hnsRequestedDuration,
                          0,
                          pwfx,
@@ -166,7 +172,7 @@ HRESULT RecordAudioStream(MyAudioSink *pMySink)
     {
 		// Sleep for half the buffer duration.
 		//Sleep(hnsActualDuration/REFTIMES_PER_MILLISEC/2);
-		//Sleep(16);
+		Sleep(1);
 
         hr = pCaptureClient->GetNextPacketSize(&packetLength);
         EXIT_ON_ERROR(hr)

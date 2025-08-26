@@ -30,7 +30,7 @@ find_package(SDL2_mixer CONFIG REQUIRED)
 find_package(JPEG REQUIRED)
 find_package(SDL2_image CONFIG REQUIRED)
 find_package(SDL2_net CONFIG REQUIRED)
-find_package(FFTW3 CONFIG REQUIRED)
+find_package(FFTW3f CONFIG REQUIRED)
 find_package(Freetype CONFIG REQUIRED)
 
 add_subdirectory(MathCPP)
@@ -251,7 +251,7 @@ set_target_properties(basswasapi PROPERTIES
 	IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswasapi/lib/basswasapi.lib"
 	)
 
-target_link_libraries(popRocks PRIVATE MathsCPP Utils ${OPENGL_LIBRARIES} OpenGL SDL2::SDL2 SDL2::SDL2main SDL2_mixer::SDL2_mixer SDL2_image::SDL2_image SDL2_net::SDL2_net freetype bass bassflac bassape basswv basswasapi FFTW3::fftw3 serial nfd ${JPEG_LIBRARIES})
+target_link_libraries(popRocks PRIVATE MathsCPP Utils ${OPENGL_LIBRARIES} OpenGL SDL2::SDL2 SDL2::SDL2main SDL2_mixer::SDL2_mixer SDL2_image::SDL2_image SDL2_net::SDL2_net freetype bass bassflac bassape basswv basswasapi FFTW3::fftw3f serial nfd ${JPEG_LIBRARIES})
 target_include_directories(popRocks PRIVATE ${JPEG_INCLUDE_DIR})
 
 add_custom_command(TARGET popRocks POST_BUILD

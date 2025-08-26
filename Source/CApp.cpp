@@ -166,7 +166,7 @@ void CApp::SetBufferLength(std::size_t bufferLength) {
 	renderer->SetBufferLength(bufferLength, changed);
 
 	if (listening && changed)
-		Listen();
+		Listen(audioSink->loopback);
 }
 
 void CApp::SetFftLength(std::size_t length) {
@@ -593,29 +593,31 @@ void CApp::OnInit() {
 	 delete[] buffer;
 	 delete audioSink;
 
-	 if(in) fftw_free(in);
-	 if(out) fftw_free(out);
-	 if (plan) fftw_destroy_plan(plan);
+	 if(in) fftwf_free(in);
+	 if(out) fftwf_free(out);
+	 if (plan) fftwf_destroy_plan(plan);
 }
 
-void CApp::Listen() {
+void CApp::Listen(bool loopback) {
 	if (listening) {
 		audioSink->done = true;
 		if (listenThread.joinable())
 			listenThread.join();
 
-		fftw_free(in);
-		fftw_free(out);
-		fftw_destroy_plan(plan);
+		fftwf_free(in);
+		fftwf_free(out);
+		fftwf_destroy_plan(plan);
+
+		delete audioSink;
 	}
 	//audioSink = new MyAudioSink();
 	//CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)RecordAudioStream, audioSink, 0, NULL);
 
 	SetGain(1.0f);
 
-	in = reinterpret_cast<double*>(fftw_malloc(sizeof(double) * bufferLength * 2));
-    out = reinterpret_cast<fftw_complex*>(fftw_malloc(sizeof(fftw_complex) * bufferLength * 2));
-	plan = fftw_plan_dft_r2c_1d(static_cast<int>(bufferLength * 2), in, out, FFTW_ESTIMATE);
+	in = reinterpret_cast<float*>(fftwf_malloc(sizeof(float) * maxLength * 2));
+    out = reinterpret_cast<fftwf_complex*>(fftwf_malloc(sizeof(fftwf_complex) * maxLength * 2));
+	plan = fftwf_plan_dft_r2c_1d(static_cast<int>(maxLength * 2), in, out, FFTW_MEASURE);
 
 	//streamHandle = BASS_StreamCreate(48000, 2, BASS_SAMPLE_FLOAT, STREAMPROC_PUSH, NULL);
 	//listening = true;
@@ -625,7 +627,8 @@ void CApp::Listen() {
 	//BASS_ChannelSetAttribute(streamHandle, BASS_ATTRIB_MUSIC_VOL_GLOBAL, 0);
 	//BASS_ChannelSetAttribute(streamHandle, BASS_ATTRIB_VOL, 0);
 	//BASS_ChannelPlay(streamHandle, false);
-	audioSink = new MyAudioSink(bufferLength * 4 /* we're assuming stereo, for now */);
+	audioSink = new MyAudioSink(maxLength * 4 /* we're assuming stereo, for now */);
+	audioSink->loopback = loopback;
 	//audioSink->streamHandle = streamHandle;
 	//BASS_WASAPI_Start();
 
@@ -756,29 +759,53 @@ void CApp::OnLoop(const Delta &time) {
 	} else {
 		std::unique_lock lock(audioSink->mutex);
 		if (audioSink->dataChanged) {
-			//std::cout << audioSink->buffer[0] << std::endl;
-			for (int i = 0, j = audioSink->currentBufferPos; i < bufferLength * 2; i++) {
-				// Average the channels together
-				in[i] = (audioSink->buffer[j] + audioSink->buffer[j + 1]) / 2.0f;
-				j += 2;
-				if(j >= bufferLength * 4)
-					j = 0;
-			}
+			if (renderer->IsFloatingPoint()) {
+				//std::cout << audioSink->buffer[0] << std::endl;
+				int j = audioSink->currentBufferPos - maxLength * 2;
+				if (j < 0)
+					j = maxLength * 4 + j;
 
-			fftw_execute(plan);
+				for (int i = 0; i < maxLength * 2; ++i) {
+					// Average the channels together
+					in[i] = (audioSink->buffer[j] + audioSink->buffer[j + 1]) / 2.0f;
+					j += 2;
+					if (j >= maxLength * 4)
+						j = 0;
+				}
 
-			maxHeardSample = std::numeric_limits<float>::lowest();
-			for (int i = 0; i < bufferLength; ++i) {
-				// Get the magnitude
-				floatBuffer[i] = static_cast<float>(
-					std::sqrt(
-						std::pow(out[i][0], 2) +
-						std::pow(out[i][1], 2)
-					)
-				);
+				fftwf_execute(plan);
 
-				if (floatBuffer[i] > maxHeardSample)
-					maxHeardSample = floatBuffer[i];
+				maxHeardSample = std::numeric_limits<float>::lowest();
+
+				for (int i = 1; i <= maxLength; ++i) {
+					// Get the magnitude
+					floatBuffer[i - 1] = static_cast<float>(
+						std::sqrt(
+							std::pow(out[i][0], 2) +
+							std::pow(out[i][1], 2)
+						)
+					);
+
+					if (floatBuffer[i - 1] > maxHeardSample)
+						maxHeardSample = floatBuffer[i - 1];
+				}
+
+				// Normalize
+				for (int i = 0; i < maxLength; ++i)
+					floatBuffer[i] /= maxHeardSample;
+					
+			} else {
+				int j = audioSink->currentBufferPos - bufferLength * 2;
+				if (j < 0)
+					j = maxLength * 4 + j;
+
+				for (int i = 0; i < bufferLength; i++) {
+					shortBuffer[i * 2] = audioSink->buffer[j] * std::numeric_limits<short>::max();
+					shortBuffer[i * 2 + 1] = audioSink->buffer[j + 1] * std::numeric_limits<short>::max();
+					j += 2;
+					if (j >= maxLength * 4)
+						j = 0;
+				}
 			}
 
 			audioSink->dataChanged = false;
@@ -793,7 +820,7 @@ void CApp::OnLoop(const Delta &time) {
 	if (renderer->IsFloatingPoint())
 		lightPack.NextSamples(floatBuffer, bufferLength);
 
-	if (playing) {
+	if (playing || listening) {
 		renderer->OnLoop(
 			time,
 			fileLoaded,
@@ -824,14 +851,14 @@ void CApp::OnLoop(const Delta &time) {
 	if (resetGain) resetGain = false;
 
 	//++frameCount;
-	if (rotating && playing) {
+	if (rotating && (playing || listening)) {
 		auto changeInSeconds = static_cast<float>(time.change.AsSeconds());
 		frameCount += changeInSeconds * rotationSpeed;
 		while (frameCount >= 360.0f)
 			frameCount -= 360.0f;
 	}
 
-	if (strobe && playing) {
+	if (strobe && (playing || listening)) {
 		strobeAccum += time.change;
 		if (strobeAccum >= strobeFrequency) {
 			albumArt.NextBin(true);
@@ -848,7 +875,7 @@ void CApp::OnLoop(const Delta &time) {
 		glDisable(GL_BLEND);
 		
 		context->Use("blur"_hash);
-		context->GetShaderProgram().Uniform1f("timeDelta", playing ? time.change.AsSeconds() : 0.0f);
+		context->GetShaderProgram().Uniform1f("timeDelta", (playing || listening) ? time.change.AsSeconds() : 0.0f);
 
 		lastFrame->DrawMultisampled(0, 0, *context);
 

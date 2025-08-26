@@ -230,6 +230,12 @@ void CApp::AddCommands() {
 			}
 		},
 		{
+			"loopback", [&](const std::vector<std::string> &args) {
+				Listen(true);
+				logger.LogDebug("Now listening to primary output device");
+			}
+		},
+		{
 			"x", [&](const std::vector<std::string> &args) {
 				if (auto fftRenderer = dynamic_cast<FFTRenderer*>(renderer))
 					fftRenderer->ToggleXRot();
