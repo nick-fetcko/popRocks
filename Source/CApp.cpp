@@ -378,8 +378,14 @@ void CApp::OnInit() {
 				for (auto &detector : beatDetectors)
 					detector.Cancel();
 
+				auto stream = OpenWithFlags(loadedFile, loadedFileExtension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+
+				// Disassociate the stream from a device,
+				// so it doesn't get freed on BASS_Free()
+				BASS_ChannelSetDevice(stream, BASS_NODEVICE);
+
 				LoadBeats(
-					OpenWithFlags(loadedFile, loadedFileExtension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT),
+					stream,
 					loadedFile,
 					false // don't ping-pong when we toggle
 				);
@@ -488,6 +494,41 @@ void CApp::OnInit() {
 
 			Settings::settings.SetLoopback(loopback);
 		});
+		menu.SetOnOutputDeviceChanged([this](int outputDevice) {
+			Settings::settings.SetOutputDevice(outputDevice);
+
+			if (listening && Settings::settings.GetLoopback())
+				Listen(true);
+			else {
+				auto pos = streamHandle ? BASS_ChannelBytes2Seconds(
+					streamHandle,
+					BASS_ChannelGetPosition(streamHandle, BASS_POS_BYTE)
+				) : 0.0;
+
+				if (controls.GetExclusiveIndicator().IsExclusive() && Open(loadedFile, loadedFileExtension, true, true)) {
+					SeekTo(pos);
+					BASS_WASAPI_Start();
+					playing = true;
+				} else {
+					// Free the old device
+					BASS_Free();
+
+					// Initialize the new device
+					BASS_Init(outputDevice, freq, 0, 0, nullptr);
+
+					Open(loadedFile, loadedFileExtension, false, true);
+
+					SeekTo(pos);
+					TogglePlaying();
+				}
+			}
+		});
+		menu.SetOnInputDeviceChanged([this](int inputDevice) {
+			Settings::settings.SetInputDevice(inputDevice);
+
+			if (listening && !Settings::settings.GetLoopback())
+				Listen();
+		});
 		menu.SetOnResetWindow([this] {
 			Settings::settings.SetWindowWidth(1920);
 			Settings::settings.SetWindowHeight(1080);
@@ -590,7 +631,7 @@ void CApp::OnInit() {
 	if (!BASS_PluginLoad("basswv.dll", 0))
 		logger.LogError("Could not load WavPack plugin! Error code ", BASS_ErrorGetCode());
 
-	if (BASS_Init(device, freq, 0, 0, nullptr) != TRUE)
+	if (BASS_Init(Settings::settings.GetOutputDevice(), freq, 0, 0, nullptr) != TRUE)
 		logger.LogError("Could not initialize audio device!");
 
 	lightPack.OnInit();
@@ -661,6 +702,19 @@ void CApp::Listen(bool loopback) {
 	//BASS_ChannelPlay(streamHandle, false);
 	audioSink = new MyAudioSink(maxLength * 4 /* we're assuming stereo, for now */);
 	audioSink->loopback = loopback;
+
+	// TODO: we now convert from UTF-8 to UTF-16 in multiple
+	//       places. Make this DRY
+	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+	if (loopback) {
+		BASS_DEVICEINFO info;
+		if (BASS_GetDeviceInfo(loopback ? Settings::settings.GetOutputDevice() : Settings::settings.GetInputDevice(), &info))
+			audioSink->deviceName = converter.from_bytes(info.driver);
+	} else {
+		BASS_WASAPI_DEVICEINFO info;
+		if (BASS_WASAPI_GetDeviceInfo(Settings::settings.GetInputDevice(), &info))
+			audioSink->deviceName = converter.from_bytes(info.id);
+	}
 	//audioSink->streamHandle = streamHandle;
 	//BASS_WASAPI_Start();
 
@@ -1120,22 +1174,40 @@ HSTREAM CApp::OpenWithFlags(const std::filesystem::path &path, const std::string
 	return ret;
 }
 
-void CApp::Open(const std::filesystem::path &path, const std::string &extension, bool exclusive) {
+bool CApp::Open(const std::filesystem::path &path, const std::string &extension, bool exclusive, bool force) {
 	if (exclusive) {
-		if (wasapiInfo.freq != channelInfo.freq) {
+		if (wasapiInfo.freq != channelInfo.freq || force) {
 			if (wasapiInfo.freq != 0) StopExclusive(TRUE);
 
-			// Only swap out the handle _after_ we've stopped
-			// as StopExclusive(TRUE) frees the handle
-			streamHandle = OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+			auto outputDevice = Settings::settings.GetOutputDevice();
 
-			if (BASS_WASAPI_Init(device, channelInfo.freq, channelInfo.chans, BASS_WASAPI_BUFFER | BASS_WASAPI_EXCLUSIVE, exclusiveBufferSize, 0, OutputWasapiProc, reinterpret_cast<void *>(this)) == TRUE) {
+			// BASS and BASS_WASAPI use different device indices
+			if (outputDevice != -1) {
+				BASS_DEVICEINFO info;
+				BASS_GetDeviceInfo(outputDevice, &info);
+
+				BASS_WASAPI_DEVICEINFO wasapiInfo;
+				for (int i = 0; BASS_WASAPI_GetDeviceInfo(i, &wasapiInfo); ++i) {
+					if ((wasapiInfo.flags & BASS_DEVICE_ENABLED) &&
+						!(wasapiInfo.flags & BASS_DEVICE_INPUT) &&
+						(strncmp(wasapiInfo.id, info.driver, std::min(strlen(wasapiInfo.id), strlen(info.driver))) == 0)) {
+						outputDevice = i;
+						break;
+					}
+				}
+			}
+
+			if (BASS_WASAPI_Init(outputDevice, channelInfo.freq, channelInfo.chans, BASS_WASAPI_BUFFER | BASS_WASAPI_EXCLUSIVE, exclusiveBufferSize, 0, OutputWasapiProc, reinterpret_cast<void *>(this)) == TRUE) {
+				// Only swap out the handle _after_ we've stopped
+				// as StopExclusive(TRUE) frees the handle
+				streamHandle = OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+
 				BASS_WASAPI_GetInfo(&wasapiInfo);
 				if (wasapiInfo.freq == channelInfo.freq) {
 					keyboardHook = SetWindowsHookExA(WH_KEYBOARD_LL, LowLevelKeyboardProc, NULL, 0);
 					logger.LogDebug("Channel and device frequencies (", wasapiInfo.freq, ") match!");
 
-					return;
+					return exclusive;
 				} else {
 					logger.LogError("Could not initialize exclusive mode! Error code ", BASS_ErrorGetCode());
 					exclusive = false;
@@ -1146,16 +1218,20 @@ void CApp::Open(const std::filesystem::path &path, const std::string &extension,
 			}
 		} else {
 			streamHandle = OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
-			return;
+			return exclusive;
 		}
 	}
 
 	if (!exclusive) {
-		BASS_WASAPI_Free();
+		if (BASS_WASAPI_GetDevice() != -1)
+			BASS_WASAPI_Free();
+
 		controls.GetExclusiveIndicator().SetExclusive(false);
 		BASS_StreamFree(streamHandle);
 		streamHandle = OpenWithFlags(path, extension, BASS_STREAM_PRESCAN);
 	}
+
+	return exclusive;
 }
 
 void CApp::Stop(BOOL reset) {
@@ -1180,7 +1256,9 @@ void CApp::StopExclusive(BOOL reset) {
 	}
 
 	if (reset == TRUE) {
-		BASS_WASAPI_Free();
+		if (BASS_WASAPI_GetDevice() != -1)
+			BASS_WASAPI_Free();
+
 		BASS_StreamFree(streamHandle);
 		wasapiInfo = { 0 };
 	}
@@ -1289,8 +1367,14 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 		for (auto &detector : beatDetectors)
 			detector.Cancel();
 
+		auto stream = OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+
+		// Disassociate the stream from a device,
+		// so it doesn't get freed on BASS_Free()
+		BASS_ChannelSetDevice(stream, BASS_NODEVICE);
+
 		LoadBeats(
-			OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT),
+			stream,
 			path
 		);
 
@@ -1363,6 +1447,10 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 
 	// We want this as a local variable, as it's handed off to BeatDetect
 	auto streamHandle = OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+
+	// Disassociate the stream from a device,
+	// so it doesn't get freed on BASS_Free()
+	BASS_ChannelSetDevice(streamHandle, BASS_NODEVICE);
 
 	if (streamHandle) {
 		BASS_ChannelGetInfo(streamHandle, &channelInfo);

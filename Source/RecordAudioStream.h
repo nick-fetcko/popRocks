@@ -62,6 +62,8 @@ public:
 
 	bool loopback = false;
 
+	std::wstring deviceName;
+
 private:
 	std::size_t bufferLength = 0;
 
@@ -115,10 +117,16 @@ HRESULT RecordAudioStream(MyAudioSink *pMySink)
            CLSID_MMDeviceEnumerator, NULL,
            CLSCTX_ALL, IID_IMMDeviceEnumerator,
            (void**)&pEnumerator);
-    EXIT_ON_ERROR(hr)
+	EXIT_ON_ERROR(hr)
 
-    hr = pEnumerator->GetDefaultAudioEndpoint(
-	pMySink->loopback ? eRender : eCapture, eConsole, &pDevice);
+	if (pMySink->deviceName.empty()) {
+		hr = pEnumerator->GetDefaultAudioEndpoint(
+			pMySink->loopback ? eRender : eCapture, eConsole, &pDevice
+		);
+	} else {
+		hr = pEnumerator->GetDevice(pMySink->deviceName.c_str(), &pDevice);
+	}
+
     EXIT_ON_ERROR(hr)
 
     hr = pDevice->Activate(

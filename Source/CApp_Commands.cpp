@@ -493,8 +493,14 @@ void CApp::AddCommands() {
 					for (auto &detector : beatDetectors)
 						detector.Cancel();
 
+					auto stream = OpenWithFlags(loadedFile, loadedFileExtension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+
+					// Disassociate the stream from a device,
+					// so it doesn't get freed on BASS_Free()
+					BASS_ChannelSetDevice(stream, BASS_NODEVICE);
+
 					LoadBeats(
-						OpenWithFlags(loadedFile, loadedFileExtension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT),
+						stream,
 						loadedFile,
 						false // don't ping-pong when we toggle
 					);

@@ -217,6 +217,16 @@ void Settings::SetLoopback(bool loopback) {
 	Save();
 }
 
+void Settings::SetOutputDevice(int outputDevice) {
+	this->outputDevice = outputDevice;
+	Save();
+}
+
+void Settings::SetInputDevice(int inputDevice) {
+	this->inputDevice = inputDevice;
+	Save();
+}
+
 void Settings::Save() {
 	if (auto path = GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
@@ -354,6 +364,11 @@ const Node &operator>>(const Node &node, Settings &settings) {
 		node["listening"]->get(settings.listening);
 	if (node.has("loopback"))
 		node["loopback"]->get(settings.loopback);
+
+	if (node.has("outputDevice"))
+		node["outputDevice"]->get(settings.outputDevice);
+	if (node.has("inputDevice"))
+		node["inputDevice"]->get(settings.inputDevice);
 		
 	return node;
 }
@@ -389,6 +404,8 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["fftSize"]->set(settings.fftSize);
 	node["listening"]->set(settings.listening);
 	node["loopback"]->set(settings.loopback);
+	node["outputDevice"]->set(settings.outputDevice);
+	node["inputDevice"]->set(settings.inputDevice);
 
 	return node;
 }

@@ -125,7 +125,7 @@ public:
 
 	void AdvanceToNextTrack();
 
-	void Open(const std::filesystem::path &path, const std::string &extension, bool exclusive);
+	bool Open(const std::filesystem::path &path, const std::string &extension, bool exclusive, bool force = false);
 
 	void StopExclusive();
 
@@ -168,7 +168,6 @@ private:
 	bool fileLoaded = false;
 	std::filesystem::path loadedFile;
 	std::string loadedFileExtension;
-	int device = -1; // Default Sounddevice
 	int freq = 48000; // Sample rate (Hz)
 	HSTREAM streamHandle = NULL; // Handle for open stream
 	BASS_CHANNELINFO channelInfo = { 0 };

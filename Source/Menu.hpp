@@ -398,14 +398,49 @@ public:
 		}
 
 		if (ImGui::BeginMenu("Device Options")) {
+			if (ImGui::BeginMenu("Input device")) {
+				BASS_WASAPI_DEVICEINFO info;
+				auto inputDevice = Settings::settings.GetInputDevice();
+				for (int i = 0; BASS_WASAPI_GetDeviceInfo(i, &info); ++i) {
+					if ((info.flags & BASS_DEVICE_INPUT) && // device is an input device
+					   !(info.flags & BASS_DEVICE_LOOPBACK) && // device is NOT a loopback device
+						(info.flags & BASS_DEVICE_ENABLED)) { // and it is enabled
+						bool selected = (i == inputDevice) || (inputDevice == -1 && (info.flags & BASS_DEVICE_DEFAULT));
+						if (ImGui::MenuItem(info.name, nullptr, &selected)) {
+							if (onInputDeviceChanged)
+								onInputDeviceChanged(i);
+						}
+					}
+				}
+
+				ImGui::EndMenu();
+			}
+
 			listening = Settings::settings.GetListening();
-			if (ImGui::MenuItem("Listen to primary input device", nullptr, &listening)) {
+			if (ImGui::MenuItem("Listen to selected input device", nullptr, &listening)) {
 				if (onListeningChanged)
 					onListeningChanged(listening);
 			}
 
+			if (ImGui::BeginMenu("Output device")) {
+				BASS_DEVICEINFO info;
+				auto outputDevice = Settings::settings.GetOutputDevice();
+				for (int i = 1; BASS_GetDeviceInfo(i, &info); ++i) {
+					if ((info.flags & BASS_DEVICE_ENABLED) && // // device is enabled
+						strlen(info.driver)) { // device has a driver (this excludes the "Default" device without dealing with i18n)
+						bool selected = (i == outputDevice) || (outputDevice == -1 && (info.flags & BASS_DEVICE_DEFAULT));
+						if (ImGui::MenuItem(info.name, nullptr, &selected)) {
+							if (onOutputDeviceChanged)
+								onOutputDeviceChanged(i);
+						}
+					}
+				}
+
+				ImGui::EndMenu();
+			}
+
 			loopback = Settings::settings.GetLoopback();
-			if (ImGui::MenuItem("Listen to primary output device", nullptr, &loopback)) {
+			if (ImGui::MenuItem("Listen to selected output device", nullptr, &loopback)) {
 				if (onLoopbackChanged)
 					onLoopbackChanged(loopback);
 			}
@@ -562,6 +597,9 @@ public:
 	void SetOnListeningChanged(std::function<void(bool)> f) { onListeningChanged = f; }
 	void SetOnLoopbackChanged(std::function<void(bool)> f) { onLoopbackChanged = f; }
 
+	void SetOnOutputDeviceChanged(std::function<void(int)> f) { onOutputDeviceChanged = f; }
+	void SetOnInputDeviceChanged(std::function<void(int)> f) { onInputDeviceChanged = f; }
+
 	void SetOnResetWindow(std::function<void()> f) { onResetWindow = f; }
 
 	void SetOnQuit(std::function<void()> f) { onQuit = f; }
@@ -660,6 +698,8 @@ private:
 	std::function<void(int)> onFftSizeChanged;
 	std::function<void(bool)> onListeningChanged;
 	std::function<void(bool)> onLoopbackChanged;
+	std::function<void(int)> onOutputDeviceChanged;
+	std::function<void(int)> onInputDeviceChanged;
 
 	std::function<void()> onQuit;
 	std::function<void()> onResetWindow;
