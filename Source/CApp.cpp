@@ -81,6 +81,7 @@ DWORD CALLBACK InWasapiProc(void *buffer, DWORD length, void *user) {
 DWORD CALLBACK OutputWasapiProc(void *buffer, DWORD length, void *user) {
 	const auto app = reinterpret_cast<CApp *>(user);
 
+	// FIXME: Flush buffer when switching playlists
 	int c = BASS_ChannelGetData(app->GetStreamHandle(), buffer, length);
 	if (c < 0) { // at the end of the current stream, but not the _buffer_
 		auto code = BASS_ErrorGetCode();
@@ -242,6 +243,38 @@ float CApp::GetScale(SDL_Window *window, int *w, int *h) {
 	scale = (virtualW == 0 ? 1.0f : static_cast<float>(*w) / virtualW);
 
 	return scale;
+}
+
+template <bool Output>
+int CApp::GetDeviceIndex(const std::string &device) {
+	int index = device.empty() ? -1 : 1;
+	bool found = false;
+
+	if constexpr (Output) {
+		BASS_DEVICEINFO info;
+		
+		for (; index != -1 && BASS_GetDeviceInfo(index, &info); ++index) {
+			if (strlen(info.driver) && strncmp(info.driver, device.c_str(), std::min(strlen(info.driver), device.size())) == 0) {
+				found = true;
+				break;
+			}
+		}
+	} else {
+		BASS_WASAPI_DEVICEINFO info;
+
+		for (; index != -1 && BASS_WASAPI_GetDeviceInfo(index, &info); ++index) {
+			if (strncmp(info.id, device.c_str(), std::min(strlen(info.id), device.size())) == 0) {
+				found = true;
+				break;
+			}
+		}
+	}
+
+	// Reset to default device if we can't find
+	// the selected device anymore
+	if (!found) index = -1;
+
+	return index;
 }
 
 void CApp::OnInit() {
@@ -494,7 +527,7 @@ void CApp::OnInit() {
 
 			Settings::settings.SetLoopback(loopback);
 		});
-		menu.SetOnOutputDeviceChanged([this](int outputDevice) {
+		menu.SetOnOutputDeviceChanged([this](const std::string &outputDevice) {
 			Settings::settings.SetOutputDevice(outputDevice);
 
 			if (listening && Settings::settings.GetLoopback())
@@ -514,7 +547,7 @@ void CApp::OnInit() {
 					BASS_Free();
 
 					// Initialize the new device
-					BASS_Init(outputDevice, freq, 0, 0, nullptr);
+					BASS_Init(GetDeviceIndex<true>(outputDevice), freq, 0, 0, nullptr);
 
 					Open(loadedFile, loadedFileExtension, false, true);
 
@@ -523,7 +556,7 @@ void CApp::OnInit() {
 				}
 			}
 		});
-		menu.SetOnInputDeviceChanged([this](int inputDevice) {
+		menu.SetOnInputDeviceChanged([this](const std::string &inputDevice) {
 			Settings::settings.SetInputDevice(inputDevice);
 
 			if (listening && !Settings::settings.GetLoopback())
@@ -631,7 +664,7 @@ void CApp::OnInit() {
 	if (!BASS_PluginLoad("basswv.dll", 0))
 		logger.LogError("Could not load WavPack plugin! Error code ", BASS_ErrorGetCode());
 
-	if (BASS_Init(Settings::settings.GetOutputDevice(), freq, 0, 0, nullptr) != TRUE)
+	if (BASS_Init(GetDeviceIndex<true>(Settings::settings.GetOutputDevice()), freq, 0, 0, nullptr) != TRUE)
 		logger.LogError("Could not initialize audio device!");
 
 	lightPack.OnInit();
@@ -708,11 +741,18 @@ void CApp::Listen(bool loopback) {
 	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
 	if (loopback) {
 		BASS_DEVICEINFO info;
-		if (BASS_GetDeviceInfo(loopback ? Settings::settings.GetOutputDevice() : Settings::settings.GetInputDevice(), &info))
+		if (BASS_GetDeviceInfo(
+				loopback ? 
+					GetDeviceIndex<true>(Settings::settings.GetOutputDevice()) :
+					GetDeviceIndex<false>(Settings::settings.GetInputDevice()),
+				&info
+			)
+		) {
 			audioSink->deviceName = converter.from_bytes(info.driver);
+		}
 	} else {
 		BASS_WASAPI_DEVICEINFO info;
-		if (BASS_WASAPI_GetDeviceInfo(Settings::settings.GetInputDevice(), &info))
+		if (BASS_WASAPI_GetDeviceInfo(GetDeviceIndex<false>(Settings::settings.GetInputDevice()), &info))
 			audioSink->deviceName = converter.from_bytes(info.id);
 	}
 	//audioSink->streamHandle = streamHandle;
@@ -1179,7 +1219,7 @@ bool CApp::Open(const std::filesystem::path &path, const std::string &extension,
 		if (wasapiInfo.freq != channelInfo.freq || force) {
 			if (wasapiInfo.freq != 0) StopExclusive(TRUE);
 
-			auto outputDevice = Settings::settings.GetOutputDevice();
+			auto outputDevice = GetDeviceIndex<true>(Settings::settings.GetOutputDevice());
 
 			// BASS and BASS_WASAPI use different device indices
 			if (outputDevice != -1) {

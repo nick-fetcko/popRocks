@@ -217,12 +217,12 @@ void Settings::SetLoopback(bool loopback) {
 	Save();
 }
 
-void Settings::SetOutputDevice(int outputDevice) {
+void Settings::SetOutputDevice(const std::string &outputDevice) {
 	this->outputDevice = outputDevice;
 	Save();
 }
 
-void Settings::SetInputDevice(int inputDevice) {
+void Settings::SetInputDevice(const std::string &inputDevice) {
 	this->inputDevice = inputDevice;
 	Save();
 }
@@ -365,9 +365,9 @@ const Node &operator>>(const Node &node, Settings &settings) {
 	if (node.has("loopback"))
 		node["loopback"]->get(settings.loopback);
 
-	if (node.has("outputDevice"))
+	if (node.has("outputDevice") && node["outputDevice"]->type() == NodeType::String)
 		node["outputDevice"]->get(settings.outputDevice);
-	if (node.has("inputDevice"))
+	if (node.has("inputDevice") && node["inputDevice"]->type() == NodeType::String)
 		node["inputDevice"]->get(settings.inputDevice);
 		
 	return node;

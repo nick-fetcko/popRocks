@@ -400,15 +400,17 @@ public:
 		if (ImGui::BeginMenu("Device Options")) {
 			if (ImGui::BeginMenu("Input device")) {
 				BASS_WASAPI_DEVICEINFO info;
-				auto inputDevice = Settings::settings.GetInputDevice();
+				const auto &inputDevice = Settings::settings.GetInputDevice();
 				for (int i = 0; BASS_WASAPI_GetDeviceInfo(i, &info); ++i) {
 					if ((info.flags & BASS_DEVICE_INPUT) && // device is an input device
 					   !(info.flags & BASS_DEVICE_LOOPBACK) && // device is NOT a loopback device
 						(info.flags & BASS_DEVICE_ENABLED)) { // and it is enabled
-						bool selected = (i == inputDevice) || (inputDevice == -1 && (info.flags & BASS_DEVICE_DEFAULT));
+						bool selected = 
+							(!inputDevice.empty() && strncmp(info.id, inputDevice.c_str(), std::min(strlen(info.id), inputDevice.size())) == 0) ||
+							 (inputDevice.empty() && (info.flags & BASS_DEVICE_DEFAULT));
 						if (ImGui::MenuItem(info.name, nullptr, &selected)) {
 							if (onInputDeviceChanged)
-								onInputDeviceChanged(i);
+								onInputDeviceChanged(std::string(info.id, info.id + strlen(info.id)));
 						}
 					}
 				}
@@ -424,14 +426,17 @@ public:
 
 			if (ImGui::BeginMenu("Output device")) {
 				BASS_DEVICEINFO info;
-				auto outputDevice = Settings::settings.GetOutputDevice();
+				const auto &outputDevice = Settings::settings.GetOutputDevice();
 				for (int i = 1; BASS_GetDeviceInfo(i, &info); ++i) {
 					if ((info.flags & BASS_DEVICE_ENABLED) && // // device is enabled
 						strlen(info.driver)) { // device has a driver (this excludes the "Default" device without dealing with i18n)
-						bool selected = (i == outputDevice) || (outputDevice == -1 && (info.flags & BASS_DEVICE_DEFAULT));
+						bool selected = 
+							(!outputDevice.empty() && strncmp(info.driver, outputDevice.c_str(), std::min(strlen(info.driver), outputDevice.size())) == 0) ||
+							 (outputDevice.empty() && (info.flags & BASS_DEVICE_DEFAULT));
+
 						if (ImGui::MenuItem(info.name, nullptr, &selected)) {
 							if (onOutputDeviceChanged)
-								onOutputDeviceChanged(i);
+								onOutputDeviceChanged(std::string(info.driver, info.driver + strlen(info.driver)));
 						}
 					}
 				}
@@ -597,8 +602,8 @@ public:
 	void SetOnListeningChanged(std::function<void(bool)> f) { onListeningChanged = f; }
 	void SetOnLoopbackChanged(std::function<void(bool)> f) { onLoopbackChanged = f; }
 
-	void SetOnOutputDeviceChanged(std::function<void(int)> f) { onOutputDeviceChanged = f; }
-	void SetOnInputDeviceChanged(std::function<void(int)> f) { onInputDeviceChanged = f; }
+	void SetOnOutputDeviceChanged(std::function<void(const std::string &)> f) { onOutputDeviceChanged = f; }
+	void SetOnInputDeviceChanged(std::function<void(const std::string &)> f) { onInputDeviceChanged = f; }
 
 	void SetOnResetWindow(std::function<void()> f) { onResetWindow = f; }
 
@@ -698,8 +703,8 @@ private:
 	std::function<void(int)> onFftSizeChanged;
 	std::function<void(bool)> onListeningChanged;
 	std::function<void(bool)> onLoopbackChanged;
-	std::function<void(int)> onOutputDeviceChanged;
-	std::function<void(int)> onInputDeviceChanged;
+	std::function<void(const std::string &)> onOutputDeviceChanged;
+	std::function<void(const std::string &)> onInputDeviceChanged;
 
 	std::function<void()> onQuit;
 	std::function<void()> onResetWindow;

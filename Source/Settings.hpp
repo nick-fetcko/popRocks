@@ -121,11 +121,11 @@ public:
 	const bool &GetLoopback() const { return loopback; }
 	void SetLoopback(bool loopback);
 
-	const int &GetOutputDevice() const { return outputDevice; }
-	void SetOutputDevice(int outputDevice);
+	const std::string &GetOutputDevice() const { return outputDevice; }
+	void SetOutputDevice(const std::string &outputDevice);
 
-	const int &GetInputDevice() const { return inputDevice; }
-	void SetInputDevice(int inputDevice);
+	const std::string &GetInputDevice() const { return inputDevice; }
+	void SetInputDevice(const std::string &inputDevice);
 
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
@@ -186,6 +186,6 @@ private:
 	bool listening = false;
 	bool loopback = false;
 
-	int outputDevice = -1;
-	int inputDevice = -1;
+	std::string outputDevice;
+	std::string inputDevice;
 };

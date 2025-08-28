@@ -160,6 +160,9 @@ private:
 	// FIXME: Put this somewhere else, but I don't want SDL as a dependency to OpenGL
 	void SaveAsPNG(const FramebufferObject &framebuffer, const std::filesystem::path &path);
 
+	template<bool Output>
+	int GetDeviceIndex(const std::string &device);
+
 	int windowWidth = 1920;
 	int windowHeight = 1080;
 
