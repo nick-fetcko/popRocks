@@ -804,7 +804,7 @@ void CApp::OnResize(int width, int height, float scale) {
 #if GUI
 	uiFbo = std::make_unique<MultisampledFramebufferObject>(windowWidth, windowHeight);
 
-	menu.OnResize(width, height);
+	menu.OnResize(width, height, scale);
 
 	// Needs 3 frames:
 	// 1 to layout the menu

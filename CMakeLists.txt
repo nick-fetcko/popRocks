@@ -58,6 +58,7 @@ set(_poprocks_cpp_headers
 	Source/FPSCounter.hpp
 	Source/Gaussian.hpp
 	Source/ID3V2.hpp
+	Source/imconfig.h
 	Source/LightPack.hpp
 	Source/LineRenderer.hpp
 	Source/Mappings.h
@@ -134,13 +135,13 @@ set(_imgui_dir
 	imgui)
 
 set(_imgui_headers
-	${_imgui_dir}/imconfig.h
 	${_imgui_dir}/imgui.h
 	${_imgui_dir}/imgui_internal.h
 	${_imgui_dir}/imstb_rectpack.h
 	${_imgui_dir}/imstb_textedit.h
 	${_imgui_dir}/imstb_truetype.h
 	${_imgui_dir}/misc/cpp/imgui_stdlib.h
+	${_imgui_dir}/misc/freetype/imgui_freetype.h
 	)
 
 set(_imgui_sources
@@ -150,6 +151,7 @@ set(_imgui_sources
 	${_imgui_dir}/imgui_tables.cpp
 	${_imgui_dir}/imgui_widgets.cpp
 	${_imgui_dir}/misc/cpp/imgui_stdlib.cpp
+	${_imgui_dir}/misc/freetype/imgui_freetype.cpp
 	)
 
 set(_imgui_backend_headers
@@ -194,6 +196,7 @@ target_include_directories(popRocks PUBLIC
 	${_beatroot_dir}
 	${_imgui_dir}
 	${_imgui_dir}/misc/cpp
+	${_imgui_dir}/misc/freetype
 	Serial/src
 	)
 target_compile_features(popRocks PUBLIC cxx_std_17)

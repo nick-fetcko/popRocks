@@ -4,6 +4,7 @@
 
 #include <imgui.h>
 #include <imgui_stdlib.h>
+#include <imgui_freetype.h>
 #include <nfd.hpp>
 
 #include "Utils/Utils.hpp"
@@ -23,8 +24,19 @@ public:
 		delete[] presetSelections;
 	}
 
-	void OnResize(int width, int height) {
+	void OnResize(int width, int height, float scale) {
 		this->width = width;
+		this->scale = scale;
+
+		if (!font) {
+			font = ImGui::GetIO().Fonts->AddFontFromFileTTF(
+				Utils::GetResource("KurintoSans-Rg.ttf").u8string().c_str(),
+				20
+			);
+		}
+		
+		ImGui::GetStyle().ScaleAllSizes(scale);
+		ImGui::GetStyle().FontScaleMain = scale;
 	}
 
 	float OnLoop(const LightPack &lightPack, AlbumArt &albumArt, Context &context) {
@@ -548,8 +560,8 @@ public:
 			ImGui::EndMenu();
 		}
 
-		if (auto height = ImGui::GetFrameHeight(); height != this->height) {
-			height = ImGui::GetFrameHeight();
+		if (auto height = ImGui::GetFrameHeight() * scale; height != this->height) {
+			this->height = height;
 			context.SetYOffset(height);
 		}
 
@@ -708,4 +720,7 @@ private:
 
 	std::function<void()> onQuit;
 	std::function<void()> onResetWindow;
+
+	float scale = 1.0f;
+	ImFont *font = nullptr;
 };
