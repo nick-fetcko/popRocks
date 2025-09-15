@@ -786,25 +786,32 @@ void CApp::OnResize(int width, int height, float scale) {
 	context->SetIdentity(glm::ortho(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f));
 	context->Apply();
 
-	context->With("rotate"_hash, [width, height](Context::Shader &shader) {
-		shader.program.Uniform2f("screenSize", width, height);
-	});
-
-	context->With("blur"_hash, [width, height](Context::Shader &shader) {
-		shader.program.Uniform2f("screenSize", width, height);
-	});
-
 	glViewport(0, 0, windowWidth, windowHeight);
 
 	renderer->OnResize(windowWidth, windowHeight);
 	controls.OnResize(windowWidth, windowHeight, *context, scale);
 
 	if (blur) {
-		blurFbo = std::make_unique<MultisampledFramebufferObject>(windowWidth, windowHeight);
-		lastFrame = std::make_unique<MultisampledFramebufferObject>(windowWidth, windowHeight);
+		maxDimension = std::sqrt(std::pow(windowWidth, 2) + std::pow(windowHeight, 2));
+
+		blurOffset = {
+			windowWidth - maxDimension,
+			windowHeight - maxDimension
+		};
+
+		blurFbo = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension);
+		lastFrame = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension);
 
 		context->With("blur"_hash, [this](Context::Shader &shader) {
 			shader.program.Uniform1f("intensity", blurIntensity);
+			shader.program.Uniform2f("screenSize", maxDimension, maxDimension);
+		});
+		context->With("rotate"_hash, [this](Context::Shader &shader) {
+			shader.program.Uniform2f("screenSize", maxDimension, maxDimension);
+		});
+	} else {
+		context->With("rotate"_hash, [width, height](Context::Shader &shader) {
+			shader.program.Uniform2f("screenSize", width, height);
 		});
 	}
 
@@ -983,8 +990,16 @@ void CApp::OnLoop(const Delta &time) {
 		}
 	}
 
+	GLint oldViewport[4];
+	auto identity = context->GetIdentity();
 	if (blur) {
 		blurFbo->Bind();
+
+		glGetIntegerv(GL_VIEWPORT, oldViewport);
+		auto projection = glm::ortho(0.0f, static_cast<float>(maxDimension), static_cast<float>(maxDimension), 0.0f);
+		context->SetIdentity(std::move(projection));
+		glViewport(0, 0, maxDimension, maxDimension);
+
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
@@ -999,7 +1014,7 @@ void CApp::OnLoop(const Delta &time) {
 		glEnable(GL_BLEND);
 	}
 	
-	renderer->Draw(time, frameCount, GetColor(), *context);
+	renderer->Draw(time, frameCount, GetColor(), blurOffset, *context);
 
 	if (blur) {
 		glDisable(GL_BLEND);
@@ -1012,8 +1027,14 @@ void CApp::OnLoop(const Delta &time) {
 		glClear(GL_COLOR_BUFFER_BIT);
 		blurFbo->Draw(0, 0, *context, lastFrame.get());
 		glEnable(GL_BLEND);
+
+		context->SetIdentity(std::move(identity));
+		glViewport(oldViewport[0], oldViewport[1], oldViewport[2], oldViewport[3]);
+		context->LoadIdentity();
 		
-		blurFbo->Draw(0, 0, *context);
+		blurFbo->Draw(blurOffset.x / 2.0f, blurOffset.y / 2.0f, *context);
+
+		context->LoadIdentity();
 	}
 
 	if (!shuttingDown)
@@ -1591,15 +1612,31 @@ void CApp::SetBlur(bool blur) {
 	logger.LogDebug("Turning blur ", blur ? "on" : "off");
 	Settings::settings.SetBlur(blur);
 	if (blur) {
-		blurFbo = std::make_unique<MultisampledFramebufferObject>(windowWidth, windowHeight);
-		lastFrame = std::make_unique<MultisampledFramebufferObject>(windowWidth, windowHeight);
+		maxDimension = std::sqrt(std::pow(windowWidth, 2) + std::pow(windowHeight, 2));
+
+		blurOffset = {
+			windowWidth - maxDimension,
+			windowHeight - maxDimension
+		};
+
+		blurFbo = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension);
+		lastFrame = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension);
 
 		context->With("blur"_hash, [this](Context::Shader &shader) {
 			shader.program.Uniform1f("intensity", blurIntensity);
 		});
+		context->With("rotate"_hash, [this](Context::Shader &shader) {
+			shader.program.Uniform2f("screenSize", maxDimension, maxDimension);
+		});
 	} else {
 		blurFbo.reset();
 		lastFrame.reset();
+
+		blurOffset = { 0, 0 };
+
+		context->With("rotate"_hash, [this](Context::Shader &shader) {
+			shader.program.Uniform2f("screenSize", windowWidth, windowHeight);
+		});
 	}
 }
 

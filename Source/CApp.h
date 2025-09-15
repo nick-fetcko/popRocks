@@ -294,4 +294,7 @@ private:
 
 	std::unique_ptr<MultisampledFramebufferObject> uiFbo;
 	double uiAccum = 0.0;
+
+	Vector<int, 2> blurOffset;
+	int maxDimension = 0;
 };

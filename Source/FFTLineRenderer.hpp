@@ -60,12 +60,13 @@ public:
 		const Delta &time,
 		float frameCount,
 		const Colour<float> &color,
+		const Vector<int, 2> &blurOffset,
 		Context &context
 	) override {
 		context.Use("basic"_hash);
 
 		SetColor(color, 1.0f, context);
-		context.Translate(0, windowHeight / 3.0f * 2.0f, 0);
+		context.Translate(-blurOffset.x / 2.0f, -blurOffset.y / 2.0f + windowHeight / 3.0f * 2.0f, 0);
 		// TODO: allow the oscilloscope / fft line to rotate
 		/*
 		glRotatef(

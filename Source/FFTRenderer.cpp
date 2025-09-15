@@ -246,7 +246,7 @@ void FFTRenderer::OnLoop(
 	vbo->Unbind();
 }
 
-void FFTRenderer::Draw(const Delta &time, float frameCount, const Colour<float> &color, Context &context) {
+void FFTRenderer::Draw(const Delta &time, float frameCount, const Colour<float> &color, const Vector<int, 2> &blurOffset, Context &context) {
 	context.Use("rotate"_hash);
 	context.LoadIdentity();
 

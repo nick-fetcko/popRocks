@@ -79,6 +79,7 @@ public:
 		const Delta &time,
 		float frameCount,
 		const Colour<float> &color,
+		const Vector<int, 2> &blurOffset,
 		Context &context
 	) = 0;
 	virtual void Reset() = 0;
