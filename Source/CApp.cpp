@@ -272,7 +272,14 @@ int CApp::GetDeviceIndex(const std::string &device) {
 
 	// Reset to default device if we can't find
 	// the selected device anymore
-	if (!found) index = -1;
+	if (!found) {
+		index = -1;
+
+		if constexpr (Output)
+			Settings::settings.SetOutputDevice("");
+		else
+			Settings::settings.SetInputDevice("");
+	}
 
 	return index;
 }
