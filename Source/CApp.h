@@ -158,7 +158,22 @@ private:
 	inline bool SeekToMousePos(const Vector2i &mousePos, bool ignoreY = false);
 
 	// FIXME: Put this somewhere else, but I don't want SDL as a dependency to OpenGL
-	void SaveAsPNG(const FramebufferObject &framebuffer, const std::filesystem::path &path);
+	template<bool Multisampled>
+	void SaveAsPNG(const Framebuffer<Multisampled> &framebuffer, const std::filesystem::path &path) {
+		auto surface = SDL_CreateRGBSurface(
+			0,
+			framebuffer.GetWidth(),
+			framebuffer.GetHeight(),
+			32,
+			0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000
+		);
+
+		auto pixels = framebuffer.GetBitmap();
+		memcpy(surface->pixels, pixels.data(), framebuffer.GetWidth() * framebuffer.GetHeight() * 4);
+		auto ret = IMG_SavePNG(surface, path.u8string().c_str());
+
+		SDL_FreeSurface(surface);
+	}
 
 	template<bool Output>
 	int GetDeviceIndex(const std::string &device);

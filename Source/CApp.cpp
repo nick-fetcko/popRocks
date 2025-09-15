@@ -831,22 +831,6 @@ inline void CApp::AdvanceToNextTrack() {
 	advanceOnNextLoop = true;
 }
 
-void CApp::SaveAsPNG(const FramebufferObject &framebuffer, const std::filesystem::path &path) {
-	auto surface = SDL_CreateRGBSurface(
-		0,
-		windowWidth,
-		windowHeight,
-		32,
-		0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000
-	);
-
-	auto pixels = framebuffer.GetBitmap();
-	memcpy(surface->pixels, pixels.data(), windowWidth * windowHeight * 4);
-	auto ret = IMG_SavePNG(surface, path.u8string().c_str());
-
-	SDL_FreeSurface(surface);
-}
-
 void CApp::OnLoop(const Delta &time) {
 	Logger::ProcessCommands();
 
