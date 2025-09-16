@@ -227,6 +227,16 @@ void Settings::SetInputDevice(const std::string &inputDevice) {
 	Save();
 }
 
+void Settings::SetEffect(const std::string &effect) {
+	this->effect = effect;
+	Save();
+}
+
+void Settings::SetEffectIntensity(float effectIntensity) {
+	this->effectIntensity = effectIntensity;
+	Save();
+}
+
 void Settings::Save() {
 	if (auto path = GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
@@ -369,6 +379,11 @@ const Node &operator>>(const Node &node, Settings &settings) {
 		node["outputDevice"]->get(settings.outputDevice);
 	if (node.has("inputDevice") && node["inputDevice"]->type() == NodeType::String)
 		node["inputDevice"]->get(settings.inputDevice);
+
+	if (node.has("effect"))
+		node["effect"]->get(settings.effect);
+	if (node.has("effectIntensity"))
+		node["effectIntensity"]->get(settings.effectIntensity);
 		
 	return node;
 }
@@ -406,6 +421,8 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["loopback"]->set(settings.loopback);
 	node["outputDevice"]->set(settings.outputDevice);
 	node["inputDevice"]->set(settings.inputDevice);
+	node["effect"]->set(settings.effect);
+	node["effectIntensity"]->set(settings.effectIntensity);
 
 	return node;
 }

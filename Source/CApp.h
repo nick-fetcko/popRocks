@@ -6,6 +6,7 @@
 #include <vector>
 #include <optional>
 #include <thread>
+#include <random>
 
 #include <string>
 #include <bass.h>
@@ -178,6 +179,8 @@ private:
 	template<bool Output>
 	int GetDeviceIndex(const std::string &device);
 
+	inline void CacheBlurUniforms(Context::Shader &shader);
+
 	int windowWidth = 1920;
 	int windowHeight = 1080;
 
@@ -297,4 +300,6 @@ private:
 
 	Vector<int, 2> blurOffset;
 	int maxDimension = 0;
+
+	std::mt19937 prng;
 };

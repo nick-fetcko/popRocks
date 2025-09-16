@@ -208,6 +208,49 @@ public:
 
 			ImGui::Separator();
 
+			if (ImGui::BeginMenu("Effect")) {
+				auto files = Utils::GetFiles(Utils::GetResourceFolder() / "Effects");
+
+				for (const auto &file : files) {
+					auto effectName = file.stem().u8string();
+					effectName = effectName.substr(effectName.find_first_of('-') + 1);
+
+					std::ifstream inFile(file, std::ios::in);
+					std::string line;
+					std::size_t lineNumber = 0;
+					std::string friendlyName;
+					while (std::getline(inFile, line) && ++lineNumber <= 3 /* We expect a name comment within the first 3 lines */) {
+						if (line.find("// Name:") == 0) {
+							if (auto split = Utils::Split(line, ':'); split.size() == 2) {
+								Utils::ltrim(split[1]);
+								friendlyName = split[1];
+								break;
+							}
+						}
+					}
+
+					bool selected = Settings::settings.GetEffect() == effectName || Settings::settings.GetEffect() == friendlyName;
+					if (ImGui::MenuItem(friendlyName.empty() ? effectName.c_str() : friendlyName.c_str(), nullptr, &selected)) {
+						if (onEffectChanged)
+							onEffectChanged(effectName);
+					}
+				}
+
+				ImGui::EndMenu();
+			}
+
+			if (ImGui::BeginMenu("Effect Settings", Settings::settings.GetEffect() != "noeffect")) {
+				effectIntensity = Settings::settings.GetEffectIntensity();
+
+				if (ImGui::SliderFloat("Intensity", &effectIntensity, 1.0f, 25.0f, "%.2f")) {
+					if (onEffectIntensityChanged)
+						onEffectIntensityChanged(effectIntensity);
+				}
+				ImGui::EndMenu();
+			}
+
+			ImGui::Separator();
+
 			radius = Settings::settings.GetRadius();
 			if (ImGui::SliderInt("Album art radius", &radius, 50, 720)) {
 				if (onRadiusChanged)
@@ -617,6 +660,9 @@ public:
 	void SetOnOutputDeviceChanged(std::function<void(const std::string &)> f) { onOutputDeviceChanged = f; }
 	void SetOnInputDeviceChanged(std::function<void(const std::string &)> f) { onInputDeviceChanged = f; }
 
+	void SetOnEffectChanged(std::function<void(const std::string &)> f) { onEffectChanged = f; }
+	void SetOnEffectIntensityChanged(std::function<void(float)> f) { onEffectIntensityChanged = f; }
+
 	void SetOnResetWindow(std::function<void()> f) { onResetWindow = f; }
 
 	void SetOnQuit(std::function<void()> f) { onQuit = f; }
@@ -683,6 +729,8 @@ private:
 	bool listening = Settings::settings.GetListening();
 	bool loopback = Settings::settings.GetLoopback();
 
+	float effectIntensity = Settings::settings.GetEffectIntensity();
+
 	int minPercentage = Settings::settings.GetColorSelection().minPercentage * 100;
 	int minHueSeparation = Settings::settings.GetColorSelection().minHueSeparation;
 	float minValueSeparation = Settings::settings.GetColorSelection().minValueSeparation;
@@ -717,6 +765,8 @@ private:
 	std::function<void(bool)> onLoopbackChanged;
 	std::function<void(const std::string &)> onOutputDeviceChanged;
 	std::function<void(const std::string &)> onInputDeviceChanged;
+	std::function<void(const std::string &)> onEffectChanged;
+	std::function<void(float)> onEffectIntensityChanged;
 
 	std::function<void()> onQuit;
 	std::function<void()> onResetWindow;

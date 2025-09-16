@@ -127,6 +127,12 @@ public:
 	const std::string &GetInputDevice() const { return inputDevice; }
 	void SetInputDevice(const std::string &inputDevice);
 
+	const std::string &GetEffect() const { return effect; }
+	void SetEffect(const std::string &effect);
+
+	const float &GetEffectIntensity() const { return effectIntensity; }
+	void SetEffectIntensity(float effectIntensity);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -188,4 +194,8 @@ private:
 
 	std::string outputDevice;
 	std::string inputDevice;
+
+	std::string effect = "noeffect";
+
+	float effectIntensity = 1.0f;
 };

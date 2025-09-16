@@ -1,4 +1,5 @@
 #version 330 core
+
 in vec2 texCoords;
 out vec4 outColor;
 
@@ -7,10 +8,14 @@ uniform float timeDelta;
 uniform sampler2DMS texture;
 uniform vec2 screenSize;
 
+vec2 applyEffect(vec2 coords);
+
 void main() {
+    vec2 effected = applyEffect(texCoords);
+
     ivec2 coords = ivec2(
-        screenSize.x * texCoords.x,
-        screenSize.y * texCoords.y
+        screenSize.x * texCoords.x + effected.x,
+        screenSize.y * texCoords.y + effected.y
     );
 
     vec4 sample1 = texelFetch(texture, coords, 0);

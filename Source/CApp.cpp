@@ -117,7 +117,7 @@ DWORD CALLBACK OutputWasapiProc(void *buffer, DWORD length, void *user) {
 // =====================================================
 // ======================= CApp ========================
 // =====================================================
-CApp::CApp() : albumArt(context), controls(&albumArt), circleLine(12.0f) {
+CApp::CApp() : albumArt(context), controls(&albumArt), circleLine(12.0f), prng(time(nullptr)) {
 	renderer = RendererFactory::Build(
 		Settings::settings.GetRenderer(),
 		&dynamicGain,
@@ -282,6 +282,15 @@ int CApp::GetDeviceIndex(const std::string &device) {
 	}
 
 	return index;
+}
+
+inline void CApp::CacheBlurUniforms(Context::Shader &shader) {
+	shader.program.CacheUniformLocation("timeDelta");
+	shader.program.CacheUniformLocation("intensity");
+	shader.program.CacheUniformLocation("screenSize");
+	shader.program.CacheUniformLocation("randomX");
+	shader.program.CacheUniformLocation("randomY");
+	shader.program.CacheUniformLocation("effectIntensity");
 }
 
 void CApp::OnInit() {
@@ -569,6 +578,36 @@ void CApp::OnInit() {
 			if (listening && !Settings::settings.GetLoopback())
 				Listen();
 		});
+		menu.SetOnEffectChanged([this](const std::string &effect) {
+			Settings::settings.SetEffect(effect);
+
+			this->context->RemoveShader("blur"_hash);
+
+			auto blurShader = this->context->AddShader(
+				Utils::GetResource("vertex-blur.glsl"),
+				std::vector<std::filesystem::path> {
+					Utils::GetResource("fragment-blur.glsl"),
+					Utils::GetResource(std::string("Effects/fragment-") + Settings::settings.GetEffect() + ".glsl")
+				},
+				"blur"_hash
+			);
+
+			blurShader->program.Use();
+			blurShader->program.CacheUniformLocation("projection");
+
+			CacheBlurUniforms(*blurShader);
+
+			blurShader->program.Uniform1f("intensity", blurIntensity);
+			blurShader->program.Uniform2f("screenSize", maxDimension, maxDimension);
+			blurShader->program.Uniform1f("effectIntensity", Settings::settings.GetEffectIntensity());
+		});
+		menu.SetOnEffectIntensityChanged([this](float effectIntensity) {
+			Settings::settings.SetEffectIntensity(effectIntensity);
+
+			this->context->With("blur"_hash, [effectIntensity](Context::Shader &shader) {
+				shader.program.Uniform1f("effectIntensity", effectIntensity);
+			});
+		});
 		menu.SetOnResetWindow([this] {
 			Settings::settings.SetWindowWidth(1920);
 			Settings::settings.SetWindowHeight(1080);
@@ -625,7 +664,10 @@ void CApp::OnInit() {
 	);
 	context->AddShader(
 		Utils::GetResource("vertex-blur.glsl"),
-		Utils::GetResource("fragment-blur.glsl"),
+		std::vector<std::filesystem::path>{ 
+			Utils::GetResource("fragment-blur.glsl"),
+			Utils::GetResource(std::string("Effects/fragment-") + Settings::settings.GetEffect() + ".glsl")
+		},
 		"blur"_hash
 	);
 
@@ -640,9 +682,9 @@ void CApp::OnInit() {
 			shader.program.CacheUniformLocation("color");
 			shader.program.Uniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
 		} else {
-			shader.program.CacheUniformLocation("timeDelta");
-			shader.program.CacheUniformLocation("intensity");
-			shader.program.CacheUniformLocation("screenSize");
+			CacheBlurUniforms(shader);
+
+			shader.program.Uniform1f("effectIntensity", Settings::settings.GetEffectIntensity());
 		}
 
 		if (hash == "rotate"_hash) {
@@ -1008,6 +1050,8 @@ void CApp::OnLoop(const Delta &time) {
 		
 		context->Use("blur"_hash);
 		context->GetShaderProgram().Uniform1f("timeDelta", (playing || listening) ? time.change.AsSeconds() : 0.0f);
+		context->GetShaderProgram().Uniform1f("randomX", prng() / static_cast<float>(prng.max()));
+		context->GetShaderProgram().Uniform1f("randomY", prng() / static_cast<float>(prng.max()));
 
 		lastFrame->DrawMultisampled(0, 0, *context);
 
