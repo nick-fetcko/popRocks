@@ -40,8 +40,10 @@ public:
 			targetAlpha = 0.0f;
 		}
 
-		if (fadeCallback)
+		if (fadeCallback && (!lastFade || *lastFade != in)) {
 			fadeCallback(in);
+			lastFade = in;
+		}
 	}
 
 	void SetFadeCallback(std::function<void(bool)> &&callback) { 
@@ -59,4 +61,6 @@ protected:
 	std::chrono::system_clock::time_point lastEventTime = std::chrono::system_clock::now();
 
 	std::function<void(bool)> fadeCallback;
+
+	std::optional<bool> lastFade = std::nullopt;
 };

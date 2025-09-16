@@ -44,6 +44,7 @@ int main(int argc, char *argv[]) {
 
 #if GUI
 	auto &io = ImGui::GetIO();
+	io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
 #endif
 	
 	while(running) {

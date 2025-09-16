@@ -743,8 +743,7 @@ void CApp::OnInit() {
 	controls.OnInit(windowWidth, windowHeight, *context, scale);
 
 	controls.SetFadeCallback([this](bool in) {
-		if (SDL_GetWindowFlags(sdlWindow) & SDL_WINDOW_FULLSCREEN_DESKTOP)
-			SDL_ShowCursor(in ? SDL_ENABLE : SDL_DISABLE);
+		SDL_ShowCursor(in ? SDL_ENABLE : SDL_DISABLE);
 	});
 
 	spindle.OnInit(albumArt.GetRadius() / SpindleSize);
