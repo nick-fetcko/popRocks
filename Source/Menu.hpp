@@ -240,7 +240,6 @@ public:
 			}
 
 			if (ImGui::BeginMenu("Effect Settings")) {
-
 				if (Settings::settings.GetEffect() != "noeffect") {
 					effectIntensity = Settings::settings.GetEffectIntensity();
 
@@ -261,6 +260,13 @@ public:
 					if (onEffectYOffsetChanged)
 						onEffectYOffsetChanged(effectYOffset);
 				}
+
+				effectRadiation = Settings::settings.GetEffectRadiation();
+				if (ImGui::SliderFloat("Radiation", &effectRadiation, -10.0f, 10.0f, "%.2f")) {
+					if (onEffectRadiationChanged)
+						onEffectRadiationChanged(effectRadiation);
+				}
+
 				ImGui::EndMenu();
 			}
 
@@ -679,6 +685,7 @@ public:
 	void SetOnEffectIntensityChanged(std::function<void(float)> f) { onEffectIntensityChanged = f; }
 	void SetOnEffectXOffsetChanged(std::function<void(float)> f) { onEffectXOffsetChanged = f; }
 	void SetOnEffectYOffsetChanged(std::function<void(float)> f) { onEffectYOffsetChanged = f; }
+	void SetOnEffectRadiationChanged(std::function<void(float)> f) { onEffectRadiationChanged = f; }
 
 	void SetOnResetWindow(std::function<void()> f) { onResetWindow = f; }
 
@@ -749,6 +756,7 @@ private:
 	float effectIntensity = Settings::settings.GetEffectIntensity();
 	float effectXOffset = Settings::settings.GetEffectXOffset();
 	float effectYOffset = Settings::settings.GetEffectYOffset();
+	float effectRadiation = Settings::settings.GetEffectRadiation();
 
 	int minPercentage = Settings::settings.GetColorSelection().minPercentage * 100;
 	int minHueSeparation = Settings::settings.GetColorSelection().minHueSeparation;
@@ -788,6 +796,7 @@ private:
 	std::function<void(float)> onEffectIntensityChanged;
 	std::function<void(float)> onEffectXOffsetChanged;
 	std::function<void(float)> onEffectYOffsetChanged;
+	std::function<void(float)> onEffectRadiationChanged;
 
 	std::function<void()> onQuit;
 	std::function<void()> onResetWindow;

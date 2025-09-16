@@ -2,12 +2,15 @@
 
 // Name: Smoke
 
+#define M_PI       3.14159265358979323846   // pi
+
 uniform float randomX;
 uniform float randomY;
 
 uniform float effectIntensity;
 uniform float effectXOffset;
 uniform float effectYOffset;
+uniform float effectRadiation;
 
 // From https://stackoverflow.com/a/17479300
 uint hash( uint x ) {
@@ -45,8 +48,12 @@ float random( vec3  v ) { return floatConstruct(hash(floatBitsToUint(v))); }
 float random( vec4  v ) { return floatConstruct(hash(floatBitsToUint(v))); }
 
 vec2 applyEffect(vec2 coords) {
+    vec2 centered = vec2((coords.x - 0.5) * 2, (coords.y - 0.5) * 2);
+
+    float angle = atan(centered.y, centered.x) - M_PI;
+
     return vec2(
-        random(vec3(coords, randomX)) * effectIntensity + effectXOffset,
-        random(vec3(coords, randomY)) * effectIntensity + effectYOffset
+        random(vec3(coords, randomX)) * effectIntensity + effectXOffset + cos(angle) * effectRadiation,
+        random(vec3(coords, randomY)) * effectIntensity + effectYOffset + sin(angle) * effectRadiation
     );
 }

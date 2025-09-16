@@ -293,6 +293,7 @@ inline void CApp::CacheBlurUniforms(Context::Shader &shader) {
 	shader.program.CacheUniformLocation("effectIntensity");
 	shader.program.CacheUniformLocation("effectXOffset");
 	shader.program.CacheUniformLocation("effectYOffset");
+	shader.program.CacheUniformLocation("effectRadiation");
 }
 
 void CApp::OnInit() {
@@ -604,6 +605,7 @@ void CApp::OnInit() {
 			blurShader->program.Uniform1f("effectIntensity", Settings::settings.GetEffectIntensity());
 			blurShader->program.Uniform1f("effectXOffset", Settings::settings.GetEffectXOffset());
 			blurShader->program.Uniform1f("effectYOffset", Settings::settings.GetEffectYOffset());
+			blurShader->program.Uniform1f("effectRadiation", Settings::settings.GetEffectRadiation());
 		});
 		menu.SetOnEffectIntensityChanged([this](float effectIntensity) {
 			Settings::settings.SetEffectIntensity(effectIntensity);
@@ -624,6 +626,13 @@ void CApp::OnInit() {
 
 			this->context->With("blur"_hash, [effectYOffset](Context::Shader &shader) {
 				shader.program.Uniform1f("effectYOffset", effectYOffset);
+			});
+		});
+		menu.SetOnEffectRadiationChanged([this](float effectRadiation) {
+			Settings::settings.SetEffectRadiation(effectRadiation);
+
+			this->context->With("blur"_hash, [effectRadiation](Context::Shader &shader) {
+				shader.program.Uniform1f("effectRadiation", effectRadiation);
 			});
 		});
 		menu.SetOnResetWindow([this] {
@@ -705,6 +714,7 @@ void CApp::OnInit() {
 			shader.program.Uniform1f("effectIntensity", Settings::settings.GetEffectIntensity());
 			shader.program.Uniform1f("effectXOffset", Settings::settings.GetEffectXOffset());
 			shader.program.Uniform1f("effectYOffset", Settings::settings.GetEffectYOffset());
+			shader.program.Uniform1f("effectRadiation", Settings::settings.GetEffectRadiation());
 		}
 
 		if (hash == "rotate"_hash) {

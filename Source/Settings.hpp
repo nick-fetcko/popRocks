@@ -139,6 +139,9 @@ public:
 	const float &GetEffectYOffset() const { return effectYOffset; }
 	void SetEffectYOffset(float effectYOffset);
 
+	const float &GetEffectRadiation() const { return effectRadiation; }
+	void SetEffectRadiation(float effectRadiation);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -206,4 +209,5 @@ private:
 	float effectIntensity = 1.0f;
 	float effectXOffset = 0.0f;
 	float effectYOffset = 0.0f;
+	float effectRadiation = 0.0f;
 };
