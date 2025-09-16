@@ -237,6 +237,16 @@ void Settings::SetEffectIntensity(float effectIntensity) {
 	Save();
 }
 
+void Settings::SetEffectXOffset(float effectXOffset) {
+	this->effectXOffset = effectXOffset;
+	Save();
+}
+
+void Settings::SetEffectYOffset(float effectYOffset) {
+	this->effectYOffset = effectYOffset;
+	Save();
+}
+
 void Settings::Save() {
 	if (auto path = GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
@@ -384,6 +394,10 @@ const Node &operator>>(const Node &node, Settings &settings) {
 		node["effect"]->get(settings.effect);
 	if (node.has("effectIntensity"))
 		node["effectIntensity"]->get(settings.effectIntensity);
+	if (node.has("effectXOffset"))
+		node["effectXOffset"]->get(settings.effectXOffset);
+	if (node.has("effectYOffset"))
+		node["effectYOffset"]->get(settings.effectYOffset);
 		
 	return node;
 }
@@ -423,6 +437,8 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["inputDevice"]->set(settings.inputDevice);
 	node["effect"]->set(settings.effect);
 	node["effectIntensity"]->set(settings.effectIntensity);
+	node["effectXOffset"]->set(settings.effectXOffset);
+	node["effectYOffset"]->set(settings.effectYOffset);
 
 	return node;
 }

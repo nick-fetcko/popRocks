@@ -291,6 +291,8 @@ inline void CApp::CacheBlurUniforms(Context::Shader &shader) {
 	shader.program.CacheUniformLocation("randomX");
 	shader.program.CacheUniformLocation("randomY");
 	shader.program.CacheUniformLocation("effectIntensity");
+	shader.program.CacheUniformLocation("effectXOffset");
+	shader.program.CacheUniformLocation("effectYOffset");
 }
 
 void CApp::OnInit() {
@@ -600,12 +602,28 @@ void CApp::OnInit() {
 			blurShader->program.Uniform1f("intensity", blurIntensity);
 			blurShader->program.Uniform2f("screenSize", maxDimension, maxDimension);
 			blurShader->program.Uniform1f("effectIntensity", Settings::settings.GetEffectIntensity());
+			blurShader->program.Uniform1f("effectXOffset", Settings::settings.GetEffectXOffset());
+			blurShader->program.Uniform1f("effectYOffset", Settings::settings.GetEffectYOffset());
 		});
 		menu.SetOnEffectIntensityChanged([this](float effectIntensity) {
 			Settings::settings.SetEffectIntensity(effectIntensity);
 
 			this->context->With("blur"_hash, [effectIntensity](Context::Shader &shader) {
 				shader.program.Uniform1f("effectIntensity", effectIntensity);
+			});
+		});
+		menu.SetOnEffectXOffsetChanged([this](float effectXOffset) {
+			Settings::settings.SetEffectXOffset(effectXOffset);
+
+			this->context->With("blur"_hash, [effectXOffset](Context::Shader &shader) {
+				shader.program.Uniform1f("effectXOffset", effectXOffset);
+			});
+		});
+		menu.SetOnEffectYOffsetChanged([this](float effectYOffset) {
+			Settings::settings.SetEffectYOffset(effectYOffset);
+
+			this->context->With("blur"_hash, [effectYOffset](Context::Shader &shader) {
+				shader.program.Uniform1f("effectYOffset", effectYOffset);
 			});
 		});
 		menu.SetOnResetWindow([this] {
@@ -685,6 +703,8 @@ void CApp::OnInit() {
 			CacheBlurUniforms(shader);
 
 			shader.program.Uniform1f("effectIntensity", Settings::settings.GetEffectIntensity());
+			shader.program.Uniform1f("effectXOffset", Settings::settings.GetEffectXOffset());
+			shader.program.Uniform1f("effectYOffset", Settings::settings.GetEffectYOffset());
 		}
 
 		if (hash == "rotate"_hash) {

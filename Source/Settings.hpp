@@ -133,6 +133,12 @@ public:
 	const float &GetEffectIntensity() const { return effectIntensity; }
 	void SetEffectIntensity(float effectIntensity);
 
+	const float &GetEffectXOffset() const { return effectXOffset; }
+	void SetEffectXOffset(float effectXOffset);
+
+	const float &GetEffectYOffset() const { return effectYOffset; }
+	void SetEffectYOffset(float effectYOffset);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -198,4 +204,6 @@ private:
 	std::string effect = "noeffect";
 
 	float effectIntensity = 1.0f;
+	float effectXOffset = 0.0f;
+	float effectYOffset = 0.0f;
 };

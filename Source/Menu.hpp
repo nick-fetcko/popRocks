@@ -239,12 +239,27 @@ public:
 				ImGui::EndMenu();
 			}
 
-			if (ImGui::BeginMenu("Effect Settings", Settings::settings.GetEffect() != "noeffect")) {
-				effectIntensity = Settings::settings.GetEffectIntensity();
+			if (ImGui::BeginMenu("Effect Settings")) {
 
-				if (ImGui::SliderFloat("Intensity", &effectIntensity, 1.0f, 25.0f, "%.2f")) {
-					if (onEffectIntensityChanged)
-						onEffectIntensityChanged(effectIntensity);
+				if (Settings::settings.GetEffect() != "noeffect") {
+					effectIntensity = Settings::settings.GetEffectIntensity();
+
+					if (ImGui::SliderFloat("Intensity", &effectIntensity, 1.0f, 25.0f, "%.2f")) {
+						if (onEffectIntensityChanged)
+							onEffectIntensityChanged(effectIntensity);
+					}
+				}
+
+				effectXOffset = Settings::settings.GetEffectXOffset();
+				if (ImGui::SliderFloat("X Offset", &effectXOffset, -10.0f, 10.0f, "%.2f")) {
+					if (onEffectXOffsetChanged)
+						onEffectXOffsetChanged(effectXOffset);
+				}
+
+				effectYOffset = Settings::settings.GetEffectYOffset();
+				if (ImGui::SliderFloat("Y Offset", &effectYOffset, -10.0f, 10.0f, "%.2f")) {
+					if (onEffectYOffsetChanged)
+						onEffectYOffsetChanged(effectYOffset);
 				}
 				ImGui::EndMenu();
 			}
@@ -662,6 +677,8 @@ public:
 
 	void SetOnEffectChanged(std::function<void(const std::string &)> f) { onEffectChanged = f; }
 	void SetOnEffectIntensityChanged(std::function<void(float)> f) { onEffectIntensityChanged = f; }
+	void SetOnEffectXOffsetChanged(std::function<void(float)> f) { onEffectXOffsetChanged = f; }
+	void SetOnEffectYOffsetChanged(std::function<void(float)> f) { onEffectYOffsetChanged = f; }
 
 	void SetOnResetWindow(std::function<void()> f) { onResetWindow = f; }
 
@@ -730,6 +747,8 @@ private:
 	bool loopback = Settings::settings.GetLoopback();
 
 	float effectIntensity = Settings::settings.GetEffectIntensity();
+	float effectXOffset = Settings::settings.GetEffectXOffset();
+	float effectYOffset = Settings::settings.GetEffectYOffset();
 
 	int minPercentage = Settings::settings.GetColorSelection().minPercentage * 100;
 	int minHueSeparation = Settings::settings.GetColorSelection().minHueSeparation;
@@ -767,6 +786,8 @@ private:
 	std::function<void(const std::string &)> onInputDeviceChanged;
 	std::function<void(const std::string &)> onEffectChanged;
 	std::function<void(float)> onEffectIntensityChanged;
+	std::function<void(float)> onEffectXOffsetChanged;
+	std::function<void(float)> onEffectYOffsetChanged;
 
 	std::function<void()> onQuit;
 	std::function<void()> onResetWindow;

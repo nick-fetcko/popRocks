@@ -6,6 +6,8 @@ uniform float randomX;
 uniform float randomY;
 
 uniform float effectIntensity;
+uniform float effectXOffset;
+uniform float effectYOffset;
 
 // From https://stackoverflow.com/a/17479300
 uint hash( uint x ) {
@@ -44,7 +46,7 @@ float random( vec4  v ) { return floatConstruct(hash(floatBitsToUint(v))); }
 
 vec2 applyEffect(vec2 coords) {
     return vec2(
-        random(vec3(coords, randomX)) * effectIntensity,
-        random(vec3(coords, randomY)) * effectIntensity
+        random(vec3(coords, randomX)) * effectIntensity + effectXOffset,
+        random(vec3(coords, randomY)) * effectIntensity + effectYOffset
     );
 }
