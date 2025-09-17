@@ -300,6 +300,7 @@ private:
 
 	Vector<int, 2> blurOffset;
 	int maxDimension = 0;
+	float blurOpacity = Settings::settings.GetBlurOpacity();
 
 	std::mt19937 prng;
 };

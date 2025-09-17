@@ -407,6 +407,11 @@ void CApp::OnInit() {
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
+		menu.SetOnBlurOpacityChanged([this](float blurOpacity) {
+			Settings::settings.SetBlurOpacity(blurOpacity);
+
+			this->blurOpacity = blurOpacity;
+		});
 		menu.SetOnRotatingChanged([this](bool rotate) {
 			SetRotating(rotate);
 			ImGui::SetWindowFocus(nullptr);
@@ -1085,11 +1090,13 @@ void CApp::OnLoop(const Delta &time) {
 		lastFrame->DrawMultisampled(0, 0, *context);
 
 		glEnable(GL_BLEND);
-	}
-	
-	renderer->Draw(time, frameCount, GetColor(), blurOffset, *context);
 
-	if (blur) {
+		context->With("rotate"_hash, [this](Context::Shader &shader) {
+			shader.program.Uniform2f("screenSize", maxDimension, maxDimension);
+		});
+
+		renderer->Draw(time, frameCount, GetColor(), blurOffset, *context);
+
 		glDisable(GL_BLEND);
 
 		context->LoadIdentity();
@@ -1105,10 +1112,17 @@ void CApp::OnLoop(const Delta &time) {
 		glViewport(oldViewport[0], oldViewport[1], oldViewport[2], oldViewport[3]);
 		context->LoadIdentity();
 		
+		context->Color(1.0f, 1.0f, 1.0f, blurOpacity);
 		blurFbo->Draw(blurOffset.x / 2.0f, blurOffset.y / 2.0f, *context);
 
 		context->LoadIdentity();
+
+		context->With("rotate"_hash, [this](Context::Shader &shader) {
+			shader.program.Uniform2f("screenSize", windowWidth, windowHeight);
+		});
 	}
+
+	renderer->Draw(time, frameCount, GetColor(), {0, 0}, *context);
 
 	if (!shuttingDown)
 		lightPack.OnLoop((albumArt.Loaded() && !overrideColor) ? albumArt.GetColor() : visColor);

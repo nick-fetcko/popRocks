@@ -206,6 +206,14 @@ public:
 			}
 			ImGui::EndDisabled();
 
+			blurOpacity = Settings::settings.GetBlurOpacity();
+			ImGui::BeginDisabled(!blur);
+			if (ImGui::SliderFloat("Blur opacity", &blurOpacity, 0.0f, 1.0f, "%.2f")) {
+				if (onBlurOpacityChanged)
+					onBlurOpacityChanged(blurOpacity);
+			}
+			ImGui::EndDisabled();
+
 			ImGui::Separator();
 
 			if (ImGui::BeginMenu("Effect")) {
@@ -654,6 +662,7 @@ public:
 
 	void SetOnPulseChanged(std::function<void(bool)> f) { onPulseChanged = f; }
 	void SetOnBlurIntensityChanged(std::function<void(float)> f) { onBlurIntensityChanged = f; }
+	void SetOnBlurOpacityChanged(std::function<void(float)> f) { onBlurOpacityChanged = f; }
 	void SetOnRpmChanged(std::function<void(float)> f) { onRpmChanged = f; }
 
 	void SetOnBufferSizeChanged(std::function<void(int)> f) { onBufferSizeChanged = f; }
@@ -722,6 +731,7 @@ private:
 	float rpm = Settings::settings.GetRotationSpeed() / (360.0f / 60.0f);
 
 	float blurIntensity = Settings::settings.GetBlurIntensity();
+	float blurOpacity = Settings::settings.GetBlurOpacity();
 
 	int bufferSize = Settings::settings.GetBufferLength();
 
@@ -775,6 +785,7 @@ private:
 	std::function<void(const std::string &)> onLightPackMappingChanged;
 	std::function<void(const std::string &)> onLightPackFocusAreaChanged;
 	std::function<void(float)> onBlurIntensityChanged;
+	std::function<void(float)> onBlurOpacityChanged;
 	std::function<void(float)> onRpmChanged;
 	std::function<void(int)> onBufferSizeChanged;
 	std::function<void(float)> onDecayTimeChanged;

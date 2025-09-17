@@ -109,6 +109,9 @@ public:
 	const float &GetBlurIntensity() const { return blurIntensity; }
 	void SetBlurIntensity(float blurIntensity);
 
+	const float &GetBlurOpacity() const { return blurOpacity; }
+	void SetBlurOpacity(float blurOpacity);
+
 	const bool &GetCurrentSongVisible() const { return currentSongVisible; }
 	void SetCurrentSongVisible(bool currentSongVisible);
 
@@ -189,6 +192,7 @@ private:
 
 	bool blur = false;
 	float blurIntensity = 0.5f;
+	float blurOpacity = 1.0f;
 
 	std::string lightPackVisualizationType = "intensity";
 	std::string lightPackMapping = "default";

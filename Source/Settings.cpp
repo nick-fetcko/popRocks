@@ -195,6 +195,11 @@ void Settings::SetBlurIntensity(float blurIntensity) {
 	Save();
 }
 
+void Settings::SetBlurOpacity(float blurOpacity) {
+	this->blurOpacity = blurOpacity;
+	Save();
+}
+
 void Settings::SetCurrentSongVisible(bool currentSongVisible) {
 	this->currentSongVisible = currentSongVisible;
 	Save();
@@ -378,6 +383,8 @@ const Node &operator>>(const Node &node, Settings &settings) {
 		node["blur"]->get(settings.blur);
 	if (node.has("blurIntensity"))
 		node["blurIntensity"]->get(settings.blurIntensity);
+	if (node.has("blurOpacity"))
+		node["blurOpacity"]->get(settings.blurOpacity);
 
 	if (node.has("currentSongVisible"))
 		node["currentSongVisible"]->get(settings.currentSongVisible);
@@ -447,6 +454,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["effectXOffset"]->set(settings.effectXOffset);
 	node["effectYOffset"]->set(settings.effectYOffset);
 	node["effectRadiation"]->set(settings.effectRadiation);
+	node["blurOpacity"]->set(settings.blurOpacity);
 
 	return node;
 }
