@@ -157,7 +157,7 @@ void CApp::SetBufferLength(std::size_t bufferLength) {
 		this->bufferLength = bufferLength;
 		Settings::settings.SetBufferLength(bufferLength);
 
-		hStep = static_cast<float>(windowWidth) / bufferLength;
+		hStep = static_cast<float>(blur ? maxDimension : windowWidth) / bufferLength;
 		
 		lightPack.SetBufferLength(bufferLength);
 
@@ -861,18 +861,16 @@ void CApp::OnResize(int width, int height, float scale) {
 	Settings::settings.SetWindowWidth(width);
 	Settings::settings.SetWindowHeight(height);
 
-	hStep = static_cast<float>(windowWidth) / bufferLength;
-
 	context->SetIdentity(glm::ortho(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f));
 	context->Apply();
 
 	glViewport(0, 0, windowWidth, windowHeight);
 
-	renderer->OnResize(windowWidth, windowHeight);
 	controls.OnResize(windowWidth, windowHeight, *context, scale);
 
 	if (blur) {
 		maxDimension = std::sqrt(std::pow(windowWidth, 2) + std::pow(windowHeight, 2));
+		hStep = static_cast<float>(maxDimension) / bufferLength;
 
 		blurOffset = {
 			windowWidth - maxDimension,
@@ -890,10 +888,14 @@ void CApp::OnResize(int width, int height, float scale) {
 			shader.program.Uniform2f("screenSize", maxDimension, maxDimension);
 		});
 	} else {
+		maxDimension = windowWidth;
+		hStep = static_cast<float>(windowWidth) / bufferLength;
 		context->With("rotate"_hash, [width, height](Context::Shader &shader) {
 			shader.program.Uniform2f("screenSize", width, height);
 		});
 	}
+
+	renderer->OnResize(windowWidth, windowHeight, maxDimension);
 
 #if GUI
 	uiFbo = std::make_unique<MultisampledFramebufferObject>(windowWidth, windowHeight);
@@ -1704,6 +1706,7 @@ void CApp::SetBlur(bool blur) {
 	Settings::settings.SetBlur(blur);
 	if (blur) {
 		maxDimension = std::sqrt(std::pow(windowWidth, 2) + std::pow(windowHeight, 2));
+		hStep = static_cast<float>(maxDimension) / bufferLength;
 
 		blurOffset = {
 			windowWidth - maxDimension,
@@ -1725,10 +1728,15 @@ void CApp::SetBlur(bool blur) {
 
 		blurOffset = { 0, 0 };
 
+		hStep = static_cast<float>(windowWidth) / bufferLength;
+		maxDimension = windowWidth;
+
 		context->With("rotate"_hash, [this](Context::Shader &shader) {
 			shader.program.Uniform2f("screenSize", windowWidth, windowHeight);
 		});
 	}
+
+	renderer->OnResize(windowWidth, windowHeight, maxDimension);
 }
 
 void CApp::ToggleBlur() {

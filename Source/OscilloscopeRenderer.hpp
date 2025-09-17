@@ -68,16 +68,13 @@ public:
 		context.Use("basic"_hash);
 
 		SetColor(color, 1.0f, context);
-		context.Translate(-blurOffset.x / 2.0f, -blurOffset.y / 2.0f + windowHeight / 2.0f, 0);
-		// TODO: allow the oscilloscope / fft line to rotate
-		/*
-		glRotatef(
-			360.0f - frameCount,
-			0.0f,
-			0.0f,
-			1.0f
-		);
-		*/
+
+		context.Translate(-blurOffset.x / 2.0f - (maxDimension - windowWidth) / 2.0f, -blurOffset.y / 2.0f + windowHeight / 2.0f, 0);
+
+		context.Translate(maxDimension / 2.0f, 0, 0);
+		context.Rotate(frameCount, 0.0f, 0.0f, 1.0f);
+		context.Translate(-maxDimension / 2.0f, 0, 0);
+
 		context.Apply();
 		line.SetPoints<Polyline::Join::None>(points, bufferLength);
 		line.Draw(context);

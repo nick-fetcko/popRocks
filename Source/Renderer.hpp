@@ -44,10 +44,12 @@ public:
 
 	virtual void OnResize(
 		int windowWidth,
-		int windowHeight
+		int windowHeight,
+		int maxDimension
 	) {
 		this->windowWidth = windowWidth;
 		this->windowHeight = windowHeight;
+		this->maxDimension = maxDimension;
 	}
 
 	virtual void SetBufferLength(std::size_t bufferLength, bool changed) {
@@ -108,7 +110,7 @@ protected:
 
 	bool initialized = false;
 
-	int windowWidth = 0, windowHeight = 0;
+	int windowWidth = 0, windowHeight = 0, maxDimension = 0;
 	std::size_t fullBufferLength = 0;
 	std::size_t bufferLength = 0;
 
