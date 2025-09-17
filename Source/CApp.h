@@ -181,6 +181,8 @@ private:
 
 	inline void CacheBlurUniforms(Context::Shader &shader);
 
+	inline void SetEffect(const std::string &effect);
+
 	int windowWidth = 1920;
 	int windowHeight = 1080;
 

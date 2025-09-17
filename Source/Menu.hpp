@@ -380,7 +380,13 @@ public:
 						Settings::settings.GetRotating(),
 						Settings::settings.GetRotationSpeed(),
 						Settings::settings.GetBlur(),
-						Settings::settings.GetBlurIntensity()
+						Settings::settings.GetBlurIntensity(),
+						Settings::settings.GetBlurOpacity(),
+						Settings::settings.GetEffect(),
+						Settings::settings.GetEffectIntensity(),
+						Settings::settings.GetEffectXOffset(),
+						Settings::settings.GetEffectYOffset(),
+						Settings::settings.GetEffectRadiation()
 					);
 
 					Preset::AddPreset(std::move(preset));

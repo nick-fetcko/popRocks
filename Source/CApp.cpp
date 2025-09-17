@@ -296,6 +296,33 @@ inline void CApp::CacheBlurUniforms(Context::Shader &shader) {
 	shader.program.CacheUniformLocation("effectRadiation");
 }
 
+inline void CApp::SetEffect(const std::string &effect) {
+	Settings::settings.SetEffect(effect);
+
+	context->RemoveShader("blur"_hash);
+
+	auto blurShader = context->AddShader(
+		Utils::GetResource("vertex-blur.glsl"),
+		std::vector<std::filesystem::path> {
+			Utils::GetResource("fragment-blur.glsl"),
+			Utils::GetResource(std::string("Effects/fragment-") + Settings::settings.GetEffect() + ".glsl")
+		},
+		"blur"_hash
+	);
+
+	blurShader->program.Use();
+	blurShader->program.CacheUniformLocation("projection");
+
+	CacheBlurUniforms(*blurShader);
+
+	blurShader->program.Uniform1f("intensity", blurIntensity);
+	blurShader->program.Uniform2f("screenSize", maxDimension, maxDimension);
+	blurShader->program.Uniform1f("effectIntensity", Settings::settings.GetEffectIntensity());
+	blurShader->program.Uniform1f("effectXOffset", Settings::settings.GetEffectXOffset());
+	blurShader->program.Uniform1f("effectYOffset", Settings::settings.GetEffectYOffset());
+	blurShader->program.Uniform1f("effectRadiation", Settings::settings.GetEffectRadiation());
+}
+
 void CApp::OnInit() {
 	// https://tgui.eu/tutorials/latest-stable/dpi-scaling/
 	SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
@@ -587,30 +614,7 @@ void CApp::OnInit() {
 				Listen();
 		});
 		menu.SetOnEffectChanged([this](const std::string &effect) {
-			Settings::settings.SetEffect(effect);
-
-			this->context->RemoveShader("blur"_hash);
-
-			auto blurShader = this->context->AddShader(
-				Utils::GetResource("vertex-blur.glsl"),
-				std::vector<std::filesystem::path> {
-					Utils::GetResource("fragment-blur.glsl"),
-					Utils::GetResource(std::string("Effects/fragment-") + Settings::settings.GetEffect() + ".glsl")
-				},
-				"blur"_hash
-			);
-
-			blurShader->program.Use();
-			blurShader->program.CacheUniformLocation("projection");
-
-			CacheBlurUniforms(*blurShader);
-
-			blurShader->program.Uniform1f("intensity", blurIntensity);
-			blurShader->program.Uniform2f("screenSize", maxDimension, maxDimension);
-			blurShader->program.Uniform1f("effectIntensity", Settings::settings.GetEffectIntensity());
-			blurShader->program.Uniform1f("effectXOffset", Settings::settings.GetEffectXOffset());
-			blurShader->program.Uniform1f("effectYOffset", Settings::settings.GetEffectYOffset());
-			blurShader->program.Uniform1f("effectRadiation", Settings::settings.GetEffectRadiation());
+			SetEffect(effect);
 		});
 		menu.SetOnEffectIntensityChanged([this](float effectIntensity) {
 			Settings::settings.SetEffectIntensity(effectIntensity);
@@ -1966,8 +1970,20 @@ void CApp::LoadPreset(std::optional<std::size_t> index) {
 
 		auto blur = preset.GetBlur();
 		SetBlur(blur && *blur);
-		if (blur && *blur)
+		if (blur && *blur) {
 			SetBlurIntensity(preset.GetBlurIntensity());
+
+			Settings::settings.SetBlurOpacity(preset.GetBlurOpacity());
+			blurOpacity = preset.GetBlurOpacity();
+		}
+
+		Settings::settings.SetEffectIntensity(preset.GetEffectIntensity());
+		Settings::settings.SetEffectXOffset(preset.GetEffectXOffset());
+		Settings::settings.SetEffectYOffset(preset.GetEffectYOffset());
+		Settings::settings.SetEffectRadiation(preset.GetEffectRadiation());
+
+		SetEffect(preset.GetEffect());
+
 	} else index = std::nullopt;
 
 	presetIndex = index;

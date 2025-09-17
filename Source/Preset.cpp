@@ -90,6 +90,19 @@ const Node &operator>>(const Node &node, Preset &preset) {
 		node["blur"]->get(preset.blur);
 	if (node.has("blurIntensity"))
 		node["blurIntensity"]->get(preset.blurIntensity);
+	if (node.has("blurOpacity"))
+		node["blurOpacity"]->get(preset.blurOpacity);
+
+	if (node.has("effect"))
+		node["effect"]->get(preset.effect);
+	if (node.has("effectIntensity"))
+		node["effectIntensity"]->get(preset.effectIntensity);
+	if (node.has("effectXOffset"))
+		node["effectXOffset"]->get(preset.effectXOffset);
+	if (node.has("effectYOffset"))
+		node["effectYOffset"]->get(preset.effectYOffset);
+	if (node.has("effectRadiation"))
+		node["effectRadiation"]->get(preset.effectRadiation);
 
 	return node;
 }
@@ -106,6 +119,12 @@ Node &operator<<(Node &node, const Preset &preset) {
 	node["rotationSpeed"]->set(preset.rotationSpeed);
 	node["blur"]->set(preset.blur);
 	node["blurIntensity"]->set(preset.blurIntensity);
+	node["blurOpacity"]->set(preset.blurOpacity);
+	node["effect"]->set(preset.effect);
+	node["effectIntensity"]->set(preset.effectIntensity);
+	node["effectXOffset"]->set(preset.effectXOffset);
+	node["effectYOffset"]->set(preset.effectYOffset);
+	node["effectRadiation"]->set(preset.effectRadiation);
 
 	return node;
 }

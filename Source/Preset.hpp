@@ -24,7 +24,13 @@ public:
 		bool rotating,
 		float rotationSpeed,
 		bool blur,
-		float blurIntensity
+		float blurIntensity,
+		float blurOpacity,
+		const std::string &effect,
+		float effectIntensity,
+		float effectXOffset,
+		float effectYOffset,
+		float effectRadiation
 	) : name(name),
 		bufferSize(bufferSize),
 		decayTime(decayTime),
@@ -34,7 +40,13 @@ public:
 		rotating(rotating),
 		rotationSpeed(rotationSpeed),
 		blur(blur),
-		blurIntensity(blurIntensity) {
+		blurIntensity(blurIntensity),
+		blurOpacity(blurOpacity),
+		effect(effect),
+		effectIntensity(effectIntensity),
+		effectXOffset(effectXOffset),
+		effectYOffset(effectYOffset),
+		effectRadiation(effectRadiation) {
 
 	}
 
@@ -52,6 +64,12 @@ public:
 	const float GetRotationSpeed() const { return rotationSpeed; }
 	const std::optional<bool> &GetBlur() const { return blur; }
 	const float GetBlurIntensity() const { return blurIntensity; }
+	const float GetBlurOpacity() const { return blurOpacity; }
+	const std::string &GetEffect() const { return effect; }
+	const float GetEffectIntensity() const { return effectIntensity; }
+	const float GetEffectXOffset() const { return effectXOffset; }
+	const float GetEffectYOffset() const { return effectYOffset; }
+	const float GetEffectRadiation() const { return effectRadiation; }
 
 	friend const Node &operator>>(const Node &node, Preset &preset);
 	friend Node &operator<<(Node &node, const Preset &preset);
@@ -76,4 +94,11 @@ private:
 
 	std::optional<bool> blur = std::nullopt;
 	float blurIntensity = 0.5;
+	float blurOpacity = 1.0f;
+
+	std::string effect = "noeffect";
+	float effectIntensity = 1.0f;
+	float effectXOffset = 0.0f;
+	float effectYOffset = 0.0f;
+	float effectRadiation = 0.0f;
 };
