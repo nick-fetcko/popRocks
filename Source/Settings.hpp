@@ -67,6 +67,12 @@ public:
 	const Duration<Microseconds> &GetPulseTime() { return pulseTime; }
 	void SetPulseTime(Duration<Microseconds> pulseTime);
 
+	const bool &GetStrobe() const { return strobe; }
+	void SetStrobe(bool strobe);
+
+	const float &GetStrobeIntensity() const { return strobeIntensity; }
+	void SetStrobeIntensity(float strobeIntensity);
+
 	const bool &GetRotating() const { return rotating; }
 	void SetRotating(bool rotating);
 
@@ -214,4 +220,7 @@ private:
 	float effectXOffset = 0.0f;
 	float effectYOffset = 0.0f;
 	float effectRadiation = 0.0f;
+
+	bool strobe = false;
+	float strobeIntensity = 0.66f;
 };

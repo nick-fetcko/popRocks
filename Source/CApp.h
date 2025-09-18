@@ -91,7 +91,7 @@ public:
 
 	void SetGain(float gain) { this->gain = gain; }
 
-	void SetStrobe(bool strobe) { this->strobe = strobe; }
+	void SetStrobe(bool strobe);
 	bool GetStrobe() const { return strobe; }
 	void SetStrobeFrequency(Duration<Microseconds> freq);
 
@@ -234,9 +234,10 @@ private:
 	// In degrees per second
 	float rotationSpeed = Settings::settings.GetRotationSpeed();
 
-	bool strobe = false;
+	bool strobe = Settings::settings.GetStrobe();
 	Duration<Microseconds> strobeAccum;
 	Duration<Microseconds> strobeFrequency = 1s;
+	float strobeIntensity = Settings::settings.GetStrobeIntensity();
 
 	std::atomic<bool> shuttingDown = false;
 

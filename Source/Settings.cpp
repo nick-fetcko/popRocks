@@ -125,6 +125,16 @@ void Settings::SetPulseTime(Duration<Microseconds> pulseTime) {
 	Save();
 }
 
+void Settings::SetStrobe(bool strobe) {
+	this->strobe = strobe;
+	Save();
+}
+
+void Settings::SetStrobeIntensity(float strobeIntensity) {
+	this->strobeIntensity = strobeIntensity;
+	Save();
+}
+
 void Settings::SetRotating(bool rotating) {
 	this->rotating = rotating;
 	Save();
@@ -348,6 +358,11 @@ const Node &operator>>(const Node &node, Settings &settings) {
 		);
 	}
 
+	if (node.has("strobe"))
+		node["strobe"]->get(settings.strobe);
+	if (node.has("strobeIntensity"))
+		node["strobeIntensity"]->get(settings.strobeIntensity);
+
 	if (node.has("rotating"))
 		node["rotating"]->get(settings.rotating);
 	if (node.has("rotationSpeed"))
@@ -429,6 +444,8 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["fadeTime"]->set(settings.fadeTime.AsSeconds());
 	node["pulse"]->set(settings.pulse);
 	node["pulseTime"]->set(settings.pulseTime.AsSeconds());
+	node["strobe"]->set(settings.strobe);
+	node["strobeIntensity"]->set(settings.strobeIntensity);
 	node["rotating"]->set(settings.rotating);
 	node["rotationSpeed"]->set(settings.rotationSpeed);
 	node["radius"]->set(settings.radius);

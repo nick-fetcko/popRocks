@@ -168,6 +168,20 @@ public:
 
 			ImGui::Separator();
 
+			strobe = Settings::settings.GetStrobe();
+			if (ImGui::MenuItem("Strobe", nullptr, &strobe)) {
+				if (onStrobeChanged)
+					onStrobeChanged(strobe);
+			}
+
+			strobeIntensity = Settings::settings.GetStrobeIntensity();
+			if (ImGui::SliderFloat("Strobe intensity", &strobeIntensity, 0.0, 1.0, "%.2f")) {
+				if (onStrobeIntensityChanged)
+					onStrobeIntensityChanged(strobeIntensity);
+			}
+
+			ImGui::Separator();
+
 			rotate = Settings::settings.GetRotating();
 			if (ImGui::MenuItem("Rotate", nullptr, &rotate)) {
 				if (onRotatingChanged)
@@ -675,6 +689,8 @@ public:
 	void SetOnDecayTimeChanged(std::function<void(float)> f) { onDecayTimeChanged = f; }
 	void SetOnFadeTimeChanged(std::function<void(float)> f) { onFadeTimeChanged = f; }
 	void SetOnPulseTimeChanged(std::function<void(float)> f) { onPulseTimeChanged = f; }
+	void SetOnStrobeChanged(std::function<void(bool)> f) { onStrobeChanged = f; }
+	void SetOnStrobeIntensityChanged(std::function<void(float)> f) { onStrobeIntensityChanged = f; }
 
 	void SetOnRadiusChanged(std::function<void(int)> f) { onRadiusChanged = f; }
 	void SetOnLineWidthChanged(std::function<void(float)> f) { onLineWidthChanged = f; }
@@ -747,6 +763,9 @@ private:
 	bool pulse = Settings::settings.GetPulse();
 	float pulseTime = Settings::settings.GetPulseTime().AsSeconds();
 
+	bool strobe = Settings::settings.GetStrobe();
+	float strobeIntensity = Settings::settings.GetStrobeIntensity();
+
 	int radius = Settings::settings.GetRadius();
 
 	float lineWidth = Settings::settings.GetWidth();
@@ -797,6 +816,8 @@ private:
 	std::function<void(float)> onDecayTimeChanged;
 	std::function<void(float)> onFadeTimeChanged;
 	std::function<void(float)> onPulseTimeChanged;
+	std::function<void(bool)> onStrobeChanged;
+	std::function<void(float)> onStrobeIntensityChanged;
 	std::function<void(int)> onRadiusChanged;
 	std::function<void(float)> onLineWidthChanged;
 	std::function<void(int)> onSmoothChanged;

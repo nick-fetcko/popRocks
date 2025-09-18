@@ -421,6 +421,14 @@ void CApp::OnInit() {
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
+		menu.SetOnStrobeChanged([this](bool strobe) {
+			SetStrobe(strobe);
+		});
+		menu.SetOnStrobeIntensityChanged([this](float strobeIntensity) {
+			Settings::settings.SetStrobeIntensity(strobeIntensity);
+
+			this->strobeIntensity = strobeIntensity;
+		});
 		menu.SetOnBlurChanged([this](bool blur) {
 			ToggleBlur();
 			ImGui::SetWindowFocus(nullptr);
@@ -1026,13 +1034,29 @@ void CApp::OnLoop(const Delta &time) {
 	if (renderer->IsFloatingPoint())
 		lightPack.NextSamples(floatBuffer, bufferLength);
 
+	auto color = GetColor();
+	currentFadeTime += time.change.AsSeconds();
+	auto lerp = std::min(1.0f, currentFadeTime / fadeTime);
+
+	if ((renderer->GetPulse() && !renderer->GetPulses()) || strobe) {
+		auto hsv = color.ToHsv();
+		auto brightHsv = brightColor.ToHsv();
+		
+		brightHsv.v = brightHsv.v + ((strobe ? hsv.v - strobeIntensity : hsv.v) - brightHsv.v) * lerp;
+		color = Colour<float>::FromHsv(brightHsv);
+	}
+
 	if (playing || listening) {
+		auto hsv = this->brightColor.ToHsv();
+		hsv.v = std::max(0.0f, hsv.v - strobeIntensity * lerp);
+
 		renderer->OnLoop(
 			time,
 			fileLoaded,
 			hStep,
 			*context,
-			GetColor(),
+			color,
+			strobe ? Colour<float>::FromHsv(hsv) : this->brightColor,
 			frameCount,
 			maxHeardSample,
 			resetGain
@@ -1072,17 +1096,6 @@ void CApp::OnLoop(const Delta &time) {
 		}
 	}
 
-	auto color = GetColor();
-
-	if (!renderer->GetPulses() && renderer->GetPulse()) {
-		currentFadeTime += time.change.AsSeconds();
-		auto lerp = std::min(1.0f, currentFadeTime / fadeTime);
-
-		color.r = brightColor.r + (color.r - brightColor.r) * lerp;
-		color.g = brightColor.g + (color.g - brightColor.g) * lerp;
-		color.b = brightColor.b + (color.b - brightColor.b) * lerp;
-	}
-
 	GLint oldViewport[4];
 	auto identity = context->GetIdentity();
 	if (blur) {
@@ -1112,7 +1125,7 @@ void CApp::OnLoop(const Delta &time) {
 			shader.program.Uniform2f("screenSize", maxDimension, maxDimension);
 		});
 
-		renderer->Draw(time, frameCount, GetColor(), blurOffset, *context);
+		renderer->Draw(time, frameCount, color, blurOffset, *context);
 
 		glDisable(GL_BLEND);
 
@@ -1129,7 +1142,7 @@ void CApp::OnLoop(const Delta &time) {
 		glViewport(oldViewport[0], oldViewport[1], oldViewport[2], oldViewport[3]);
 		context->LoadIdentity();
 		
-		context->Color(1.0f, 1.0f, 1.0f, blurOpacity);
+		context->Color(1.0f, 1.0f, 1.0f, blurOpacity - (strobe ? lerp * strobeIntensity : 0.0));
 		blurFbo->Draw(blurOffset.x / 2.0f, blurOffset.y / 2.0f, *context);
 
 		context->LoadIdentity();
@@ -1710,6 +1723,12 @@ void CApp::SetFadeTime(Duration<Microseconds> time) {
 
 	SetBufferLength(bufferLength);
 }
+
+void CApp::SetStrobe(bool strobe) {
+	this->strobe = strobe;
+	Settings::settings.SetStrobe(strobe);
+}
+
 void CApp::SetStrobeFrequency(Duration<Microseconds> freq) {
 	strobeFrequency = freq;
 }

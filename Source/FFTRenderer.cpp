@@ -116,29 +116,14 @@ void FFTRenderer::OnLoop(
 	float hStep,
 	Context &context,
 	const Colour<float> &color,
+	const Colour<float> &brightColor,
 	float frameCount,
 	float maxHeardSample,
 	bool resetGain
 ) {
-	auto brightColor = color.ToHsv();
-	brightColor.v = 1.0;
-	//brightColor.s = 1.0;
-	auto brightRgb = Colour<float>::FromHsv(brightColor.h, brightColor.s, brightColor.v);
-
 	std::size_t maxUpdates = 0;
 
 	for (int i = 0; i < fullBufferLength; i++) {
-		//rects[i * 4] = i*hStep;
-		//rects[i * 4 + 1] = SCREEN_HEIGHT;
-		//if(fileLoaded) rects[i * 4 + 3] = rects[i * 4 + 1] - (buffer.floatBuffer[i]*5000);
-		//else rects[i * 4 + 3] = -out[0][i]*10.0f;
-		//rects[i].h = buffer[i]/10000000;
-		//rects[i].w = 10;
-		//rects[i * 4 + 2] = rects[i * 4] + 1;
-
-		//auto value = (buffer.floatBuffer[i] * 2500.0f) * gain;
-		//auto value = (buffer.floatBuffer[i] * 2500.0f) * (static_cast<float>(i) / bufferLength) * gain;
-
 		auto rawValue = floatBuffer[i];
 
 		if (resetGain) {
@@ -180,10 +165,6 @@ void FFTRenderer::OnLoop(
 			shrinkDecays[i].Reset(scaledValue);
 			fadeDecays[i].Reset(1.0f);
 		}
-		//values[i] = value; // BYPASS DECAYS
-
-		//if (value > SCREEN_HEIGHT / 4.0f)
-		//	value = SCREEN_HEIGHT / 4.0f;
 
 		// Only update the rectangles we're actively rendering
 		if (i < bufferLength) {
@@ -191,7 +172,7 @@ void FFTRenderer::OnLoop(
 			float alpha = fadeDecays[i].Get();
 
 			if (pulse && fadeDecays[i].WasReset()) {
-				finalColor = &brightRgb;
+				finalColor = &brightColor;
 				alpha = static_cast<float>(
 					fadeDecays[i].Get() - fadeDecays[i].Get() * (fadeDecays[i].SinceLastReset().AsSeconds() / pulseTime.AsSeconds())
 				);
