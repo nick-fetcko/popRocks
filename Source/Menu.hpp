@@ -97,7 +97,7 @@ public:
 			ImGui::EndMenu();
 		}
 
-		if (ImGui::BeginMenu("Visualizer Options")) {
+		if (ImGui::BeginMenu("Visualizer")) {
 			if (ImGui::BeginMenu("Visualization Type")) {
 				fft = Settings::settings.GetRenderer() == "fft";
 				fftLine = Settings::settings.GetRenderer() == "fftline";
@@ -417,7 +417,7 @@ public:
 			newPresetPopup = open;
 		}
 
-		if (ImGui::BeginMenu("Playlist Options")) {
+		if (ImGui::BeginMenu("Playlist")) {
 			currentSongVisible = Settings::settings.GetCurrentSongVisible();
 			if (ImGui::MenuItem("Current track always visible?", nullptr, &currentSongVisible)) {
 				if (onCurrentSongVisibleChanged)
@@ -426,7 +426,7 @@ public:
 			ImGui::EndMenu();
 		}
 
-		if (ImGui::BeginMenu("Color Selection Options")) {
+		if (ImGui::BeginMenu("Color Selection")) {
 			minPercentage = Settings::settings.GetColorSelection().minPercentage * 100;
 			if (ImGui::SliderInt("Minimum % of pixels vs. dominant color", &minPercentage, 1, 100)) {
 				if (onColorSelectionChanged) {
@@ -501,7 +501,7 @@ public:
 			ImGui::EndMenu();
 		}
 
-		if (ImGui::BeginMenu("Device Options")) {
+		if (ImGui::BeginMenu("Device")) {
 			if (ImGui::BeginMenu("Input device")) {
 				BASS_WASAPI_DEVICEINFO info;
 				const auto &inputDevice = Settings::settings.GetInputDevice();
@@ -557,7 +557,7 @@ public:
 			ImGui::EndMenu();
 		}
 
-		if (ImGui::BeginMenu("LightPack Integration", lightPack.IsActive())) {
+		if (ImGui::BeginMenu("LightPack", lightPack.IsActive())) {
 			if (ImGui::BeginMenu("LightPack Visualization Type", lightPack.IsActive())) {
 				intensity = Settings::settings.GetLightPackVisualizationType() == "intensity";
 				color = Settings::settings.GetLightPackVisualizationType() == "color";
