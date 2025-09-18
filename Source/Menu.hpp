@@ -151,12 +151,12 @@ public:
 			}
 
 			pulse = Settings::settings.GetPulse();
-			ImGui::BeginDisabled(!fft);
+			//ImGui::BeginDisabled(!fft);
 			if (ImGui::MenuItem("Pulse", nullptr, &pulse)) {
 				if (onPulseChanged)
 					onPulseChanged(pulse);
 			}
-			ImGui::EndDisabled();
+			//ImGui::EndDisabled();
 
 			pulseTime = Settings::settings.GetPulseTime().AsSeconds();
 			ImGui::BeginDisabled(!pulse || !fft);

@@ -35,6 +35,7 @@ public:
 	);
 
 	bool OnLoop(double elapsed);
+	float NextBeatTime() const { return eventListIter == eventList.end() ? 0.0f : eventListIter->time; }
 
 	void SeekTo(double time);
 

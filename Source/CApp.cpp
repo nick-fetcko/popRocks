@@ -1072,6 +1072,17 @@ void CApp::OnLoop(const Delta &time) {
 		}
 	}
 
+	auto color = GetColor();
+
+	if (!renderer->GetPulses() && renderer->GetPulse()) {
+		currentFadeTime += time.change.AsSeconds();
+		auto lerp = std::min(1.0f, currentFadeTime / fadeTime);
+
+		color.r = brightColor.r + (color.r - brightColor.r) * lerp;
+		color.g = brightColor.g + (color.g - brightColor.g) * lerp;
+		color.b = brightColor.b + (color.b - brightColor.b) * lerp;
+	}
+
 	GLint oldViewport[4];
 	auto identity = context->GetIdentity();
 	if (blur) {
@@ -1128,7 +1139,7 @@ void CApp::OnLoop(const Delta &time) {
 		});
 	}
 
-	renderer->Draw(time, frameCount, GetColor(), {0, 0}, *context);
+	renderer->Draw(time, frameCount, color, {0, 0}, *context);
 
 	if (!shuttingDown)
 		lightPack.OnLoop((albumArt.Loaded() && !overrideColor) ? albumArt.GetColor() : visColor);
@@ -1207,8 +1218,12 @@ void CApp::OnLoop(const Delta &time) {
 		stopWasapiOnNextLoop = false;
 	}
 
-	if(beatDetect->OnLoop(elapsed - (controls.GetExclusiveIndicator().IsExclusive() ? exclusiveBufferSize : 0)))
+	if (auto time = elapsed - (controls.GetExclusiveIndicator().IsExclusive() ? exclusiveBufferSize : 0); beatDetect->OnLoop(time)) {
 		albumArt.NextBin(true);
+
+		currentFadeTime = 0.0f;
+		fadeTime = beatDetect->NextBeatTime() - time;
+	}
 
 	SwapBuffers(time);
 }
@@ -2002,6 +2017,13 @@ void CApp::LoadPreset(std::optional<std::size_t> index) {
 void CApp::OnColorChanged(const MathsCPP::Colour<float> &color, bool silent) {
 	if (!silent)
 		logger.LogDebug("Color changed!");
+
+	brightColor = color;
+
+	auto hsv = brightColor.ToHsv();
+	hsv.v = 1.0f;
+	//hsv.s = 1.0f;
+	brightColor = Colour<float>::FromHsv(hsv);
 
 	// Simple, linear function
 	//SetGamma(2.8f - color.ToHsv().s * 2.0f);

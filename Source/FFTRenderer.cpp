@@ -9,6 +9,7 @@ FFTRenderer::FFTRenderer(
 	const AlbumArt *albumArt) :
 	Renderer(dynamicGain, albumArt),
 	indexBuffer(&Buffers::SquareBuffer) {
+	pulses = true;
 	SetDecayTime(Settings::settings.GetDecayTime());
 	SetFadeTime(Settings::settings.GetFadeTime());
 }
@@ -16,6 +17,7 @@ FFTRenderer::FFTRenderer(
 FFTRenderer::FFTRenderer(Renderer &&right) : Renderer(std::move(right)) {
 	SetBuffer(buffer, fullBufferLength, true);
 	SetBufferLength(bufferLength, true);
+	pulses = true;
 	SetDecayTime(Settings::settings.GetDecayTime());
 	SetFadeTime(Settings::settings.GetFadeTime());
 }

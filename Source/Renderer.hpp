@@ -24,6 +24,21 @@ public:
 		pulseTime = Settings::settings.GetPulseTime();
 	}
 
+	Renderer(Renderer &&other) noexcept : albumArt(other.albumArt) {
+		initialized = other.initialized;
+		windowWidth = other.windowWidth;
+		windowHeight = other.windowHeight;
+		maxDimension = other.maxDimension;
+		fullBufferLength = other.fullBufferLength;
+		bufferLength = other.bufferLength;
+		dynamicGain = other.dynamicGain;
+		buffer = other.buffer;
+		numberOfChannels = other.numberOfChannels;
+		pulse = other.pulse;
+		// pulses intentionally left blank
+		pulseTime = other.pulseTime;
+	}
+
 	virtual ~Renderer() {
 
 	}
@@ -90,6 +105,9 @@ public:
 		this->numberOfChannels = numberOfChannels;
 	}
 
+	const bool GetPulses() const { return pulses; }
+	const bool GetPulse() const { return pulse; }
+
 	void TogglePulse() { 
 		pulse = !pulse; 
 		Settings::settings.SetPulse(pulse);
@@ -121,6 +139,7 @@ protected:
 
 	uint8_t numberOfChannels = 2;
 
+	bool pulses = false;
 	bool pulse = false;
 	Duration<Microseconds> pulseTime = 0.1s;
 };

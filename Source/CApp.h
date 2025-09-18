@@ -204,6 +204,9 @@ private:
 	float hStep = 0.0f;
 	SDL_Window *sdlWindow = nullptr;
 	Colour<float> visColor{ 0.0f, 0.5f, 1.0f };
+	Colour<float> brightColor{ 0.0f, 0.0f, 0.0f };
+	float fadeTime = 0.0f;
+	float currentFadeTime = 0.0f;
 
 	std::wstring savedFile;
 
