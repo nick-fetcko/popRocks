@@ -310,6 +310,13 @@ public:
 
 			ImGui::Separator();
 
+			if (ImGui::MenuItem("Randomize")) {
+				if (onRandom)
+					onRandom();
+			}
+
+			ImGui::Separator();
+
 			if (ImGui::MenuItem("Reset window")) {
 				if (onResetWindow)
 					onResetWindow();
@@ -391,6 +398,8 @@ public:
 						Settings::settings.GetFadeTime(),
 						Settings::settings.GetPulse(),
 						Settings::settings.GetPulseTime(),
+						Settings::settings.GetStrobe(),
+						Settings::settings.GetStrobeIntensity(),
 						Settings::settings.GetRotating(),
 						Settings::settings.GetRotationSpeed(),
 						Settings::settings.GetBlur(),
@@ -722,6 +731,8 @@ public:
 
 	void SetOnQuit(std::function<void()> f) { onQuit = f; }
 
+	void SetOnRandom(std::function<void()> f) { onRandom = f; }
+
 private:
 	int width = 0, height = 0;
 
@@ -835,6 +846,8 @@ private:
 	std::function<void(float)> onEffectXOffsetChanged;
 	std::function<void(float)> onEffectYOffsetChanged;
 	std::function<void(float)> onEffectRadiationChanged;
+
+	std::function<void()> onRandom;
 
 	std::function<void()> onQuit;
 	std::function<void()> onResetWindow;

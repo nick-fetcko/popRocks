@@ -123,6 +123,7 @@ public:
 	void OnMouseDragged(const Vector2i &mousePos);
 
 	void LoadPreset(std::optional<std::size_t> index);
+	void LoadPreset(const Preset &preset);
 
 	void AdvanceToNextTrack();
 

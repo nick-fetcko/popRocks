@@ -1,6 +1,7 @@
 #include "Preset.hpp"
 
 #include <fstream>
+#include <random>
 
 #include "Settings.hpp"
 #include "Utils.hpp"
@@ -28,6 +29,53 @@ std::vector<Preset> Preset::Load() {
 	} catch (std::exception &e) {
 		errorLog.LogError("Could not parse presets: ", e.what());
 	}
+
+	return ret;
+}
+
+Preset Preset::Random() {
+	std::mt19937 prng(time(nullptr));
+
+	auto files = Utils::GetFiles(Utils::GetResourceFolder() / "Effects");
+	std::vector<std::string> effectNames;
+	for (const auto &file : files) {
+		auto effectName = file.stem().u8string();
+		effectName = effectName.substr(effectName.find_first_of('-') + 1);
+		effectNames.emplace_back(std::move(effectName));
+	}
+
+	Preset ret(
+		"Random",
+		1 + prng() % 512, // limit to 512
+		Duration<Microseconds>(
+			std::chrono::duration<double>(
+				(prng() % 10000) / 1000.0f
+			)
+		),
+		Duration<Microseconds>(
+			std::chrono::duration<double>(
+				(prng() % 10000) / 1000.0f
+			)
+		),
+		prng() % 2,
+		Duration<Microseconds>(
+			std::chrono::duration<double>(
+				(prng() % 10000) / 1000.0f
+			)
+		),
+		prng() % 2,
+		0.25f + (prng() % 10000) / 13333.0f, // 0.25 - 1.0
+		true, // always rotate
+		(1 + prng() % 25) * 6, // limit to 25 RPM max
+		true, // always blur
+		(prng() % 40000) / 10000.0f,
+		0.25f + (prng() % 10000) / 13333.0f, // 0.25 - 1.0
+		effectNames[1 + (prng() % (effectNames.size() - 1))], // skip "noeffect"
+		(prng() % 10000) / 400.0f,
+		(prng() % 10000) / 1000.0f * ((prng() % 1) ? -1 : 1),
+		(prng() % 10000) / 1000.0f * ((prng() % 1) ? -1 : 1),
+		(prng() % 10000) / 1000.0f * ((prng() % 1) ? -1 : 1)
+	);
 
 	return ret;
 }
@@ -81,6 +129,11 @@ const Node &operator>>(const Node &node, Preset &preset) {
 		)
 	);
 
+	if (node.has("strobe"))
+		node["strobe"]->get(preset.strobe);
+	if (node.has("strobeIntensity"))
+		node["strobeIntensity"]->get(preset.strobeIntensity);
+
 	if (node.has("rotating"))
 		node["rotating"]->get(preset.rotating);
 	if (node.has("rotationSpeed"))
@@ -115,6 +168,8 @@ Node &operator<<(Node &node, const Preset &preset) {
 	node["fadeTime"]->set(preset.fadeDecayTime.AsSeconds());
 	node["pulse"]->set(preset.pulse);
 	node["pulseTime"]->set(preset.pulseTime.AsSeconds());
+	node["strobe"]->set(preset.strobe);
+	node["strobeIntensity"]->set(preset.strobeIntensity);
 	node["rotating"]->set(preset.rotating);
 	node["rotationSpeed"]->set(preset.rotationSpeed);
 	node["blur"]->set(preset.blur);

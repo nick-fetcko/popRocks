@@ -423,11 +423,17 @@ void CApp::OnInit() {
 		});
 		menu.SetOnStrobeChanged([this](bool strobe) {
 			SetStrobe(strobe);
+
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
 		});
 		menu.SetOnStrobeIntensityChanged([this](float strobeIntensity) {
 			Settings::settings.SetStrobeIntensity(strobeIntensity);
 
 			this->strobeIntensity = strobeIntensity;
+
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
 		});
 		menu.SetOnBlurChanged([this](bool blur) {
 			ToggleBlur();
@@ -446,6 +452,9 @@ void CApp::OnInit() {
 			Settings::settings.SetBlurOpacity(blurOpacity);
 
 			this->blurOpacity = blurOpacity;
+
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
 		});
 		menu.SetOnRotatingChanged([this](bool rotate) {
 			SetRotating(rotate);
@@ -623,6 +632,9 @@ void CApp::OnInit() {
 		});
 		menu.SetOnEffectChanged([this](const std::string &effect) {
 			SetEffect(effect);
+
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
 		});
 		menu.SetOnEffectIntensityChanged([this](float effectIntensity) {
 			Settings::settings.SetEffectIntensity(effectIntensity);
@@ -630,6 +642,9 @@ void CApp::OnInit() {
 			this->context->With("blur"_hash, [effectIntensity](Context::Shader &shader) {
 				shader.program.Uniform1f("effectIntensity", effectIntensity);
 			});
+
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
 		});
 		menu.SetOnEffectXOffsetChanged([this](float effectXOffset) {
 			Settings::settings.SetEffectXOffset(effectXOffset);
@@ -637,6 +652,9 @@ void CApp::OnInit() {
 			this->context->With("blur"_hash, [effectXOffset](Context::Shader &shader) {
 				shader.program.Uniform1f("effectXOffset", effectXOffset);
 			});
+
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
 		});
 		menu.SetOnEffectYOffsetChanged([this](float effectYOffset) {
 			Settings::settings.SetEffectYOffset(effectYOffset);
@@ -644,6 +662,9 @@ void CApp::OnInit() {
 			this->context->With("blur"_hash, [effectYOffset](Context::Shader &shader) {
 				shader.program.Uniform1f("effectYOffset", effectYOffset);
 			});
+
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
 		});
 		menu.SetOnEffectRadiationChanged([this](float effectRadiation) {
 			Settings::settings.SetEffectRadiation(effectRadiation);
@@ -651,6 +672,9 @@ void CApp::OnInit() {
 			this->context->With("blur"_hash, [effectRadiation](Context::Shader &shader) {
 				shader.program.Uniform1f("effectRadiation", effectRadiation);
 			});
+
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
 		});
 		menu.SetOnResetWindow([this] {
 			Settings::settings.SetWindowWidth(1920);
@@ -665,6 +689,9 @@ void CApp::OnInit() {
 			SDL_Event event;
 			event.type = SDL_QUIT;
 			SDL_PushEvent(&event);
+		});
+		menu.SetOnRandom([this] {
+			LoadPreset(Preset::Random());
 		});
 #endif
 	} else logger.LogError("Could not create OpenGL context: ", SDL_GetError());
@@ -1992,45 +2019,56 @@ void CApp::LoadPreset(std::optional<std::size_t> index) {
 	if (const auto &presets = Preset::GetPresets(); index && presets.size() > *index) {
 		const auto &preset = presets.at(*index);
 
-		logger.LogDebug("Loading preset '", preset.GetName(), "'");
-
-		SetBufferLength(preset.GetBufferSize());
-		SetDecayTime(preset.GetDecayTime());
-		SetFadeTime(preset.GetFadeTime());
-		renderer->SetPulse(preset.GetPulse());
-		renderer->SetPulseTime(preset.GetPulseTime());
-
-		auto rotating = preset.GetRotating();
-
-		if (rotating)
-			SetRotating(*rotating);
-
-		if (rotating && *rotating)
-			SetRotationSpeed(preset.GetRotationSpeed());
-		else
-			SetRotationSpeed(6.0f /* default */);
-
-		auto blur = preset.GetBlur();
-		SetBlur(blur && *blur);
-		if (blur && *blur) {
-			SetBlurIntensity(preset.GetBlurIntensity());
-
-			Settings::settings.SetBlurOpacity(preset.GetBlurOpacity());
-			blurOpacity = preset.GetBlurOpacity();
-		}
-
-		Settings::settings.SetEffectIntensity(preset.GetEffectIntensity());
-		Settings::settings.SetEffectXOffset(preset.GetEffectXOffset());
-		Settings::settings.SetEffectYOffset(preset.GetEffectYOffset());
-		Settings::settings.SetEffectRadiation(preset.GetEffectRadiation());
-
-		SetEffect(preset.GetEffect());
-
+		LoadPreset(preset);
 	} else index = std::nullopt;
 
 	presetIndex = index;
 
 	Settings::settings.SetPresetIndex(index);
+}
+
+void CApp::LoadPreset(const Preset &preset) {
+	logger.LogDebug("Loading preset '", preset.GetName(), "'");
+
+	if (preset.GetName() == "Random") {
+		presetIndex = std::nullopt;
+		Settings::settings.SetPresetIndex(presetIndex);
+	}
+
+	SetBufferLength(preset.GetBufferSize());
+	SetDecayTime(preset.GetDecayTime());
+	SetFadeTime(preset.GetFadeTime());
+	renderer->SetPulse(preset.GetPulse());
+	renderer->SetPulseTime(preset.GetPulseTime());
+	SetStrobe(preset.GetStrobe());
+	strobeIntensity = preset.GetStrobeIntensity();
+	Settings::settings.SetStrobeIntensity(strobeIntensity);
+
+	auto rotating = preset.GetRotating();
+
+	if (rotating)
+		SetRotating(*rotating);
+
+	if (rotating && *rotating)
+		SetRotationSpeed(preset.GetRotationSpeed());
+	else
+		SetRotationSpeed(6.0f /* default */);
+
+	auto blur = preset.GetBlur();
+	SetBlur(blur && *blur);
+	if (blur && *blur) {
+		SetBlurIntensity(preset.GetBlurIntensity());
+
+		Settings::settings.SetBlurOpacity(preset.GetBlurOpacity());
+		blurOpacity = preset.GetBlurOpacity();
+	}
+
+	Settings::settings.SetEffectIntensity(preset.GetEffectIntensity());
+	Settings::settings.SetEffectXOffset(preset.GetEffectXOffset());
+	Settings::settings.SetEffectYOffset(preset.GetEffectYOffset());
+	Settings::settings.SetEffectRadiation(preset.GetEffectRadiation());
+
+	SetEffect(preset.GetEffect());
 }
 
 void CApp::OnColorChanged(const MathsCPP::Colour<float> &color, bool silent) {

@@ -21,6 +21,8 @@ public:
 		Duration<Microseconds> fadeTime,
 		bool pulse,
 		Duration<Microseconds> pulseTime,
+		bool strobe,
+		float strobeIntensity,
 		bool rotating,
 		float rotationSpeed,
 		bool blur,
@@ -37,6 +39,8 @@ public:
 		fadeDecayTime(fadeTime),
 		pulse(pulse),
 		pulseTime(pulseTime),
+		strobe(strobe),
+		strobeIntensity(strobeIntensity),
 		rotating(rotating),
 		rotationSpeed(rotationSpeed),
 		blur(blur),
@@ -50,6 +54,8 @@ public:
 
 	}
 
+	static Preset Random();
+
 	static const std::vector<Preset> &GetPresets() { return Presets; }
 	static void AddPreset(Preset &&preset);
 	static void RemovePreset(std::size_t index);
@@ -60,6 +66,8 @@ public:
 	const Duration<Microseconds> &GetFadeTime() const { return fadeDecayTime; }
 	const bool GetPulse() const { return pulse; }
 	const Duration<Microseconds> &GetPulseTime() const { return pulseTime; }
+	const bool GetStrobe() const { return strobe; }
+	const float GetStrobeIntensity() const { return strobeIntensity; }
 	const std::optional<bool> &GetRotating() const { return rotating; }
 	const float GetRotationSpeed() const { return rotationSpeed; }
 	const std::optional<bool> &GetBlur() const { return blur; }
@@ -88,6 +96,9 @@ private:
 
 	bool pulse = false;
 	Duration<Microseconds> pulseTime = 0.1s;
+
+	bool strobe = false;
+	float strobeIntensity = 0.66f;
 
 	std::optional<bool> rotating = std::nullopt;
 	float rotationSpeed = 1.0f;
