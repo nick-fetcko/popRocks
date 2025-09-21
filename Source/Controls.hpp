@@ -75,11 +75,17 @@ private:
 	int windowWidth = 0, windowHeight = 0;
 
 	OpenGLFont *font = nullptr;
+	OpenGLFont *outlineFont = nullptr;
 	Text elapsedText;
+	Text elapsedOutline;
 	Text remainingText;
+	Text remainingOutline;
 	Text titleText;
+	Text titleOutline;
 	Text artistText;
+	Text artistOutline;
 	Text albumText;
+	Text albumOutline;
 
 	FPSCounter fpsCounter;
 

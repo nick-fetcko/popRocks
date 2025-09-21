@@ -8,9 +8,12 @@
 
 class ExclusiveIndicator {
 public:
-	void OnInit(OpenGLFont *font, Context *context) {
+	void OnInit(OpenGLFont *font, OpenGLFont *outlineFont, Context *context) {
 		text.OnInit(font, context);
 		text.SetText("Exclusive");
+		
+		outline.OnInit(outlineFont, context);
+		outline.SetText("Exclusive");
 	}
 
 	const int32_t GetHeight() const { return text.GetSize().y; }
@@ -18,6 +21,13 @@ public:
 	void OnLoop(int x, int y, float alpha, Context &context) {
 		pos.x = x;
 		pos.y = y - text.GetSize().y / 2;
+
+		if (IsExclusive())
+			context.Color(0.0f, 0.0f, 0.0f, alpha);
+		else
+			context.Color(0.25f, 0.25f, 0.25f, alpha);
+
+		outline.OnLoop(x, y - text.GetSize().y / 2);
 
 		if (IsExclusive())
 			context.Color(1.0f, 1.0f, 1.0f, alpha);
@@ -29,6 +39,7 @@ public:
 
 	void OnDestroy() {
 		text.OnDestroy();
+		outline.OnDestroy();
 	}
 
 	const bool IsExclusive() const { return Settings::settings.GetExclsuive(); }
@@ -50,4 +61,5 @@ private:
 	Vector2i pos {0, 0};
 
 	Text text;
+	Text outline;
 };

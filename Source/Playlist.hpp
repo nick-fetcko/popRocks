@@ -162,7 +162,7 @@ private:
 	) {
 		// Limit our background rectangle to our
 		// max height
-		if (auto height = maxHeight + em.y / 2 - pos.y; this->height > height) {
+		if (auto height = maxHeight + font->GetEm().height / 2 - pos.y; this->height > height) {
 			this->height = height;
 			vbo->Bind();
 			vbo->BufferSubData(7, sizeof(float), &height);
@@ -190,7 +190,7 @@ private:
 
 		// Add a line for our previous track
 		if (current != tracks.begin())
-			pos.y += em.y;
+			pos.y += font->GetEm().height;
 
 		std::size_t maxIndex = static_cast<std::size_t>(
 			titles.empty() ?
@@ -219,7 +219,7 @@ private:
 
 			// Reduce the height as we near the end of the playlist
 			if (i == titles.size() - 2 && pos.y < maxHeight) {
-				height = pos.y + em.y / 2.0f;
+				height = pos.y + font->GetEm().height / 2.0f;
 
 				vbo->Bind();
 				vbo->BufferSubData(7, 1 * sizeof(float), &height);
@@ -244,7 +244,6 @@ private:
 
 	Vector2i pos{ 0, 0 };
 	Vector2i size{ 0, 0 };
-	Vector2f em{ 0.0f, 0.0f };
 
 	std::unique_ptr<Cue> cue;
 

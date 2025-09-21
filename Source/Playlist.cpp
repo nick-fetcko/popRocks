@@ -231,30 +231,28 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 }
 
 inline void Playlist::UpdateSize() {
-	em = this->titles.begin()->MeasureText("M");
-
-	height = size.y + em.y / 2;
+	height = size.y + font->GetEm().height / 2;
 	std::vector<float> rect = {
-		-em.x / 2,
-		-em.y / 2,
+		-font->GetEm().width / 2.0f,
+		-font->GetEm().height / 2.0f,
 		0.0f,
 		0.0f,
 		0.0f,
 		0.75f,
-		-em.x / 2,
+		-font->GetEm().width / 2.0f,
 		height,
 		0.0f,
 		0.0f,
 		0.0f,
 		0.0f,
-		size.x + em.x / 2,
+		size.x + font->GetEm().width / 2.0f,
 		height,
 		0.0f,
 		0.0f,
 		0.0f,
 		0.0f,
-		size.x + em.x / 2,
-		-em.x / 2,
+		size.x + font->GetEm().width / 2.0f,
+		-font->GetEm().width / 2.0f,
 		0.0f,
 		0.0f,
 		0.0f,
