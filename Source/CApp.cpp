@@ -1275,7 +1275,9 @@ inline void CApp::SwapBuffers(const Delta &time) {
 	ImGui_ImplSDL2_NewFrame();
 	ImGui::NewFrame();
 
-	menu.OnLoop(lightPack, albumArt, *context);
+	// Keep the controls on screen if a menu is open
+	if (menu.OnLoop(lightPack, albumArt, *context))
+		controls.Fade(true);
 
 	// Keep the UI in an FBO and only update it as needed
 	//

@@ -39,7 +39,9 @@ public:
 		ImGui::GetStyle().FontScaleMain = scale;
 	}
 
-	float OnLoop(const LightPack &lightPack, AlbumArt &albumArt, Context &context) {
+	bool OnLoop(const LightPack &lightPack, AlbumArt &albumArt, Context &context) {
+		bool open = false;
+
 		ImGui::Begin(
 			"Menu",
 			nullptr,
@@ -58,6 +60,8 @@ public:
 		ImGui::BeginMenuBar();
 
 		if (ImGui::BeginMenu("File")) {
+			open = true;
+
 			if (ImGui::MenuItem("Open File", "Ctrl-O", false, true)) {
 				nfdnchar_t *outPath;
 
@@ -98,6 +102,8 @@ public:
 		}
 
 		if (ImGui::BeginMenu("Visualizer")) {
+			open = true;
+
 			if (ImGui::BeginMenu("Visualization Type")) {
 				fft = Settings::settings.GetRenderer() == "fft";
 				fftLine = Settings::settings.GetRenderer() == "fftline";
@@ -327,6 +333,8 @@ public:
 
 		presetIndex = Settings::settings.GetPresetIndex();
 		if (ImGui::BeginMenu("Presets")) {
+			open = true;
+
 			presetX = ImGui::GetWindowPos().x;
 			auto presets = Preset::GetPresets();
 			if (presets.size() != numPresets) {
@@ -377,6 +385,8 @@ public:
 
 		// See https://github.com/ocornut/imgui/issues/5684#issuecomment-1247928651
 		if (newPresetPopup) {
+			open = true;
+
 			ImGui::SetNextWindowPos(ImVec2(presetX, context.GetYOffset()));
 			ImGui::OpenPopup("Enter preset name...");
 
@@ -427,6 +437,8 @@ public:
 		}
 
 		if (ImGui::BeginMenu("Playlist")) {
+			open = true;
+
 			currentSongVisible = Settings::settings.GetCurrentSongVisible();
 			if (ImGui::MenuItem("Current track always visible?", nullptr, &currentSongVisible)) {
 				if (onCurrentSongVisibleChanged)
@@ -436,6 +448,8 @@ public:
 		}
 
 		if (ImGui::BeginMenu("Color Selection")) {
+			open = true;
+
 			minPercentage = Settings::settings.GetColorSelection().minPercentage * 100;
 			if (ImGui::SliderInt("Minimum % of pixels vs. dominant color", &minPercentage, 1, 100)) {
 				if (onColorSelectionChanged) {
@@ -511,6 +525,8 @@ public:
 		}
 
 		if (ImGui::BeginMenu("Device")) {
+			open = true;
+
 			if (ImGui::BeginMenu("Input device")) {
 				BASS_WASAPI_DEVICEINFO info;
 				const auto &inputDevice = Settings::settings.GetInputDevice();
@@ -567,6 +583,8 @@ public:
 		}
 
 		if (ImGui::BeginMenu("LightPack", lightPack.IsActive())) {
+			open = true;
+
 			if (ImGui::BeginMenu("LightPack Visualization Type", lightPack.IsActive())) {
 				intensity = Settings::settings.GetLightPackVisualizationType() == "intensity";
 				color = Settings::settings.GetLightPackVisualizationType() == "color";
@@ -669,7 +687,7 @@ public:
 		ImGui::EndMenuBar();
 		ImGui::End();
 
-		return height;
+		return open;
 	}
 
 	void OnDestroy() {
