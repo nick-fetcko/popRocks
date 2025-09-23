@@ -690,6 +690,25 @@ void CApp::OnInit() {
 
 			this->frameLimit = frameLimit;
 		});
+		menu.SetOnRandomizeChanged([this](bool randomize) {
+			Settings::settings.SetRandomize(randomize);
+
+			if (randomize)
+				randomizeTime = Settings::settings.GetRandomizeTime();
+			else
+				randomizeTime = std::nullopt;
+		});
+		menu.SetOnRandomizeTimeChanged([this](float randomizeTime) {
+			this->randomizeTime = Duration<Microseconds>(
+				std::chrono::duration<double>(
+					static_cast<double>(randomizeTime)
+				)
+			);
+
+			Settings::settings.SetRandomizeTime(
+				*this->randomizeTime
+			);
+		});
 		menu.SetOnResetWindow([this] {
 			Settings::settings.SetWindowWidth(1920);
 			Settings::settings.SetWindowHeight(1080);
@@ -987,6 +1006,11 @@ void CApp::OnLoop(const Delta &time) {
 	if (!fileLoaded && !listening) {
 		SwapBuffers(time);
 		return;
+	}
+
+	if (randomizeTime && std::chrono::system_clock::now() > lastRandomize + std::chrono::duration<double>(randomizeTime->AsSeconds())) {
+		LoadPreset(Preset::Random());
+		lastRandomize = std::chrono::system_clock::now();
 	}
 
 	if(fileLoaded) {
@@ -1801,6 +1825,10 @@ void CApp::SetStrobe(bool strobe) {
 }
 
 void CApp::SetBlur(bool blur) {
+	// If blur isn't actually changing,
+	// ignore it.
+	if (this->blur == blur) return;
+
 	this->blur = blur;
 
 	logger.LogDebug("Turning blur ", blur ? "on" : "off");

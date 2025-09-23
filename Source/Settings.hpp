@@ -157,6 +157,12 @@ public:
 	const int &GetFrameLimit() const { return frameLimit; }
 	void SetFrameLimit(int frameLimit);
 
+	const bool &GetRandomize() const { return randomize; }
+	void SetRandomize(bool randomize);
+
+	const Duration<Microseconds> &GetRandomizeTime() const { return randomizeTime; }
+	void SetRandomizeTime(Duration<Microseconds> randomizeTime);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -232,4 +238,7 @@ private:
 
 	bool limitFramerate = false;
 	int frameLimit = 60;
+
+	bool randomize = false;
+	Duration<Microseconds> randomizeTime = 2.5s;
 };

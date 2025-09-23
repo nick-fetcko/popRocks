@@ -337,6 +337,20 @@ public:
 					onRandom();
 			}
 
+			randomize = Settings::settings.GetRandomize();
+			if (ImGui::MenuItem("Randomize every...", nullptr, &randomize)) {
+				if (onRandomizeChanged)
+					onRandomizeChanged(randomize);
+			}
+
+			ImGui::BeginDisabled(!randomize);
+			randomizeTime = Settings::settings.GetRandomizeTime().AsSeconds();
+			if (ImGui::SliderFloat("...seconds", &randomizeTime, 0.5, 10.0, "%.2f")) {
+				if (onRandomizeTimeChanged)
+					onRandomizeTimeChanged(randomizeTime);
+			}
+			ImGui::EndDisabled();
+
 			ImGui::Separator();
 
 			if (ImGui::MenuItem("Reset window")) {
@@ -764,6 +778,9 @@ public:
 	void SetOnLimitFramerateChanged(std::function<void(bool)> f) { onLimitFramerateChanged = f; }
 	void SetOnFrameLimitChanged(std::function<void(int)> f) { onFrameLimitChanged = f; }
 
+	void SetOnRandomizeChanged(std::function<void(bool)> f) { onRandomizeChanged = f; }
+	void SetOnRandomizeTimeChanged(std::function<void(float)> f) { onRandomizeTimeChanged = f; }
+
 	void SetOnResetWindow(std::function<void()> f) { onResetWindow = f; }
 
 	void SetOnQuit(std::function<void()> f) { onQuit = f; }
@@ -851,6 +868,9 @@ private:
 	bool limitFramerate = Settings::settings.GetLimitFramerate();
 	int frameLimit = Settings::settings.GetFrameLimit();
 
+	bool randomize = Settings::settings.GetRandomize();
+	float randomizeTime = Settings::settings.GetRandomizeTime().AsSeconds();
+
 	std::function<void(const std::filesystem::path &)> onOpen;
 	std::function<void(bool)> onPulseChanged;
 	std::function<void(bool)> onBlurChanged;
@@ -888,6 +908,8 @@ private:
 	std::function<void(float)> onEffectRadiationChanged;
 	std::function<void(bool)> onLimitFramerateChanged;
 	std::function<void(int)> onFrameLimitChanged;
+	std::function<void(bool)> onRandomizeChanged;
+	std::function<void(float)> onRandomizeTimeChanged;
 
 	std::function<void()> onRandom;
 

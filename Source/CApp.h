@@ -310,4 +310,11 @@ private:
 
 	std::chrono::steady_clock::time_point frameStart;
 	double frameLimit = Settings::settings.GetLimitFramerate() ? Settings::settings.GetFrameLimit() : -1;
+
+	std::optional<Duration<Microseconds>> randomizeTime = 
+		Settings::settings.GetRandomize() ?
+			static_cast<std::optional<Duration<Microseconds>>>(Settings::settings.GetRandomizeTime()) :
+			std::nullopt;
+
+	std::chrono::system_clock::time_point lastRandomize;
 };

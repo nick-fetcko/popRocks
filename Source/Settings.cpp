@@ -277,6 +277,16 @@ void Settings::SetFrameLimit(int frameLimit) {
 	Save();
 }
 
+void Settings::SetRandomize(bool randomize) {
+	this->randomize = randomize;
+	Save();
+}
+
+void Settings::SetRandomizeTime(Duration<Microseconds> randomizeTime) {
+	this->randomizeTime = randomizeTime;
+	Save();
+}
+
 void Settings::Save() {
 	if (auto path = GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
@@ -442,6 +452,16 @@ const Node &operator>>(const Node &node, Settings &settings) {
 		node["limitFramerate"]->get(settings.limitFramerate);
 	if (node.has("frameLimit"))
 		node["frameLimit"]->get(settings.frameLimit);
+
+	if (node.has("randomize"))
+		node["randomize"]->get(settings.randomize);
+	if (node.has("randomizeTime")) {
+		settings.randomizeTime = Duration<Microseconds>(
+			std::chrono::duration<double>(
+				node["randomizeTime"]->get<double>()
+			)
+		);
+	}
 		
 	return node;
 }
@@ -489,6 +509,8 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["blurOpacity"]->set(settings.blurOpacity);
 	node["limitFramerate"]->set(settings.limitFramerate);
 	node["frameLimit"]->set(settings.frameLimit);
+	node["randomize"]->set(settings.randomize);
+	node["randomizeTime"]->set(settings.randomizeTime.AsSeconds());
 
 	return node;
 }
