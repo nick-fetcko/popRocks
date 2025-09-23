@@ -147,7 +147,7 @@ void FFTRenderer::OnLoop(
 				max[i] -= dynamicGain->smallStep;
 		}
 
-		auto height = (std::max(windowWidth, windowHeight) / 2.0f - albumArt->GetRadius() / 2.0f);
+		auto height = (std::max(windowWidth, windowHeight) / 2.0f - albumArt->GetRadius() / 2.0f) * scale;
 
 		// If we're listening, skip normalization
 		auto scaledValue =

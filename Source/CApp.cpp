@@ -709,6 +709,12 @@ void CApp::OnInit() {
 				*this->randomizeTime
 			);
 		});
+		menu.SetOnScaleChanged([this](float scale) {
+			Settings::settings.SetScale(scale);
+
+			if (renderer)
+				renderer->SetScale(scale);
+		});
 		menu.SetOnResetWindow([this] {
 			Settings::settings.SetWindowWidth(1920);
 			Settings::settings.SetWindowHeight(1080);

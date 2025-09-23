@@ -287,6 +287,11 @@ void Settings::SetRandomizeTime(Duration<Microseconds> randomizeTime) {
 	Save();
 }
 
+void Settings::SetScale(float scale) {
+	this->scale = scale;
+	Save();
+}
+
 void Settings::Save() {
 	if (auto path = GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
@@ -462,6 +467,9 @@ const Node &operator>>(const Node &node, Settings &settings) {
 			)
 		);
 	}
+
+	if (node.has("scale"))
+		node["scale"]->get(settings.scale);
 		
 	return node;
 }
@@ -511,6 +519,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["frameLimit"]->set(settings.frameLimit);
 	node["randomize"]->set(settings.randomize);
 	node["randomizeTime"]->set(settings.randomizeTime.AsSeconds());
+	node["scale"]->set(settings.scale);
 
 	return node;
 }

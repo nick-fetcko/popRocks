@@ -22,6 +22,7 @@ public:
 	) : albumArt(albumArt), dynamicGain(dynamicGain) {
 		pulse = Settings::settings.GetPulse();
 		pulseTime = Settings::settings.GetPulseTime();
+		scale = Settings::settings.GetScale();
 	}
 
 	Renderer(Renderer &&other) noexcept : albumArt(other.albumArt) {
@@ -37,6 +38,7 @@ public:
 		pulse = other.pulse;
 		// pulses intentionally left blank
 		pulseTime = other.pulseTime;
+		scale = other.scale;
 	}
 
 	virtual ~Renderer() {
@@ -122,6 +124,10 @@ public:
 		Settings::settings.SetPulseTime(time);
 	}
 
+	void SetScale(float scale) {
+		this->scale = scale;
+	}
+
 protected:
 	void SetColor(const Colour<float> &color, float alpha, Context &context) {
 		context.Color(color.r, color.g, color.b, alpha);
@@ -143,6 +149,8 @@ protected:
 	bool pulses = false;
 	bool pulse = false;
 	Duration<Microseconds> pulseTime = 0.1s;
+
+	float scale = 1.0f;
 };
 
 class RendererFactory {

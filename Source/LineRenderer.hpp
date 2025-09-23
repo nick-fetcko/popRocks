@@ -49,7 +49,7 @@ protected:
 	inline void CenterPoints() {
 		// Center / scale points within our album art circle
 		for (auto i = 0; i < bufferLength; ++i)
-			points[i].y = ((points[i].y - minPoint) / (maxPoint - minPoint)) * (albumArt->GetRadius() * 2) + albumArt->GetRadius() * -1;
+			points[i].y = (((points[i].y - minPoint) / (maxPoint - minPoint)) * (albumArt->GetRadius() * 2) + albumArt->GetRadius() * -1) * scale;
 	}
 
 	Vector2f *points = nullptr;

@@ -163,6 +163,9 @@ public:
 	const Duration<Microseconds> &GetRandomizeTime() const { return randomizeTime; }
 	void SetRandomizeTime(Duration<Microseconds> randomizeTime);
 
+	const float &GetScale() const { return scale; }
+	void SetScale(float scale);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -241,4 +244,6 @@ private:
 
 	bool randomize = false;
 	Duration<Microseconds> randomizeTime = 2.5s;
+
+	float scale = 1.0f;
 };

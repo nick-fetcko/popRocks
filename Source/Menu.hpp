@@ -136,6 +136,12 @@ public:
 				ImGui::EndMenu();
 			}
 
+			visualizerScale = Settings::settings.GetScale();
+			if (ImGui::SliderFloat("Scale", &visualizerScale, 0.01, 5.0, "%.2f")) {
+				if (onScaleChanged)
+					onScaleChanged(visualizerScale);
+			}
+
 			ImGui::Separator();
 
 			bufferSize = Settings::settings.GetBufferLength();
@@ -781,6 +787,8 @@ public:
 	void SetOnRandomizeChanged(std::function<void(bool)> f) { onRandomizeChanged = f; }
 	void SetOnRandomizeTimeChanged(std::function<void(float)> f) { onRandomizeTimeChanged = f; }
 
+	void SetOnScaleChanged(std::function<void(float)> f) { onScaleChanged = f; }
+
 	void SetOnResetWindow(std::function<void()> f) { onResetWindow = f; }
 
 	void SetOnQuit(std::function<void()> f) { onQuit = f; }
@@ -871,6 +879,8 @@ private:
 	bool randomize = Settings::settings.GetRandomize();
 	float randomizeTime = Settings::settings.GetRandomizeTime().AsSeconds();
 
+	float visualizerScale = Settings::settings.GetScale();
+
 	std::function<void(const std::filesystem::path &)> onOpen;
 	std::function<void(bool)> onPulseChanged;
 	std::function<void(bool)> onBlurChanged;
@@ -910,6 +920,7 @@ private:
 	std::function<void(int)> onFrameLimitChanged;
 	std::function<void(bool)> onRandomizeChanged;
 	std::function<void(float)> onRandomizeTimeChanged;
+	std::function<void(float)> onScaleChanged;
 
 	std::function<void()> onRandom;
 
