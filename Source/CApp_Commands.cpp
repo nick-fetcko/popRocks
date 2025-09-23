@@ -380,22 +380,7 @@ void CApp::AddCommands() {
 		},
 		{
 			"strobe", [&](const std::vector<std::string> &args) {
-				if (args.size() > 1) {
-					try {
-						if (IsDefault(args[1]))
-							SetStrobeFrequency(1s);
-						else
-							SetStrobeFrequency(
-								std::chrono::duration<double> {
-									std::stod(args[1])
-								}
-							);
-					} catch (std::exception &e) {
-						logger.LogError("Could not set strobe frequency: ", e.what());
-					}
-				} else {
-					SetStrobe(!GetStrobe());
-				}
+				SetStrobe(!GetStrobe());
 			}
 		},
 		{

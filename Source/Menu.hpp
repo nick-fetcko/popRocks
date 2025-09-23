@@ -316,6 +316,22 @@ public:
 
 			ImGui::Separator();
 
+			frameLimit = Settings::settings.GetFrameLimit();
+			
+			bool limitFramerate = Settings::settings.GetLimitFramerate();
+			if (ImGui::MenuItem("Limit framerate?", nullptr, &limitFramerate)) {
+				if (onLimitFramerateChanged)
+					onLimitFramerateChanged(limitFramerate);
+			}
+			ImGui::BeginDisabled(!limitFramerate);
+			if (ImGui::SliderInt("Limit", &frameLimit, 5, 240)) {
+				if (onFrameLimitChanged)
+					onFrameLimitChanged(frameLimit);
+			}
+			ImGui::EndDisabled();
+
+			ImGui::Separator();
+
 			if (ImGui::MenuItem("Randomize")) {
 				if (onRandom)
 					onRandom();
@@ -745,6 +761,9 @@ public:
 	void SetOnEffectYOffsetChanged(std::function<void(float)> f) { onEffectYOffsetChanged = f; }
 	void SetOnEffectRadiationChanged(std::function<void(float)> f) { onEffectRadiationChanged = f; }
 
+	void SetOnLimitFramerateChanged(std::function<void(bool)> f) { onLimitFramerateChanged = f; }
+	void SetOnFrameLimitChanged(std::function<void(int)> f) { onFrameLimitChanged = f; }
+
 	void SetOnResetWindow(std::function<void()> f) { onResetWindow = f; }
 
 	void SetOnQuit(std::function<void()> f) { onQuit = f; }
@@ -829,6 +848,9 @@ private:
 	float minimumSaturation = Settings::settings.GetColorSelection().minSaturation;
 	float minimumValue = Settings::settings.GetColorSelection().minValue;
 
+	bool limitFramerate = Settings::settings.GetLimitFramerate();
+	int frameLimit = Settings::settings.GetFrameLimit();
+
 	std::function<void(const std::filesystem::path &)> onOpen;
 	std::function<void(bool)> onPulseChanged;
 	std::function<void(bool)> onBlurChanged;
@@ -864,6 +886,8 @@ private:
 	std::function<void(float)> onEffectXOffsetChanged;
 	std::function<void(float)> onEffectYOffsetChanged;
 	std::function<void(float)> onEffectRadiationChanged;
+	std::function<void(bool)> onLimitFramerateChanged;
+	std::function<void(int)> onFrameLimitChanged;
 
 	std::function<void()> onRandom;
 

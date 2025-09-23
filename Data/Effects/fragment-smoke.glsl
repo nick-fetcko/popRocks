@@ -11,6 +11,7 @@ uniform float effectIntensity;
 uniform float effectXOffset;
 uniform float effectYOffset;
 uniform float effectRadiation;
+uniform float effectTimeDelta;
 
 // From https://stackoverflow.com/a/17479300
 uint hash( uint x ) {
@@ -53,7 +54,11 @@ vec2 applyEffect(vec2 coords) {
     float angle = atan(centered.y, centered.x) - M_PI;
 
     return vec2(
-        random(vec3(coords, randomX)) * effectIntensity + effectXOffset + cos(angle) * effectRadiation,
-        random(vec3(coords, randomY)) * effectIntensity + effectYOffset + sin(angle) * effectRadiation
+        random(
+            vec3(coords, randomX)
+        ) * effectIntensity + effectXOffset * effectTimeDelta + cos(angle) * effectRadiation * effectTimeDelta,
+        random(
+            vec3(coords, randomY)
+        ) * effectIntensity + effectYOffset * effectTimeDelta + sin(angle) * effectRadiation * effectTimeDelta
     );
 }

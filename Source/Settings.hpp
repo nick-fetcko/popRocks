@@ -151,6 +151,12 @@ public:
 	const float &GetEffectRadiation() const { return effectRadiation; }
 	void SetEffectRadiation(float effectRadiation);
 
+	const bool &GetLimitFramerate() const { return limitFramerate; }
+	void SetLimitFramerate(bool limitFramerate);
+
+	const int &GetFrameLimit() const { return frameLimit; }
+	void SetFrameLimit(int frameLimit);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -223,4 +229,7 @@ private:
 
 	bool strobe = false;
 	float strobeIntensity = 0.66f;
+
+	bool limitFramerate = false;
+	int frameLimit = 60;
 };

@@ -267,6 +267,16 @@ void Settings::SetEffectRadiation(float effectRadiation) {
 	Save();
 }
 
+void Settings::SetLimitFramerate(bool limitFramerate) {
+	this->limitFramerate = limitFramerate;
+	Save();
+}
+
+void Settings::SetFrameLimit(int frameLimit) {
+	this->frameLimit = frameLimit;
+	Save();
+}
+
 void Settings::Save() {
 	if (auto path = GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
@@ -427,6 +437,11 @@ const Node &operator>>(const Node &node, Settings &settings) {
 		node["effectYOffset"]->get(settings.effectYOffset);
 	if (node.has("effectRadiation"))
 		node["effectRadiation"]->get(settings.effectRadiation);
+
+	if (node.has("limitFramerate"))
+		node["limitFramerate"]->get(settings.limitFramerate);
+	if (node.has("frameLimit"))
+		node["frameLimit"]->get(settings.frameLimit);
 		
 	return node;
 }
@@ -472,6 +487,8 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["effectYOffset"]->set(settings.effectYOffset);
 	node["effectRadiation"]->set(settings.effectRadiation);
 	node["blurOpacity"]->set(settings.blurOpacity);
+	node["limitFramerate"]->set(settings.limitFramerate);
+	node["frameLimit"]->set(settings.frameLimit);
 
 	return node;
 }

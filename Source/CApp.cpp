@@ -294,6 +294,7 @@ inline void CApp::CacheBlurUniforms(Context::Shader &shader) {
 	shader.program.CacheUniformLocation("effectXOffset");
 	shader.program.CacheUniformLocation("effectYOffset");
 	shader.program.CacheUniformLocation("effectRadiation");
+	shader.program.CacheUniformLocation("effectTimeDelta");
 }
 
 inline void CApp::SetEffect(const std::string &effect) {
@@ -675,6 +676,19 @@ void CApp::OnInit() {
 
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
+		});
+		menu.SetOnLimitFramerateChanged([this](bool limitFramerate) {
+			Settings::settings.SetLimitFramerate(limitFramerate);
+
+			if (limitFramerate)
+				frameLimit = Settings::settings.GetFrameLimit();
+			else
+				frameLimit = -1;
+		});
+		menu.SetOnFrameLimitChanged([this](int frameLimit) {
+			Settings::settings.SetFrameLimit(frameLimit);
+
+			this->frameLimit = frameLimit;
 		});
 		menu.SetOnResetWindow([this] {
 			Settings::settings.SetWindowWidth(1920);
@@ -1062,7 +1076,7 @@ void CApp::OnLoop(const Delta &time) {
 		lightPack.NextSamples(floatBuffer, bufferLength);
 
 	auto color = GetColor();
-	currentFadeTime += time.change.AsSeconds();
+	currentFadeTime += playing ? time.change.AsSeconds() : 0.0f;
 	auto lerp = std::min(1.0f, currentFadeTime / fadeTime);
 
 	if ((renderer->GetPulse() && !renderer->GetPulses()) || strobe) {
@@ -1115,14 +1129,6 @@ void CApp::OnLoop(const Delta &time) {
 			frameCount -= 360.0f;
 	}
 
-	if (strobe && (playing || listening)) {
-		strobeAccum += time.change;
-		if (strobeAccum >= strobeFrequency) {
-			albumArt.NextBin(true);
-			strobeAccum -= strobeFrequency;
-		}
-	}
-
 	GLint oldViewport[4];
 	auto identity = context->GetIdentity();
 	if (blur) {
@@ -1140,7 +1146,27 @@ void CApp::OnLoop(const Delta &time) {
 		glDisable(GL_BLEND);
 		
 		context->Use("blur"_hash);
-		context->GetShaderProgram().Uniform1f("timeDelta", (playing || listening) ? time.change.AsSeconds() : 0.0f);
+		context->GetShaderProgram().Uniform1f(
+			"timeDelta",
+			(playing || listening) ?
+				(
+					// We currently treat anything >= 3
+					// as "never fades out"
+					blurIntensity >= 3.0f ?
+					0.0f :
+					time.change.AsSeconds()
+				) 
+				: 0.0f
+		);
+
+		context->GetShaderProgram().Uniform1f(
+			"effectTimeDelta",
+			(playing || listening) ?
+				// Effects were written with a framerate
+				// of 240 in mind, so scale accordingly
+				time.change.AsSeconds() / (1.0 / 240.0) :
+				0.0f
+		);
 		context->GetShaderProgram().Uniform1f("randomX", prng() / static_cast<float>(prng.max()));
 		context->GetShaderProgram().Uniform1f("randomY", prng() / static_cast<float>(prng.max()));
 
@@ -1269,7 +1295,21 @@ void CApp::OnLoop(const Delta &time) {
 }
 
 inline void CApp::SwapBuffers(const Delta &time) {
+	std::chrono::duration<double, std::nano> over;
+
+	if (frameLimit != -1) {
+		if (std::chrono::duration_cast<std::chrono::microseconds>(frameStart.time_since_epoch()).count() == 0)
+			frameStart = std::chrono::steady_clock::now();
+
+		while (std::chrono::steady_clock::now() < frameStart + (1s / frameLimit))
+			std::this_thread::sleep_for(1ms);
+
+		// How far over the target time are we?
+		over = std::chrono::steady_clock::now() - (frameStart + (1s / frameLimit));
+	}
+
 	controls.GetFpsCounter().OnFrame();
+
 #if GUI
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplSDL2_NewFrame();
@@ -1285,7 +1325,7 @@ inline void CApp::SwapBuffers(const Delta &time) {
 	// 
 	// The high overhead involved in caching the OpenGL context (+5% CPU usage on a 9950X)
 	// as part of ImGui_ImplOpenGL3_RenderDrawData() conflicts with my goal of ~1% CPU usage
-	if (updateUi && (uiAccum += time.change.AsSeconds()) >= 0.01667 /* Render UI at 60FPS */) {
+	if (updateUi && (uiAccum += time.change.AsSeconds()) >= 0.01667 /* Render UI at 60FPS maximum */) {
 		uiFbo->Bind();
 		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -1307,6 +1347,8 @@ inline void CApp::SwapBuffers(const Delta &time) {
 	uiFbo->Draw(0, 0, *context);
 #endif
 	SDL_GL_SwapWindow(sdlWindow);
+
+	frameStart = std::chrono::steady_clock::now() - std::chrono::duration_cast<std::chrono::microseconds>(over);
 }
 
 void CApp::OnDestroy() {
@@ -1756,10 +1798,6 @@ void CApp::SetFadeTime(Duration<Microseconds> time) {
 void CApp::SetStrobe(bool strobe) {
 	this->strobe = strobe;
 	Settings::settings.SetStrobe(strobe);
-}
-
-void CApp::SetStrobeFrequency(Duration<Microseconds> freq) {
-	strobeFrequency = freq;
 }
 
 void CApp::SetBlur(bool blur) {

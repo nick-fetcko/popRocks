@@ -93,7 +93,6 @@ public:
 
 	void SetStrobe(bool strobe);
 	bool GetStrobe() const { return strobe; }
-	void SetStrobeFrequency(Duration<Microseconds> freq);
 
 	AlbumArt &GetAlbumArt() { return albumArt; }
 
@@ -236,8 +235,6 @@ private:
 	float rotationSpeed = Settings::settings.GetRotationSpeed();
 
 	bool strobe = Settings::settings.GetStrobe();
-	Duration<Microseconds> strobeAccum;
-	Duration<Microseconds> strobeFrequency = 1s;
 	float strobeIntensity = Settings::settings.GetStrobeIntensity();
 
 	std::atomic<bool> shuttingDown = false;
@@ -310,4 +307,7 @@ private:
 	float blurOpacity = Settings::settings.GetBlurOpacity();
 
 	std::mt19937 prng;
+
+	std::chrono::steady_clock::time_point frameStart;
+	double frameLimit = Settings::settings.GetLimitFramerate() ? Settings::settings.GetFrameLimit() : -1;
 };
