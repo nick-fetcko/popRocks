@@ -14,6 +14,7 @@ uniform float effectRadiation;
 uniform float effectTimeDelta;
 uniform float effectHorizontalSpread;
 uniform float effectVerticalSpread;
+uniform float effectEnabled;
 
 vec2 applyEffect(vec2 coords) {
     vec2 centered = vec2((coords.x - 0.5) * 2, (coords.y - 0.5) * 2);

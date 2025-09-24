@@ -14,6 +14,7 @@ uniform float effectRadiation;
 uniform float effectTimeDelta;
 uniform float effectHorizontalSpread;
 uniform float effectVerticalSpread;
+uniform float effectEnabled;
 
 // From https://stackoverflow.com/a/17479300
 uint hash( uint x ) {
@@ -58,9 +59,9 @@ vec2 applyEffect(vec2 coords) {
     return vec2(
         random(
             vec3(coords, randomX)
-        ) * effectIntensity + effectXOffset * effectTimeDelta + cos(angle) * effectRadiation * effectTimeDelta + centered.x * -effectHorizontalSpread * effectTimeDelta,
+        ) * effectIntensity * effectEnabled + effectXOffset * effectTimeDelta + cos(angle) * effectRadiation * effectTimeDelta + centered.x * -effectHorizontalSpread * effectTimeDelta,
         random(
             vec3(coords, randomY)
-        ) * effectIntensity + effectYOffset * effectTimeDelta + sin(angle) * effectRadiation * effectTimeDelta + centered.y * -effectVerticalSpread * effectTimeDelta
+        ) * effectIntensity * effectEnabled + effectYOffset * effectTimeDelta + sin(angle) * effectRadiation * effectTimeDelta + centered.y * -effectVerticalSpread * effectTimeDelta
     );
 }

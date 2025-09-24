@@ -300,6 +300,7 @@ inline void CApp::CacheBlurUniforms(Context::Shader &shader) {
 	shader.program.CacheUniformLocation("effectTimeDelta");
 	shader.program.CacheUniformLocation("effectHorizontalSpread");
 	shader.program.CacheUniformLocation("effectVerticalSpread");
+	shader.program.CacheUniformLocation("effectEnabled");
 }
 
 inline void CApp::SetEffect(const std::string &effect) {
@@ -329,6 +330,7 @@ inline void CApp::SetEffect(const std::string &effect) {
 	blurShader->program.Uniform1f("effectRadiation", Settings::settings.GetEffectRadiation());
 	blurShader->program.Uniform1f("effectHorizontalSpread", Settings::settings.GetEffectHorizontalSpread());
 	blurShader->program.Uniform1f("effectVerticalSpread", Settings::settings.GetEffectVerticalSpread());
+	blurShader->program.Uniform1f("effectEnabled", (playing || listening) ? 1.0f : 0.0f);
 }
 
 void CApp::OnInit() {
@@ -822,6 +824,7 @@ void CApp::OnInit() {
 			shader.program.Uniform1f("effectRadiation", Settings::settings.GetEffectRadiation());
 			shader.program.Uniform1f("effectHorizontalSpread", Settings::settings.GetEffectHorizontalSpread());
 			shader.program.Uniform1f("effectVerticalSpread", Settings::settings.GetEffectVerticalSpread());
+			shader.program.Uniform1f("effectEnabled", (playing || listening) ? 1.0f : 0.0f);
 		}
 
 		if (hash == "rotate"_hash) {
@@ -1223,6 +1226,7 @@ void CApp::OnLoop(const Delta &time) {
 		);
 		context->GetShaderProgram().Uniform1f("randomX", prng() / static_cast<float>(prng.max()));
 		context->GetShaderProgram().Uniform1f("randomY", prng() / static_cast<float>(prng.max()));
+		context->GetShaderProgram().Uniform1f("effectEnabled", (playing || listening) ? 1.0f : 0.0f);
 
 		lastFrame->DrawMultisampled(0, 0, *context);
 
