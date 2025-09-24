@@ -132,6 +132,9 @@ CApp::CApp() : albumArt(context), controls(&albumArt), circleLine(12.0f), prng(t
 
 	// Add our console commands
 	AddCommands();
+
+	// Set our initial visualizer color
+	OnColorChanged(visColor, true);
 }
 
 void CApp::UpdateMaxBufferLength() {
@@ -1109,7 +1112,7 @@ void CApp::OnLoop(const Delta &time) {
 	currentFadeTime += playing ? time.change.AsSeconds() : 0.0f;
 	auto lerp = std::min(1.0f, currentFadeTime / fadeTime);
 
-	if ((renderer->GetPulse() && !renderer->GetPulses()) || strobe) {
+	if (playing && ((renderer->GetPulse() && !renderer->GetPulses()) || strobe)) {
 		auto hsv = color.ToHsv();
 		auto brightHsv = brightColor.ToHsv();
 		
@@ -1127,7 +1130,7 @@ void CApp::OnLoop(const Delta &time) {
 			hStep,
 			*context,
 			color,
-			strobe ? Colour<float>::FromHsv(hsv) : this->brightColor,
+			((strobe && playing) ? Colour<float>::FromHsv(hsv) : this->brightColor),
 			frameCount,
 			maxHeardSample,
 			resetGain
@@ -1806,6 +1809,8 @@ void CApp::SetColor(int r, int g, int b) {
 	// from the album art
 	if (albumArt.Loaded())
 		overrideColor = true;
+
+	OnColorChanged(visColor);
 }
 
 void CApp::SetDecayTime(Duration<Microseconds> time) {
