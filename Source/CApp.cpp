@@ -327,7 +327,7 @@ inline void CApp::SetEffect(const std::string &effect) {
 	blurShader->program.Uniform1f("effectXOffset", Settings::settings.GetEffectXOffset());
 	blurShader->program.Uniform1f("effectYOffset", Settings::settings.GetEffectYOffset());
 	blurShader->program.Uniform1f("effectRadiation", Settings::settings.GetEffectRadiation());
-	blurShader->program.Uniform1f("effectHorizontalSpread", Settings::settings.GetEffectVerticalSpread());
+	blurShader->program.Uniform1f("effectHorizontalSpread", Settings::settings.GetEffectHorizontalSpread());
 	blurShader->program.Uniform1f("effectVerticalSpread", Settings::settings.GetEffectVerticalSpread());
 }
 
