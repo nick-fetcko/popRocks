@@ -267,6 +267,16 @@ void Settings::SetEffectRadiation(float effectRadiation) {
 	Save();
 }
 
+void Settings::SetEffectHorizontalSpread(float effectHorizontalSpread) {
+	this->effectHorizontalSpread = effectHorizontalSpread;
+	Save();
+}
+
+void Settings::SetEffectVerticalSpread(float effectVerticalSpread) {
+	this->effectVerticalSpread = effectVerticalSpread;
+	Save();
+}
+
 void Settings::SetLimitFramerate(bool limitFramerate) {
 	this->limitFramerate = limitFramerate;
 	Save();
@@ -452,6 +462,10 @@ const Node &operator>>(const Node &node, Settings &settings) {
 		node["effectYOffset"]->get(settings.effectYOffset);
 	if (node.has("effectRadiation"))
 		node["effectRadiation"]->get(settings.effectRadiation);
+	if (node.has("effectHorizontalSpread"))
+		node["effectHorizontalSpread"]->get(settings.effectHorizontalSpread);
+	if (node.has("effectVerticalSpread"))
+		node["effectVerticalSpread"]->get(settings.effectVerticalSpread);
 
 	if (node.has("limitFramerate"))
 		node["limitFramerate"]->get(settings.limitFramerate);
@@ -514,6 +528,8 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["effectXOffset"]->set(settings.effectXOffset);
 	node["effectYOffset"]->set(settings.effectYOffset);
 	node["effectRadiation"]->set(settings.effectRadiation);
+	node["effectHorizontalSpread"]->set(settings.effectHorizontalSpread);
+	node["effectVerticalSpread"]->set(settings.effectVerticalSpread);
 	node["blurOpacity"]->set(settings.blurOpacity);
 	node["limitFramerate"]->set(settings.limitFramerate);
 	node["frameLimit"]->set(settings.frameLimit);

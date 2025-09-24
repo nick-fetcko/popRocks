@@ -301,6 +301,18 @@ public:
 						onEffectRadiationChanged(effectRadiation);
 				}
 
+				effectHorizontalSpread = Settings::settings.GetEffectHorizontalSpread();
+				if (ImGui::SliderFloat("Horizontal Spread", &effectHorizontalSpread, -10.0f, 10.0f, "%.2f")) {
+					if (onEffectHorizontalSpreadChanged)
+						onEffectHorizontalSpreadChanged(effectHorizontalSpread);
+				}
+
+				effectVerticalSpread = Settings::settings.GetEffectVerticalSpread();
+				if (ImGui::SliderFloat("Vertical Spread", &effectVerticalSpread, -10.0f, 10.0f, "%.2f")) {
+					if (onEffectVerticalSpreadChanged)
+						onEffectVerticalSpreadChanged(effectVerticalSpread);
+				}
+
 				ImGui::EndMenu();
 			}
 
@@ -455,7 +467,9 @@ public:
 						Settings::settings.GetEffectIntensity(),
 						Settings::settings.GetEffectXOffset(),
 						Settings::settings.GetEffectYOffset(),
-						Settings::settings.GetEffectRadiation()
+						Settings::settings.GetEffectRadiation(),
+						Settings::settings.GetEffectHorizontalSpread(),
+						Settings::settings.GetEffectVerticalSpread()
 					);
 
 					Preset::AddPreset(std::move(preset));
@@ -780,6 +794,8 @@ public:
 	void SetOnEffectXOffsetChanged(std::function<void(float)> f) { onEffectXOffsetChanged = f; }
 	void SetOnEffectYOffsetChanged(std::function<void(float)> f) { onEffectYOffsetChanged = f; }
 	void SetOnEffectRadiationChanged(std::function<void(float)> f) { onEffectRadiationChanged = f; }
+	void SetOnEffectHorizontalSpreadChanged(std::function<void(float)> f) { onEffectHorizontalSpreadChanged = f; }
+	void SetOnEffectVerticalSpreadChanged(std::function<void(float)> f) { onEffectVerticalSpreadChanged = f; }
 
 	void SetOnLimitFramerateChanged(std::function<void(bool)> f) { onLimitFramerateChanged = f; }
 	void SetOnFrameLimitChanged(std::function<void(int)> f) { onFrameLimitChanged = f; }
@@ -865,6 +881,8 @@ private:
 	float effectXOffset = Settings::settings.GetEffectXOffset();
 	float effectYOffset = Settings::settings.GetEffectYOffset();
 	float effectRadiation = Settings::settings.GetEffectRadiation();
+	float effectHorizontalSpread = Settings::settings.GetEffectHorizontalSpread();
+	float effectVerticalSpread = Settings::settings.GetEffectVerticalSpread();
 
 	int minPercentage = Settings::settings.GetColorSelection().minPercentage * 100;
 	int minHueSeparation = Settings::settings.GetColorSelection().minHueSeparation;
@@ -916,6 +934,8 @@ private:
 	std::function<void(float)> onEffectXOffsetChanged;
 	std::function<void(float)> onEffectYOffsetChanged;
 	std::function<void(float)> onEffectRadiationChanged;
+	std::function<void(float)> onEffectHorizontalSpreadChanged;
+	std::function<void(float)> onEffectVerticalSpreadChanged;
 	std::function<void(bool)> onLimitFramerateChanged;
 	std::function<void(int)> onFrameLimitChanged;
 	std::function<void(bool)> onRandomizeChanged;

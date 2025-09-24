@@ -12,6 +12,8 @@ uniform float effectXOffset;
 uniform float effectYOffset;
 uniform float effectRadiation;
 uniform float effectTimeDelta;
+uniform float effectHorizontalSpread;
+uniform float effectVerticalSpread;
 
 vec2 applyEffect(vec2 coords) {
     vec2 centered = vec2((coords.x - 0.5) * 2, (coords.y - 0.5) * 2);
@@ -19,7 +21,7 @@ vec2 applyEffect(vec2 coords) {
     float angle = atan(centered.y, centered.x) - M_PI;
 
     return vec2(
-        effectXOffset * effectTimeDelta + cos(angle) * effectRadiation * effectTimeDelta,
-        effectYOffset * effectTimeDelta + sin(angle) * effectRadiation * effectTimeDelta
+        effectXOffset * effectTimeDelta + cos(angle) * effectRadiation * effectTimeDelta + centered.x * -effectHorizontalSpread * effectTimeDelta,
+        effectYOffset * effectTimeDelta + sin(angle) * effectRadiation * effectTimeDelta + centered.y * -effectVerticalSpread * effectTimeDelta
     );
 }

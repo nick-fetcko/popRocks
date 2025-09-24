@@ -298,6 +298,8 @@ inline void CApp::CacheBlurUniforms(Context::Shader &shader) {
 	shader.program.CacheUniformLocation("effectYOffset");
 	shader.program.CacheUniformLocation("effectRadiation");
 	shader.program.CacheUniformLocation("effectTimeDelta");
+	shader.program.CacheUniformLocation("effectHorizontalSpread");
+	shader.program.CacheUniformLocation("effectVerticalSpread");
 }
 
 inline void CApp::SetEffect(const std::string &effect) {
@@ -325,6 +327,8 @@ inline void CApp::SetEffect(const std::string &effect) {
 	blurShader->program.Uniform1f("effectXOffset", Settings::settings.GetEffectXOffset());
 	blurShader->program.Uniform1f("effectYOffset", Settings::settings.GetEffectYOffset());
 	blurShader->program.Uniform1f("effectRadiation", Settings::settings.GetEffectRadiation());
+	blurShader->program.Uniform1f("effectHorizontalSpread", Settings::settings.GetEffectVerticalSpread());
+	blurShader->program.Uniform1f("effectVerticalSpread", Settings::settings.GetEffectVerticalSpread());
 }
 
 void CApp::OnInit() {
@@ -670,6 +674,7 @@ void CApp::OnInit() {
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
+		// TODO: Add setting to change radiation function (circle, centered horizontal line (iTunes-style), etc.)
 		menu.SetOnEffectRadiationChanged([this](float effectRadiation) {
 			Settings::settings.SetEffectRadiation(effectRadiation);
 
@@ -679,6 +684,20 @@ void CApp::OnInit() {
 
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
+		});
+		menu.SetOnEffectHorizontalSpreadChanged([this](float effectHorizontalSpread) {
+			Settings::settings.SetEffectHorizontalSpread(effectHorizontalSpread);
+
+			this->context->With("blur"_hash, [effectHorizontalSpread](Context::Shader &shader) {
+				shader.program.Uniform1f("effectHorizontalSpread", effectHorizontalSpread);
+			});
+		});
+		menu.SetOnEffectVerticalSpreadChanged([this](float effectVerticalSpread) {
+			Settings::settings.SetEffectVerticalSpread(effectVerticalSpread);
+
+			this->context->With("blur"_hash, [effectVerticalSpread](Context::Shader &shader) {
+				shader.program.Uniform1f("effectVerticalSpread", effectVerticalSpread);
+			});
 		});
 		menu.SetOnLimitFramerateChanged([this](bool limitFramerate) {
 			Settings::settings.SetLimitFramerate(limitFramerate);
@@ -801,6 +820,8 @@ void CApp::OnInit() {
 			shader.program.Uniform1f("effectXOffset", Settings::settings.GetEffectXOffset());
 			shader.program.Uniform1f("effectYOffset", Settings::settings.GetEffectYOffset());
 			shader.program.Uniform1f("effectRadiation", Settings::settings.GetEffectRadiation());
+			shader.program.Uniform1f("effectHorizontalSpread", Settings::settings.GetEffectHorizontalSpread());
+			shader.program.Uniform1f("effectVerticalSpread", Settings::settings.GetEffectVerticalSpread());
 		}
 
 		if (hash == "rotate"_hash) {
@@ -2146,6 +2167,8 @@ void CApp::LoadPreset(const Preset &preset) {
 	Settings::settings.SetEffectXOffset(preset.GetEffectXOffset());
 	Settings::settings.SetEffectYOffset(preset.GetEffectYOffset());
 	Settings::settings.SetEffectRadiation(preset.GetEffectRadiation());
+	Settings::settings.SetEffectHorizontalSpread(preset.GetEffectHorizontalSpread());
+	Settings::settings.SetEffectVerticalSpread(preset.GetEffectVerticalSpread());
 
 	SetEffect(preset.GetEffect());
 }
