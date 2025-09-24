@@ -49,18 +49,18 @@ Preset Preset::Random() {
 		1 + prng() % 512, // limit to 512
 		Duration<Microseconds>(
 			std::chrono::duration<double>(
-				(prng() % 10000) / 1000.0f
+				(prng() % 10000) / 5000.0f // 0 - 2
 			)
 		),
 		Duration<Microseconds>(
 			std::chrono::duration<double>(
-				(prng() % 10000) / 1000.0f
+				(prng() % 10000) / 5000.0f // 0 - 2
 			)
 		),
 		prng() % 2,
 		Duration<Microseconds>(
 			std::chrono::duration<double>(
-				(prng() % 10000) / 1000.0f
+				(prng() % 10000) / 5000.0f // 0 - 2
 			)
 		),
 		prng() % 2,
