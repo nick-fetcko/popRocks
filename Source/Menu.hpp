@@ -25,7 +25,8 @@ public:
 	}
 
 	void OnResize(int width, int height, float scale) {
-		this->width = width;
+		this->width = this->windowWidth = width;
+		this->windowHeight = height;
 		this->scale = scale;
 
 		if (!font) {
@@ -380,6 +381,7 @@ public:
 		}
 
 		presetIndex = Settings::settings.GetPresetIndex();
+		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(windowWidth, windowHeight - height));
 		if (ImGui::BeginMenu("Presets")) {
 			open = true;
 
@@ -390,11 +392,27 @@ public:
 				presetSelections = new bool[presets.size()];
 				numPresets = presets.size();
 			}
+			selectedPresets = Settings::settings.GetSelectedPresets();
 			for (const auto &[i, preset] : Utils::Enumerate(presets)) {
 				presetSelections[i] = presetIndex && *presetIndex == i;
-				if (ImGui::MenuItem(preset.GetName().c_str(), nullptr, &presetSelections[i])) {
+
+				auto name = preset.GetName();
+				if (selectedPresets.find(i) != selectedPresets.end())
+					name = "- " + name;
+
+				if (ImGui::MenuItem(name.c_str(), nullptr, &presetSelections[i])) {
 					if (onPresetChanged)
 						onPresetChanged(i);
+				}
+
+				if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Middle)) {
+					if (selectedPresets.find(i) != selectedPresets.end())
+						selectedPresets.erase(i);
+					else
+						selectedPresets.emplace(i);
+
+					if (onSelectedPresetsChanged)
+						onSelectedPresetsChanged(selectedPresets);
 				}
 
 				if (ImGui::BeginPopupContextItem()) {
@@ -416,6 +434,22 @@ public:
 							else if (*presetIndex > i)
 								onPresetChanged(*presetIndex - 1);
 						}
+
+						// If it was a selected preset, remove it
+						if (auto iter = selectedPresets.find(i); iter != selectedPresets.end())
+							selectedPresets.erase(i);
+
+						// Drop any selected presets after it down one index
+						for (auto iter = selectedPresets.begin(); iter != selectedPresets.end();) {
+							if (*iter > i) {
+								auto temp = *iter;
+								selectedPresets.erase(iter);
+								iter = selectedPresets.emplace(temp - 1).first;
+								std::advance(iter, 1);
+							} else ++iter;
+						}
+						if (onSelectedPresetsChanged)
+							onSelectedPresetsChanged(selectedPresets);
 					}
 					ImGui::EndPopup();
 				}
@@ -427,6 +461,22 @@ public:
 				currentPresetName.clear();
 				newPresetPopup = true;
 			}
+
+			ImGui::Separator();
+
+			randomizePresets = Settings::settings.GetRandomizePresets();
+			if (ImGui::MenuItem("Randomize selected (middle-click) every...", nullptr, &randomizePresets)) {
+				if (onRandomizePresetsChanged)
+					onRandomizePresetsChanged(randomizePresets);
+			}
+
+			ImGui::BeginDisabled(!randomizePresets);
+			randomizePresetsTime = Settings::settings.GetRandomizePresetsTime().AsSeconds();
+			if (ImGui::SliderFloat("...seconds", &randomizePresetsTime, 0.5, 10.0, "%.2f")) {
+				if (onRandomizePresetsTimeChanged)
+					onRandomizePresetsTimeChanged(randomizePresetsTime);
+			}
+			ImGui::EndDisabled();
 			
 			ImGui::EndMenu();
 		}
@@ -805,6 +855,10 @@ public:
 
 	void SetOnScaleChanged(std::function<void(float)> f) { onScaleChanged = f; }
 
+	void SetOnSelectedPresetsChanged(std::function<void(const std::set<std::size_t> &)> f) { onSelectedPresetsChanged = f; }
+	void SetOnRandomizePresetsChanged(std::function<void(bool)> f) { onRandomizePresetsChanged = f; }
+	void SetOnRandomizePresetsTimeChanged(std::function<void(float)> f) { onRandomizePresetsTimeChanged = f; }
+
 	void SetOnResetWindow(std::function<void()> f) { onResetWindow = f; }
 
 	void SetOnQuit(std::function<void()> f) { onQuit = f; }
@@ -812,6 +866,7 @@ public:
 	void SetOnRandom(std::function<void()> f) { onRandom = f; }
 
 private:
+	int windowWidth = 0, windowHeight = 0;
 	int width = 0, height = 0;
 
 	bool fft = Settings::settings.GetRenderer() == "fft";
@@ -899,6 +954,10 @@ private:
 
 	float visualizerScale = Settings::settings.GetScale();
 
+	std::set<std::size_t> selectedPresets = Settings::settings.GetSelectedPresets();
+	bool randomizePresets = Settings::settings.GetRandomizePresets();
+	float randomizePresetsTime = Settings::settings.GetRandomizePresetsTime().AsSeconds();
+
 	std::function<void(const std::filesystem::path &)> onOpen;
 	std::function<void(bool)> onPulseChanged;
 	std::function<void(bool)> onBlurChanged;
@@ -941,6 +1000,9 @@ private:
 	std::function<void(bool)> onRandomizeChanged;
 	std::function<void(float)> onRandomizeTimeChanged;
 	std::function<void(float)> onScaleChanged;
+	std::function<void(const std::set<std::size_t> &)> onSelectedPresetsChanged;
+	std::function<void(bool)> onRandomizePresetsChanged;
+	std::function<void(float)> onRandomizePresetsTimeChanged;
 
 	std::function<void()> onRandom;
 

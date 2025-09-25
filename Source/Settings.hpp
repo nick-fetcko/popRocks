@@ -172,6 +172,15 @@ public:
 	const float &GetScale() const { return scale; }
 	void SetScale(float scale);
 
+	const std::set<std::size_t> &GetSelectedPresets() const { return selectedPresets; }
+	void SetSelectedPresets(const std::set<std::size_t> &selectedPresets);
+
+	const bool &GetRandomizePresets() const { return randomizePresets; }
+	void SetRandomizePresets(bool randomizePresets);
+
+	const Duration<Microseconds> &GetRandomizePresetsTime() const { return randomizePresetsTime; }
+	void SetRandomizePresetsTime(Duration<Microseconds> randomizePresetsTime);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -254,4 +263,8 @@ private:
 	Duration<Microseconds> randomizeTime = 2.5s;
 
 	float scale = 1.0f;
+
+	std::set<std::size_t> selectedPresets;
+	bool randomizePresets = false;
+	Duration<Microseconds> randomizePresetsTime = 2.5s;
 };

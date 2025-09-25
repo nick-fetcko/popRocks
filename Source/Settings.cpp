@@ -302,6 +302,21 @@ void Settings::SetScale(float scale) {
 	Save();
 }
 
+void Settings::SetSelectedPresets(const std::set<std::size_t> &selectedPresets) {
+	this->selectedPresets = selectedPresets;
+	Save();
+}
+
+void Settings::SetRandomizePresets(bool randomizePresets) {
+	this->randomizePresets = randomizePresets;
+	Save();
+}
+
+void Settings::SetRandomizePresetsTime(Duration<Microseconds> randomizePresetsTime) {
+	this->randomizePresetsTime = randomizePresetsTime;
+	Save();
+}
+
 void Settings::Save() {
 	if (auto path = GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
@@ -484,6 +499,18 @@ const Node &operator>>(const Node &node, Settings &settings) {
 
 	if (node.has("scale"))
 		node["scale"]->get(settings.scale);
+
+	if (node.has("selectedPresets"))
+		node["selectedPresets"]->get(settings.selectedPresets);
+	if (node.has("randomizePresets"))
+		node["randomizePresets"]->get(settings.randomizePresets);
+	if (node.has("randomizePresetsTime")) {
+		settings.randomizePresetsTime = Duration<Microseconds>(
+			std::chrono::duration<double>(
+				node["randomizePresetsTime"]->get<double>()
+			)
+		);
+	}
 		
 	return node;
 }
@@ -536,6 +563,9 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["randomize"]->set(settings.randomize);
 	node["randomizeTime"]->set(settings.randomizeTime.AsSeconds());
 	node["scale"]->set(settings.scale);
+	node["selectedPresets"]->set(settings.selectedPresets);
+	node["randomizePresets"]->set(settings.randomizePresets);
+	node["randomizePresetsTime"]->set(settings.randomizePresetsTime.AsSeconds());
 
 	return node;
 }

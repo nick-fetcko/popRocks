@@ -317,4 +317,11 @@ private:
 			std::nullopt;
 
 	std::chrono::system_clock::time_point lastRandomize;
+
+	std::optional<Duration<Microseconds>> randomizePresetsTime =
+		Settings::settings.GetRandomizePresets() ?
+		static_cast<std::optional<Duration<Microseconds>>>(Settings::settings.GetRandomizePresetsTime()) :
+		std::nullopt;
+
+	std::chrono::system_clock::time_point lastPresetRandomize;
 };

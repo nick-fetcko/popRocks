@@ -739,6 +739,28 @@ void CApp::OnInit() {
 			if (renderer)
 				renderer->SetScale(scale);
 		});
+		menu.SetOnSelectedPresetsChanged([this](const std::set<std::size_t> &selectedPresets) {
+			Settings::settings.SetSelectedPresets(selectedPresets);
+		});
+		menu.SetOnRandomizePresetsChanged([this](bool randomizePresets) {
+			Settings::settings.SetRandomizePresets(randomizePresets);
+
+			if (randomizePresets)
+				randomizePresetsTime = Settings::settings.GetRandomizePresetsTime();
+			else
+				randomizePresetsTime = std::nullopt;
+		});
+		menu.SetOnRandomizePresetsTimeChanged([this](float randomizePresetsTime) {
+			this->randomizePresetsTime = Duration<Microseconds>(
+				std::chrono::duration<double>(
+					static_cast<double>(randomizePresetsTime)
+				)
+			);
+
+			Settings::settings.SetRandomizePresetsTime(
+				*this->randomizePresetsTime
+			);
+		});
 		menu.SetOnResetWindow([this] {
 			Settings::settings.SetWindowWidth(1920);
 			Settings::settings.SetWindowHeight(1080);
@@ -1044,6 +1066,17 @@ void CApp::OnLoop(const Delta &time) {
 	if (randomizeTime && std::chrono::system_clock::now() > lastRandomize + std::chrono::duration<double>(randomizeTime->AsSeconds())) {
 		LoadPreset(Preset::Random());
 		lastRandomize = std::chrono::system_clock::now();
+	} else if (randomizePresetsTime && std::chrono::system_clock::now() > lastPresetRandomize + std::chrono::duration<double>(randomizePresetsTime->AsSeconds())) {
+		const auto &selectedPresets = Settings::settings.GetSelectedPresets();
+		auto begin = selectedPresets.begin();
+
+		do {
+			begin = selectedPresets.begin();
+			std::advance(begin, (prng() % selectedPresets.size()));
+		} while (presetIndex && *begin == *presetIndex);
+
+		LoadPreset(*begin);
+		lastPresetRandomize = std::chrono::system_clock::now();
 	}
 
 	if(fileLoaded) {
