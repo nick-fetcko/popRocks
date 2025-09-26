@@ -29,11 +29,18 @@ bool BeatDetect::OnLoop(double elapsed) {
 	return false;
 }
 
-void BeatDetect::SeekTo(double time) {
-	for (eventListIter = eventList.begin(); eventListIter != eventList.end(); ++eventListIter) {
+int BeatDetect::SeekTo(double time) {
+	int ret = 0;
+	for (eventListIter = eventList.begin(); eventListIter != eventList.end(); ++eventListIter, ++ret) {
 		if (eventListIter->time > time)
-			return;
+			return ret;
 	}
+
+	return ret;
+}
+
+const int BeatDetect::GetNumberOfElapsedBeats() const {
+	return std::distance(eventList.begin(), EventList::const_iterator(eventListIter));
 }
 
 void BeatDetect::SetDetecting(bool detecting) {
@@ -199,6 +206,11 @@ inline void BeatDetect::_OnLoad(
 			start = end;
 
 			eventList = beatRootProcessor.beatTrack();
+
+			if (eventList.size() % 2) {
+				eventList.erase(eventList.begin());
+				logger.LogDebug("Song had an odd number of beats! Removing the first one...");
+			}
 
 			end = std::chrono::system_clock::now();
 

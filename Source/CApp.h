@@ -183,6 +183,9 @@ private:
 
 	inline void SetEffect(const std::string &effect);
 
+	inline void LoadRandomPreset();
+	inline void UpdateBeatCounter();
+
 	int windowWidth = 1920;
 	int windowHeight = 1080;
 
@@ -324,4 +327,11 @@ private:
 		std::nullopt;
 
 	std::chrono::system_clock::time_point lastPresetRandomize;
+
+	std::optional<int> randomizePresetsBeats =
+		Settings::settings.GetRandomizePresetsByBeats() ?
+		static_cast<std::optional<int>>(Settings::settings.GetRandomizePresetsBeats()) :
+		std::nullopt;
+
+	int beatCounter = 0;
 };

@@ -465,7 +465,9 @@ public:
 			ImGui::Separator();
 
 			randomizePresets = Settings::settings.GetRandomizePresets();
-			if (ImGui::MenuItem("Randomize selected (middle-click) every...", nullptr, &randomizePresets)) {
+			randomizePresetsByBeats = Settings::settings.GetRandomizePresetsByBeats();
+
+			if (ImGui::MenuItem("Randomize selected (middle-click) every...", nullptr, &randomizePresets, !randomizePresetsByBeats)) {
 				if (onRandomizePresetsChanged)
 					onRandomizePresetsChanged(randomizePresets);
 			}
@@ -476,6 +478,34 @@ public:
 				if (onRandomizePresetsTimeChanged)
 					onRandomizePresetsTimeChanged(randomizePresetsTime);
 			}
+			ImGui::EndDisabled();
+
+			if (ImGui::MenuItem("Randomize selected (middle-click) every...##", nullptr, &randomizePresetsByBeats, !randomizePresets)) {
+				if (onRandomizePresetsByBeatsChanged)
+					onRandomizePresetsByBeatsChanged(randomizePresetsByBeats);
+			}
+
+			ImGui::BeginDisabled(!randomizePresetsByBeats);
+
+			randomizePresetsBeats = Settings::settings.GetRandomizePresetsBeats();
+
+			// As power-of-two sliders are not yet supported in ImGui,
+			// this is a bit of a hack.
+			//
+			// https://github.com/ocornut/imgui/issues/1815
+			if (ImGui::SliderInt("...beats", &randomizePresetsBeats, 1, 1024, std::to_string(randomizePresetsBeats).c_str(), ImGuiSliderFlags_Logarithmic)) {
+				randomizePresetsBeats--;
+				randomizePresetsBeats |= randomizePresetsBeats >> 1;
+				randomizePresetsBeats |= randomizePresetsBeats >> 2;
+				randomizePresetsBeats |= randomizePresetsBeats >> 4;
+				randomizePresetsBeats |= randomizePresetsBeats >> 8;
+				randomizePresetsBeats |= randomizePresetsBeats >> 16;
+				randomizePresetsBeats++;
+
+				if (onRandomizePresetsBeatsChanged)
+					onRandomizePresetsBeatsChanged(randomizePresetsBeats);
+			}
+
 			ImGui::EndDisabled();
 			
 			ImGui::EndMenu();
@@ -858,6 +888,8 @@ public:
 	void SetOnSelectedPresetsChanged(std::function<void(const std::set<std::size_t> &)> f) { onSelectedPresetsChanged = f; }
 	void SetOnRandomizePresetsChanged(std::function<void(bool)> f) { onRandomizePresetsChanged = f; }
 	void SetOnRandomizePresetsTimeChanged(std::function<void(float)> f) { onRandomizePresetsTimeChanged = f; }
+	void SetOnRandomizePresetsByBeatChanged(std::function<void(bool)> f) { onRandomizePresetsByBeatsChanged = f; }
+	void SetOnRandomizePresetsBeatsChanged(std::function<void(int)> f) { onRandomizePresetsBeatsChanged = f; }
 
 	void SetOnResetWindow(std::function<void()> f) { onResetWindow = f; }
 
@@ -957,6 +989,8 @@ private:
 	std::set<std::size_t> selectedPresets = Settings::settings.GetSelectedPresets();
 	bool randomizePresets = Settings::settings.GetRandomizePresets();
 	float randomizePresetsTime = Settings::settings.GetRandomizePresetsTime().AsSeconds();
+	bool randomizePresetsByBeats = Settings::settings.GetRandomizePresetsByBeats();
+	int randomizePresetsBeats = Settings::settings.GetRandomizePresetsBeats();
 
 	std::function<void(const std::filesystem::path &)> onOpen;
 	std::function<void(bool)> onPulseChanged;
@@ -1003,6 +1037,8 @@ private:
 	std::function<void(const std::set<std::size_t> &)> onSelectedPresetsChanged;
 	std::function<void(bool)> onRandomizePresetsChanged;
 	std::function<void(float)> onRandomizePresetsTimeChanged;
+	std::function<void(bool)> onRandomizePresetsByBeatsChanged;
+	std::function<void(int)> onRandomizePresetsBeatsChanged;
 
 	std::function<void()> onRandom;
 

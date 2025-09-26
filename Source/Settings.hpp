@@ -181,6 +181,12 @@ public:
 	const Duration<Microseconds> &GetRandomizePresetsTime() const { return randomizePresetsTime; }
 	void SetRandomizePresetsTime(Duration<Microseconds> randomizePresetsTime);
 
+	const bool &GetRandomizePresetsByBeats() const { return randomizePresetsByBeats; }
+	void SetRandomizePresetsByBeats(bool randomizePresetsByBeats);
+
+	const int &GetRandomizePresetsBeats() const { return randomizePresetsBeats; }
+	void SetRandomizePresetsBeats(int randomizePresetsBeats);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -267,4 +273,6 @@ private:
 	std::set<std::size_t> selectedPresets;
 	bool randomizePresets = false;
 	Duration<Microseconds> randomizePresetsTime = 2.5s;
+	bool randomizePresetsByBeats = false;
+	int randomizePresetsBeats = 16;
 };

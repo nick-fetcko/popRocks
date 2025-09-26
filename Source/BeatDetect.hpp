@@ -37,7 +37,8 @@ public:
 	bool OnLoop(double elapsed);
 	float NextBeatTime() const { return eventListIter == eventList.end() ? 0.0f : eventListIter->time; }
 
-	void SeekTo(double time);
+	int SeekTo(double time);
+	const int GetNumberOfElapsedBeats() const;
 
 	void SetDetecting(bool detecting);
 

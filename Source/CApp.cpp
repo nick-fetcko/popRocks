@@ -333,6 +333,16 @@ inline void CApp::SetEffect(const std::string &effect) {
 	blurShader->program.Uniform1f("effectEnabled", (playing || listening) ? 1.0f : 0.0f);
 }
 
+void CApp::UpdateBeatCounter() {
+	if (!randomizePresetsBeats) return;
+
+	const auto elapsedBeats = beatDetect->GetNumberOfElapsedBeats();
+	beatCounter = elapsedBeats % *randomizePresetsBeats;
+
+	logger.LogDebug("Number of elapsed beats: ", elapsedBeats);
+	logger.LogDebug("\t% randomizePresetsBeats: ", beatCounter);
+}
+
 void CApp::OnInit() {
 	// https://tgui.eu/tutorials/latest-stable/dpi-scaling/
 	SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
@@ -761,6 +771,21 @@ void CApp::OnInit() {
 				*this->randomizePresetsTime
 			);
 		});
+		menu.SetOnRandomizePresetsByBeatChanged([this](bool randomizePresetsByBeats) {
+			Settings::settings.SetRandomizePresetsByBeats(randomizePresetsByBeats);
+
+			if (randomizePresetsByBeats) {
+				randomizePresetsBeats = Settings::settings.GetRandomizePresetsBeats();
+				UpdateBeatCounter();
+			} else randomizePresetsBeats = std::nullopt;
+		});
+		menu.SetOnRandomizePresetsBeatsChanged([this](int randomizePresetsBeats) {
+			Settings::settings.SetRandomizePresetsBeats(randomizePresetsBeats);
+
+			this->randomizePresetsBeats = randomizePresetsBeats;
+
+			UpdateBeatCounter();
+		});
 		menu.SetOnResetWindow([this] {
 			Settings::settings.SetWindowWidth(1920);
 			Settings::settings.SetWindowHeight(1080);
@@ -1050,6 +1075,18 @@ inline void CApp::AdvanceToNextTrack() {
 	advanceOnNextLoop = true;
 }
 
+void CApp::LoadRandomPreset() {
+	const auto &selectedPresets = Settings::settings.GetSelectedPresets();
+	auto begin = selectedPresets.begin();
+
+	do {
+		begin = selectedPresets.begin();
+		std::advance(begin, (prng() % selectedPresets.size()));
+	} while (presetIndex && *begin == *presetIndex);
+
+	LoadPreset(*begin);
+}
+
 void CApp::OnLoop(const Delta &time) {
 	Logger::ProcessCommands();
 
@@ -1067,15 +1104,7 @@ void CApp::OnLoop(const Delta &time) {
 		LoadPreset(Preset::Random());
 		lastRandomize = std::chrono::system_clock::now();
 	} else if (randomizePresetsTime && std::chrono::system_clock::now() > lastPresetRandomize + std::chrono::duration<double>(randomizePresetsTime->AsSeconds())) {
-		const auto &selectedPresets = Settings::settings.GetSelectedPresets();
-		auto begin = selectedPresets.begin();
-
-		do {
-			begin = selectedPresets.begin();
-			std::advance(begin, (prng() % selectedPresets.size()));
-		} while (presetIndex && *begin == *presetIndex);
-
-		LoadPreset(*begin);
+		LoadRandomPreset();
 		lastPresetRandomize = std::chrono::system_clock::now();
 	}
 
@@ -1380,6 +1409,13 @@ void CApp::OnLoop(const Delta &time) {
 
 		currentFadeTime = 0.0f;
 		fadeTime = beatDetect->NextBeatTime() - time;
+
+		if (randomizePresetsBeats) {
+			if (++beatCounter == *randomizePresetsBeats) {
+				LoadRandomPreset();
+				beatCounter = 0;
+			}
+		}
 	}
 
 	SwapBuffers(time);
@@ -1566,6 +1602,9 @@ bool CApp::Open(const std::filesystem::path &path, const std::string &extension,
 		streamHandle = OpenWithFlags(path, extension, BASS_STREAM_PRESCAN);
 	}
 
+	// Reset beat counter on each song
+	beatCounter = 0;
+
 	return exclusive;
 }
 
@@ -1645,7 +1684,16 @@ void CApp::LoadBeats(
 					fileName,
 					")!"
 				);
-				beatDetect->SeekTo(controls.GetCurrentPosition());
+
+				// Set beat counter to how many beats we _skipped_
+				beatCounter = beatDetect->SeekTo(controls.GetCurrentPosition());
+
+				logger.LogDebug("\tSkipped first ", beatCounter, " beats");
+
+				if (randomizePresetsBeats)
+					beatCounter %= *randomizePresetsBeats;
+
+				logger.LogDebug("\tStarting beat counter at ", beatCounter);
 			},
 			cue ? cue->GetCurrentTrack()->startTime : static_cast<std::optional<double>>(std::nullopt),
 			cue ? controls.GetCurrentSongLength() : static_cast<std::optional<double>>(std::nullopt)
@@ -1977,6 +2025,8 @@ void CApp::Seek(double seconds) {
 		controls.SetElapsedSeconds(-1);
 
 		beatDetect->SeekTo(absolute);
+
+		UpdateBeatCounter();
 	}
 }
 
@@ -1999,6 +2049,8 @@ void CApp::SeekTo(double seconds) {
 			beatDetect->SeekTo(seconds - cue->GetCurrentTrack()->startTime);
 		else
 			beatDetect->SeekTo(seconds);
+
+		UpdateBeatCounter();
 	}
 }
 

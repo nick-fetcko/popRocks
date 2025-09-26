@@ -317,6 +317,16 @@ void Settings::SetRandomizePresetsTime(Duration<Microseconds> randomizePresetsTi
 	Save();
 }
 
+void Settings::SetRandomizePresetsByBeats(bool randomizePresetsByBeats) {
+	this->randomizePresetsByBeats = randomizePresetsByBeats;
+	Save();
+}
+
+void Settings::SetRandomizePresetsBeats(int randomizePresetsBeats) {
+	this->randomizePresetsBeats = randomizePresetsBeats;
+	Save();
+}
+
 void Settings::Save() {
 	if (auto path = GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
@@ -511,6 +521,10 @@ const Node &operator>>(const Node &node, Settings &settings) {
 			)
 		);
 	}
+	if (node.has("randomizePresetsByBeats"))
+		node["randomizePresetsByBeats"]->get(settings.randomizePresetsByBeats);
+	if (node.has("randomizePresetsBeats"))
+		node["randomizePresetsBeats"]->get(settings.randomizePresetsBeats);
 		
 	return node;
 }
@@ -566,6 +580,8 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["selectedPresets"]->set(settings.selectedPresets);
 	node["randomizePresets"]->set(settings.randomizePresets);
 	node["randomizePresetsTime"]->set(settings.randomizePresetsTime.AsSeconds());
+	node["randomizePresetsByBeats"]->set(settings.randomizePresetsByBeats);
+	node["randomizePresetsBeats"]->set(settings.randomizePresetsBeats);
 
 	return node;
 }
