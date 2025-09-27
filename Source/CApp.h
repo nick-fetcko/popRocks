@@ -321,6 +321,7 @@ private:
 
 	std::chrono::system_clock::time_point lastRandomize;
 
+	std::vector<std::size_t> shuffledPresets;
 	std::optional<Duration<Microseconds>> randomizePresetsTime =
 		Settings::settings.GetRandomizePresets() ?
 		static_cast<std::optional<Duration<Microseconds>>>(Settings::settings.GetRandomizePresetsTime()) :

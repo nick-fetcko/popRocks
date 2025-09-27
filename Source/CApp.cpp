@@ -1076,6 +1076,7 @@ inline void CApp::AdvanceToNextTrack() {
 }
 
 void CApp::LoadRandomPreset() {
+	/*
 	const auto &selectedPresets = Settings::settings.GetSelectedPresets();
 	auto begin = selectedPresets.begin();
 
@@ -1085,6 +1086,23 @@ void CApp::LoadRandomPreset() {
 	} while (presetIndex && *begin == *presetIndex);
 
 	LoadPreset(*begin);
+	*/
+
+	// Shuffle presets like they're tetrominoes
+	if (shuffledPresets.empty()) {
+		// Copy because we're modifying it
+		auto selectedPresets = Settings::settings.GetSelectedPresets();
+		while (!selectedPresets.empty()) {
+			auto preset = selectedPresets.begin();
+			std::advance(preset, (prng() % selectedPresets.size()));
+
+			shuffledPresets.emplace_back(*preset);
+			selectedPresets.erase(preset);
+		}
+	}
+	
+	LoadPreset(*shuffledPresets.begin());
+	shuffledPresets.erase(shuffledPresets.begin());
 }
 
 void CApp::OnLoop(const Delta &time) {
