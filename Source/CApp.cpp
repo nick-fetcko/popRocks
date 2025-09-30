@@ -331,6 +331,8 @@ inline void CApp::SetEffect(const std::string &effect) {
 	blurShader->program.Uniform1f("effectHorizontalSpread", Settings::settings.GetEffectHorizontalSpread());
 	blurShader->program.Uniform1f("effectVerticalSpread", Settings::settings.GetEffectVerticalSpread());
 	blurShader->program.Uniform1f("effectEnabled", (playing || listening) ? 1.0f : 0.0f);
+
+	context->Use("texture"_hash);
 }
 
 void CApp::UpdateBeatCounter() {
