@@ -73,7 +73,9 @@ int main(int argc, char *argv[]) {
 					}
 					break;
 				case SDL_KEYDOWN:
-					if (event.key.keysym.sym == SDLK_AUDIONEXT || 
+					if (io.WantCaptureKeyboard) break;
+
+					else if (event.key.keysym.sym == SDLK_AUDIONEXT || 
 						(event.key.keysym.sym == SDLK_d && (event.key.keysym.mod & KMOD_CTRL)) ||
 						(event.key.keysym.sym == SDLK_RIGHT && (event.key.keysym.mod & KMOD_CTRL)))
 						app.NextTrack();
@@ -124,11 +126,11 @@ int main(int argc, char *argv[]) {
 					}
 					break;
 				case SDL_MOUSEBUTTONDOWN:
-					if (event.button.button == SDL_BUTTON_LEFT && app.OnMouseDown(mousePos)
+					if (event.button.button == SDL_BUTTON_LEFT
 #if GUI
 						&& !io.WantCaptureMouse
 #endif
-						) {
+						&& app.OnMouseDown(mousePos)) {
 						mouseButtonDown = true;
 					}
 					break;
