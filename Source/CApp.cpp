@@ -2283,6 +2283,8 @@ void CApp::LoadPreset(const Preset &preset) {
 	Settings::settings.SetEffectVerticalSpread(preset.GetEffectVerticalSpread());
 
 	SetEffect(preset.GetEffect());
+
+	updateUi = 1;
 }
 
 void CApp::OnColorChanged(const MathsCPP::Colour<float> &color, bool silent) {
