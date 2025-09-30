@@ -1427,16 +1427,18 @@ void CApp::OnLoop(const Delta &time) {
 		stopWasapiOnNextLoop = false;
 	}
 
-	if (auto time = elapsed - (controls.GetExclusiveIndicator().IsExclusive() ? exclusiveBufferSize : 0); beatDetect->OnLoop(time)) {
+	beatDetectTime = elapsed - (controls.GetExclusiveIndicator().IsExclusive() ? exclusiveBufferSize : 0);
+	if (beatDetect->OnLoop(beatDetectTime)) {
 		albumArt.NextBin(true);
 
 		currentFadeTime = 0.0f;
-		fadeTime = beatDetect->NextBeatTime() - time;
+		fadeTime = beatDetect->NextBeatTime() - beatDetectTime;
 
 		if (randomizePresetsBeats) {
-			if (++beatCounter == *randomizePresetsBeats) {
+			if (++beatCounter == *randomizePresetsBeats || resyncBeats) {
 				LoadRandomPreset();
 				beatCounter = 0;
+				resyncBeats = false;
 			}
 		}
 	}
@@ -1499,6 +1501,15 @@ inline void CApp::SwapBuffers(const Delta &time) {
 	SDL_GL_SwapWindow(sdlWindow);
 
 	frameStart = std::chrono::steady_clock::now() - std::chrono::duration_cast<std::chrono::microseconds>(over);
+}
+
+void CApp::SyncToNearestBeat() {
+	beatCounter = beatDetect->IsNextBeatCloser(beatDetectTime) ? -1 : 0;
+
+	if (beatCounter == -1)
+		resyncBeats = true;
+
+	logger.LogDebug("Setting beatCounter to ", beatCounter);
 }
 
 void CApp::OnDestroy() {

@@ -40,6 +40,8 @@ public:
 	int SeekTo(double time);
 	const int GetNumberOfElapsedBeats() const;
 
+	const bool IsNextBeatCloser(double elapsed) const;
+
 	void SetDetecting(bool detecting);
 
 	bool IsDetecting() const;

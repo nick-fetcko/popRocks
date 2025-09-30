@@ -43,6 +43,16 @@ const int BeatDetect::GetNumberOfElapsedBeats() const {
 	return std::distance(eventList.begin(), EventList::const_iterator(eventListIter));
 }
 
+const bool BeatDetect::IsNextBeatCloser(double elapsed) const {
+	if (eventListIter == eventList.end()) return true;
+
+	auto tempIter = eventListIter;
+	if (tempIter != eventList.begin())
+		std::advance(tempIter, -1);
+
+	return eventListIter->time - elapsed < elapsed - tempIter->time;
+}
+
 void BeatDetect::SetDetecting(bool detecting) {
 	std::unique_lock lock(mutex);
 	detectBpm = detecting;

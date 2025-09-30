@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
 				case SDL_KEYDOWN:
 					if (io.WantCaptureKeyboard) break;
 
-					else if (event.key.keysym.sym == SDLK_AUDIONEXT || 
+					else if (event.key.keysym.sym == SDLK_AUDIONEXT ||
 						(event.key.keysym.sym == SDLK_d && (event.key.keysym.mod & KMOD_CTRL)) ||
 						(event.key.keysym.sym == SDLK_RIGHT && (event.key.keysym.mod & KMOD_CTRL)))
 						app.NextTrack();
@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
 						(event.key.keysym.sym == SDLK_DOWN && (event.key.keysym.mod & KMOD_CTRL))) &&
 						app.GetControls().GetExclusiveIndicator().IsExclusive())
 						app.GetControls().GetVolume().VolumeDown();
-					else if (event.key.keysym.sym == SDLK_RIGHT || 
+					else if (event.key.keysym.sym == SDLK_RIGHT ||
 						event.key.keysym.sym == SDLK_d)
 						app.GetAlbumArt().NextBin();
 					else if (event.key.keysym.sym == SDLK_LEFT ||
@@ -116,6 +116,8 @@ int main(int argc, char *argv[]) {
 						app.GetControls().GetVolume().ToggleVolumeControl();
 					else if (event.key.keysym.sym >= SDLK_F1 && event.key.keysym.sym <= SDLK_F12)
 						app.LoadPreset(event.key.keysym.sym - SDLK_F1);
+					else if (event.key.keysym.sym == SDLK_s)
+						app.SyncToNearestBeat();
 					break;
 				case SDL_MOUSEMOTION:
 					mousePos.x = static_cast<int32_t>(event.motion.x * app.GetScale());

@@ -132,6 +132,8 @@ public:
 
 	void UpdateUi() { updateUi = 1; }
 
+	void SyncToNearestBeat();
+
 private:
 	void AddCommands();
 
@@ -272,6 +274,7 @@ private:
 
 	std::array<BeatDetect, 2> beatDetectors;
 	BeatDetect *beatDetect = &beatDetectors[0];
+	double beatDetectTime = 0.0;
 
 	Metadata metadata;
 
@@ -335,4 +338,5 @@ private:
 		std::nullopt;
 
 	int beatCounter = 0;
+	bool resyncBeats = false;
 };
