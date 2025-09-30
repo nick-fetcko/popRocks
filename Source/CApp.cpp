@@ -1093,8 +1093,11 @@ void CApp::LoadRandomPreset() {
 		// Copy because we're modifying it
 		auto selectedPresets = Settings::settings.GetSelectedPresets();
 		while (!selectedPresets.empty()) {
-			auto preset = selectedPresets.begin();
-			std::advance(preset, (prng() % selectedPresets.size()));
+			std::set<std::size_t>::iterator preset;
+			do {
+				preset = selectedPresets.begin();
+				std::advance(preset, (prng() % selectedPresets.size()));
+			} while (shuffledPresets.empty() && presetIndex && *preset == *presetIndex);
 
 			shuffledPresets.emplace_back(*preset);
 			selectedPresets.erase(preset);
