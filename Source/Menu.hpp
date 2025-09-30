@@ -102,6 +102,10 @@ public:
 			ImGui::EndMenu();
 		}
 
+		randomize = Settings::settings.GetRandomize();
+		randomizePresets = Settings::settings.GetRandomizePresets();
+		randomizePresetsByBeats = Settings::settings.GetRandomizePresetsByBeats();
+
 		if (ImGui::BeginMenu("Visualizer")) {
 			open = true;
 
@@ -356,13 +360,14 @@ public:
 					onRandom();
 			}
 
-			randomize = Settings::settings.GetRandomize();
+			ImGui::BeginDisabled(randomizePresets || randomizePresetsByBeats);
 			if (ImGui::MenuItem("Randomize every...", nullptr, &randomize)) {
 				if (onRandomizeChanged)
 					onRandomizeChanged(randomize);
 			}
+			ImGui::EndDisabled();
 
-			ImGui::BeginDisabled(!randomize);
+			ImGui::BeginDisabled(!randomize || randomizePresets || randomizePresetsByBeats);
 			randomizeTime = Settings::settings.GetRandomizeTime().AsSeconds();
 			if (ImGui::SliderFloat("...seconds", &randomizeTime, 0.5, 10.0, "%.2f")) {
 				if (onRandomizeTimeChanged)
@@ -464,15 +469,14 @@ public:
 
 			ImGui::Separator();
 
-			randomizePresets = Settings::settings.GetRandomizePresets();
-			randomizePresetsByBeats = Settings::settings.GetRandomizePresetsByBeats();
-
+			ImGui::BeginDisabled(randomize);
 			if (ImGui::MenuItem("Randomize selected (middle-click) every...", nullptr, &randomizePresets, !randomizePresetsByBeats)) {
 				if (onRandomizePresetsChanged)
 					onRandomizePresetsChanged(randomizePresets);
 			}
+			ImGui::EndDisabled();
 
-			ImGui::BeginDisabled(!randomizePresets);
+			ImGui::BeginDisabled(!randomizePresets || randomize);
 			randomizePresetsTime = Settings::settings.GetRandomizePresetsTime().AsSeconds();
 			if (ImGui::SliderFloat("...seconds", &randomizePresetsTime, 0.5, 10.0, "%.2f")) {
 				if (onRandomizePresetsTimeChanged)
@@ -480,12 +484,14 @@ public:
 			}
 			ImGui::EndDisabled();
 
+			ImGui::BeginDisabled(randomize);
 			if (ImGui::MenuItem("Randomize selected (middle-click) every...##", nullptr, &randomizePresetsByBeats, !randomizePresets)) {
 				if (onRandomizePresetsByBeatsChanged)
 					onRandomizePresetsByBeatsChanged(randomizePresetsByBeats);
 			}
+			ImGui::EndDisabled();
 
-			ImGui::BeginDisabled(!randomizePresetsByBeats);
+			ImGui::BeginDisabled(!randomizePresetsByBeats || randomize);
 
 			randomizePresetsBeats = Settings::settings.GetRandomizePresetsBeats();
 
