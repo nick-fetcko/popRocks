@@ -41,7 +41,12 @@ Preset Preset::Random() {
 	for (const auto &file : files) {
 		auto effectName = file.stem().u8string();
 		effectName = effectName.substr(effectName.find_first_of('-') + 1);
-		effectNames.emplace_back(std::move(effectName));
+
+		// Make sure "No Effect" is at index 0
+		if (effectName == "noeffect")
+			effectNames.emplace(effectNames.begin(), std::move(effectName));
+		else
+			effectNames.emplace_back(std::move(effectName));
 	}
 
 	Preset ret(

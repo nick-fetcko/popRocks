@@ -258,6 +258,7 @@ public:
 			if (ImGui::BeginMenu("Effect")) {
 				auto files = Utils::GetFiles(Utils::GetResourceFolder() / "Effects");
 
+				std::vector<std::pair<std::string, std::string>> effectNames;
 				for (const auto &file : files) {
 					auto effectName = file.stem().u8string();
 					effectName = effectName.substr(effectName.find_first_of('-') + 1);
@@ -276,6 +277,14 @@ public:
 						}
 					}
 
+					// Make sure "No Effect" is at index 0
+					if (effectName == "noeffect")
+						effectNames.emplace(effectNames.begin(), std::make_pair(effectName, friendlyName));
+					else
+						effectNames.emplace_back(std::make_pair(effectName, friendlyName));
+				}
+
+				for (const auto &[effectName, friendlyName] : effectNames) {
 					bool selected = Settings::settings.GetEffect() == effectName || Settings::settings.GetEffect() == friendlyName;
 					if (ImGui::MenuItem(friendlyName.empty() ? effectName.c_str() : friendlyName.c_str(), nullptr, &selected)) {
 						if (onEffectChanged)
