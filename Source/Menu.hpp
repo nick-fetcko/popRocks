@@ -35,9 +35,17 @@ public:
 				20
 			);
 		}
-		
-		ImGui::GetStyle().ScaleAllSizes(scale);
-		ImGui::GetStyle().FontScaleMain = scale;
+
+		if (!originalStyle)
+			originalStyle = ImGui::GetStyle();
+
+		if (scale != lastScale) {
+			// https://github.com/ocornut/imgui/issues/5452
+			ImGui::GetStyle() = *originalStyle;
+			ImGui::GetStyle().ScaleAllSizes(scale);
+
+			lastScale = scale;
+		}
 	}
 
 	bool OnLoop(const LightPack &lightPack, AlbumArt &albumArt, Context &context) {
@@ -1052,5 +1060,7 @@ private:
 	std::function<void()> onResetWindow;
 
 	float scale = 1.0f;
+	float lastScale = 1.0f;
+	std::optional<ImGuiStyle> originalStyle = std::nullopt;
 	ImFont *font = nullptr;
 };
