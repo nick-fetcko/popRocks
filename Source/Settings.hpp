@@ -270,7 +270,13 @@ private:
 
 	float scale = 1.0f;
 
-	std::set<std::size_t> selectedPresets;
+	// 7: Ripples
+	// 8: Conway
+	// 10: Eye of the Storm
+	// 11: Tunnel
+	// 12: Sinkhole
+	// 13: Horizon
+	std::set<std::size_t> selectedPresets = { 7, 8, 10, 11, 12, 13 };
 	bool randomizePresets = false;
 	Duration<Microseconds> randomizePresetsTime = 2.5s;
 	bool randomizePresetsByBeats = false;
