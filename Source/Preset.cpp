@@ -76,7 +76,8 @@ Preset Preset::Random() {
 		(prng() % 10000) / 1000.0f * ((prng() % 1) ? -1 : 1),
 		(prng() % 10000) / 1000.0f * ((prng() % 1) ? -1 : 1),
 		(prng() % 10000) / 1000.0f * ((prng() % 1) ? -1 : 1),
-		(prng() % 10000) / 1000.0f * ((prng() % 1) ? -1 : 1)
+		(prng() % 10000) / 1000.0f * ((prng() % 1) ? -1 : 1),
+		(prng() % 10000) / 2000.0f * ((prng() % 1) ? -1 : 1)
 	);
 
 	return ret;
@@ -162,6 +163,8 @@ const Node &operator>>(const Node &node, Preset &preset) {
 		node["effectHorizontalSpread"]->get(preset.effectHorizontalSpread);
 	if (node.has("effectVerticalSpread"))
 		node["effectVerticalSpread"]->get(preset.effectVerticalSpread);
+	if (node.has("effectRotation"))
+		node["effectRotation"]->get(preset.effectRotation);
 
 	return node;
 }
@@ -188,6 +191,7 @@ Node &operator<<(Node &node, const Preset &preset) {
 	node["effectRadiation"]->set(preset.effectRadiation);
 	node["effectHorizontalSpread"]->set(preset.effectHorizontalSpread);
 	node["effectVerticalSpread"]->set(preset.effectVerticalSpread);
+	node["effectRotation"]->set(preset.effectRotation);
 
 	return node;
 }

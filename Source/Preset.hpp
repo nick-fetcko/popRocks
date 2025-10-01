@@ -34,7 +34,8 @@ public:
 		float effectYOffset,
 		float effectRadiation,
 		float effectHorizontalSpread,
-		float effectVerticalSpread
+		float effectVerticalSpread,
+		float effectRotation
 	) : name(name),
 		bufferSize(bufferSize),
 		decayTime(decayTime),
@@ -54,7 +55,8 @@ public:
 		effectYOffset(effectYOffset),
 		effectRadiation(effectRadiation),
 		effectHorizontalSpread(effectHorizontalSpread),
-		effectVerticalSpread(effectVerticalSpread) {
+		effectVerticalSpread(effectVerticalSpread),
+		effectRotation(effectRotation) {
 
 	}
 
@@ -84,6 +86,7 @@ public:
 	const float GetEffectRadiation() const { return effectRadiation; }
 	const float GetEffectHorizontalSpread() const { return effectHorizontalSpread; }
 	const float GetEffectVerticalSpread() const { return effectVerticalSpread; }
+	const float GetEffectRotation() const { return effectRotation; }
 
 	friend const Node &operator>>(const Node &node, Preset &preset);
 	friend Node &operator<<(Node &node, const Preset &preset);
@@ -120,4 +123,5 @@ private:
 	float effectRadiation = 0.0f;
 	float effectHorizontalSpread = 0.0f;
 	float effectVerticalSpread = 0.0f;
+	float effectRotation = 0.0f;
 };

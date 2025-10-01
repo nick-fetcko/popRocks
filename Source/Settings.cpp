@@ -277,6 +277,11 @@ void Settings::SetEffectVerticalSpread(float effectVerticalSpread) {
 	Save();
 }
 
+void Settings::SetEffectRotation(float effectRotation) {
+	this->effectRotation = effectRotation;
+	Save();
+}
+
 void Settings::SetLimitFramerate(bool limitFramerate) {
 	this->limitFramerate = limitFramerate;
 	Save();
@@ -491,6 +496,8 @@ const Node &operator>>(const Node &node, Settings &settings) {
 		node["effectHorizontalSpread"]->get(settings.effectHorizontalSpread);
 	if (node.has("effectVerticalSpread"))
 		node["effectVerticalSpread"]->get(settings.effectVerticalSpread);
+	if (node.has("effectRotation"))
+		node["effectRotation"]->get(settings.effectRotation);
 
 	if (node.has("limitFramerate"))
 		node["limitFramerate"]->get(settings.limitFramerate);
@@ -582,6 +589,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["randomizePresetsTime"]->set(settings.randomizePresetsTime.AsSeconds());
 	node["randomizePresetsByBeats"]->set(settings.randomizePresetsByBeats);
 	node["randomizePresetsBeats"]->set(settings.randomizePresetsBeats);
+	node["effectRotation"]->set(settings.effectRotation);
 
 	return node;
 }

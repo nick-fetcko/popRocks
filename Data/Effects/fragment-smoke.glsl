@@ -3,6 +3,7 @@
 // Name: Smoke
 
 #define M_PI       3.14159265358979323846   // pi
+#define DIV 240.0f
 
 uniform float randomX;
 uniform float randomY;
@@ -14,6 +15,7 @@ uniform float effectRadiation;
 uniform float effectTimeDelta;
 uniform float effectHorizontalSpread;
 uniform float effectVerticalSpread;
+uniform float effectRotation;
 uniform float effectEnabled;
 
 // From https://stackoverflow.com/a/17479300
@@ -51,12 +53,21 @@ float random( vec2  v ) { return floatConstruct(hash(floatBitsToUint(v))); }
 float random( vec3  v ) { return floatConstruct(hash(floatBitsToUint(v))); }
 float random( vec4  v ) { return floatConstruct(hash(floatBitsToUint(v))); }
 
-vec2 applyEffect(vec2 coords) {
+vec3 applyEffect(vec2 coords, vec2 screenSize) {
     vec2 centered = vec2((coords.x - 0.5) * 2, (coords.y - 0.5) * 2);
 
     float angle = atan(centered.y, centered.x) - M_PI;
 
-    return vec2(
+    vec2 uv = coords;
+    uv -= 0.5; // Center it
+    uv = vec2(
+        uv.x * cos(effectTimeDelta / DIV * effectRotation) - uv.y * sin(effectTimeDelta / DIV * effectRotation),
+        uv.x * sin(effectTimeDelta / DIV * effectRotation) + uv.y * cos(effectTimeDelta / DIV * effectRotation)
+    );
+    uv += 0.5; // Bring it back from the center, to the corner
+    uv *= screenSize;
+
+    uv += vec2(
         random(
             vec3(coords, randomX)
         ) * effectIntensity * effectEnabled + effectXOffset * effectTimeDelta + cos(angle) * effectRadiation * effectTimeDelta + centered.x * -effectHorizontalSpread * effectTimeDelta,
@@ -64,4 +75,6 @@ vec2 applyEffect(vec2 coords) {
             vec3(coords, randomY)
         ) * effectIntensity * effectEnabled + effectYOffset * effectTimeDelta + sin(angle) * effectRadiation * effectTimeDelta + centered.y * -effectVerticalSpread * effectTimeDelta
     );
+
+    return vec3(uv, 0.0f);
 }

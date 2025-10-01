@@ -300,6 +300,7 @@ inline void CApp::CacheBlurUniforms(Context::Shader &shader) {
 	shader.program.CacheUniformLocation("effectTimeDelta");
 	shader.program.CacheUniformLocation("effectHorizontalSpread");
 	shader.program.CacheUniformLocation("effectVerticalSpread");
+	shader.program.CacheUniformLocation("effectRotation");
 	shader.program.CacheUniformLocation("effectEnabled");
 }
 
@@ -330,6 +331,7 @@ inline void CApp::SetEffect(const std::string &effect) {
 	blurShader->program.Uniform1f("effectRadiation", Settings::settings.GetEffectRadiation());
 	blurShader->program.Uniform1f("effectHorizontalSpread", Settings::settings.GetEffectHorizontalSpread());
 	blurShader->program.Uniform1f("effectVerticalSpread", Settings::settings.GetEffectVerticalSpread());
+	blurShader->program.Uniform1f("effectRotation", Settings::settings.GetEffectRotation());
 	blurShader->program.Uniform1f("effectEnabled", (playing || listening) ? 1.0f : 0.0f);
 
 	context->Use("texture"_hash);
@@ -705,6 +707,9 @@ void CApp::OnInit() {
 			this->context->With("blur"_hash, [effectHorizontalSpread](Context::Shader &shader) {
 				shader.program.Uniform1f("effectHorizontalSpread", effectHorizontalSpread);
 			});
+
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
 		});
 		menu.SetOnEffectVerticalSpreadChanged([this](float effectVerticalSpread) {
 			Settings::settings.SetEffectVerticalSpread(effectVerticalSpread);
@@ -712,6 +717,19 @@ void CApp::OnInit() {
 			this->context->With("blur"_hash, [effectVerticalSpread](Context::Shader &shader) {
 				shader.program.Uniform1f("effectVerticalSpread", effectVerticalSpread);
 			});
+
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
+		});
+		menu.SetOnEffectRotationChanged([this](float effectRotation) {
+			Settings::settings.SetEffectRotation(effectRotation);
+
+			this->context->With("blur"_hash, [effectRotation](Context::Shader &shader) {
+				shader.program.Uniform1f("effectRotation", effectRotation);
+			});
+
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
 		});
 		menu.SetOnLimitFramerateChanged([this](bool limitFramerate) {
 			Settings::settings.SetLimitFramerate(limitFramerate);
@@ -873,6 +891,7 @@ void CApp::OnInit() {
 			shader.program.Uniform1f("effectRadiation", Settings::settings.GetEffectRadiation());
 			shader.program.Uniform1f("effectHorizontalSpread", Settings::settings.GetEffectHorizontalSpread());
 			shader.program.Uniform1f("effectVerticalSpread", Settings::settings.GetEffectVerticalSpread());
+			shader.program.Uniform1f("effectRotation", Settings::settings.GetEffectRotation());
 			shader.program.Uniform1f("effectEnabled", (playing || listening) ? 1.0f : 0.0f);
 		}
 
@@ -2292,6 +2311,7 @@ void CApp::LoadPreset(const Preset &preset) {
 	Settings::settings.SetEffectRadiation(preset.GetEffectRadiation());
 	Settings::settings.SetEffectHorizontalSpread(preset.GetEffectHorizontalSpread());
 	Settings::settings.SetEffectVerticalSpread(preset.GetEffectVerticalSpread());
+	Settings::settings.SetEffectRotation(preset.GetEffectRotation());
 
 	SetEffect(preset.GetEffect());
 

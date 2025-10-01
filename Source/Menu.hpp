@@ -326,6 +326,12 @@ public:
 						onEffectVerticalSpreadChanged(effectVerticalSpread);
 				}
 
+				effectRotation = Settings::settings.GetEffectRotation();
+				if (ImGui::SliderFloat("Rotation", &effectRotation, -5.0f, 5.0f, "%.2f")) {
+					if (onEffectRotationChanged)
+						onEffectRotationChanged(effectRotation);
+				}
+
 				ImGui::EndMenu();
 			}
 
@@ -563,7 +569,8 @@ public:
 						Settings::settings.GetEffectYOffset(),
 						Settings::settings.GetEffectRadiation(),
 						Settings::settings.GetEffectHorizontalSpread(),
-						Settings::settings.GetEffectVerticalSpread()
+						Settings::settings.GetEffectVerticalSpread(),
+						Settings::settings.GetEffectRotation()
 					);
 
 					Preset::AddPreset(std::move(preset));
@@ -890,6 +897,7 @@ public:
 	void SetOnEffectRadiationChanged(std::function<void(float)> f) { onEffectRadiationChanged = f; }
 	void SetOnEffectHorizontalSpreadChanged(std::function<void(float)> f) { onEffectHorizontalSpreadChanged = f; }
 	void SetOnEffectVerticalSpreadChanged(std::function<void(float)> f) { onEffectVerticalSpreadChanged = f; }
+	void SetOnEffectRotationChanged(std::function<void(float)> f) { onEffectRotationChanged = f; }
 
 	void SetOnLimitFramerateChanged(std::function<void(bool)> f) { onLimitFramerateChanged = f; }
 	void SetOnFrameLimitChanged(std::function<void(int)> f) { onFrameLimitChanged = f; }
@@ -984,6 +992,7 @@ private:
 	float effectRadiation = Settings::settings.GetEffectRadiation();
 	float effectHorizontalSpread = Settings::settings.GetEffectHorizontalSpread();
 	float effectVerticalSpread = Settings::settings.GetEffectVerticalSpread();
+	float effectRotation = Settings::settings.GetEffectRotation();
 
 	int minPercentage = Settings::settings.GetColorSelection().minPercentage * 100;
 	int minHueSeparation = Settings::settings.GetColorSelection().minHueSeparation;
@@ -1043,6 +1052,7 @@ private:
 	std::function<void(float)> onEffectRadiationChanged;
 	std::function<void(float)> onEffectHorizontalSpreadChanged;
 	std::function<void(float)> onEffectVerticalSpreadChanged;
+	std::function<void(float)> onEffectRotationChanged;
 	std::function<void(bool)> onLimitFramerateChanged;
 	std::function<void(int)> onFrameLimitChanged;
 	std::function<void(bool)> onRandomizeChanged;

@@ -14,15 +14,17 @@ uniform float effectRadiation;
 uniform float effectTimeDelta;
 uniform float effectHorizontalSpread;
 uniform float effectVerticalSpread;
+uniform float effectRotation;
 uniform float effectEnabled;
 
-vec2 applyEffect(vec2 coords) {
+vec3 applyEffect(vec2 coords, vec2 screenSize) {
     vec2 centered = vec2((coords.x - 0.5) * 2, (coords.y - 0.5) * 2);
 
     float angle = atan(centered.y, centered.x) - M_PI;
 
-    return vec2(
+    return vec3(
         effectXOffset * effectTimeDelta + cos(angle) * effectRadiation * effectTimeDelta + centered.x * -effectHorizontalSpread * effectTimeDelta,
-        effectYOffset * effectTimeDelta + sin(angle) * effectRadiation * effectTimeDelta + centered.y * -effectVerticalSpread * effectTimeDelta
+        effectYOffset * effectTimeDelta + sin(angle) * effectRadiation * effectTimeDelta + centered.y * -effectVerticalSpread * effectTimeDelta,
+        1.0f
     );
 }

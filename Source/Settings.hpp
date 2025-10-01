@@ -157,6 +157,9 @@ public:
 	const float &GetEffectVerticalSpread() const { return effectVerticalSpread; }
 	void SetEffectVerticalSpread(float effectVerticalSpread);
 
+	const float &GetEffectRotation() const { return effectRotation; }
+	void SetEffectRotation(float effectRotation);
+
 	const bool &GetLimitFramerate() const { return limitFramerate; }
 	void SetLimitFramerate(bool limitFramerate);
 
@@ -258,6 +261,7 @@ private:
 	float effectRadiation = 0.0f;
 	float effectHorizontalSpread = 0.0f;
 	float effectVerticalSpread = 0.0f;
+	float effectRotation = 0.0f;
 
 	bool strobe = false;
 	float strobeIntensity = 0.66f;
