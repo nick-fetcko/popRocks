@@ -118,6 +118,8 @@ int main(int argc, char *argv[]) {
 						app.LoadPreset(event.key.keysym.sym - SDLK_F1);
 					else if (event.key.keysym.sym == SDLK_s)
 						app.SyncToNearestBeat();
+					else if (event.key.keysym.sym == SDLK_r)
+						app.LoadPreset(Preset::Random());
 					break;
 				case SDL_MOUSEMOTION:
 					mousePos.x = static_cast<int32_t>(event.motion.x * app.GetScale());
