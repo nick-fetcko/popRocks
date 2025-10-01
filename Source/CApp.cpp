@@ -1008,8 +1008,8 @@ void CApp::OnResize(int width, int height, float scale) {
 	windowWidth = width;
 	windowHeight = height;
 
-	Settings::settings.SetWindowWidth(width);
-	Settings::settings.SetWindowHeight(height);
+	Settings::settings.SetWindowWidth(width / scale);
+	Settings::settings.SetWindowHeight(height / scale);
 
 	context->SetIdentity(glm::ortho(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f));
 	context->Apply();
