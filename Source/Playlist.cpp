@@ -252,7 +252,7 @@ inline void Playlist::UpdateSize() {
 		0.0f,
 		0.0f,
 		size.x + font->GetEm().width / 2.0f,
-		-font->GetEm().width / 2.0f,
+		-font->GetEm().height / 2.0f,
 		0.0f,
 		0.0f,
 		0.0f,
