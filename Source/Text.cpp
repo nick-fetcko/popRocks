@@ -44,7 +44,7 @@ void Text::SetText(const std::string &text, bool force) {
 		return;
 	}
 
-	size = { bounds.width, bounds.renderedHeight + font->GetDescender() / 2 };
+	size = { bounds.width, bounds.renderedHeight };
 }
 
 void Text::OnDestroy() {
@@ -56,6 +56,14 @@ void Text::OnLoop(int x, int y) const {
 	if (!font || Empty()) return;
 
 	glBindTexture(GL_TEXTURE_2D, texture);
+
+	// Center rendered text on the line
+	y += (bounds.height - bounds.renderedHeight) / 2.0f;
+
+	if (bounds.overhang)
+		y -= std::floor((bounds.renderedHeight - bounds.overhang) / 2.0f) - std::ceil(bounds.overhang / 2.0f);
+	else
+		y -= bounds.renderedHeight / 2.0f;
 
 	context->Translate(x, y, 0.0f);
 	context->Apply();

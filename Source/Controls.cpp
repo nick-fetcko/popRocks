@@ -257,7 +257,7 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 			for (const auto *text : { &remainingOutline, &remainingText }) {
 				text->OnLoop(
 					windowWidth - remainingText.GetSize().x - margin,
-					windowHeight - yOffset / 2 - remainingText.GetSize().y / 2
+					windowHeight - yOffset / 2 - remainingText.GetSize().y / 2 + outlineFont->GetOutlineRadius()
 				);
 				context.Color(1.0f, 1.0f, 1.0f, alpha);
 			}
