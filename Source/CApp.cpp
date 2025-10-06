@@ -305,23 +305,31 @@ inline void CApp::CacheBlurUniforms(Context::Shader &shader) {
 }
 
 inline void CApp::SetEffect(const std::string &effect) {
-	Settings::settings.SetEffect(effect);
+	const Context::Shader *blurShader = nullptr;
+	if (effect != Settings::settings.GetEffect()) {
+		Settings::settings.SetEffect(effect);
 
-	context->RemoveShader("blur"_hash);
+		context->RemoveShader("blur"_hash);
 
-	auto blurShader = context->AddShader(
-		Utils::GetResource("vertex-blur.glsl"),
-		std::vector<std::filesystem::path> {
+		auto newShader = context->AddShader(
+			Utils::GetResource("vertex-blur.glsl"),
+			std::vector<std::filesystem::path> {
 			Utils::GetResource("fragment-blur.glsl"),
-			Utils::GetResource(std::string("Effects/fragment-") + Settings::settings.GetEffect() + ".glsl")
-		},
-		"blur"_hash
-	);
+				Utils::GetResource(std::string("Effects/fragment-") + Settings::settings.GetEffect() + ".glsl")
+			},
+			"blur"_hash
+		);
 
-	blurShader->program.Use();
-	blurShader->program.CacheUniformLocation("projection");
+		newShader->program.Use();
+		newShader->program.CacheUniformLocation("projection");
 
-	CacheBlurUniforms(*blurShader);
+		CacheBlurUniforms(*newShader);
+
+		blurShader = const_cast<const Context::Shader *>(newShader);
+	} else {
+		blurShader = context->GetShader("blur"_hash);
+		blurShader->program.Use();
+	}
 
 	blurShader->program.Uniform1f("intensity", blurIntensity);
 	blurShader->program.Uniform2f("screenSize", maxDimension, maxDimension);
