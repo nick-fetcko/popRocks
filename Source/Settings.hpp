@@ -190,6 +190,12 @@ public:
 	const int &GetRandomizePresetsBeats() const { return randomizePresetsBeats; }
 	void SetRandomizePresetsBeats(int randomizePresetsBeats);
 
+	const Duration<Microseconds> &GetWaitTime() { return waitTime; }
+	void SetWaitTime(Duration<Microseconds> waitTime);
+
+	const float &GetAutoFadeSpeed() const { return autoFadeSpeed; }
+	void SetAutoFadeSpeed(float autoFadeSpeed);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -285,4 +291,7 @@ private:
 	Duration<Microseconds> randomizePresetsTime = 2.5s;
 	bool randomizePresetsByBeats = false;
 	int randomizePresetsBeats = 16;
+
+	Duration<Microseconds> waitTime = 2s;
+	float autoFadeSpeed = 2.0f;
 };

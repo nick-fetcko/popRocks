@@ -831,6 +831,17 @@ void CApp::OnInit() {
 		menu.SetOnRandom([this] {
 			LoadPreset(Preset::Random());
 		});
+		menu.SetOnWaitTimeChanged([this](float waitTime) {
+			auto duration = Duration<Microseconds>(
+				std::chrono::duration<double>(waitTime)
+			);
+
+			Settings::settings.SetWaitTime(duration);
+			controls.SetWaitTime(duration);
+		});
+		menu.SetOnAutoFadeSpeedChanged([this](float autoFadeSpeed) {
+			Settings::settings.SetAutoFadeSpeed(autoFadeSpeed);
+		});
 #endif
 	} else logger.LogError("Could not create OpenGL context: ", SDL_GetError());
 

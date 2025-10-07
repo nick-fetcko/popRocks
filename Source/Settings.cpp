@@ -332,6 +332,16 @@ void Settings::SetRandomizePresetsBeats(int randomizePresetsBeats) {
 	Save();
 }
 
+void Settings::SetWaitTime(Duration<Microseconds> waitTime) {
+	this->waitTime = waitTime;
+	Save();
+}
+
+void Settings::SetAutoFadeSpeed(float autoFadeSpeed) {
+	this->autoFadeSpeed = autoFadeSpeed;
+	Save();
+}
+
 void Settings::Save() {
 	if (auto path = GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
@@ -532,6 +542,16 @@ const Node &operator>>(const Node &node, Settings &settings) {
 		node["randomizePresetsByBeats"]->get(settings.randomizePresetsByBeats);
 	if (node.has("randomizePresetsBeats"))
 		node["randomizePresetsBeats"]->get(settings.randomizePresetsBeats);
+
+	if (node.has("waitTime")) {
+		settings.waitTime = Duration<Microseconds>(
+			std::chrono::duration<double>(
+				node["waitTime"]->get<double>()
+			)
+		);
+	}
+	if (node.has("autoFadeSpeed"))
+		node["autoFadeSpeed"]->get(settings.autoFadeSpeed);
 		
 	return node;
 }
@@ -590,6 +610,8 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["randomizePresetsByBeats"]->set(settings.randomizePresetsByBeats);
 	node["randomizePresetsBeats"]->set(settings.randomizePresetsBeats);
 	node["effectRotation"]->set(settings.effectRotation);
+	node["waitTime"]->set(settings.waitTime.AsSeconds());
+	node["autoFadeSpeed"]->set(settings.autoFadeSpeed);
 
 	return node;
 }

@@ -5,6 +5,8 @@
 
 #include "MathCPP/Duration.hpp"
 
+#include "Settings.hpp"
+
 using namespace MathsCPP;
 
 class AutoFader {
@@ -12,13 +14,13 @@ public:
 	void OnLoop(const Delta &time) {
 		if (targetAlpha) {
 			if (alpha < *targetAlpha) {
-				alpha += static_cast<float>(time.change.AsSeconds() * 2.0);
+				alpha += static_cast<float>(time.change.AsSeconds() * Settings::settings.GetAutoFadeSpeed());
 				if (alpha >= *targetAlpha) {
 					alpha = *targetAlpha;
 					targetAlpha = std::nullopt;
 				}
 			} else if (alpha > *targetAlpha) {
-				alpha -= static_cast<float>(time.change.AsSeconds() * 2.0);
+				alpha -= static_cast<float>(time.change.AsSeconds() * Settings::settings.GetAutoFadeSpeed());
 				if (alpha <= *targetAlpha) {
 					alpha = *targetAlpha;
 					targetAlpha = std::nullopt;
@@ -46,6 +48,10 @@ public:
 		}
 	}
 
+	void SetWaitTime(Duration<Microseconds> waitTime) {
+		this->waitTime = waitTime;
+	}
+
 	void SetFadeCallback(std::function<void(bool)> &&callback) { 
 		this->fadeCallback = std::move(callback); 
 	}
@@ -53,7 +59,7 @@ public:
 	const float &GetAlpha() const { return alpha; }
 
 protected:
-	std::chrono::seconds waitTime = 2s;
+	std::chrono::seconds waitTime = Settings::settings.GetWaitTime();
 
 	float alpha = 1.0f;
 	std::optional<float> targetAlpha = std::nullopt;

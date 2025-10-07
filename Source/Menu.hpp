@@ -596,6 +596,22 @@ public:
 			newPresetPopup = open;
 		}
 
+		if (ImGui::BeginMenu("Interface")) {
+			waitTime = Settings::settings.GetWaitTime().AsSeconds();
+			autoFadeSpeed = Settings::settings.GetAutoFadeSpeed();
+
+			if (ImGui::SliderFloat("Autofade wait time", &waitTime, 1.0, 10.0, "%.2f")) {
+				if (onWaitTimeChanged)
+					onWaitTimeChanged(waitTime);
+			}
+			if (ImGui::SliderFloat("Autofade speed", &autoFadeSpeed, 0.5, 5.0, "%.2f")) {
+				if (onAutoFadeSpeedChanged)
+					onAutoFadeSpeedChanged(autoFadeSpeed);
+			}
+
+			ImGui::EndMenu();
+		}
+
 		if (ImGui::BeginMenu("Playlist")) {
 			open = true;
 
@@ -928,6 +944,9 @@ public:
 
 	void SetOnRandom(std::function<void()> f) { onRandom = f; }
 
+	void SetOnWaitTimeChanged(std::function<void(float)> f) { onWaitTimeChanged = f; }
+	void SetOnAutoFadeSpeedChanged(std::function<void(float)> f) { onAutoFadeSpeedChanged = f; }
+
 private:
 	int windowWidth = 0, windowHeight = 0;
 	int width = 0, height = 0;
@@ -1024,6 +1043,9 @@ private:
 	bool randomizePresetsByBeats = Settings::settings.GetRandomizePresetsByBeats();
 	int randomizePresetsBeats = Settings::settings.GetRandomizePresetsBeats();
 
+	float waitTime = Settings::settings.GetWaitTime().AsSeconds();
+	float autoFadeSpeed = Settings::settings.GetAutoFadeSpeed();
+
 	std::function<void(const std::filesystem::path &)> onOpen;
 	std::function<void(bool)> onPulseChanged;
 	std::function<void(bool)> onBlurChanged;
@@ -1072,6 +1094,8 @@ private:
 	std::function<void(float)> onRandomizePresetsTimeChanged;
 	std::function<void(bool)> onRandomizePresetsByBeatsChanged;
 	std::function<void(int)> onRandomizePresetsBeatsChanged;
+	std::function<void(float)> onWaitTimeChanged;
+	std::function<void(float)> onAutoFadeSpeedChanged;
 
 	std::function<void()> onRandom;
 
