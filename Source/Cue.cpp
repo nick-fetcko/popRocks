@@ -1,5 +1,8 @@
 #include "Cue.hpp"
 
+#include "Utils/ShiftJIS.hpp"
+#include "Utils/Windows1252.hpp"
+
 #include "Playlist.hpp"
 
 std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &path, bool append) {
@@ -47,7 +50,21 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 				return std::nullopt;
 			}
 
-			auto originalFilePath = filePath = path.parent_path() / converter.from_bytes(line[1]);
+			std::filesystem::path originalFilePath;
+			try {
+				originalFilePath = filePath = path.parent_path() / converter.from_bytes(line[1]);
+			}
+			catch (const std::exception &e) {
+				// As these are single lines, lower threshold to a single match
+				auto encoding = Utils::GuessEncoding(line[1], 1);
+
+				if (encoding == Utils::Encoding::Windows1252)
+					originalFilePath = filePath = path.parent_path() / Windows1252::ToUtf16(line[1]);
+				else if (encoding == Utils::Encoding::ShiftJis)
+					originalFilePath = filePath = path.parent_path() / converter.from_bytes(ShiftJIS::ToUtf8(line[1]));
+				else if (encoding == Utils::Encoding::Ascii) // Should be treated as UTF-8, but just in case
+					originalFilePath = filePath = path.parent_path() / line[1];
+			}
 			track.filePath = filePath;
 
 			// Some .cue files still point to the original .wav
