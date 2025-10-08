@@ -44,10 +44,7 @@ public:
 	std::optional<Track> Previous();
 	std::optional<Track> Next();
 
-	// FIXME: you pretty much NEED to const_cast
-	//        to get this overload, so it's not
-	//        that intuitive
-	const std::optional<Track> Next() const;
+	const std::optional<Track> GetNext() const;
 
 	void OnLoop(Vector2i pos, float maxHeight, float alpha, Context &context);
 

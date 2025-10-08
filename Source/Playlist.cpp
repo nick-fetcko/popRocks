@@ -367,7 +367,7 @@ std::optional<Playlist::Track> Playlist::Next() {
 	return Track{ *currentFile };
 }
 
-const std::optional<Playlist::Track> Playlist::Next() const {
+const std::optional<Playlist::Track> Playlist::GetNext() const {
 	if (files.empty()) {
 		if (cue) {
 			const auto &next = const_cast<const Cue *>(cue.get())->Next();

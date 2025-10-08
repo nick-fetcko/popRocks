@@ -81,7 +81,6 @@ DWORD CALLBACK InWasapiProc(void *buffer, DWORD length, void *user) {
 DWORD CALLBACK OutputWasapiProc(void *buffer, DWORD length, void *user) {
 	const auto app = reinterpret_cast<CApp *>(user);
 
-	// FIXME: Flush buffer when switching playlists
 	int c = BASS_ChannelGetData(app->GetStreamHandle(), buffer, length);
 	if (c < 0) { // at the end of the current stream, but not the _buffer_
 		auto code = BASS_ErrorGetCode();
@@ -1772,7 +1771,7 @@ void CApp::LoadBeats(
 		);
 	}
 
-	if (const auto &next = const_cast<const Playlist &>(controls.GetPlaylist()).Next()) {
+	if (const auto &next = controls.GetPlaylist().GetNext()) {
 		auto nextExtension = next->path.extension().u8string();
 		std::transform(nextExtension.begin(), nextExtension.end(), nextExtension.begin(), tolower);
 		auto nextHandle = OpenWithFlags(next->path, nextExtension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
@@ -2210,7 +2209,7 @@ void CApp::OnMouseClicked(const Vector2i &mousePos) {
 	// our playlist to the clicked position, so we have
 	// to figure out what our next track is _before_
 	// that happens.
-	const auto next = const_cast<const Playlist &>(controls.GetPlaylist()).Next();
+	const auto next = controls.GetPlaylist().GetNext();
 
 	if (auto file = controls.GetPlaylist().OnMouseClicked(mousePos)) {
 		// If we didn't select the _next_ song in the playlist,
