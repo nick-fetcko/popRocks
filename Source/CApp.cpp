@@ -1925,7 +1925,7 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 		// open the file. Auto-advancing handles
 		// opening the file in the WASAPI proc.
 		if (!fileLoaded || !advanceOnNextLoop)
-			Open(path, extension, controls.GetExclusiveIndicator().IsExclusive());
+			Open(path, extension, controls.GetExclusiveIndicator().IsExclusive(), !fromPlaylist);
 
 		metadata.OnLoad(
 			path,
