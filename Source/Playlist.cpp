@@ -314,6 +314,7 @@ void Playlist::OnDestroy() {
 void Playlist::Clear() {
 	path.clear();
 	files.clear();
+	currentFile = files.end();
 
 	for (auto &title : titles)
 		title.OnDestroy();
