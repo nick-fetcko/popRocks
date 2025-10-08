@@ -190,6 +190,9 @@ public:
 	const int &GetRandomizePresetsBeats() const { return randomizePresetsBeats; }
 	void SetRandomizePresetsBeats(int randomizePresetsBeats);
 
+	const bool &GetAutoFade() const { return autoFade; }
+	void SetAutoFade(bool autoFade);
+
 	const Duration<Microseconds> &GetWaitTime() { return waitTime; }
 	void SetWaitTime(Duration<Microseconds> waitTime);
 
@@ -292,6 +295,7 @@ private:
 	bool randomizePresetsByBeats = false;
 	int randomizePresetsBeats = 16;
 
+	bool autoFade = true;
 	Duration<Microseconds> waitTime = 2s;
 	float autoFadeSpeed = 2.0f;
 };

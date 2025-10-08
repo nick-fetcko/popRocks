@@ -332,6 +332,11 @@ void Settings::SetRandomizePresetsBeats(int randomizePresetsBeats) {
 	Save();
 }
 
+void Settings::SetAutoFade(bool autoFade) {
+	this->autoFade = autoFade;
+	Save();
+}
+
 void Settings::SetWaitTime(Duration<Microseconds> waitTime) {
 	this->waitTime = waitTime;
 	Save();
@@ -543,6 +548,8 @@ const Node &operator>>(const Node &node, Settings &settings) {
 	if (node.has("randomizePresetsBeats"))
 		node["randomizePresetsBeats"]->get(settings.randomizePresetsBeats);
 
+	if (node.has("autoFade"))
+		node["autoFade"]->get(settings.autoFade);
 	if (node.has("waitTime")) {
 		settings.waitTime = Duration<Microseconds>(
 			std::chrono::duration<double>(
@@ -610,6 +617,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["randomizePresetsByBeats"]->set(settings.randomizePresetsByBeats);
 	node["randomizePresetsBeats"]->set(settings.randomizePresetsBeats);
 	node["effectRotation"]->set(settings.effectRotation);
+	node["autoFade"]->set(settings.autoFade);
 	node["waitTime"]->set(settings.waitTime.AsSeconds());
 	node["autoFadeSpeed"]->set(settings.autoFadeSpeed);
 

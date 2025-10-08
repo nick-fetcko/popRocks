@@ -597,8 +597,14 @@ public:
 		}
 
 		if (ImGui::BeginMenu("Interface")) {
+			autoFade = Settings::settings.GetAutoFade();
 			waitTime = Settings::settings.GetWaitTime().AsSeconds();
 			autoFadeSpeed = Settings::settings.GetAutoFadeSpeed();
+
+			if (ImGui::MenuItem("Autofade?", nullptr, &autoFade)) {
+				if (onAutoFadeChanged)
+					onAutoFadeChanged(autoFade);
+			}
 
 			if (ImGui::SliderFloat("Autofade wait time", &waitTime, 1.0, 10.0, "%.2f")) {
 				if (onWaitTimeChanged)
@@ -944,6 +950,7 @@ public:
 
 	void SetOnRandom(std::function<void()> f) { onRandom = f; }
 
+	void SetOnAutoFadeChanged(std::function<void(bool)> f) { onAutoFadeChanged = f; }
 	void SetOnWaitTimeChanged(std::function<void(float)> f) { onWaitTimeChanged = f; }
 	void SetOnAutoFadeSpeedChanged(std::function<void(float)> f) { onAutoFadeSpeedChanged = f; }
 
@@ -1043,6 +1050,7 @@ private:
 	bool randomizePresetsByBeats = Settings::settings.GetRandomizePresetsByBeats();
 	int randomizePresetsBeats = Settings::settings.GetRandomizePresetsBeats();
 
+	bool autoFade = Settings::settings.GetAutoFade();
 	float waitTime = Settings::settings.GetWaitTime().AsSeconds();
 	float autoFadeSpeed = Settings::settings.GetAutoFadeSpeed();
 
@@ -1094,6 +1102,7 @@ private:
 	std::function<void(float)> onRandomizePresetsTimeChanged;
 	std::function<void(bool)> onRandomizePresetsByBeatsChanged;
 	std::function<void(int)> onRandomizePresetsBeatsChanged;
+	std::function<void(bool)> onAutoFadeChanged;
 	std::function<void(float)> onWaitTimeChanged;
 	std::function<void(float)> onAutoFadeSpeedChanged;
 

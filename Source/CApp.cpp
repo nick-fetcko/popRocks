@@ -830,6 +830,9 @@ void CApp::OnInit() {
 		menu.SetOnRandom([this] {
 			LoadPreset(Preset::Random());
 		});
+		menu.SetOnAutoFadeChanged([this](bool autoFade) {
+			Settings::settings.SetAutoFade(autoFade);
+		});
 		menu.SetOnWaitTimeChanged([this](float waitTime) {
 			auto duration = Duration<Microseconds>(
 				std::chrono::duration<double>(waitTime)

@@ -29,7 +29,9 @@ public:
 		}
 
 		if (auto now = std::chrono::system_clock::now(); (now - lastEventTime) > waitTime) {
-			Fade(false);
+			if (Settings::settings.GetAutoFade()) 
+				Fade(false);
+
 			lastEventTime = now;
 		}
 	}
