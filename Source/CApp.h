@@ -188,6 +188,8 @@ private:
 	inline void LoadRandomPreset();
 	inline void UpdateBeatCounter();
 
+	inline void ToggleExclusive();
+
 	int windowWidth = 1920;
 	int windowHeight = 1080;
 

@@ -86,6 +86,11 @@ void Volume::VolumeDown() {
 	Settings::settings.SetVolume(std::clamp(GetVolume() - 0.02f - FLT_EPSILON, 0.0f, 1.0f));
 	UpdateVolume();
 }
+
+void Volume::SetVolume(int volume) {
+	Settings::settings.SetVolume(volume / 100.0f);
+	UpdateVolume();
+}
 const float &Volume::GetVolume() const { return Settings::settings.GetVolume(); }
 
 // https://stackoverflow.com/a/1165188

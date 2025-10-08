@@ -31,6 +31,8 @@ public:
 
 	void VolumeUp();
 	void VolumeDown();
+
+	void SetVolume(int volume);
 	const float &GetVolume() const;
 
 	const float GetScaledVolume() const;

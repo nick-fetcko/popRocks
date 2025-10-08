@@ -761,6 +761,20 @@ public:
 					onLoopbackChanged(loopback);
 			}
 
+			ImGui::Separator();
+
+			exclusive = Settings::settings.GetExclsuive();
+			if (ImGui::MenuItem("Exclusive output?", nullptr, &exclusive)) {
+				if (onExclusiveChanged)
+					onExclusiveChanged(exclusive);
+			}
+
+			exclusiveVolume = Settings::settings.GetVolume() * 100;
+			if (ImGui::SliderInt("Exclusive volume", &exclusiveVolume, 0, 100)) {
+				if (onExclusiveVolumeChanged)
+					onExclusiveVolumeChanged(exclusiveVolume);
+			}
+
 			ImGui::EndMenu();
 		}
 
@@ -954,6 +968,9 @@ public:
 	void SetOnWaitTimeChanged(std::function<void(float)> f) { onWaitTimeChanged = f; }
 	void SetOnAutoFadeSpeedChanged(std::function<void(float)> f) { onAutoFadeSpeedChanged = f; }
 
+	void SetOnExclusiveChanged(std::function<void(bool)> f) { onExclusiveChanged = f; }
+	void SetOnExclusiveVolumeChanged(std::function<void(int)> f) { onExclusiveVolumeChanged = f; }
+
 private:
 	int windowWidth = 0, windowHeight = 0;
 	int width = 0, height = 0;
@@ -1054,6 +1071,9 @@ private:
 	float waitTime = Settings::settings.GetWaitTime().AsSeconds();
 	float autoFadeSpeed = Settings::settings.GetAutoFadeSpeed();
 
+	bool exclusive = Settings::settings.GetExclsuive();
+	int exclusiveVolume = Settings::settings.GetVolume() * 100;
+
 	std::function<void(const std::filesystem::path &)> onOpen;
 	std::function<void(bool)> onPulseChanged;
 	std::function<void(bool)> onBlurChanged;
@@ -1105,6 +1125,8 @@ private:
 	std::function<void(bool)> onAutoFadeChanged;
 	std::function<void(float)> onWaitTimeChanged;
 	std::function<void(float)> onAutoFadeSpeedChanged;
+	std::function<void(bool)> onExclusiveChanged;
+	std::function<void(int)> onExclusiveVolumeChanged;
 
 	std::function<void()> onRandom;
 

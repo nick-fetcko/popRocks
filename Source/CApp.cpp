@@ -844,6 +844,12 @@ void CApp::OnInit() {
 		menu.SetOnAutoFadeSpeedChanged([this](float autoFadeSpeed) {
 			Settings::settings.SetAutoFadeSpeed(autoFadeSpeed);
 		});
+		menu.SetOnExclusiveChanged([this](bool exclusive) {
+			ToggleExclusive();
+		});
+		menu.SetOnExclusiveVolumeChanged([this](int volume) {
+			controls.GetVolume().SetVolume(volume);
+		});
 #endif
 	} else logger.LogError("Could not create OpenGL context: ", SDL_GetError());
 
@@ -2207,6 +2213,52 @@ inline bool CApp::SeekToMousePos(const Vector2i &mousePos, bool ignoreY) {
 	return false;
 }
 
+inline void CApp::ToggleExclusive() {
+	// Store our elapsed time before freeing
+	// the handle
+	auto elapsed = BASS_ChannelBytes2Seconds(
+		streamHandle,
+		BASS_ChannelGetPosition(streamHandle, BASS_POS_BYTE)
+	);
+
+	const auto exclusive = controls.GetExclusiveIndicator().IsExclusive();
+
+	if (exclusive)
+		StopExclusive(TRUE);
+	else
+		Stop();
+
+	// Wait to toggle until AFTER we've stopped
+	// the current stream
+	controls.GetExclusiveIndicator().SetExclusive(
+		!exclusive
+	);
+
+	Open(loadedFile, loadedFileExtension, controls.GetExclusiveIndicator().IsExclusive());
+
+	// Restore our last position
+	BASS_ChannelSetPosition(
+		streamHandle,
+		BASS_ChannelSeconds2Bytes(
+			streamHandle,
+			elapsed
+		),
+		BASS_POS_BYTE
+	);
+
+	if (controls.GetExclusiveIndicator().IsExclusive()) {
+		Unmute();
+		BASS_WASAPI_Start();
+
+		playing = true;
+	} else {
+		BASS_Start();
+		BASS_ChannelPlay(streamHandle, false);
+
+		playing = true;
+	}
+}
+
 void CApp::OnMouseClicked(const Vector2i &mousePos) {
 	// Playlist::OnMouseClicked automatically advances
 	// our playlist to the clicked position, so we have
@@ -2224,49 +2276,7 @@ void CApp::OnMouseClicked(const Vector2i &mousePos) {
 
 		SeekTo(file->startTime);
 	} else if (auto toggled = controls.GetExclusiveIndicator().OnMouseClicked(mousePos)) {
-		// Store our elapsed time before freeing
-		// the handle
-		auto elapsed = BASS_ChannelBytes2Seconds(
-			streamHandle,
-			BASS_ChannelGetPosition(streamHandle, BASS_POS_BYTE)
-		);
-
-		const auto exclusive = controls.GetExclusiveIndicator().IsExclusive();
-		
-		if (exclusive)
-			StopExclusive(TRUE);
-		else
-			Stop();
-
-		// Wait to toggle until AFTER we've stopped
-		// the current stream
-		controls.GetExclusiveIndicator().SetExclusive(
-			!exclusive
-		);
-
-		Open(loadedFile, loadedFileExtension, controls.GetExclusiveIndicator().IsExclusive());
-
-		// Restore our last position
-		BASS_ChannelSetPosition(
-			streamHandle,
-			BASS_ChannelSeconds2Bytes(
-				streamHandle,
-				elapsed
-			),
-			BASS_POS_BYTE
-		);
-
-		if (controls.GetExclusiveIndicator().IsExclusive()) {
-			Unmute();
-			BASS_WASAPI_Start();
-
-			playing = true;
-		} else {
-			BASS_Start();
-			BASS_ChannelPlay(streamHandle, false);
-
-			playing = true;
-		}
+		ToggleExclusive();
 	}
 }
 
