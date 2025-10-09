@@ -1881,6 +1881,22 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 		} else {
 			controls.GetPlaylist().Clear();
 		}
+
+		// Clear the blur FBO when we load a new file / playlist
+		if (blur) {
+			blurFbo->Bind();
+
+			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+			glClear(GL_COLOR_BUFFER_BIT);
+
+			blurFbo->Unbind();
+			lastFrame->Bind();
+
+			glClear(GL_COLOR_BUFFER_BIT);
+
+			lastFrame->Unbind();
+		}
+
 	} else {
 		// If we're in a playlist, we want the
 		// folder that was originally scanned
