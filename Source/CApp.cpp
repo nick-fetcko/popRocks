@@ -137,7 +137,7 @@ CApp::CApp() : albumArt(context), controls(&albumArt), circleLine(12.0f), prng(t
 }
 
 void CApp::UpdateMaxBufferLength() {
-	auto length = std::max(fftLength, bufferLength);
+	auto length = std::max(fftLength, bufferLength) * channelInfo.chans;
 
 	if (length != maxLength) {
 		delete[] buffer;
@@ -1939,6 +1939,10 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 			// many cases where we have > 255 channels
 			static_cast<uint8_t>(channelInfo.chans)
 		);
+
+		// If our number of channels changed,
+		// we need to update the buffer
+		UpdateMaxBufferLength();
 
 		controls.OnLoad(streamHandle);
 

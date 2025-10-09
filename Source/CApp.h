@@ -200,7 +200,9 @@ private:
 	std::string loadedFileExtension;
 	int freq = 48000; // Sample rate (Hz)
 	HSTREAM streamHandle = NULL; // Handle for open stream
-	BASS_CHANNELINFO channelInfo = { 0 };
+
+	// We start assuming 2 channels
+	BASS_CHANNELINFO channelInfo = { 0, 2, 0, 0, 0, 0, 0 };
 
 	uint8_t *buffer = nullptr;
 	float *floatBuffer = nullptr;
