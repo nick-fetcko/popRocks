@@ -201,7 +201,7 @@ void AlbumArt::OnDestroy() {
 
 std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder) const {
 	std::filesystem::path found;
-	bool foundPreferred = false;
+	std::multimap<int, std::filesystem::path> preferred;
 
 	auto find = [&](const std::filesystem::directory_entry &entry, bool breakOnFind = false) {
 		auto extension = entry.path().extension().u8string();
@@ -215,10 +215,22 @@ std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder) con
 
 			if ((filename.find("cover") == 0 ||
 				filename.find("front") != std::string::npos ||
-				filename.find("folder") == 0) &&
-				!foundPreferred) {
+				filename.find("folder") == 0)) {
 				found = entry.path();
-				foundPreferred = true;
+
+				// Sort by digits in the filename (if there are any), ascending
+				//
+				// For example, if a folder has:
+				//		"Cover 1.jpg"
+				//		"Cover 2.jpg"
+				//		"Cover 3.jpg"
+				//
+				// We'll use "Cover 1.jpg"
+				const char *digits = "0123456789";
+				if (auto start = filename.find_first_of(digits); start != std::string::npos)
+					preferred.emplace(std::make_pair(std::stoi(filename.substr(start)), entry.path()));
+				else
+					preferred.emplace(std::make_pair(std::numeric_limits<int>::max(), entry.path()));
 
 				// Optionally break when we find a preferred file
 				//
@@ -252,7 +264,7 @@ std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder) con
 			if (find(iter, true)) break;
 	}
 
-	return found;
+	return preferred.empty() ? found : preferred.begin()->second;
 }
 
 void AlbumArt::ReprocessColors() {
