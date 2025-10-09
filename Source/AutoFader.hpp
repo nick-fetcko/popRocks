@@ -9,6 +9,7 @@
 
 using namespace MathsCPP;
 
+template<bool UserControlled>
 class AutoFader {
 public:
 	void OnLoop(const Delta &time) {
@@ -29,8 +30,12 @@ public:
 		}
 
 		if (auto now = std::chrono::system_clock::now(); (now - lastEventTime) > waitTime) {
-			if (Settings::settings.GetAutoFade()) 
+			if constexpr (UserControlled) {
+				if (Settings::settings.GetAutoFade())
+					Fade(false);
+			} else {
 				Fade(false);
+			}
 
 			lastEventTime = now;
 		}

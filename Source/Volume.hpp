@@ -14,7 +14,7 @@
 using namespace MathsCPP;
 using namespace Fetcko;
 
-class Volume : public ColorChangeListener, public AutoFader {
+class Volume : public ColorChangeListener, public AutoFader<false> {
 public:
 	Volume() = default;
 

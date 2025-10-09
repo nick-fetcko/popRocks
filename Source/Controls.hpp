@@ -30,7 +30,7 @@
 using namespace MathsCPP;
 using namespace Fetcko;
 
-class Controls : public TagLoader, public AutoFader, public LoggableClass {
+class Controls : public TagLoader, public AutoFader<true>, public LoggableClass {
 public:
 	constexpr static inline float SeekbarSize = 25.0f;
 
