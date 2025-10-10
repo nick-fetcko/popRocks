@@ -155,6 +155,11 @@ void Settings::SetDetectBpm(bool detectBpm) {
 	Save();
 }
 
+void Settings::SetHalveBpm(bool halveBpm) {
+	this->halveBpm = halveBpm;
+	Save();
+}
+
 void Settings::SetWidth(float width) {
 	this->width = width;
 	Save();
@@ -458,6 +463,8 @@ const Node &operator>>(const Node &node, Settings &settings) {
 
 	if (node.has("detectBpm"))
 		node["detectBpm"]->get(settings.detectBpm);
+	if (node.has("halveBpm"))
+		node["halveBpm"]->get(settings.halveBpm);
 
 	if (node.has("width"))
 		node["width"]->get(settings.width);
@@ -590,6 +597,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["rotationSpeed"]->set(settings.rotationSpeed);
 	node["radius"]->set(settings.radius);
 	node["detectBpm"]->set(settings.detectBpm);
+	node["halveBpm"]->set(settings.halveBpm);
 	node["width"]->set(settings.width);
 	node["renderer"]->set(settings.renderer);
 	node["presetIndex"]->set(settings.presetIndex);

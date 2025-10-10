@@ -85,6 +85,9 @@ public:
 	const bool &GetDetectBpm() const { return detectBpm; }
 	void SetDetectBpm(bool detectBpm);
 
+	const bool &GetHalveBpm() const { return halveBpm; }
+	void SetHalveBpm(bool halveBpm);
+
 	const float &GetWidth() const { return width; }
 	void SetWidth(float width);
 
@@ -236,7 +239,8 @@ private:
 
 	float radius = 200;
 
-	bool detectBpm = false;
+	bool detectBpm = true;
+	bool halveBpm = false;
 
 	float width = 4.0f;
 

@@ -852,6 +852,9 @@ void CApp::OnInit() {
 		menu.SetOnExclusiveVolumeChanged([this](int volume) {
 			controls.GetVolume().SetVolume(volume);
 		});
+		menu.SetOnHalveBpmChanged([this](bool halveBpm) {
+			Settings::settings.SetHalveBpm(halveBpm);
+		});
 #endif
 	} else logger.LogError("Could not create OpenGL context: ", SDL_GetError());
 

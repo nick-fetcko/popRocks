@@ -229,6 +229,12 @@ public:
 					onDetectBpmChanged(!Settings::settings.GetDetectBpm());
 			}
 
+			halveBpm = Settings::settings.GetHalveBpm();
+			if (ImGui::MenuItem("Halve detected BPM?", nullptr, &halveBpm)) {
+				if (onHalveBpmChanged)
+					onHalveBpmChanged(halveBpm);
+			}
+
 			ImGui::Separator();
 
 			blur = Settings::settings.GetBlur();
@@ -912,6 +918,7 @@ public:
 	void SetOnBlurChanged(std::function<void(bool)> f) { onBlurChanged = f; }
 	void SetOnRotatingChanged(std::function<void(bool)> f) { onRotatingChanged = f; }
 	void SetOnDetectBpmChanged(std::function<void(bool)> f) { onDetectBpmChanged = f; }
+	void SetOnHalveBpmChanged(std::function<void(bool)> f) { onHalveBpmChanged = f; }
 
 	void SetOnPulseChanged(std::function<void(bool)> f) { onPulseChanged = f; }
 	void SetOnBlurIntensityChanged(std::function<void(float)> f) { onBlurIntensityChanged = f; }
@@ -1008,6 +1015,7 @@ private:
 
 	bool rotate = Settings::settings.GetRotating();
 	bool detectBpm = Settings::settings.GetDetectBpm();
+	bool halveBpm = Settings::settings.GetHalveBpm();
 	bool blur = Settings::settings.GetBlur();
 
 	float rpm = Settings::settings.GetRotationSpeed() / (360.0f / 60.0f);
@@ -1092,6 +1100,7 @@ private:
 	std::function<void(bool)> onBlurChanged;
 	std::function<void(bool)> onRotatingChanged;
 	std::function<void(bool)> onDetectBpmChanged;
+	std::function<void(bool)> onHalveBpmChanged;
 	std::function<void(const std::string &)> onVisualizationTypeChanged;
 	std::function<void(const std::string &)> onLightPackVisualizationTypeChanged;
 	std::function<void(const std::string &)> onLightPackMappingChanged;

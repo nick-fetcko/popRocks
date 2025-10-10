@@ -19,6 +19,7 @@ bool BeatDetect::OnLoop(double elapsed) {
 	if (mutex.try_lock()) {
 		if (detectBpm && eventListIter != eventList.end() && elapsed >= eventListIter->time) {
 			++eventListIter;
+			if (Settings::settings.GetHalveBpm()) ++eventListIter;
 			mutex.unlock();
 			return true;
 		}
@@ -232,10 +233,11 @@ inline void BeatDetect::_OnLoad(
 
 				logger.LogDebug(
 					"Song's estimated BPM is ",
-					static_cast<int>(1.0 / average * 60.0),
+					static_cast<int>(1.0 / average * 60.0) / (Settings::settings.GetHalveBpm() ? 2.0 : 1.0),
 					" based on ",
 					eventList.size(),
-					" beats"
+					" beats",
+					Settings::settings.GetHalveBpm() ? " (divided by 2)" : ""
 				);
 
 				eventListIter = eventList.begin();
