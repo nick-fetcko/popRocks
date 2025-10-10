@@ -171,6 +171,9 @@ const Node &operator>>(const Node &node, Preset &preset) {
 	if (node.has("effectRotation"))
 		node["effectRotation"]->get(preset.effectRotation);
 
+	if (node.has("renderer"))
+		node["renderer"]->get(preset.renderer);
+
 	return node;
 }
 
@@ -197,6 +200,8 @@ Node &operator<<(Node &node, const Preset &preset) {
 	node["effectHorizontalSpread"]->set(preset.effectHorizontalSpread);
 	node["effectVerticalSpread"]->set(preset.effectVerticalSpread);
 	node["effectRotation"]->set(preset.effectRotation);
+	if (preset.renderer)
+		node["renderer"]->set(preset.renderer);
 
 	return node;
 }

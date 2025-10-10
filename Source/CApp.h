@@ -190,6 +190,8 @@ private:
 
 	inline void ToggleExclusive();
 
+	inline void LoadRenderer(const std::string &rendererName);
+
 	int windowWidth = 1920;
 	int windowHeight = 1080;
 

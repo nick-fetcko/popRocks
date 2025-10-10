@@ -35,7 +35,8 @@ public:
 		float effectRadiation,
 		float effectHorizontalSpread,
 		float effectVerticalSpread,
-		float effectRotation
+		float effectRotation,
+		std::optional<std::string> renderer = std::nullopt
 	) : name(name),
 		bufferSize(bufferSize),
 		decayTime(decayTime),
@@ -56,7 +57,8 @@ public:
 		effectRadiation(effectRadiation),
 		effectHorizontalSpread(effectHorizontalSpread),
 		effectVerticalSpread(effectVerticalSpread),
-		effectRotation(effectRotation) {
+		effectRotation(effectRotation),
+		renderer(renderer) {
 
 	}
 
@@ -87,6 +89,7 @@ public:
 	const float GetEffectHorizontalSpread() const { return effectHorizontalSpread; }
 	const float GetEffectVerticalSpread() const { return effectVerticalSpread; }
 	const float GetEffectRotation() const { return effectRotation; }
+	const std::optional<std::string> &GetRenderer() const { return renderer; }
 
 	friend const Node &operator>>(const Node &node, Preset &preset);
 	friend Node &operator<<(Node &node, const Preset &preset);
@@ -124,4 +127,6 @@ private:
 	float effectHorizontalSpread = 0.0f;
 	float effectVerticalSpread = 0.0f;
 	float effectRotation = 0.0f;
+
+	std::optional<std::string> renderer = std::nullopt;
 };

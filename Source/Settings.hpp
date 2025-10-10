@@ -199,6 +199,9 @@ public:
 	const float &GetAutoFadeSpeed() const { return autoFadeSpeed; }
 	void SetAutoFadeSpeed(float autoFadeSpeed);
 
+	const bool &GetSaveRenderer() const { return saveRenderer; }
+	void SetSaveRenderer(bool saveRenderer);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -289,7 +292,7 @@ private:
 	// 11: Tunnel
 	// 12: Sinkhole
 	// 13: Horizon
-	std::set<std::size_t> selectedPresets = { 7, 8, 10, 11, 12, 13 };
+	std::set<std::size_t> selectedPresets = { 7, 8, 10, 11, 12, 13, 14, 15 };
 	bool randomizePresets = false;
 	Duration<Microseconds> randomizePresetsTime = 2.5s;
 	bool randomizePresetsByBeats = false;
@@ -298,4 +301,6 @@ private:
 	bool autoFade = true;
 	Duration<Microseconds> waitTime = 2s;
 	float autoFadeSpeed = 2.0f;
+
+	bool saveRenderer = false;
 };

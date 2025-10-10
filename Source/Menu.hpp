@@ -552,8 +552,15 @@ public:
 				
 				ImGui::InputText("Preset name", &currentPresetName);
 
-				if (ImGui::Button("Cancel"))
+				saveRenderer = Settings::settings.GetSaveRenderer();
+				if (ImGui::Checkbox("Save visualization type?", &saveRenderer))
+					Settings::settings.SetSaveRenderer(saveRenderer);
+
+				if (ImGui::Button("Cancel")) {
+					saveRenderer = lastSaveRenderer;
+					Settings::settings.SetSaveRenderer(lastSaveRenderer);
 					open = false;
+				}
 
 				ImGui::SameLine();
 
@@ -579,13 +586,16 @@ public:
 						Settings::settings.GetEffectRadiation(),
 						Settings::settings.GetEffectHorizontalSpread(),
 						Settings::settings.GetEffectVerticalSpread(),
-						Settings::settings.GetEffectRotation()
+						Settings::settings.GetEffectRotation(),
+						saveRenderer ? Settings::settings.GetRenderer() : static_cast<std::optional<std::string>>(std::nullopt)
 					);
 
 					Preset::AddPreset(std::move(preset));
 
 					if (onPresetChanged)
 						onPresetChanged(Preset::GetPresets().size() - 1);
+
+					lastSaveRenderer = saveRenderer;
 
 					open = false;
 				}
@@ -1073,6 +1083,9 @@ private:
 
 	bool exclusive = Settings::settings.GetExclsuive();
 	int exclusiveVolume = Settings::settings.GetVolume() * 100;
+
+	bool saveRenderer = Settings::settings.GetSaveRenderer();
+	bool lastSaveRenderer = Settings::settings.GetSaveRenderer();
 
 	std::function<void(const std::filesystem::path &)> onOpen;
 	std::function<void(bool)> onPulseChanged;

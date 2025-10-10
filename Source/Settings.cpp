@@ -347,6 +347,11 @@ void Settings::SetAutoFadeSpeed(float autoFadeSpeed) {
 	Save();
 }
 
+void Settings::SetSaveRenderer(bool saveRenderer) {
+	this->saveRenderer = saveRenderer;
+	Save();
+}
+
 void Settings::Save() {
 	if (auto path = GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
@@ -559,6 +564,9 @@ const Node &operator>>(const Node &node, Settings &settings) {
 	}
 	if (node.has("autoFadeSpeed"))
 		node["autoFadeSpeed"]->get(settings.autoFadeSpeed);
+
+	if (node.has("saveRenderer"))
+		node["saveRenderer"]->get(settings.saveRenderer);
 		
 	return node;
 }
@@ -620,6 +628,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["autoFade"]->set(settings.autoFade);
 	node["waitTime"]->set(settings.waitTime.AsSeconds());
 	node["autoFadeSpeed"]->set(settings.autoFadeSpeed);
+	node["saveRenderer"]->set(settings.saveRenderer);
 
 	return node;
 }

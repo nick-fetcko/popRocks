@@ -354,6 +354,22 @@ void CApp::UpdateBeatCounter() {
 	logger.LogDebug("\t% randomizePresetsBeats: ", beatCounter);
 }
 
+void CApp::LoadRenderer(const std::string &rendererName) {
+	renderer = RendererFactory::Build(
+		rendererName,
+		&dynamicGain,
+		&albumArt,
+		renderer,
+		windowWidth,
+		windowHeight,
+		buffer,
+		maxLength,
+		bufferLength
+	);
+
+	Settings::settings.SetRenderer(rendererName);
+}
+
 void CApp::OnInit() {
 	// https://tgui.eu/tutorials/latest-stable/dpi-scaling/
 	SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
@@ -524,24 +540,10 @@ void CApp::OnInit() {
 			}
 		});
 		menu.SetOnVisualizationTypeChanged([this](const std::string &visualizationType) {
-			renderer = RendererFactory::Build(
-				visualizationType,
-				&dynamicGain,
-				&albumArt,
-				renderer,
-				windowWidth,
-				windowHeight,
-				buffer,
-				maxLength,
-				bufferLength
-			);
+			LoadRenderer(visualizationType);
 
-			Settings::settings.SetRenderer(visualizationType);
-
-			if (visualizationType == "fft") {
-				// Presets only really affect the FFT renderer for now
-				LoadPreset(presetIndex);
-			}
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
 		});
 		menu.SetOnLightPackVisualizationTypeChanged([this](const std::string &lightPackVisualizationType) {
 			lightPack.SetLightType(
@@ -2327,6 +2329,9 @@ void CApp::LoadPreset(const Preset &preset) {
 		presetIndex = std::nullopt;
 		Settings::settings.SetPresetIndex(presetIndex);
 	}
+
+	if (auto renderer = preset.GetRenderer())
+		LoadRenderer(*renderer);
 
 	SetBufferLength(preset.GetBufferSize());
 	SetDecayTime(preset.GetDecayTime());
