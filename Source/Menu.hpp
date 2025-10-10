@@ -562,9 +562,17 @@ public:
 				if (ImGui::Checkbox("Save visualization type?", &saveRenderer))
 					Settings::settings.SetSaveRenderer(saveRenderer);
 
+				saveScale = Settings::settings.GetSaveScale();
+				if (ImGui::Checkbox("Save scale?", &saveScale))
+					Settings::settings.SetSaveScale(saveScale);
+
 				if (ImGui::Button("Cancel")) {
 					saveRenderer = lastSaveRenderer;
 					Settings::settings.SetSaveRenderer(lastSaveRenderer);
+
+					saveScale = lastSaveScale;
+					Settings::settings.SetSaveScale(lastSaveScale);
+
 					open = false;
 				}
 
@@ -593,7 +601,8 @@ public:
 						Settings::settings.GetEffectHorizontalSpread(),
 						Settings::settings.GetEffectVerticalSpread(),
 						Settings::settings.GetEffectRotation(),
-						saveRenderer ? Settings::settings.GetRenderer() : static_cast<std::optional<std::string>>(std::nullopt)
+						saveRenderer ? Settings::settings.GetRenderer() : static_cast<std::optional<std::string>>(std::nullopt),
+						saveScale ? Settings::settings.GetScale() : static_cast<std::optional<float>>(std::nullopt)
 					);
 
 					Preset::AddPreset(std::move(preset));
@@ -602,6 +611,7 @@ public:
 						onPresetChanged(Preset::GetPresets().size() - 1);
 
 					lastSaveRenderer = saveRenderer;
+					lastSaveScale = saveScale;
 
 					open = false;
 				}
@@ -1094,6 +1104,9 @@ private:
 
 	bool saveRenderer = Settings::settings.GetSaveRenderer();
 	bool lastSaveRenderer = Settings::settings.GetSaveRenderer();
+
+	bool saveScale = Settings::settings.GetSaveScale();
+	bool lastSaveScale = Settings::settings.GetSaveScale();
 
 	std::function<void(const std::filesystem::path &)> onOpen;
 	std::function<void(bool)> onPulseChanged;

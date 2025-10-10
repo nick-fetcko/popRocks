@@ -205,6 +205,9 @@ public:
 	const bool &GetSaveRenderer() const { return saveRenderer; }
 	void SetSaveRenderer(bool saveRenderer);
 
+	const bool &GetSaveScale() const { return saveScale; }
+	void SetSaveScale(bool saveScale);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -307,4 +310,5 @@ private:
 	float autoFadeSpeed = 2.0f;
 
 	bool saveRenderer = false;
+	bool saveScale = false;
 };

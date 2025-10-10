@@ -192,6 +192,8 @@ private:
 
 	inline void LoadRenderer(const std::string &rendererName);
 
+	inline void SetVisualizerScale(float scale);
+
 	int windowWidth = 1920;
 	int windowHeight = 1080;
 

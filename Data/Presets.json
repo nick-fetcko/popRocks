@@ -6,7 +6,8 @@
 		"fadeTime" : 0.5,
 		"pulse" : false,
 		"pulseTime" : 0.1,
-		"renderer" : "fft"
+		"renderer" : "fft",
+		"scale" : 1.0
 	},
 	"1" : {
 		"name" : "Fast",
@@ -15,7 +16,8 @@
 		"fadeTime" : 0.1,
 		"pulse" : false,
 		"pulseTime" : 0.04,
-		"renderer" : "fft"
+		"renderer" : "fft",
+		"scale" : 1.0
 	},
 	"2" : {
 		"name" : "Slow",
@@ -24,7 +26,8 @@
 		"fadeTime" : 5,
 		"pulse" : true,
 		"pulseTime" : 1,
-		"renderer" : "fft"
+		"renderer" : "fft",
+		"scale" : 1.0
 	},
 	"3" : {
 		"name" : "Flower",
@@ -37,7 +40,8 @@
 		"rotationSpeed" : 66.6,
 		"blur": true,
 		"blurIntensity": 0.170000,
-		"renderer" : "fft"
+		"renderer" : "fft",
+		"scale" : 1.0
 	},
 	"4" : {
 		"name" : "Smoke",
@@ -56,7 +60,8 @@
 		"effectXOffset" : -0.07,
 		"effectYOffset" : 3.63,
 		"effectRadiation" : 3.95,
-		"renderer" : "fft"
+		"renderer" : "fft",
+		"scale" : 1.0
 	},
 	"5" : {
 		"name" : "Mist",
@@ -75,7 +80,8 @@
 		"effectXOffset" : 0,
 		"effectYOffset" : 0,
 		"effectRadiation" : 0,
-		"renderer" : "fft"
+		"renderer" : "fft",
+		"scale" : 1.0
 	},
 	"6": {
 		"name": "Black Hole",
@@ -94,7 +100,8 @@
 		"effectXOffset": 0.460000,
 		"effectYOffset": 0.530000,
 		"effectRadiation": -10.000000,
-		"renderer" : "fft"
+		"renderer" : "fft",
+		"scale" : 1.0
 	},
 	"7": {
 		"name": "Ripples",
@@ -113,7 +120,8 @@
 		"effectXOffset": 0.190000,
 		"effectYOffset": 0.330000,
 		"effectRadiation": 3.150000,
-		"renderer" : "osc"
+		"renderer" : "osc",
+		"scale" : 1.15
 	},
 	"8": {
 		"name": "Conway",
@@ -132,7 +140,8 @@
 		"effectXOffset": -0.010000,
 		"effectYOffset": 0.000000,
 		"effectRadiation": -0.010000,
-		"renderer" : "osc"
+		"renderer" : "osc",
+		"scale" : 1.15
 	},
 	"9": {
 		"name": "Fountain",
@@ -151,7 +160,8 @@
 		"effectXOffset": -0.140000,
 		"effectYOffset": -4.140000,
 		"effectRadiation": 6.640000,
-		"renderer" : "fft"
+		"renderer" : "fft",
+		"scale" : 1.15
 	},
 	"10": {
 		"name": "Eye of the Storm",
@@ -174,7 +184,8 @@
 		"effectRadiation": 6.580000,
 		"effectHorizontalSpread": -10.000000,
 		"effectVerticalSpread": -10.000000,
-		"renderer" : "osc"
+		"renderer" : "osc",
+		"scale" : 1.15
 	},
 	"11": {
 		"name": "Tunnel",
@@ -197,7 +208,8 @@
 		"effectRadiation": -2.890000,
 		"effectHorizontalSpread": 10.000000,
 		"effectVerticalSpread": 10.000000,
-		"renderer" : "osc"
+		"renderer" : "osc",
+		"scale" : 1.15
 	},
 	"12": {
 		"name": "Sinkhole",
@@ -220,7 +232,8 @@
 		"effectRadiation": -10.000000,
 		"effectHorizontalSpread": 10.000000,
 		"effectVerticalSpread": 10.000000,
-		"renderer" : "osc"
+		"renderer" : "osc",
+		"scale" : 1.15
 	},
 	"13": {
 		"name": "Horizon",
@@ -243,7 +256,8 @@
 		"effectRadiation": 2.960000,
 		"effectHorizontalSpread": -2.700000,
 		"effectVerticalSpread": 10.000000,
-		"renderer" : "osc"
+		"renderer" : "osc",
+		"scale" : 1.15
 	},
 	"14": {
 		"name": "Galaxy",
@@ -267,7 +281,8 @@
 		"effectHorizontalSpread": -4.800000,
 		"effectVerticalSpread": -1.780000,
 		"effectRotation": 0.560000,
-		"renderer" : "osc"
+		"renderer" : "osc",
+		"scale" : 1.15
 	},
 	"15": {
 		"name": "Tubular",
@@ -291,7 +306,8 @@
 		"effectHorizontalSpread": 10.000000,
 		"effectVerticalSpread": 10.000000,
 		"effectRotation": 1.410000,
-		"renderer" : "osc"
+		"renderer" : "osc",
+		"scale" : 1.15
 	},
 	"20": {
 		"name": "In The Clouds",
@@ -315,6 +331,7 @@
 		"effectHorizontalSpread": 2.500000,
 		"effectVerticalSpread": 2.890000,
 		"effectRotation": 0.760000,
-		"renderer" : "fft"
+		"renderer" : "fft",
+		"scale" : 0.25
 	}
 }

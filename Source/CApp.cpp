@@ -370,6 +370,13 @@ void CApp::LoadRenderer(const std::string &rendererName) {
 	Settings::settings.SetRenderer(rendererName);
 }
 
+void CApp::SetVisualizerScale(float scale) {
+	Settings::settings.SetScale(scale);
+
+	if (renderer)
+		renderer->SetScale(scale);
+}
+
 void CApp::OnInit() {
 	// https://tgui.eu/tutorials/latest-stable/dpi-scaling/
 	SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
@@ -773,10 +780,10 @@ void CApp::OnInit() {
 			);
 		});
 		menu.SetOnScaleChanged([this](float scale) {
-			Settings::settings.SetScale(scale);
+			SetVisualizerScale(scale);
 
-			if (renderer)
-				renderer->SetScale(scale);
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
 		});
 		menu.SetOnSelectedPresetsChanged([this](const std::set<std::size_t> &selectedPresets) {
 			Settings::settings.SetSelectedPresets(selectedPresets);
@@ -2335,6 +2342,9 @@ void CApp::LoadPreset(const Preset &preset) {
 
 	if (auto renderer = preset.GetRenderer())
 		LoadRenderer(*renderer);
+
+	if (auto scale = preset.GetScale())
+		SetVisualizerScale(*scale);
 
 	SetBufferLength(preset.GetBufferSize());
 	SetDecayTime(preset.GetDecayTime());

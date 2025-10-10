@@ -173,6 +173,9 @@ const Node &operator>>(const Node &node, Preset &preset) {
 
 	if (node.has("renderer"))
 		node["renderer"]->get(preset.renderer);
+	
+	if (node.has("scale"))
+		node["scale"]->get(preset.scale);
 
 	return node;
 }
@@ -202,6 +205,8 @@ Node &operator<<(Node &node, const Preset &preset) {
 	node["effectRotation"]->set(preset.effectRotation);
 	if (preset.renderer)
 		node["renderer"]->set(preset.renderer);
+	if (preset.scale)
+		node["scale"]->set(preset.scale);
 
 	return node;
 }
