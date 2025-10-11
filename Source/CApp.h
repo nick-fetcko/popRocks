@@ -194,6 +194,8 @@ private:
 
 	inline void SetVisualizerScale(float scale);
 
+	inline void ClearBlurFbo();
+
 	int windowWidth = 1920;
 	int windowHeight = 1080;
 

@@ -822,6 +822,9 @@ void CApp::OnInit() {
 
 			UpdateBeatCounter();
 		});
+		menu.SetOnClearBlurFbo([this] {
+			ClearBlurFbo();
+		});
 		menu.SetOnResetWindow([this] {
 			Settings::settings.SetWindowWidth(1920);
 			Settings::settings.SetWindowHeight(1080);
@@ -1826,6 +1829,20 @@ void CApp::ResetBeatDetection() {
 	}
 }
 
+inline void CApp::ClearBlurFbo() {
+	blurFbo->Bind();
+
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	blurFbo->Unbind();
+	lastFrame->Bind();
+
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	lastFrame->Unbind();
+}
+
 void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 	auto extension = path.extension().u8string();
 	std::transform(extension.begin(), extension.end(), extension.begin(), tolower);
@@ -1895,20 +1912,8 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 		}
 
 		// Clear the blur FBO when we load a new file / playlist
-		if (blur) {
-			blurFbo->Bind();
-
-			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-			glClear(GL_COLOR_BUFFER_BIT);
-
-			blurFbo->Unbind();
-			lastFrame->Bind();
-
-			glClear(GL_COLOR_BUFFER_BIT);
-
-			lastFrame->Unbind();
-		}
-
+		if (blur)
+			ClearBlurFbo();
 	} else {
 		// If we're in a playlist, we want the
 		// folder that was originally scanned

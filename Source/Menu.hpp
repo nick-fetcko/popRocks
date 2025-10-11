@@ -259,6 +259,13 @@ public:
 			}
 			ImGui::EndDisabled();
 
+			ImGui::BeginDisabled(!blur);
+			if (ImGui::MenuItem("Reset blur...")) {
+				if (onClearBlurFbo)
+					onClearBlurFbo();
+			}
+			ImGui::EndDisabled();
+
 			ImGui::Separator();
 
 			if (ImGui::BeginMenu("Effect")) {
@@ -985,6 +992,8 @@ public:
 	void SetOnRandomizePresetsByBeatChanged(std::function<void(bool)> f) { onRandomizePresetsByBeatsChanged = f; }
 	void SetOnRandomizePresetsBeatsChanged(std::function<void(int)> f) { onRandomizePresetsBeatsChanged = f; }
 
+	void SetOnClearBlurFbo(std::function<void()> f) { onClearBlurFbo = f; }
+
 	void SetOnResetWindow(std::function<void()> f) { onResetWindow = f; }
 
 	void SetOnQuit(std::function<void()> f) { onQuit = f; }
@@ -1162,6 +1171,8 @@ private:
 	std::function<void(float)> onAutoFadeSpeedChanged;
 	std::function<void(bool)> onExclusiveChanged;
 	std::function<void(int)> onExclusiveVolumeChanged;
+
+	std::function<void()> onClearBlurFbo;
 
 	std::function<void()> onRandom;
 
