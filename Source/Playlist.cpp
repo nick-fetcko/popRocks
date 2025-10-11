@@ -7,15 +7,21 @@
 #include "OGG.hpp"
 #include "WV.hpp"
 
-Playlist::Sorter::iterator Playlist::GuessDisc(Sorter &sorter, std::size_t index) {
+Playlist::Sorter::iterator Playlist::GuessDisc(Sorter &sorter, std::optional<std::size_t> &index) {
 	std::size_t discGuess = 1;
 
 	// If we already have a track with
 	// the same index on another disc,
 	// make a new one.
-	for (const auto &disc : sorter) {
-		if (auto track = disc.second.find(index); track != disc.second.end())
-			++discGuess;
+	if (index) {
+		for (const auto &disc : sorter) {
+			if (auto track = disc.second.find(*index); track != disc.second.end())
+				++discGuess;
+		}
+	} else {
+		// If we don't have an index, make it the last
+		// track on the last disc.
+		index = sorter.rbegin()->second.size() + 1;
 	}
 
 	auto discSorter = sorter.find(discGuess);
@@ -193,10 +199,12 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 							)
 						).first;
 					}
-				} else discSorter = GuessDisc(sorter, *index);
+				} else discSorter = GuessDisc(sorter, index);
 			} else {
-				index = titles.size() + 1;
-				discSorter = GuessDisc(sorter, *index);
+				if (auto [success, number] = Utils::ExtractDigitsFromString(iter.path().stem().u8string(), true); success)
+					index = number;
+
+				discSorter = GuessDisc(sorter, index);
 			}
 
 			discSorter->second.emplace(

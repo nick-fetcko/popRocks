@@ -226,11 +226,8 @@ std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder) con
 				//		"Cover 3.jpg"
 				//
 				// We'll use "Cover 1.jpg"
-				const char *digits = "0123456789";
-				if (auto start = filename.find_first_of(digits); start != std::string::npos)
-					preferred.emplace(std::make_pair(std::stoi(filename.substr(start)), entry.path()));
-				else
-					preferred.emplace(std::make_pair(std::numeric_limits<int>::max(), entry.path()));
+				auto [success, number] = Utils::ExtractDigitsFromString(filename);
+				preferred.emplace(std::make_pair(number, entry.path()));
 
 				// Optionally break when we find a preferred file
 				//

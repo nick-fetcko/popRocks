@@ -95,7 +95,7 @@ private:
 	// First key is disc #
 	// Second key is track #
 	using Sorter = std::map<std::size_t, std::map<std::size_t, std::pair<std::string, std::filesystem::path>>>;
-	Sorter::iterator GuessDisc(Sorter &sorter, std::size_t index);
+	Sorter::iterator GuessDisc(Sorter &sorter, std::optional<std::size_t> &index);
 
 	template <typename T>
 	void LoadTitles(const std::vector<T> &titles) {
