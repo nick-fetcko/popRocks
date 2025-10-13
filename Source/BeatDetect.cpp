@@ -55,6 +55,8 @@ const bool BeatDetect::IsNextBeatCloser(double elapsed) const {
 }
 
 void BeatDetect::SetDetecting(bool detecting) {
+	if (!detecting) Cancel();
+
 	std::unique_lock lock(mutex);
 	detectBpm = detecting;
 }
@@ -216,7 +218,7 @@ inline void BeatDetect::_OnLoad(
 
 			start = end;
 
-			eventList = beatRootProcessor.beatTrack();
+			eventList = beatRootProcessor.beatTrack(canceled);
 
 			if (eventList.size() % 2) {
 				eventList.erase(eventList.begin());

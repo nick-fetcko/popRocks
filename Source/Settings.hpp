@@ -25,6 +25,15 @@ public:
 		double minHueSeparation = 25.0;
 		double minValueSeparation = 0.1;
 		double minRgbSeparation = 0.70;
+
+		bool operator !=(const ColorSelection &right) {
+			return right.minPercentage != minPercentage ||
+				right.minSaturation != minSaturation ||
+				right.minValue != minValue ||
+				right.minHueSeparation != minHueSeparation ||
+				right.minValueSeparation != minValueSeparation ||
+				right.minRgbSeparation != minRgbSeparation;
+		}
 	};
 
 	static Settings settings;

@@ -99,14 +99,6 @@ QWORD Controls::OnLoad(HSTREAM streamHandle) {
 		);
 		logger.LogDebug("Song is ", currentFileLength, " seconds long");
 	}
-
-	titleText.SetText("");
-	titleOutline.SetText("");
-	artistText.SetText("");
-	artistOutline.SetText("");
-	albumText.SetText("");
-	albumOutline.SetText("");
-
 	currentPos = 0.0;
 	elapsedSeconds = -1;
 
@@ -131,6 +123,9 @@ void Controls::LoadFromTags(const std::map<std::string, std::string> &tags) {
 	if (auto title = tags.find("title"); title != tags.end()) {
 		titleText.SetText(title->second);
 		titleOutline.SetText(title->second);
+	} else {
+		titleText.SetText("");
+		titleOutline.SetText("");
 	}
 
 	if (auto artist = tags.find("artist"); artist != tags.end()) {
@@ -139,11 +134,17 @@ void Controls::LoadFromTags(const std::map<std::string, std::string> &tags) {
 	} else if (auto albumArtist = tags.find("albumartist"); albumArtist != tags.end()) {
 		artistText.SetText(albumArtist->second);
 		artistOutline.SetText(albumArtist->second);
+	} else {
+		artistText.SetText("");
+		artistOutline.SetText("");
 	}
 
 	if (auto album = tags.find("album"); album != tags.end()) {
 		albumText.SetText(album->second);
 		albumOutline.SetText(album->second);
+	} else {
+		albumText.SetText("");
+		albumOutline.SetText("");
 	}
 }
 

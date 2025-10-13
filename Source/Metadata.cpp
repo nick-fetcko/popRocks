@@ -11,7 +11,31 @@ void Metadata::OnLoad(
 	TagLoader *tagLoader,
 	AlbumArt *albumArt
 ) {
-	if (extension == ".ape") {
+	if (extension == ".flac") {
+		FLAC flac(path);
+
+		auto tags = flac.GetTags(false);
+		tagLoader->LoadFromTags(tags);
+		if (auto &[mimeType, data] = flac.GetArt(); data.size()) {
+			albumArt->Load(
+				mimeType,
+				data.data(),
+				data.size()
+			);
+		}
+
+		return;
+	}
+	else if (extension == ".mp4" || extension == ".m4a") {
+		MP4 mp4(path);
+
+		auto tags = mp4.GetTags(false);
+		tagLoader->LoadFromTags(tags);
+		if (auto &art = mp4.GetArt(); art && albumArt->Load(art->mimeType, art->data, art->dataSize))
+			logger.LogDebug("Found iTunes-style embedded album art");
+
+		return;
+	} else if (extension == ".ape") {
 		APE ape(path);
 
 		auto tags = ape.GetTags(false);
@@ -87,14 +111,7 @@ void Metadata::OnLoad(
 
 				tagLoader->LoadFromTags(tags);
 			} else {
-				auto mp4 = BASS_ChannelGetTags(streamHandle, BASS_TAG_MP4);
-				if (mp4) {
-					auto tags = GetTags(mp4);
-
-					tagLoader->LoadFromTags(tags);
-				} else {
-					logger.LogError("Could not fully populate tags!");
-				}
+				logger.LogError("Could not fully populate tags!");
 			}
 		}
 	}
@@ -115,17 +132,6 @@ void Metadata::OnLoad(
 					const_cast<void *>(art->data),
 					art->length
 				);
-			}
-		} else if (extension == ".mp4" || extension == ".m4a") {
-			MP4 mp4(path);
-
-			// For now, we just want to grab "iTunes style" album art
-			auto atom = mp4.GetAtomAtPath({ "moov", "udta", "meta", "ilst", "covr", "data" });
-
-			if (atom) {
-				atom->ReadData();
-				if (albumArt->Load(atom->mimeType, atom->data, atom->dataSize))
-					logger.LogDebug("Found iTunes-style embedded album art");
 			}
 		}
 	}

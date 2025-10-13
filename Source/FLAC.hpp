@@ -90,12 +90,17 @@ protected:
 		return ret;
 	}
 
+	std::vector<uint8_t> artData;
+	std::string artMimeType;
+
 public:
 	FLAC(const std::filesystem::path &path) : MetadataReader(path) {
 
 	}
 
 	std::map<std::string, std::string> GetTags(bool textOnly = true) override {
+		std::map<std::string, std::string> ret;
+
 		// Make sure first 4 bytes are "fLaC"
 		uint32_t fourCC = 0;
 		inFile.read(reinterpret_cast<char *>(&fourCC), sizeof(uint32_t));
@@ -121,7 +126,51 @@ public:
 			while (!block.IsLast()) {
 				inFile.read(reinterpret_cast<char *>(&block), sizeof(MetadataBlock));
 				if ((block.type & 0x7F) == 4) { // VORBIS_COMMENT
-					return GetVorbisTags(textOnly);
+					ret.merge(GetVorbisTags(textOnly));
+
+					// Do we have album art next?
+					inFile.read(reinterpret_cast<char *>(&block), sizeof(MetadataBlock));
+					if ((block.type & 0x7F) == 6) { // Picture
+						// FIXME: This shares a lot with ID3V2::Art::Read()
+						uint32_t type;
+						uint32_t mediaTypeLength;
+
+						inFile.read(reinterpret_cast<char *>(&type), sizeof(uint32_t));
+						type = Utils::LittleEndian(type);
+						inFile.read(reinterpret_cast<char *>(&mediaTypeLength), sizeof(uint32_t));
+						mediaTypeLength = Utils::LittleEndian(mediaTypeLength);
+
+						char *mediaType = new char[mediaTypeLength];
+						inFile.read(mediaType, mediaTypeLength);
+						artMimeType = mediaType;
+						delete[] mediaType;
+
+						uint32_t descriptionLength;
+
+						inFile.read(reinterpret_cast<char *>(&descriptionLength), sizeof(uint32_t));
+						descriptionLength = Utils::LittleEndian(descriptionLength);
+
+						char *description = new char[descriptionLength];
+						inFile.read(description, descriptionLength);
+						delete[] description;
+
+						uint32_t width, height, depth, colors, dataLength;
+						inFile.read(reinterpret_cast<char *>(&width), sizeof(uint32_t));
+						width = Utils::LittleEndian(width);
+						inFile.read(reinterpret_cast<char *>(&height), sizeof(uint32_t));
+						height = Utils::LittleEndian(height);
+						inFile.read(reinterpret_cast<char *>(&depth), sizeof(uint32_t));
+						depth = Utils::LittleEndian(depth);
+						inFile.read(reinterpret_cast<char *>(&colors), sizeof(uint32_t));
+						colors = Utils::LittleEndian(colors);
+						inFile.read(reinterpret_cast<char *>(&dataLength), sizeof(uint32_t));
+						dataLength = Utils::LittleEndian(dataLength);
+
+						artData.resize(dataLength);
+						inFile.read(reinterpret_cast<char *>(artData.data()), dataLength);
+					}
+
+					return ret;
 				} else {
 					auto length = block.GetLength();
 					inFile.seekg(length, std::ios::cur);
@@ -129,6 +178,10 @@ public:
 			}
 		}
 
-		return {};
+		return ret;
+	}
+
+	std::pair<std::string&, std::vector<uint8_t>&> GetArt() {
+		return { artMimeType, artData };
 	}
 };

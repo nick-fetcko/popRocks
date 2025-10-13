@@ -18,10 +18,6 @@ Playlist::Sorter::iterator Playlist::GuessDisc(Sorter &sorter, std::optional<std
 			if (auto track = disc.second.find(*index); track != disc.second.end())
 				++discGuess;
 		}
-	} else {
-		// If we don't have an index, make it the last
-		// track on the last disc.
-		index = sorter.rbegin()->second.size() + 1;
 	}
 
 	auto discSorter = sorter.find(discGuess);
@@ -34,6 +30,11 @@ Playlist::Sorter::iterator Playlist::GuessDisc(Sorter &sorter, std::optional<std
 			)
 		).first;
 	}
+
+	// If we don't have an index, make it the last
+	// track on the last disc.
+	if (!index)
+		index = sorter.rbegin()->second.size() + 1;
 
 	return discSorter;
 }

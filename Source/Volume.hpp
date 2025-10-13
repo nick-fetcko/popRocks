@@ -60,4 +60,7 @@ private:
 	Polyline ring;
 
 	Colour<float> color = Colour<float>::White;
+
+	float scaledVolume = 0.0f;
+	float inverseVolume = 0.0f;
 };

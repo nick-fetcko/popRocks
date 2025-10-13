@@ -147,7 +147,7 @@ public:
 		return {};
 	}
 
-	std::pair<std::string, std::vector<uint8_t>> GetArt(const std::string &base64) {
+	static std::pair<std::string, std::vector<uint8_t>> GetArt(const std::string &base64) {
 		auto decoded = Base64::Decode(base64);
 
 		uint8_t *ptr = decoded.data();

@@ -78,6 +78,7 @@ public:
 	inline void StopListening();
 
 	HSTREAM GetStreamHandle() const;
+	HSTREAM GetNextStreamHandle() const;
 
 	void SetBufferLength(std::size_t bufferLength);
 	void SetFftLength(std::size_t fftLength);
@@ -126,13 +127,15 @@ public:
 
 	void AdvanceToNextTrack();
 
-	bool Open(const std::filesystem::path &path, const std::string &extension, bool exclusive, bool force = false);
+	bool Open(const std::filesystem::path &path, const std::string &extension, bool exclusive, HSTREAM &target, bool force = false);
 
 	void StopExclusive();
 
 	void UpdateUi() { updateUi = 1; }
 
 	void SyncToNearestBeat();
+
+	std::mutex &GetStreamHandleMutex() { return streamHandleMutex; }
 
 private:
 	void AddCommands();
@@ -206,6 +209,7 @@ private:
 	std::string loadedFileExtension;
 	int freq = 48000; // Sample rate (Hz)
 	HSTREAM streamHandle = NULL; // Handle for open stream
+	HSTREAM nextStreamHandle = NULL; // Handle for next track in playlist
 
 	// We start assuming 2 channels
 	BASS_CHANNELINFO channelInfo = { 0, 2, 0, 0, 0, 0, 0 };
@@ -349,4 +353,6 @@ private:
 
 	int beatCounter = 0;
 	bool resyncBeats = false;
+
+	std::mutex streamHandleMutex;
 };

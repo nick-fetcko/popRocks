@@ -115,7 +115,7 @@ void AlbumArt::OnLoop(GLfloat x, GLfloat y, float frameCount, Context &context) 
 			0
 		);
 		context.Rotate(
-			360.0f + frameCount,
+			frameCount,
 			0.0f,
 			0.0f,
 			1.0f

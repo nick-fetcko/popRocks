@@ -95,16 +95,11 @@ const float &Volume::GetVolume() const { return Settings::settings.GetVolume(); 
 
 // https://stackoverflow.com/a/1165188
 const float Volume::GetScaledVolume() const {
-	return ((std::exp(GetVolume()) - 1.0f) / (std::exp(1.0f) - 1.0f));
+	return scaledVolume;
 }
 
 const float Volume::GetInverseVolume() const {
-	const auto scaled = GetScaledVolume();
-
-	if (scaled <= FLT_EPSILON)
-		return 0.0f;
-
-	return 1.0f / scaled;
+	return inverseVolume;
 }
 
 void Volume::OnDestroy() {
@@ -125,6 +120,12 @@ void Volume::OnColorChanged(const Colour<float> &color, bool silent) {
 
 inline void Volume::UpdateVolume(bool force) {
 	const auto string = std::to_string(static_cast<int>(GetVolume() * 100));
+
+	scaledVolume = ((std::exp(GetVolume()) - 1.0f) / (std::exp(1.0f) - 1.0f));
+	if (scaledVolume <= FLT_EPSILON)
+		inverseVolume = 0.0f;
+	else
+		inverseVolume = 1.0f / scaledVolume;
 
 	outlineText.SetText(string, force);
 	text.SetText(string, force);

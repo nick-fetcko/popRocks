@@ -16,7 +16,7 @@
 #include "BeatTracker.h"
 
 EventList BeatTracker::beatTrack(AgentParameters params,
-                                 EventList events, EventList beats)
+                                 EventList events, EventList beats, std::atomic<bool> &canceled)
 {
     AgentList agents;
 	// Modified 18Jul2025 by Nick Fetcko:
@@ -36,7 +36,7 @@ EventList BeatTracker::beatTrack(AgentParameters params,
     } else // tempo not given; use tempo induction
 	agents = Induction::beatInduction(params, events);
     if (!beats.empty())
-	for (AgentList::iterator itr = agents.begin(); itr != agents.end();
+	for (AgentList::iterator itr = agents.begin(); itr != agents.end() && !canceled;
 	     ++itr) {
 	    (*itr)->beatTime = beatTime;
 	    (*itr)->beatCount = count;
@@ -52,7 +52,7 @@ EventList BeatTracker::beatTrack(AgentParameters params,
     for (AgentList::iterator ai = agents.begin(); ai != agents.end(); ++ai) {
 	delete *ai;
     }
-    return results;
+	return canceled ? EventList() : results;
 } // beatTrack()/1
 	
 

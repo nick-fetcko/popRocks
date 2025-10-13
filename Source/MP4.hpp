@@ -22,8 +22,9 @@ class MP4 {
 public:
 	class Atom {
 	public:
-		Atom(std::ifstream &file);
+		Atom(std::ifstream *file);
 		Atom(Atom &&) noexcept;
+		Atom(const Atom &) = default;
 		~Atom();
 
 		uint32_t size = 0;
@@ -39,24 +40,28 @@ public:
 		void Read();
 		constexpr static int32_t GetExtrasSize();
 		void ReadExtras();
-		void ReadData();
+		bool ReadData(bool textOnly = true);
 
 		bool IsValid() const;
 		int32_t GetBytes() const;
+
+		Atom &operator=(const Atom &) = default;
 
 	private:
 		// Signed so we can easily have
 		// negative relative positions
 		int32_t bytes = 8;
 
-		std::ifstream &file;
+		std::ifstream *file;
 	};
 
 	MP4(const std::filesystem::path &path);
 
 	std::optional<Atom> GetAtomAtPath(const std::vector<std::string> &path);
 
-	std::map<std::string, std::string> GetTags();
+	std::map<std::string, std::string> GetTags(bool textOnly = true);
+
+	const std::optional<Atom> &GetArt() const { return artAtom; }
 
 private:
 	static inline const std::map<std::string, std::string> RelevantAtoms = {
@@ -64,10 +69,13 @@ private:
 		{ "©alb", "album" },
 		{ "©nam", "title"},
 		{ "disk", "discnumber" },
-		{ "trkn", "tracknumber" }
+		{ "trkn", "tracknumber" },
+		{ "covr", "art"}
 	};
 
 	std::optional<Atom> SeekToAtom(const std::string &name, const std::optional<Atom> &parent = std::nullopt);
 
 	std::ifstream file;
+
+	std::optional<Atom> artAtom;
 };

@@ -2,7 +2,7 @@
 
 #include "ID3V2.hpp"
 
-MP4::Atom::Atom(std::ifstream &file) : file(file) {
+MP4::Atom::Atom(std::ifstream *file) : file(file) {
 
 }
 
@@ -24,11 +24,13 @@ MP4::Atom::~Atom() {
 
 void MP4::Atom::Read() {
 	char name[4];
-	file.read(reinterpret_cast<char *>(&size), sizeof(size));
+	file->read(reinterpret_cast<char *>(&size), sizeof(size));
 	// Convert from Big Endian to Little Endian
 	ID3V2::Fix32Bit(&size, false);
-	file.read(name, sizeof(name));
+	file->read(name, sizeof(name));
 	this->name = std::string(name, name + sizeof(name));
+
+	std::transform(this->name.begin(), this->name.end(), this->name.begin(), tolower);
 
 	bytes = sizeof(size) + sizeof(name);
 }
@@ -38,21 +40,23 @@ constexpr int32_t MP4::Atom::GetExtrasSize() {
 }
 
 void MP4::Atom::ReadExtras() {
-	file.read(reinterpret_cast<char *>(&version), sizeof(uint8_t));
-	file.read(reinterpret_cast<char *>(flags), sizeof(flags));
+	file->read(reinterpret_cast<char *>(&version), sizeof(uint8_t));
+	file->read(reinterpret_cast<char *>(flags), sizeof(flags));
 
 	bytes += GetExtrasSize();
 }
 
-void MP4::Atom::ReadData() {
+bool MP4::Atom::ReadData(bool textOnly) {
+	bool ret = false;
+
 	// FIXME: Make this test more robust
-	if (name != "data") return;
+	if (name != "data") return ret;
 
 	ReadExtras();
 
 	// There are currently 4 reserved
 	// bytes in "data" atoms
-	file.seekg(4, std::ios::cur);
+	file->seekg(4, std::ios::cur);
 
 	switch (flags[2]) {
 	case 0:
@@ -63,9 +67,13 @@ void MP4::Atom::ReadData() {
 		break;
 	case 13:
 		mimeType = "image/jpeg";
+		if (textOnly) return ret;
+		ret = true;
 		break;
 	case 14:
 		mimeType = "image/png";
+		if (textOnly) return ret;
+		ret = true;
 		break;
 	default:
 		break;
@@ -82,7 +90,9 @@ void MP4::Atom::ReadData() {
 	delete[] data;
 
 	data = new uint8_t[dataSize];
-	file.read(reinterpret_cast<char *>(data), dataSize);
+	file->read(reinterpret_cast<char *>(data), dataSize);
+
+	return ret;
 }
 
 bool MP4::Atom::IsValid() const {
@@ -128,7 +138,7 @@ std::optional<MP4::Atom> MP4::GetAtomAtPath(const std::vector<std::string> &path
 }
 
 std::optional<MP4::Atom> MP4::SeekToAtom(const std::string &name, const std::optional<Atom> &parent) {
-	Atom ret(file);
+	Atom ret(&file);
 
 	while (file) {
 		ret.Read();
@@ -157,7 +167,7 @@ std::optional<MP4::Atom> MP4::SeekToAtom(const std::string &name, const std::opt
 	return std::nullopt;
 }
 
-std::map<std::string, std::string> MP4::GetTags() {
+std::map<std::string, std::string> MP4::GetTags(bool textOnly) {
 	std::map<std::string, std::string> ret;
 
 	auto atom = GetAtomAtPath({ "moov", "udta", "meta", "ilst" });
@@ -177,9 +187,9 @@ std::map<std::string, std::string> MP4::GetTags() {
 		if (auto iter = RelevantAtoms.find(atom->name); iter != RelevantAtoms.end()) {
 			// "data" atom comes next
 			atom->Read();
-			atom->ReadData();
-
-			if (atom->flags[2] == 1) { // text/plain
+			if (atom->ReadData(textOnly)) {
+				artAtom.emplace(std::move(*atom));
+			} else if (atom->flags[2] == 1) { // text/plain
 				ret[iter->second] = std::string(atom->data, atom->data + atom->dataSize);
 			} else if (atom->flags[2] == 0) { // application/octet-stream
 				for (uint32_t i = 0; i < atom->dataSize; ++i) {

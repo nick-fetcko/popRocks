@@ -81,33 +81,43 @@ DWORD CALLBACK InWasapiProc(void *buffer, DWORD length, void *user) {
 DWORD CALLBACK OutputWasapiProc(void *buffer, DWORD length, void *user) {
 	const auto app = reinterpret_cast<CApp *>(user);
 
-	int c = BASS_ChannelGetData(app->GetStreamHandle(), buffer, length);
-	if (c < 0) { // at the end of the current stream, but not the _buffer_
-		auto code = BASS_ErrorGetCode();
-		if (auto next = app->GetControls().GetPlaylist().Next()) {
-			auto extension = next->path.extension().u8string();
-			std::transform(extension.begin(), extension.end(), extension.begin(), tolower);
-			app->Open(next->path, extension, true);
+	std::unique_lock lock(app->GetStreamHandleMutex());
 
-			// Immediately start adding new samples to the buffer
-			// for gapless playback
-			c = BASS_ChannelGetData(app->GetStreamHandle(), buffer, length);
+	// Derived from https://forum.team-mediaportal.com/threads/music-gapless-playback.121377/post-1025539
+	DWORD c = 0;
+	if (BASS_ChannelIsActive(app->GetStreamHandle())) {
+		c = BASS_ChannelGetData(app->GetStreamHandle(), buffer, length);
+	} else if (auto next = app->GetNextStreamHandle(); next && BASS_ChannelIsActive(next)) {
+		// Immediately start adding new samples to the buffer
+		// for gapless playback
+		c = BASS_ChannelGetData(next, buffer, length);
 
-			// Update the UI on the next loop
-			app->AdvanceToNextTrack();
-		} else {
+		if (!BASS_ChannelIsActive(next)) {
+			c |= BASS_STREAMPROC_END;
+
 			// Can't kill WASAPI from inside WASAPI,
 			// so we also have to do this on the next loop
 			app->StopExclusive();
-
-			return 0;
+		} else {
+			// Update the UI on the next loop
+			app->AdvanceToNextTrack();
 		}
+
+	} else {
+		// Can't kill WASAPI from inside WASAPI,
+		// so we also have to do this on the next loop
+		app->StopExclusive();
+
+		return BASS_STREAMPROC_END;
 	}
+
+	lock.unlock();
 
 	if (app->GetControls().GetVolume().GetVolumeControl()) {
 		auto floatBuffer = reinterpret_cast<float *>(buffer);
-		for (auto i = 0; i < c / sizeof(float); ++i)
-			floatBuffer[i] *= app->GetControls().GetVolume().GetScaledVolume();
+		const auto volume = app->GetControls().GetVolume().GetScaledVolume();
+		for (auto i = 0; i < (c & (~BASS_STREAMPROC_END)) / sizeof(float); ++i)
+			floatBuffer[i] *= volume;
 	}
 
 	return c;
@@ -646,7 +656,7 @@ void CApp::OnInit() {
 					BASS_ChannelGetPosition(streamHandle, BASS_POS_BYTE)
 				) : 0.0;
 
-				if (controls.GetExclusiveIndicator().IsExclusive() && Open(loadedFile, loadedFileExtension, true, true)) {
+				if (controls.GetExclusiveIndicator().IsExclusive() && Open(loadedFile, loadedFileExtension, true, streamHandle, true)) {
 					SeekTo(pos);
 					BASS_WASAPI_Start();
 					playing = true;
@@ -657,7 +667,7 @@ void CApp::OnInit() {
 					// Initialize the new device
 					BASS_Init(GetDeviceIndex<true>(outputDevice), freq, 0, 0, nullptr);
 
-					Open(loadedFile, loadedFileExtension, false, true);
+					Open(loadedFile, loadedFileExtension, false, streamHandle, true);
 
 					SeekTo(pos);
 					TogglePlaying();
@@ -1065,6 +1075,10 @@ HSTREAM CApp::GetStreamHandle() const {
 	return streamHandle;
 }
 
+HSTREAM CApp::GetNextStreamHandle() const {
+	return nextStreamHandle;
+}
+
 void CApp::OnResize(int width, int height, float scale) {
 	windowWidth = width;
 	windowHeight = height;
@@ -1198,7 +1212,7 @@ void CApp::OnLoop(const Delta &time) {
 				BASS_WASAPI_GetData(buffer, fftFlag);
 
 				// Scale back up to 100% volume
-				auto inverseVolume = controls.GetVolume().GetInverseVolume();
+				const auto inverseVolume = controls.GetVolume().GetInverseVolume();
 				for (auto i = 0; i < bufferLength; ++i)
 					floatBuffer[i] *= inverseVolume;
 
@@ -1208,7 +1222,7 @@ void CApp::OnLoop(const Delta &time) {
 				BASS_WASAPI_GetData(buffer, static_cast<DWORD>(bufferLength * sizeof(float) * channelInfo.chans));
 
 				// Scale back up to 100% volume
-				auto inverseVolume = controls.GetVolume().GetInverseVolume();
+				const auto inverseVolume = controls.GetVolume().GetInverseVolume();
 				for (auto i = 0; i < bufferLength * channelInfo.chans; ++i)
 					shortBuffer[i] = static_cast<short>(floatBuffer[i] * inverseVolume * std::numeric_limits<short>::max());
 			}
@@ -1445,11 +1459,24 @@ void CApp::OnLoop(const Delta &time) {
 			SetColor(alpha); 
 		}
 	);
+	
+	// Line up the next file at >= 90% completion of current file
+	if (controls.GetExclusiveIndicator().IsExclusive() && elapsed >= controls.GetCurrentSongLength() * 0.9 && !nextStreamHandle && !controls.GetPlaylist().GetCue()) {
+		if (auto next = GetControls().GetPlaylist().GetNext()) {
+			std::unique_lock lock(streamHandleMutex);
+			auto extension = next->path.extension().u8string();
+			std::transform(extension.begin(), extension.end(), extension.begin(), tolower);
+
+			Open(next->path, extension, true, nextStreamHandle);
+
+			logger.LogDebug("Loaded next track: ", next->path);
+		}
+	}
 
 	// If we reached the end of the song, try loading the next
 	// song in the playlist
 	if (advanceOnNextLoop) {
-		LoadFile(controls.GetPlaylist().Current()->path, true);
+		LoadFile(controls.GetPlaylist().Next()->path, true);
 		advanceOnNextLoop = false;
 	} else if (auto &cue = controls.GetPlaylist().GetCue();
 		(!controls.GetExclusiveIndicator().IsExclusive() || cue) && elapsed >= controls.GetCurrentSongLength()) {
@@ -1640,7 +1667,7 @@ HSTREAM CApp::OpenWithFlags(const std::filesystem::path &path, const std::string
 	return ret;
 }
 
-bool CApp::Open(const std::filesystem::path &path, const std::string &extension, bool exclusive, bool force) {
+bool CApp::Open(const std::filesystem::path &path, const std::string &extension, bool exclusive, HSTREAM &target, bool force) {
 	if (exclusive) {
 		if (wasapiInfo.freq != channelInfo.freq || force) {
 			if (wasapiInfo.freq != 0) StopExclusive(TRUE);
@@ -1666,7 +1693,7 @@ bool CApp::Open(const std::filesystem::path &path, const std::string &extension,
 			if (BASS_WASAPI_Init(outputDevice, channelInfo.freq, channelInfo.chans, BASS_WASAPI_BUFFER | BASS_WASAPI_EXCLUSIVE, exclusiveBufferSize, 0, OutputWasapiProc, reinterpret_cast<void *>(this)) == TRUE) {
 				// Only swap out the handle _after_ we've stopped
 				// as StopExclusive(TRUE) frees the handle
-				streamHandle = OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+				target = OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
 
 				BASS_WASAPI_GetInfo(&wasapiInfo);
 				if (wasapiInfo.freq == channelInfo.freq) {
@@ -1683,7 +1710,7 @@ bool CApp::Open(const std::filesystem::path &path, const std::string &extension,
 				exclusive = false;
 			}
 		} else {
-			streamHandle = OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+			target = OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
 			return exclusive;
 		}
 	}
@@ -1694,7 +1721,7 @@ bool CApp::Open(const std::filesystem::path &path, const std::string &extension,
 
 		controls.GetExclusiveIndicator().SetExclusive(false);
 		BASS_StreamFree(streamHandle);
-		streamHandle = OpenWithFlags(path, extension, BASS_STREAM_PRESCAN);
+		target = OpenWithFlags(path, extension, BASS_STREAM_PRESCAN);
 	}
 
 	// Reset beat counter on each song
@@ -1929,7 +1956,7 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 	if (fileLoaded && !controls.GetExclusiveIndicator().IsExclusive()) {
 		Stop();
 		
-		Open(path, extension, controls.GetExclusiveIndicator().IsExclusive());
+		Open(path, extension, controls.GetExclusiveIndicator().IsExclusive(), streamHandle);
 
 		// Don't reset gain if we're changing songs
 		// in a playlist.
@@ -1969,8 +1996,20 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 		// or we didn't auto-advance, explicitly
 		// open the file. Auto-advancing handles
 		// opening the file in the WASAPI proc.
-		if (!fileLoaded || !advanceOnNextLoop)
-			Open(path, extension, controls.GetExclusiveIndicator().IsExclusive(), !fromPlaylist);
+		if (!fileLoaded || !advanceOnNextLoop) {
+			// Clear our next stream handle when
+			// tracks are changed by the user
+			if (nextStreamHandle) {
+				BASS_StreamFree(nextStreamHandle);
+				nextStreamHandle = NULL;
+			}
+
+			Open(path, extension, controls.GetExclusiveIndicator().IsExclusive(), this->streamHandle, !fromPlaylist);
+		} else if (advanceOnNextLoop) {
+			BASS_StreamFree(this->streamHandle);
+			this->streamHandle = nextStreamHandle;
+			nextStreamHandle = NULL;
+		}
 
 		metadata.OnLoad(
 			path,
@@ -2271,7 +2310,7 @@ inline void CApp::ToggleExclusive() {
 		!exclusive
 	);
 
-	Open(loadedFile, loadedFileExtension, controls.GetExclusiveIndicator().IsExclusive());
+	Open(loadedFile, loadedFileExtension, controls.GetExclusiveIndicator().IsExclusive(), streamHandle);
 
 	// Restore our last position
 	BASS_ChannelSetPosition(

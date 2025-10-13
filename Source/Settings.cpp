@@ -66,300 +66,418 @@ Settings Settings::Load() {
 }
 
 void Settings::SetVolume(float volume) {
-	this->volume = volume;
-	Save();
+	if (volume != this->volume) {
+		this->volume = volume;
+		Save();
+	}
 }
 
 void Settings::SetExclusive(bool exclusive) {
-	this->exclusive = exclusive;
-	Save();
+	if (exclusive != this->exclusive) {
+		this->exclusive = exclusive;
+		Save();
+	}
 }
 
 void Settings::SetColorSelection(ColorSelection colorSelection) {
-	this->colorSelection = colorSelection;
-	Save();
+	if (colorSelection != this->colorSelection) {
+		this->colorSelection = colorSelection;
+		Save();
+	}
 }
 
 void Settings::SetWindowWidth(int windowWidth) {
-	this->windowWidth = windowWidth;
-	Save();
+	if (windowWidth != this->windowWidth) {
+		this->windowWidth = windowWidth;
+		Save();
+	}
 }
 
 void Settings::SetWindowHeight(int windowHeight) {
-	this->windowHeight = windowHeight;
-	Save();
+	if (windowHeight != this->windowHeight) {
+		this->windowHeight = windowHeight;
+		Save();
+	}
 }
 
 void Settings::SetWindowX(int windowX) {
-	this->windowX = windowX;
-	Save();
+	if (windowX != this->windowX) {
+		this->windowX = windowX;
+		Save();
+	}
 }
 
 void Settings::SetWindowY(int windowY) {
-	this->windowY = windowY;
-	Save();
+	if (windowY != this->windowY) {
+		this->windowY = windowY;
+		Save();
+	}
 }
 
 void Settings::SetBufferLength(std::size_t bufferLength) {
-	this->bufferLength = bufferLength;
-	Save();
+	if (bufferLength != this->bufferLength) {
+		this->bufferLength = bufferLength;
+		Save();
+	}
 }
 
 void Settings::SetDecayTime(Duration<Microseconds> decayTime) {
-	this->decayTime = decayTime;
-	Save();
+	if (decayTime != this->decayTime) {
+		this->decayTime = decayTime;
+		Save();
+	}
 }
 
 void Settings::SetFadeTime(Duration<Microseconds> fadeTime) {
-	this->fadeTime = fadeTime;
-	Save();
+	if (fadeTime != this->fadeTime) {
+		this->fadeTime = fadeTime;
+		Save();
+	}
 }
 
 void Settings::SetPulse(bool pulse) {
-	this->pulse = pulse;
-	Save();
+	if (pulse != this->pulse) {
+		this->pulse = pulse;
+		Save();
+	}
 }
 
 void Settings::SetPulseTime(Duration<Microseconds> pulseTime) {
-	this->pulseTime = pulseTime;
-	Save();
+	if (pulseTime != this->pulseTime) {
+		this->pulseTime = pulseTime;
+		Save();
+	}
 }
 
 void Settings::SetStrobe(bool strobe) {
-	this->strobe = strobe;
-	Save();
+	if (strobe != this->strobe) {
+		this->strobe = strobe;
+		Save();
+	}
 }
 
 void Settings::SetStrobeIntensity(float strobeIntensity) {
-	this->strobeIntensity = strobeIntensity;
-	Save();
+	if (strobeIntensity != this->strobeIntensity) {
+		this->strobeIntensity = strobeIntensity;
+		Save();
+	}
 }
 
 void Settings::SetRotating(bool rotating) {
-	this->rotating = rotating;
-	Save();
+	if (rotating != this->rotating) {
+		this->rotating = rotating;
+		Save();
+	}
 }
 
 void Settings::SetRotationSpeed(float rotationSpeed) {
-	this->rotationSpeed = rotationSpeed;
-	Save();
+	if (rotationSpeed != this->rotationSpeed) {
+		this->rotationSpeed = rotationSpeed;
+		Save();
+	}
 }
 
 void Settings::SetRadius(float radius) {
-	this->radius = radius;
-	Save();
+	if (radius != this->radius) {
+		this->radius = radius;
+		Save();
+	}
 }
 
 void Settings::SetDetectBpm(bool detectBpm) {
-	this->detectBpm = detectBpm;
-	Save();
+	if (detectBpm != this->detectBpm) {
+		this->detectBpm = detectBpm;
+		Save();
+	}
 }
 
 void Settings::SetHalveBpm(bool halveBpm) {
-	this->halveBpm = halveBpm;
-	Save();
+	if (halveBpm != this->halveBpm) {
+		this->halveBpm = halveBpm;
+		Save();
+	}
 }
 
 void Settings::SetWidth(float width) {
-	this->width = width;
-	Save();
+	if (width != this->width) {
+		this->width = width;
+		Save();
+	}
 }
 
 void Settings::SetRenderer(const std::string &renderer) {
-	this->renderer = renderer;
-	Save();
+	if (renderer != this->renderer) {
+		this->renderer = renderer;
+		Save();
+	}
 }
 
 void Settings::SetLightPackVisualizationType(const std::string &lightPackVisualizationType) {
-	this->lightPackVisualizationType = lightPackVisualizationType;
-	Save();
+	if (lightPackVisualizationType != this->lightPackVisualizationType) {
+		this->lightPackVisualizationType = lightPackVisualizationType;
+		Save();
+	}
 }
 
 void Settings::SetLightPackMapping(const std::string &lightPackMapping) {
-	this->lightPackMapping = lightPackMapping;
-	Save();
+	if (lightPackMapping != this->lightPackMapping) {
+		this->lightPackMapping = lightPackMapping;
+		Save();
+	}
 }
 
 void Settings::SetLightPackFocusArea(const std::string &lightPackFocusArea) {
-	this->lightPackFocusArea = lightPackFocusArea;
-	Save();
+	if (lightPackFocusArea != this->lightPackFocusArea) {
+		this->lightPackFocusArea = lightPackFocusArea;
+		Save();
+	}
 }
 
 void Settings::SetPresetIndex(std::optional<std::size_t> presetIndex) {
-	this->presetIndex = presetIndex;
-	Save();
+	if (presetIndex != this->presetIndex) {
+		this->presetIndex = presetIndex;
+		Save();
+	}
 }
 
 void Settings::SetSmooth(uint8_t smooth) {
-	this->smooth = smooth;
-	Save();
+	if (smooth != this->smooth) {
+		this->smooth = smooth;
+		Save();
+	}
 }
 
 void Settings::SetGamma(float gamma) {
-	this->gamma = gamma;
-	Save();
+	if (gamma != this->gamma) {
+		this->gamma = gamma;
+		Save();
+	}
 }
 
 void Settings::SetBlur(bool blur) {
-	this->blur = blur;
-	Save();
+	if (blur != this->blur) {
+		this->blur = blur;
+		Save();
+	}
 }
 
 void Settings::SetBlurIntensity(float blurIntensity) {
-	this->blurIntensity = blurIntensity;
-	Save();
+	if (blurIntensity != this->blurIntensity) {
+		this->blurIntensity = blurIntensity;
+		Save();
+	}
 }
 
 void Settings::SetBlurOpacity(float blurOpacity) {
-	this->blurOpacity = blurOpacity;
-	Save();
+	if (blurOpacity != this->blurOpacity) {
+		this->blurOpacity = blurOpacity;
+		Save();
+	}
 }
 
 void Settings::SetCurrentSongVisible(bool currentSongVisible) {
-	this->currentSongVisible = currentSongVisible;
-	Save();
+	if (currentSongVisible != this->currentSongVisible) {
+		this->currentSongVisible = currentSongVisible;
+		Save();
+	}
 }
 
 void Settings::SetFftSize(int fftSize) {
-	this->fftSize = fftSize;
-	Save();
+	if (fftSize != this->fftSize) {
+		this->fftSize = fftSize;
+		Save();
+	}
 }
 
 void Settings::SetListening(bool listening) {
-	this->listening = listening;
-	if (listening) loopback = false;
-	Save();
+	if (listening != this->listening) {
+		this->listening = listening;
+		if (listening) loopback = false;
+		Save();
+	}
 }
 
 void Settings::SetLoopback(bool loopback) {
-	this->loopback = loopback;
-	if (loopback) listening = false;
-	Save();
+	if (loopback != this->loopback) {
+		this->loopback = loopback;
+		if (loopback) listening = false;
+		Save();
+	}
 }
 
 void Settings::SetOutputDevice(const std::string &outputDevice) {
-	this->outputDevice = outputDevice;
-	Save();
+	if (outputDevice != this->outputDevice) {
+		this->outputDevice = outputDevice;
+		Save();
+	}
 }
 
 void Settings::SetInputDevice(const std::string &inputDevice) {
-	this->inputDevice = inputDevice;
-	Save();
+	if (inputDevice != this->inputDevice) {
+		this->inputDevice = inputDevice;
+		Save();
+	}
 }
 
 void Settings::SetEffect(const std::string &effect) {
-	this->effect = effect;
-	Save();
+	if (effect != this->effect) {
+		this->effect = effect;
+		Save();
+	}
 }
 
 void Settings::SetEffectIntensity(float effectIntensity) {
-	this->effectIntensity = effectIntensity;
-	Save();
+	if (effectIntensity != this->effectIntensity) {
+		this->effectIntensity = effectIntensity;
+		Save();
+	}
 }
 
 void Settings::SetEffectXOffset(float effectXOffset) {
-	this->effectXOffset = effectXOffset;
-	Save();
+	if (effectXOffset != this->effectXOffset) {
+		this->effectXOffset = effectXOffset;
+		Save();
+	}
 }
 
 void Settings::SetEffectYOffset(float effectYOffset) {
-	this->effectYOffset = effectYOffset;
-	Save();
+	if (effectYOffset != this->effectYOffset) {
+		this->effectYOffset = effectYOffset;
+		Save();
+	}
 }
 
 void Settings::SetEffectRadiation(float effectRadiation) {
-	this->effectRadiation = effectRadiation;
-	Save();
+	if (effectRadiation != this->effectRadiation) {
+		this->effectRadiation = effectRadiation;
+		Save();
+	}
 }
 
 void Settings::SetEffectHorizontalSpread(float effectHorizontalSpread) {
-	this->effectHorizontalSpread = effectHorizontalSpread;
-	Save();
+	if (effectHorizontalSpread != this->effectHorizontalSpread) {
+		this->effectHorizontalSpread = effectHorizontalSpread;
+		Save();
+	}
 }
 
 void Settings::SetEffectVerticalSpread(float effectVerticalSpread) {
-	this->effectVerticalSpread = effectVerticalSpread;
-	Save();
+	if (effectVerticalSpread != this->effectVerticalSpread) {
+		this->effectVerticalSpread = effectVerticalSpread;
+		Save();
+	}
 }
 
 void Settings::SetEffectRotation(float effectRotation) {
-	this->effectRotation = effectRotation;
-	Save();
+	if (effectRotation != this->effectRotation) {
+		this->effectRotation = effectRotation;
+		Save();
+	}
 }
 
 void Settings::SetLimitFramerate(bool limitFramerate) {
-	this->limitFramerate = limitFramerate;
-	Save();
+	if (limitFramerate != this->limitFramerate) {
+		this->limitFramerate = limitFramerate;
+		Save();
+	}
 }
 
 void Settings::SetFrameLimit(int frameLimit) {
-	this->frameLimit = frameLimit;
-	Save();
+	if (frameLimit != this->frameLimit) {
+		this->frameLimit = frameLimit;
+		Save();
+	}
 }
 
 void Settings::SetRandomize(bool randomize) {
-	this->randomize = randomize;
-	Save();
+	if (randomize != this->randomize) {
+		this->randomize = randomize;
+		Save();
+	}
 }
 
 void Settings::SetRandomizeTime(Duration<Microseconds> randomizeTime) {
-	this->randomizeTime = randomizeTime;
-	Save();
+	if (randomizeTime != this->randomizeTime) {
+		this->randomizeTime = randomizeTime;
+		Save();
+	}
 }
 
 void Settings::SetScale(float scale) {
-	this->scale = scale;
-	Save();
+	if (scale != this->scale) {
+		this->scale = scale;
+		Save();
+	}
 }
 
 void Settings::SetSelectedPresets(const std::set<std::size_t> &selectedPresets) {
-	this->selectedPresets = selectedPresets;
-	Save();
+	if (selectedPresets != this->selectedPresets) {
+		this->selectedPresets = selectedPresets;
+		Save();
+	}
 }
 
 void Settings::SetRandomizePresets(bool randomizePresets) {
-	this->randomizePresets = randomizePresets;
-	Save();
+	if (randomizePresets != this->randomizePresets) {
+		this->randomizePresets = randomizePresets;
+		Save();
+	}
 }
 
 void Settings::SetRandomizePresetsTime(Duration<Microseconds> randomizePresetsTime) {
-	this->randomizePresetsTime = randomizePresetsTime;
-	Save();
+	if (randomizePresetsTime != this->randomizePresetsTime) {
+		this->randomizePresetsTime = randomizePresetsTime;
+		Save();
+	}
 }
 
 void Settings::SetRandomizePresetsByBeats(bool randomizePresetsByBeats) {
-	this->randomizePresetsByBeats = randomizePresetsByBeats;
-	Save();
+	if (randomizePresetsByBeats != this->randomizePresetsByBeats) {
+		this->randomizePresetsByBeats = randomizePresetsByBeats;
+		Save();
+	}
 }
 
 void Settings::SetRandomizePresetsBeats(int randomizePresetsBeats) {
-	this->randomizePresetsBeats = randomizePresetsBeats;
-	Save();
+	if (randomizePresetsBeats != this->randomizePresetsBeats) {
+		this->randomizePresetsBeats = randomizePresetsBeats;
+		Save();
+	}
 }
 
 void Settings::SetAutoFade(bool autoFade) {
-	this->autoFade = autoFade;
-	Save();
+	if (autoFade != this->autoFade) {
+		this->autoFade = autoFade;
+		Save();
+	}
 }
 
 void Settings::SetWaitTime(Duration<Microseconds> waitTime) {
-	this->waitTime = waitTime;
-	Save();
+	if (waitTime != this->waitTime) {
+		this->waitTime = waitTime;
+		Save();
+	}
 }
 
 void Settings::SetAutoFadeSpeed(float autoFadeSpeed) {
-	this->autoFadeSpeed = autoFadeSpeed;
-	Save();
+	if (autoFadeSpeed != this->autoFadeSpeed) {
+		this->autoFadeSpeed = autoFadeSpeed;
+		Save();
+	}
 }
 
 void Settings::SetSaveRenderer(bool saveRenderer) {
-	this->saveRenderer = saveRenderer;
-	Save();
+	if (saveRenderer != this->saveRenderer) {
+		this->saveRenderer = saveRenderer;
+		Save();
+	}
 }
 
 void Settings::SetSaveScale(bool saveScale) {
-	this->saveScale = saveScale;
-	Save();
+	if (saveScale != this->saveScale) {
+		this->saveScale = saveScale;
+		Save();
+	}
 }
 
 void Settings::Save() {
