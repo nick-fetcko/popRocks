@@ -1,7 +1,8 @@
 #pragma once
 
+#include "OpenGL/Polyline.hpp"
+
 #include "Renderer.hpp"
-#include "Polyline.hpp"
 #include "Settings.hpp"
 
 class LineRenderer : public Renderer {

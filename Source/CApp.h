@@ -25,6 +25,7 @@
 #include "MathCPP/Duration.hpp"
 
 #include "OpenGL/Context.hpp"
+#include "OpenGL/Polyline.hpp"
 
 #include "Utils/Logger.hpp"
 
@@ -40,7 +41,6 @@
 #include "Menu.hpp"
 #include "Metadata.hpp"
 #include "Playlist.hpp"
-#include "Polyline.hpp"
 #include "Preset.hpp"
 #include "Renderer.hpp"
 #include "Text.hpp"

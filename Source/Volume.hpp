@@ -4,10 +4,10 @@
 
 #include "MathCPP/Colour.hpp"
 #include "OpenGL/Context.hpp"
+#include "OpenGL/Polyline.hpp"
 
 #include "AutoFader.hpp"
 #include "ColorChangeListener.hpp"
-#include "Polyline.hpp"
 #include "Settings.hpp"
 #include "Text.hpp"
 
