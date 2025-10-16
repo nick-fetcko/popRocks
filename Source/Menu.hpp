@@ -183,6 +183,12 @@ public:
 			}
 			//ImGui::EndDisabled();
 
+			darkenPulseOnBrightColors = Settings::settings.GetDarkenPulseOnBrightColors();
+			if (ImGui::MenuItem("Darken pulse on brighter colors?", nullptr, &darkenPulseOnBrightColors)) {
+				if (onDarkenPulseOnBrightColorsChanged)
+					onDarkenPulseOnBrightColorsChanged(darkenPulseOnBrightColors);
+			}
+
 			pulseTime = Settings::settings.GetPulseTime().AsSeconds();
 			ImGui::BeginDisabled(!pulse || !fft);
 			if (ImGui::SliderFloat("Pulse time", &pulseTime, 0.01, 10, "%.2f")) {
@@ -938,6 +944,7 @@ public:
 	void SetOnHalveBpmChanged(std::function<void(bool)> f) { onHalveBpmChanged = f; }
 
 	void SetOnPulseChanged(std::function<void(bool)> f) { onPulseChanged = f; }
+	void SetOnDarkenPulseOnBrightColorsChanged(std::function<void(bool)> f) { onDarkenPulseOnBrightColorsChanged = f; }
 	void SetOnBlurIntensityChanged(std::function<void(float)> f) { onBlurIntensityChanged = f; }
 	void SetOnBlurOpacityChanged(std::function<void(float)> f) { onBlurOpacityChanged = f; }
 	void SetOnRpmChanged(std::function<void(float)> f) { onRpmChanged = f; }
@@ -1048,6 +1055,7 @@ private:
 	float fadeTime = Settings::settings.GetFadeTime().AsSeconds();
 
 	bool pulse = Settings::settings.GetPulse();
+	bool darkenPulseOnBrightColors = Settings::settings.GetDarkenPulseOnBrightColors();
 	float pulseTime = Settings::settings.GetPulseTime().AsSeconds();
 
 	bool strobe = Settings::settings.GetStrobe();
@@ -1119,6 +1127,7 @@ private:
 
 	std::function<void(const std::filesystem::path &)> onOpen;
 	std::function<void(bool)> onPulseChanged;
+	std::function<void(bool)> onDarkenPulseOnBrightColorsChanged;
 	std::function<void(bool)> onBlurChanged;
 	std::function<void(bool)> onRotatingChanged;
 	std::function<void(bool)> onDetectBpmChanged;

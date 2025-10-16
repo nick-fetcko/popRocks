@@ -142,6 +142,13 @@ void Settings::SetPulse(bool pulse) {
 	}
 }
 
+void Settings::SetDarkenPulseOnBrightColors(bool darkenPulseOnBrightColors) {
+	if (darkenPulseOnBrightColors != this->darkenPulseOnBrightColors) {
+		this->darkenPulseOnBrightColors = darkenPulseOnBrightColors;
+		Save();
+	}
+}
+
 void Settings::SetPulseTime(Duration<Microseconds> pulseTime) {
 	if (pulseTime != this->pulseTime) {
 		this->pulseTime = pulseTime;
@@ -563,6 +570,8 @@ const Node &operator>>(const Node &node, Settings &settings) {
 
 	if (node.has("pulse"))
 		node["pulse"]->get(settings.pulse);
+	if (node.has("darkenPulseOnBrightColors"))
+		node["darkenPulseOnBrightColors"]->get(settings.darkenPulseOnBrightColors);
 	if (node.has("pulseTime")) {
 		settings.pulseTime = Duration<Microseconds>(
 			std::chrono::duration<double>(
@@ -715,6 +724,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["decayTime"]->set(settings.decayTime.AsSeconds());
 	node["fadeTime"]->set(settings.fadeTime.AsSeconds());
 	node["pulse"]->set(settings.pulse);
+	node["darkenPulseOnBrightColors"]->set(settings.darkenPulseOnBrightColors);
 	node["pulseTime"]->set(settings.pulseTime.AsSeconds());
 	node["strobe"]->set(settings.strobe);
 	node["strobeIntensity"]->set(settings.strobeIntensity);

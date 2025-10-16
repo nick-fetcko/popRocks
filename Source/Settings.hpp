@@ -73,6 +73,9 @@ public:
 	const bool &GetPulse() const { return pulse; }
 	void SetPulse(bool pulse);
 
+	const bool &GetDarkenPulseOnBrightColors() const { return darkenPulseOnBrightColors; }
+	void SetDarkenPulseOnBrightColors(bool darkenPulseOnBrightColors);
+
 	const Duration<Microseconds> &GetPulseTime() { return pulseTime; }
 	void SetPulseTime(Duration<Microseconds> pulseTime);
 
@@ -244,6 +247,7 @@ private:
 	Duration<Microseconds> fadeTime = 0.5s;
 
 	bool pulse = false;
+	bool darkenPulseOnBrightColors = true;
 	Duration<Microseconds> pulseTime = 0.1s;
 
 	bool rotating = false;

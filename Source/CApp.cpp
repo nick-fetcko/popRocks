@@ -475,6 +475,11 @@ void CApp::OnInit() {
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
+		menu.SetOnDarkenPulseOnBrightColorsChanged([this](bool darkenPulseOnBrightColors) {
+			Settings::settings.SetDarkenPulseOnBrightColors(darkenPulseOnBrightColors);
+
+			this->darkenPulseOnBrightColors = darkenPulseOnBrightColors;
+		});
 		menu.SetOnPulseTimeChanged([this](float pulseTime) {
 			renderer->SetPulseTime(
 				std::chrono::duration<double> {
@@ -1298,23 +1303,30 @@ void CApp::OnLoop(const Delta &time) {
 
 	if (playing && ((renderer->GetPulse() && !renderer->GetPulses()) || strobe)) {
 		auto hsv = color.ToHsv();
-		auto brightHsv = brightColor.ToHsv();
-		
-		brightHsv.v = brightHsv.v + ((strobe ? hsv.v - strobeIntensity : hsv.v) - brightHsv.v) * lerp;
-		color = Colour<float>::FromHsv(brightHsv);
+
+		if (!darkenPulseOnBrightColors || hsv.v < 0.66) {
+			auto brightHsv = brightColor.ToHsv();
+			brightHsv.v = brightHsv.v + ((strobe ? hsv.v - strobeIntensity : hsv.v) - brightHsv.v) * lerp;
+			color = Colour<float>::FromHsv(brightHsv);
+		} else {
+			auto darkHsv = darkColor.ToHsv();
+			darkHsv.v = hsv.v + ((strobe ? darkHsv.v - strobeIntensity : darkHsv.v) - hsv.v) * lerp;
+			color = Colour<float>::FromHsv(darkHsv);
+		}
 	}
 
 	if (playing || listening) {
-		auto hsv = this->brightColor.ToHsv();
-		hsv.v = std::max(0.0f, hsv.v - strobeIntensity * lerp);
+		auto hsv = color.ToHsv();
+		auto brightHsv = this->brightColor.ToHsv();
+		brightHsv.v = std::max(0.0f, brightHsv.v - strobeIntensity * lerp);
 
 		renderer->OnLoop(
 			time,
 			fileLoaded,
 			hStep,
 			*context,
-			color,
-			((strobe && playing) ? Colour<float>::FromHsv(hsv) : this->brightColor),
+			!darkenPulseOnBrightColors || hsv.v < 0.66 ? color : darkColor,
+			((strobe && playing) ? Colour<float>::FromHsv(brightHsv) : ((!darkenPulseOnBrightColors || hsv.v < 0.66) ? this->brightColor : color)),
 			frameCount,
 			maxHeardSample,
 			resetGain
@@ -2435,12 +2447,13 @@ void CApp::OnColorChanged(const MathsCPP::Colour<float> &color, bool silent) {
 	if (!silent)
 		logger.LogDebug("Color changed!");
 
-	brightColor = color;
-
-	auto hsv = brightColor.ToHsv();
+	auto hsv = color.ToHsv();
 	hsv.v = 1.0f;
 	//hsv.s = 1.0f;
 	brightColor = Colour<float>::FromHsv(hsv);
+
+	hsv.v = 0.50f;
+	darkColor = Colour<float>::FromHsv(hsv);
 
 	// Simple, linear function
 	//SetGamma(2.8f - color.ToHsv().s * 2.0f);

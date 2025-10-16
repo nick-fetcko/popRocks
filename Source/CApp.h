@@ -224,6 +224,7 @@ private:
 	SDL_Window *sdlWindow = nullptr;
 	Colour<float> visColor{ 0.0f, 0.5f, 1.0f };
 	Colour<float> brightColor{ 0.0f, 0.0f, 0.0f };
+	Colour<float> darkColor{ 0.0f, 0.0f, 0.0f };
 	float fadeTime = 0.0f;
 	float currentFadeTime = 0.0f;
 
@@ -355,4 +356,6 @@ private:
 	bool resyncBeats = false;
 
 	std::mutex streamHandleMutex;
+
+	bool darkenPulseOnBrightColors = Settings::settings.GetDarkenPulseOnBrightColors();
 };
