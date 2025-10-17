@@ -78,7 +78,7 @@ public:
 
 		context.Apply();
 		line.SetPoints<Polyline::Join::None>(points, bufferLength);
-		line.Draw(context);
+		line.Draw<true>(context);
 
 		context.Use("texture"_hash);
 	}

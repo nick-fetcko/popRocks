@@ -47,10 +47,20 @@ public:
 	}
 
 protected:
-	inline void CenterPoints() {
+	inline std::pair<float, float> CenterPoints() {
+		std::pair<float, float> ret{ std::numeric_limits<float>::max(), std::numeric_limits<float>::lowest() };
+
 		// Center / scale points within our album art circle
-		for (auto i = 0; i < bufferLength; ++i)
+		for (auto i = 0; i < bufferLength; ++i) {
 			points[i].y = (((points[i].y - minPoint) / (maxPoint - minPoint)) * (albumArt->GetRadius() * 2) + albumArt->GetRadius() * -1) * scale;
+
+			if (points[i].y < ret.first)
+				ret.first = points[i].y;
+			if (points[i].y > ret.second)
+				ret.second = points[i].y;
+		}
+
+		return ret;
 	}
 
 	Vector2f *points = nullptr;

@@ -51,7 +51,7 @@ void Volume::OnLoop(int x, int y, const Delta &time, Context &context) {
 		0
 	);
 	context.Apply();
-	outlineRing.Draw(context);
+	outlineRing.Draw<true>(context);
 
 	context.Color(color.r, color.g, color.b, alpha);
 	context.Translate(
@@ -60,7 +60,7 @@ void Volume::OnLoop(int x, int y, const Delta &time, Context &context) {
 		0
 	);
 	context.Apply();
-	ring.Draw(context);
+	ring.Draw<true>(context);
 
 	context.Use("texture"_hash);
 }

@@ -46,7 +46,7 @@ public:
 
 		for (int i = 0; i < bufferLength; i++) {
 			points[i].x = i * hStep;
-			points[i].y = -(floatBuffer[i] * 2000);
+			points[i].y = (floatBuffer[i] * 2000);
 
 			if (points[i].y > maxPoint)
 				maxPoint = points[i].y;
@@ -54,7 +54,10 @@ public:
 				minPoint = points[i].y;
 		}
 
-		CenterPoints();
+		auto [newMin, newMax] = CenterPoints();
+
+		for (int i = 0; i < bufferLength; i++)
+			points[i].y += (newMax - newMin) / 2.0;
 	}
 
 	void Draw(
@@ -75,11 +78,18 @@ public:
 
 		// Move slightly below the album art so we
 		// aren't obstructed.
-		context.Translate(0, windowHeight / 5.0f, 0);
 
 		context.Apply();
 		line.SetPoints<Polyline::Join::None>(points, bufferLength);
-		line.Draw(context);
+		line.Draw<false>(context);
+
+		//context.Translate(0, albumArt->GetRadius() / 2.0, 0);
+		context.Translate(maxDimension / 2.0f, 0, 0);
+		context.Rotate(180, 0, 0, 1);
+		context.Translate(-maxDimension / 2.0f, 0, 0);
+		//context.Translate(0, -albumArt->GetRadius() / 2.0, 0);
+		context.Apply();
+		line.Draw<true>(context);
 
 		context.Use("texture"_hash);
 	}
