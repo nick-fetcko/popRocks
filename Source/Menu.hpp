@@ -227,6 +227,11 @@ public:
 			}
 			ImGui::EndDisabled();
 
+			if (ImGui::MenuItem("Reset rotation...")) {
+				if (onResetRotation)
+					onResetRotation();
+			}
+
 			ImGui::Separator();
 
 			detectBpm = Settings::settings.GetDetectBpm();
@@ -999,6 +1004,7 @@ public:
 	void SetOnRandomizePresetsByBeatChanged(std::function<void(bool)> f) { onRandomizePresetsByBeatsChanged = f; }
 	void SetOnRandomizePresetsBeatsChanged(std::function<void(int)> f) { onRandomizePresetsBeatsChanged = f; }
 
+	void SetOnResetRotation(std::function<void()> f) { onResetRotation = f; }
 	void SetOnClearBlurFbo(std::function<void()> f) { onClearBlurFbo = f; }
 
 	void SetOnResetWindow(std::function<void()> f) { onResetWindow = f; }
@@ -1181,6 +1187,7 @@ private:
 	std::function<void(bool)> onExclusiveChanged;
 	std::function<void(int)> onExclusiveVolumeChanged;
 
+	std::function<void()> onResetRotation;
 	std::function<void()> onClearBlurFbo;
 
 	std::function<void()> onRandom;

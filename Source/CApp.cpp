@@ -837,6 +837,13 @@ void CApp::OnInit() {
 
 			UpdateBeatCounter();
 		});
+		menu.SetOnResetRotation([this] {
+			frameCount = 0;
+			SetRotating(false);
+
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
+		});
 		menu.SetOnClearBlurFbo([this] {
 			ClearBlurFbo();
 		});
@@ -2416,10 +2423,12 @@ void CApp::LoadPreset(const Preset &preset) {
 	if (rotating)
 		SetRotating(*rotating);
 
-	if (rotating && *rotating)
+	if (rotating && *rotating) {
 		SetRotationSpeed(preset.GetRotationSpeed());
-	else
+	} else {
+		frameCount = 0; // Reset rotation
 		SetRotationSpeed(6.0f /* default */);
+	}
 
 	auto blur = preset.GetBlur();
 	SetBlur(blur && *blur);
