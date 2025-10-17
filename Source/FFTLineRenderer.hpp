@@ -76,18 +76,18 @@ public:
 		context.Rotate(frameCount, 0.0f, 0.0f, 1.0f);
 		context.Translate(-maxDimension / 2.0f, 0, 0);
 
-		// Move slightly below the album art so we
-		// aren't obstructed.
+		// TODO: Allow for this to move around the screen (iTunes style)?
+		context.Translate(0, (offset / 2.0f / 100.0f) * windowHeight, 0);
 
 		context.Apply();
 		line.SetPoints<Polyline::Join::None>(points, bufferLength);
 		line.Draw<false>(context);
 
-		//context.Translate(0, albumArt->GetRadius() / 2.0, 0);
+		context.Translate(0, -(offset / 2.0f / 100.0f) * windowHeight, 0);
 		context.Translate(maxDimension / 2.0f, 0, 0);
 		context.Rotate(180, 0, 0, 1);
 		context.Translate(-maxDimension / 2.0f, 0, 0);
-		//context.Translate(0, -albumArt->GetRadius() / 2.0, 0);
+		context.Translate(0, (offset / 2.0f / 100.0f) * windowHeight, 0);
 		context.Apply();
 		line.Draw<true>(context);
 

@@ -458,5 +458,31 @@
 		"effectRotation": 0.000000,
 		"renderer": "fftline",
 		"scale": 5.000000
+	},
+	"22": {
+		"name": "Think Inside the Box",
+		"bufferSize": 499,
+		"decayTime": 1.090000,
+		"fadeTime": 0.600000,
+		"pulse": true,
+		"pulseTime": 0.110000,
+		"strobe": true,
+		"strobeIntensity": 0.660000,
+		"rotating": false,
+		"rotationSpeed": 48.000000,
+		"blur": true,
+		"blurIntensity": 3.000000,
+		"blurOpacity": 1.000000,
+		"effect": "smoke",
+		"effectIntensity": 22.790001,
+		"effectXOffset": 0.000000,
+		"effectYOffset": 0.000000,
+		"effectRadiation": -4.010000,
+		"effectHorizontalSpread": -10.000000,
+		"effectVerticalSpread": -10.000000,
+		"effectRotation": 0.000000,
+		"renderer": "fftline",
+		"scale": 5.000000,
+		"rendererOffset": -94
 	}
 }

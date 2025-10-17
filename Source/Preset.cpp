@@ -177,6 +177,9 @@ const Node &operator>>(const Node &node, Preset &preset) {
 	if (node.has("scale"))
 		node["scale"]->get(preset.scale);
 
+	if (node.has("rendererOffset"))
+		node["rendererOffset"]->get(preset.rendererOffset);
+
 	return node;
 }
 
@@ -207,6 +210,8 @@ Node &operator<<(Node &node, const Preset &preset) {
 		node["renderer"]->set(preset.renderer);
 	if (preset.scale)
 		node["scale"]->set(preset.scale);
+	if (preset.rendererOffset)
+		node["rendererOffset"]->set(preset.rendererOffset);
 
 	return node;
 }

@@ -136,6 +136,14 @@ public:
 				ImGui::EndMenu();
 			}
 
+			if (fftLine) {
+				rendererOffset = Settings::settings.GetRendererOffset();
+				if (ImGui::SliderInt("Visualization offset (%)", &rendererOffset, -100, 100)) {
+					if (onRendererOffsetChanged)
+						onRendererOffsetChanged(rendererOffset);
+				}
+			}
+
 			fftSize = Settings::settings.GetFftSize();
 			if (ImGui::BeginMenu("FFT Size", !oscilloscope)) {
 				for (const auto &size : { 256, 512, 1024, 4096, 8192, 16384 }) {
@@ -620,7 +628,8 @@ public:
 						Settings::settings.GetEffectVerticalSpread(),
 						Settings::settings.GetEffectRotation(),
 						saveRenderer ? Settings::settings.GetRenderer() : static_cast<std::optional<std::string>>(std::nullopt),
-						saveScale ? Settings::settings.GetScale() : static_cast<std::optional<float>>(std::nullopt)
+						saveScale ? Settings::settings.GetScale() : static_cast<std::optional<float>>(std::nullopt),
+						fftLine ? Settings::settings.GetRendererOffset() : static_cast<std::optional<int>>(std::nullopt)
 					);
 
 					Preset::AddPreset(std::move(preset));
@@ -1020,6 +1029,8 @@ public:
 	void SetOnExclusiveChanged(std::function<void(bool)> f) { onExclusiveChanged = f; }
 	void SetOnExclusiveVolumeChanged(std::function<void(int)> f) { onExclusiveVolumeChanged = f; }
 
+	void SetOnRendererOffsetChanged(std::function<void(int)> f) { onRendererOffsetChanged = f; }
+
 private:
 	int windowWidth = 0, windowHeight = 0;
 	int width = 0, height = 0;
@@ -1131,6 +1142,8 @@ private:
 	bool saveScale = Settings::settings.GetSaveScale();
 	bool lastSaveScale = Settings::settings.GetSaveScale();
 
+	int rendererOffset = Settings::settings.GetRendererOffset();
+
 	std::function<void(const std::filesystem::path &)> onOpen;
 	std::function<void(bool)> onPulseChanged;
 	std::function<void(bool)> onDarkenPulseOnBrightColorsChanged;
@@ -1186,6 +1199,7 @@ private:
 	std::function<void(float)> onAutoFadeSpeedChanged;
 	std::function<void(bool)> onExclusiveChanged;
 	std::function<void(int)> onExclusiveVolumeChanged;
+	std::function<void(int)> onRendererOffsetChanged;
 
 	std::function<void()> onResetRotation;
 	std::function<void()> onClearBlurFbo;

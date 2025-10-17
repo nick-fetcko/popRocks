@@ -487,6 +487,13 @@ void Settings::SetSaveScale(bool saveScale) {
 	}
 }
 
+void Settings::SetRendererOffset(int rendererOffset) {
+	if (rendererOffset != this->rendererOffset) {
+		this->rendererOffset = rendererOffset;
+		Save();
+	}
+}
+
 void Settings::Save() {
 	if (auto path = GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
@@ -708,6 +715,9 @@ const Node &operator>>(const Node &node, Settings &settings) {
 		node["saveRenderer"]->get(settings.saveRenderer);
 	if (node.has("saveScale"))
 		node["saveScale"]->get(settings.saveScale);
+
+	if (node.has("rendererOffset"))
+		node["rendererOffset"]->get(settings.rendererOffset);
 		
 	return node;
 }
@@ -773,6 +783,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["autoFadeSpeed"]->set(settings.autoFadeSpeed);
 	node["saveRenderer"]->set(settings.saveRenderer);
 	node["saveScale"]->set(settings.saveScale);
+	node["rendererOffset"]->set(settings.rendererOffset);
 
 	return node;
 }

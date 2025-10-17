@@ -887,6 +887,14 @@ void CApp::OnInit() {
 		menu.SetOnHalveBpmChanged([this](bool halveBpm) {
 			Settings::settings.SetHalveBpm(halveBpm);
 		});
+		menu.SetOnRendererOffsetChanged([this](int rendererOffset) {
+			Settings::settings.SetRendererOffset(rendererOffset);
+
+			renderer->SetOffset(rendererOffset);
+
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
+		});
 #endif
 	} else logger.LogError("Could not create OpenGL context: ", SDL_GetError());
 
@@ -2414,6 +2422,15 @@ void CApp::LoadPreset(const Preset &preset) {
 	SetFadeTime(preset.GetFadeTime());
 	renderer->SetPulse(preset.GetPulse());
 	renderer->SetPulseTime(preset.GetPulseTime());
+
+	if (const auto &rendererOffset = preset.GetRendererOffset()) {
+		renderer->SetOffset(*rendererOffset);
+		Settings::settings.SetRendererOffset(*rendererOffset);
+	} else {
+		renderer->SetOffset(0);
+		Settings::settings.SetRendererOffset(0);
+	}
+
 	SetStrobe(preset.GetStrobe());
 	strobeIntensity = preset.GetStrobeIntensity();
 	Settings::settings.SetStrobeIntensity(strobeIntensity);

@@ -220,6 +220,9 @@ public:
 	const bool &GetSaveScale() const { return saveScale; }
 	void SetSaveScale(bool saveScale);
 
+	const int &GetRendererOffset() const { return rendererOffset; }
+	void SetRendererOffset(int rendererOffset);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -324,4 +327,6 @@ private:
 
 	bool saveRenderer = false;
 	bool saveScale = false;
+
+	int rendererOffset = 0.0f;
 };

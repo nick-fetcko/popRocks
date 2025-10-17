@@ -39,6 +39,7 @@ public:
 		// pulses intentionally left blank
 		pulseTime = other.pulseTime;
 		scale = other.scale;
+		offset = other.offset;
 	}
 
 	virtual ~Renderer() {
@@ -128,6 +129,10 @@ public:
 		this->scale = scale;
 	}
 
+	void SetOffset(int offset) {
+		this->offset = offset;
+	}
+
 protected:
 	void SetColor(const Colour<float> &color, float alpha, Context &context) {
 		context.Color(color.r, color.g, color.b, alpha);
@@ -151,6 +156,8 @@ protected:
 	Duration<Microseconds> pulseTime = 0.1s;
 
 	float scale = 1.0f;
+
+	int offset = Settings::settings.GetRendererOffset();
 };
 
 class RendererFactory {

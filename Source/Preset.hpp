@@ -37,7 +37,8 @@ public:
 		float effectVerticalSpread,
 		float effectRotation,
 		std::optional<std::string> renderer = std::nullopt,
-		std::optional<float> scale = std::nullopt
+		std::optional<float> scale = std::nullopt,
+		std::optional<int> rendererOffset = std::nullopt
 	) : name(name),
 		bufferSize(bufferSize),
 		decayTime(decayTime),
@@ -60,7 +61,8 @@ public:
 		effectVerticalSpread(effectVerticalSpread),
 		effectRotation(effectRotation),
 		renderer(renderer),
-		scale(scale) {
+		scale(scale),
+		rendererOffset(rendererOffset) {
 
 	}
 
@@ -93,6 +95,7 @@ public:
 	const float GetEffectRotation() const { return effectRotation; }
 	const std::optional<std::string> &GetRenderer() const { return renderer; }
 	const std::optional<float> &GetScale() const { return scale; }
+	const std::optional<int> &GetRendererOffset() const { return rendererOffset; }
 
 	friend const Node &operator>>(const Node &node, Preset &preset);
 	friend Node &operator<<(Node &node, const Preset &preset);
@@ -133,4 +136,5 @@ private:
 
 	std::optional<std::string> renderer = std::nullopt;
 	std::optional<float> scale = std::nullopt;
+	std::optional<int> rendererOffset = std::nullopt;
 };
