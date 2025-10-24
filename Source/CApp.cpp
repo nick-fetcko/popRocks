@@ -1064,9 +1064,6 @@ void CApp::Listen(bool loopback) {
 	audioSink = new MyAudioSink(maxLength * 4 /* we're assuming stereo, for now */);
 	audioSink->loopback = loopback;
 
-	// TODO: we now convert from UTF-8 to UTF-16 in multiple
-	//       places. Make this DRY
-	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
 	if (loopback) {
 		BASS_DEVICEINFO info;
 		if (BASS_GetDeviceInfo(
@@ -1076,12 +1073,12 @@ void CApp::Listen(bool loopback) {
 				&info
 			)
 		) {
-			audioSink->deviceName = converter.from_bytes(info.driver);
+			audioSink->deviceName = Utils::ToUTF16(info.driver);
 		}
 	} else {
 		BASS_WASAPI_DEVICEINFO info;
 		if (BASS_WASAPI_GetDeviceInfo(GetDeviceIndex<false>(Settings::settings.GetInputDevice()), &info))
-			audioSink->deviceName = converter.from_bytes(info.id);
+			audioSink->deviceName = Utils::ToUTF16(info.id);
 	}
 	//audioSink->streamHandle = streamHandle;
 	//BASS_WASAPI_Start();

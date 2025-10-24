@@ -344,8 +344,6 @@ std::string ID3V2::ToUTF8(const char *tag, uint32_t size, Encoding encoding) {
 
 		return ret;
 	} else {
-		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-
 		wchar_t *wideChars = new wchar_t[size + 1];
 		stream.read(wideChars, size);
 
@@ -354,7 +352,7 @@ std::string ID3V2::ToUTF8(const char *tag, uint32_t size, Encoding encoding) {
 		// multiple examples of no terminator
 		wideChars[size] = L'\0';
 
-		auto ret = converter.to_bytes(wideChars);
+		auto ret = Utils::ToUTF8(wideChars);
 		delete[] wideChars;
 
 		return ret;

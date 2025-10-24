@@ -41,7 +41,6 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 
 	Track track;
 	track.disc = discIndex;
-	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
 	for (const auto &line : lines) {
 		if (line[0] == "FILE") {
 			// tracks + .cue not supported
@@ -52,7 +51,7 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 
 			std::filesystem::path originalFilePath;
 			try {
-				originalFilePath = filePath = path.parent_path() / converter.from_bytes(line[1]);
+				originalFilePath = filePath = path.parent_path() / Utils::ToUTF16(line[1]);
 			}
 			catch (const std::exception &e) {
 				// As these are single lines, lower threshold to a single match
@@ -61,7 +60,7 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 				if (encoding == Utils::Encoding::Windows1252)
 					originalFilePath = filePath = path.parent_path() / Windows1252::ToUtf16(line[1]);
 				else if (encoding == Utils::Encoding::ShiftJis)
-					originalFilePath = filePath = path.parent_path() / converter.from_bytes(ShiftJIS::ToUtf8(line[1]));
+					originalFilePath = filePath = path.parent_path() / Utils::ToUTF16(ShiftJIS::ToUtf8(line[1]));
 				else if (encoding == Utils::Encoding::Ascii) // Should be treated as UTF-8, but just in case
 					originalFilePath = filePath = path.parent_path() / line[1];
 			}

@@ -105,10 +105,9 @@ private:
 			}
 
 			if constexpr (std::is_same<C, wchar_t>::value) {
-				std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
 				std::vector<std::string> utf8;
 				for (const auto &utf16 : merged)
-					utf8.emplace_back(converter.to_bytes(utf16));
+					utf8.emplace_back(Utils::ToUTF8(utf16));
 				lines.emplace_back(std::move(utf8));
 			} else {
 				lines.emplace_back(std::move(merged));

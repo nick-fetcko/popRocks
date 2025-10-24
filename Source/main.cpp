@@ -149,9 +149,7 @@ int main(int argc, char *argv[]) {
 					}
 					break;
 				case SDL_DROPFILE: {
-					// We only need to explicitly convert from UTF-8 to UTF-16 here
-					std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-					app.LoadFile(converter.from_bytes(const_cast<const char*>(event.drop.file)));
+					app.LoadFile(Utils::ToUTF16(const_cast<const char*>(event.drop.file)));
 					SDL_free(event.drop.file);
 					break;
 				}
