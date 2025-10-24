@@ -73,6 +73,9 @@ public:
 	const bool &GetPulse() const { return pulse; }
 	void SetPulse(bool pulse);
 
+	const bool &GetPulseBackground() const { return pulseBackground; }
+	void SetPulseBackground(bool pulseBackground);
+
 	const bool &GetDarkenPulseOnBrightColors() const { return darkenPulseOnBrightColors; }
 	void SetDarkenPulseOnBrightColors(bool darkenPulseOnBrightColors);
 
@@ -329,4 +332,6 @@ private:
 	bool saveScale = false;
 
 	int rendererOffset = 0.0f;
+
+	bool pulseBackground = false;
 };

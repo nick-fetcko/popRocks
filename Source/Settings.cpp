@@ -494,6 +494,13 @@ void Settings::SetRendererOffset(int rendererOffset) {
 	}
 }
 
+void Settings::SetPulseBackground(bool pulseBackground) {
+	if (pulseBackground != this->pulseBackground) {
+		this->pulseBackground = pulseBackground;
+		Save();
+	}
+}
+
 void Settings::Save() {
 	if (auto path = GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
@@ -577,6 +584,8 @@ const Node &operator>>(const Node &node, Settings &settings) {
 
 	if (node.has("pulse"))
 		node["pulse"]->get(settings.pulse);
+	if (node.has("pulseBackground"))
+		node["pulseBackground"]->get(settings.pulseBackground);
 	if (node.has("darkenPulseOnBrightColors"))
 		node["darkenPulseOnBrightColors"]->get(settings.darkenPulseOnBrightColors);
 	if (node.has("pulseTime")) {
@@ -734,6 +743,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["decayTime"]->set(settings.decayTime.AsSeconds());
 	node["fadeTime"]->set(settings.fadeTime.AsSeconds());
 	node["pulse"]->set(settings.pulse);
+	node["pulseBackground"]->set(settings.pulseBackground);
 	node["darkenPulseOnBrightColors"]->set(settings.darkenPulseOnBrightColors);
 	node["pulseTime"]->set(settings.pulseTime.AsSeconds());
 	node["strobe"]->set(settings.strobe);

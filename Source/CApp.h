@@ -342,4 +342,6 @@ private:
 	std::mutex streamHandleMutex;
 
 	bool darkenPulseOnBrightColors = Settings::settings.GetDarkenPulseOnBrightColors();
+
+	bool pulseBackground = Settings::settings.GetPulseBackground();
 };

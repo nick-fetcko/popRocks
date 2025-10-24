@@ -189,6 +189,12 @@ public:
 				if (onPulseChanged)
 					onPulseChanged(pulse);
 			}
+
+			pulseBackground = Settings::settings.GetPulseBackground();
+			if (ImGui::MenuItem("Pulse background", nullptr, &pulseBackground)) {
+				if (onPulseBackgroundChanged)
+					onPulseBackgroundChanged(pulseBackground);
+			}
 			//ImGui::EndDisabled();
 
 			darkenPulseOnBrightColors = Settings::settings.GetDarkenPulseOnBrightColors();
@@ -958,6 +964,7 @@ public:
 	void SetOnHalveBpmChanged(std::function<void(bool)> f) { onHalveBpmChanged = f; }
 
 	void SetOnPulseChanged(std::function<void(bool)> f) { onPulseChanged = f; }
+	void SetOnPulseBackgroundChanged(std::function<void(bool)> f) { onPulseBackgroundChanged = f; }
 	void SetOnDarkenPulseOnBrightColorsChanged(std::function<void(bool)> f) { onDarkenPulseOnBrightColorsChanged = f; }
 	void SetOnBlurIntensityChanged(std::function<void(float)> f) { onBlurIntensityChanged = f; }
 	void SetOnBlurOpacityChanged(std::function<void(float)> f) { onBlurOpacityChanged = f; }
@@ -1072,6 +1079,7 @@ private:
 	float fadeTime = Settings::settings.GetFadeTime().AsSeconds();
 
 	bool pulse = Settings::settings.GetPulse();
+	bool pulseBackground = Settings::settings.GetPulseBackground();
 	bool darkenPulseOnBrightColors = Settings::settings.GetDarkenPulseOnBrightColors();
 	float pulseTime = Settings::settings.GetPulseTime().AsSeconds();
 
@@ -1146,6 +1154,7 @@ private:
 
 	std::function<void(const std::filesystem::path &)> onOpen;
 	std::function<void(bool)> onPulseChanged;
+	std::function<void(bool)> onPulseBackgroundChanged;
 	std::function<void(bool)> onDarkenPulseOnBrightColorsChanged;
 	std::function<void(bool)> onBlurChanged;
 	std::function<void(bool)> onRotatingChanged;

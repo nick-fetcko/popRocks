@@ -479,6 +479,11 @@ void CApp::OnInit() {
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
+		menu.SetOnPulseBackgroundChanged([this](bool pulseBackground) {
+			Settings::settings.SetPulseBackground(pulseBackground);
+
+			this->pulseBackground = pulseBackground;
+		});
 		menu.SetOnDarkenPulseOnBrightColorsChanged([this](bool darkenPulseOnBrightColors) {
 			Settings::settings.SetDarkenPulseOnBrightColors(darkenPulseOnBrightColors);
 
@@ -1384,11 +1389,16 @@ void CApp::OnLoop(const Delta &time) {
 		context->SetIdentity(std::move(projection));
 		glViewport(0, 0, maxDimension, maxDimension);
 
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		if (pulseBackground)
+			glClearColor(color.r, color.g, color.b, 1.0f);
+		else
+			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		// Don't try to blend into the blank background
-		glDisable(GL_BLEND);
+		if (!pulseBackground)
+			glDisable(GL_BLEND);
 		
 		context->Use("blur"_hash);
 		context->GetShaderProgram().Uniform1f(
@@ -1418,7 +1428,8 @@ void CApp::OnLoop(const Delta &time) {
 
 		lastFrame->DrawMultisampled(0, 0, *context);
 
-		glEnable(GL_BLEND);
+		if (!pulseBackground)
+			glEnable(GL_BLEND);
 
 		context->With("rotate"_hash, [this](Context::Shader &shader) {
 			shader.program.Uniform2f("screenSize", maxDimension, maxDimension);
@@ -1426,7 +1437,8 @@ void CApp::OnLoop(const Delta &time) {
 
 		renderer->Draw(time, frameCount, color, blurOffset, *context);
 
-		glDisable(GL_BLEND);
+		if (!pulseBackground)
+			glDisable(GL_BLEND);
 
 		context->LoadIdentity();
 		blurFbo->Unbind();
@@ -1435,7 +1447,9 @@ void CApp::OnLoop(const Delta &time) {
 
 		glClear(GL_COLOR_BUFFER_BIT);
 		blurFbo->Draw(0, 0, *context, lastFrame.get());
-		glEnable(GL_BLEND);
+
+		if (!pulseBackground)
+			glEnable(GL_BLEND);
 
 		context->SetIdentity(std::move(identity));
 		glViewport(oldViewport[0], oldViewport[1], oldViewport[2], oldViewport[3]);
