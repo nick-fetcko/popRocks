@@ -213,9 +213,13 @@ std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder) con
 			auto filename = entry.path().filename().u8string();
 			std::transform(filename.begin(), filename.end(), filename.begin(), tolower);
 
-			if ((filename.find("cover") == 0 ||
-				filename.find("front") != std::string::npos ||
-				filename.find("folder") == 0)) {
+			auto cover = filename.find("cover");
+			auto front = filename.find("front");
+			auto folder = filename.find("folder");
+
+			if (cover == 0 ||
+				front != std::string::npos ||
+				folder == 0) {
 				found = entry.path();
 
 				// Sort by digits in the filename (if there are any), ascending
@@ -227,6 +231,9 @@ std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder) con
 				//
 				// We'll use "Cover 1.jpg"
 				auto [success, number] = Utils::ExtractDigitsFromString(filename);
+				if (number == std::numeric_limits<int>::max() && (folder == 0 || cover == 0 || front == 0))
+					--number;
+
 				preferred.emplace(std::make_pair(number, entry.path()));
 
 				// Optionally break when we find a preferred file
