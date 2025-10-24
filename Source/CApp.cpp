@@ -7,6 +7,10 @@
 #include <sstream>
 #include <vector>
 #include <fstream>
+#ifdef WIN32
+#include <Windows.h>
+#include <shlobj.h>
+#endif
 
 #include <SDL.h>
 #include <SDL_image.h>
@@ -2464,6 +2468,27 @@ void CApp::LoadPreset(const Preset &preset) {
 	SetEffect(preset.GetEffect());
 
 	updateUi = 1;
+}
+
+void CApp::SaveBlurFBO() {
+	auto time = ::time(nullptr);
+	auto tm = *std::localtime(&time);
+	std::stringstream filename;
+	
+
+#ifdef WIN32
+	WCHAR picturesPath[MAX_PATH];
+	if (SHGetFolderPath(NULL, CSIDL_MYPICTURES, NULL, SHGFP_TYPE_CURRENT, picturesPath) == S_OK) {
+		filename << Utils::ToUTF8(std::wstring(picturesPath)) << "/popRocks";
+		if (!std::filesystem::exists(filename.str()))
+			std::filesystem::create_directory(filename.str());
+		filename << "/";
+	}
+#endif
+
+	filename << "popRocks-" << std::put_time(&tm, "%Y%m%d%H%M%S") << ".png";
+
+	blurFbo->SaveAsPNG(filename.str());
 }
 
 void CApp::OnColorChanged(const MathsCPP::Colour<float> &color, bool silent) {

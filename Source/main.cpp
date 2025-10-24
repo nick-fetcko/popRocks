@@ -103,10 +103,9 @@ int main(int argc, char *argv[]) {
 						event.key.keysym.sym == SDLK_w) {
 						auto lock = app.GetAlbumArt().Lock();
 						app.GetAlbumArt().ResetBin();
-					} else if (event.key.keysym.sym == SDLK_p) {
-						if (auto fftRenderer = dynamic_cast<const FFTRenderer *>(app.GetRenderer()))
-							fftRenderer->PrintMax();
-					} else if (event.key.keysym.sym == SDLK_SPACE || event.key.keysym.sym == SDLK_AUDIOPLAY)
+					} else if (event.key.keysym.sym == SDLK_p)
+						app.SaveBlurFBO();
+					else if (event.key.keysym.sym == SDLK_SPACE || event.key.keysym.sym == SDLK_AUDIOPLAY)
 						app.TogglePlaying();
 					else if (event.key.keysym.sym == SDLK_RETURN && event.key.keysym.mod & KMOD_ALT)
 						app.ToggleFullscreen();
