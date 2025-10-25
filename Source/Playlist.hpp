@@ -205,11 +205,13 @@ private:
 			if (pos.y + title.GetBounds().height > maxHeight)
 				return;
 
-			if (currentSongVisible && iter == current) {
-				outline.SetText(title.GetText());
-				context.Color(0.0f, 0.0f, 0.0f, std::max(0.5f, alpha));
-				outline.OnLoop(pos.x, pos.y);
-				context.Color(1.0f, 1.0f, 1.0f, std::max(0.5f, alpha));
+			if (iter == current) {
+				if (currentSongVisible) {
+					outline.SetText(title.GetText());
+					context.Color(0.0f, 0.0f, 0.0f, std::max(0.5f, alpha));
+					outline.OnLoop(pos.x, pos.y);
+					context.Color(1.0f, 1.0f, 1.0f, std::max(0.5f, alpha));
+				} else context.Color(1.0f, 1.0f, 1.0f, alpha);
 			} else if (current != tracks.begin() && iter == current - 1)
 				context.Color(0.6f, 0.6f, 0.6f, 0.4f * alpha);
 			else
