@@ -1511,9 +1511,7 @@ void CApp::OnLoop(const Delta &time) {
 		time,
 		streamHandle,
 		*context,
-		[this](float alpha) {
-			SetColor(alpha); 
-		}
+		GetColor()
 	);
 	
 	// Line up the next file at >= 90% completion of current file

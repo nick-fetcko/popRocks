@@ -66,6 +66,20 @@ void Controls::OnInit(int windowWidth, int windowHeight, Context &context, float
 	eab->BufferData<std::size(Buffers::SquareBuffer)>(Buffers::SquareBuffer);
 	eab->Unbind();
 
+	sepVao = std::make_unique<VertexArray>();
+	sepVbo = std::make_unique<ArrayBuffer>();
+	sepEab = std::make_unique<ElementBuffer>();
+
+	sepVao->Bind();
+	sepVbo->Bind();
+	sepVao->AddAttribute(VertexArray::Attribute(0, 2, 2 * sizeof(float)));
+	sepVbo->Unbind();
+	sepVao->Unbind();
+
+	sepEab->Bind();
+	sepEab->BufferData<std::size(Buffers::SquareBuffer)>(Buffers::SquareBuffer);
+	sepEab->Unbind();
+
 	OpenFont(&context);
 
 	playlist.OnInit(windowWidth, windowHeight, font, &context, scale);
@@ -166,7 +180,7 @@ void Controls::LoadFromID3v1(const TAG_ID3 *id3) {
 	}
 }
 
-double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &context, std::function<void(float)> setColor) {
+double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &context, const Colour<float> &color) {
 	AutoFader::OnLoop(time);
 
 	if (streamHandle) {
@@ -193,25 +207,50 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 				pixels,
 				SeekbarSize * scale,
 				pixels,
-				0 
+				0
 			};
 
 			vbo->Bind();
 			vbo->BufferData(posRect, GL_DYNAMIC_DRAW);
 			vbo->Unbind();
+
+			posRect = {
+				0,
+				0,
+				0,
+				SeekbarSize / 5.0f * scale,
+				pixels,
+				SeekbarSize / 5.0f * scale,
+				pixels,
+				0
+			};
+
+			sepVbo->Bind();
+			sepVbo->BufferData(posRect, GL_DYNAMIC_DRAW);
+			sepVbo->Unbind();
 		}
 
 		context.Use("basic"_hash);
 		context.Translate(0, windowHeight - SeekbarSize * scale, 0.0f);
 		context.Apply();
 
-		setColor(alpha);
+		context.Color(color.r, color.g, color.b, alpha);
 
 		vao->Bind();
 		eab->Bind();
 		eab->DrawElements(GL_TRIANGLES);
 		eab->Unbind();
 		vao->Unbind();
+
+		auto inverse = color.Inverse();
+		
+		context.Color(inverse.r, inverse.g, inverse.b, alpha);
+
+		sepVao->Bind();
+		sepEab->Bind();
+		sepEab->DrawElements(GL_TRIANGLES);
+		sepEab->Unbind();
+		sepVao->Unbind();
 
 		context.Use("texture"_hash);
 		context.LoadIdentity();
@@ -386,6 +425,10 @@ void Controls::OnDestroy() {
 	vao.reset();
 	vbo.reset();
 	eab.reset();
+
+	sepVao.reset();
+	sepVbo.reset();
+	sepEab.reset();
 
 	playlist.OnDestroy();
 

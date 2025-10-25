@@ -44,7 +44,7 @@ public:
 	void LoadFromTags(const std::map<std::string, std::string> &tags) override;
 	void LoadFromID3v1(const TAG_ID3 *id3) override;
 
-	double OnLoop(const Delta &time, HSTREAM streamHandle, Context &context, std::function<void(float)> setColor);
+	double OnLoop(const Delta &time, HSTREAM streamHandle, Context &context, const Colour<float> &color);
 
 	void OnDestroy();
 
@@ -107,4 +107,8 @@ private:
 	std::unique_ptr<VertexArray> vao;
 	std::unique_ptr<ArrayBuffer> vbo;
 	std::unique_ptr<ElementBuffer> eab;
+
+	std::unique_ptr<VertexArray> sepVao;
+	std::unique_ptr<ArrayBuffer> sepVbo;
+	std::unique_ptr<ElementBuffer> sepEab;
 };
