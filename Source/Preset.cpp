@@ -63,6 +63,7 @@ Preset Preset::Random() {
 			)
 		),
 		prng() % 2,
+		false,
 		Duration<Microseconds>(
 			std::chrono::duration<double>(
 				(prng() % 10000) / 5000.0f // 0 - 2
@@ -72,7 +73,9 @@ Preset Preset::Random() {
 		0.25f + (prng() % 10000) / 13333.0f, // 0.25 - 1.0
 		true, // always rotate
 		(1 + prng() % 25) * 6, // limit to 25 RPM max
-		true, // always blur
+		true, // always blur,
+		GL_ONE,
+		GL_ZERO,
 		(prng() % 40000) / 10000.0f,
 		0.25f + (prng() % 10000) / 13333.0f, // 0.25 - 1.0
 		effectNames[1 + (prng() % (effectNames.size() - 1))], // skip "noeffect"
@@ -129,7 +132,10 @@ const Node &operator>>(const Node &node, Preset &preset) {
 		)
 	);
 
-	preset.pulse = node["pulse"]->get<bool>();
+	node["pulse"]->get(preset.pulse);
+
+	if (node.has("pulseBackground"))
+		node["pulseBackground"]->get(preset.pulseBackground);
 
 	preset.pulseTime = Duration<Microseconds>(
 		std::chrono::duration<double>(
@@ -149,6 +155,10 @@ const Node &operator>>(const Node &node, Preset &preset) {
 
 	if (node.has("blur"))
 		node["blur"]->get(preset.blur);
+	if (node.has("sourceFactor"))
+		node["sourceFactor"]->get(preset.sourceFactor);
+	if (node.has("destFactor"))
+		node["destFactor"]->get(preset.destFactor);
 	if (node.has("blurIntensity"))
 		node["blurIntensity"]->get(preset.blurIntensity);
 	if (node.has("blurOpacity"))
@@ -190,12 +200,15 @@ Node &operator<<(Node &node, const Preset &preset) {
 	node["decayTime"]->set(preset.decayTime.AsSeconds());
 	node["fadeTime"]->set(preset.fadeDecayTime.AsSeconds());
 	node["pulse"]->set(preset.pulse);
+	node["pulseBackground"]->set(preset.pulseBackground);
 	node["pulseTime"]->set(preset.pulseTime.AsSeconds());
 	node["strobe"]->set(preset.strobe);
 	node["strobeIntensity"]->set(preset.strobeIntensity);
 	node["rotating"]->set(preset.rotating);
 	node["rotationSpeed"]->set(preset.rotationSpeed);
 	node["blur"]->set(preset.blur);
+	node["sourceFactor"]->set(preset.sourceFactor);
+	node["destFactor"]->set(preset.destFactor);
 	node["blurIntensity"]->set(preset.blurIntensity);
 	node["blurOpacity"]->set(preset.blurOpacity);
 	node["effect"]->set(preset.effect);

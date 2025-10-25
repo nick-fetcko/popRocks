@@ -483,6 +483,9 @@ void CApp::OnInit() {
 			Settings::settings.SetPulseBackground(pulseBackground);
 
 			this->pulseBackground = pulseBackground;
+
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
 		});
 		menu.SetOnDarkenPulseOnBrightColorsChanged([this](bool darkenPulseOnBrightColors) {
 			Settings::settings.SetDarkenPulseOnBrightColors(darkenPulseOnBrightColors);
@@ -516,6 +519,22 @@ void CApp::OnInit() {
 		menu.SetOnBlurChanged([this](bool blur) {
 			ToggleBlur();
 			ImGui::SetWindowFocus(nullptr);
+
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
+		});
+		menu.SetOnSourceFactorChanged([this](GLenum sourceFactor) {
+			Settings::settings.SetSourceFactor(sourceFactor);
+
+			this->sourceFactor = sourceFactor;
+
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
+		});
+		menu.SetOnDestFactorChanged([this](GLenum destFactor) {
+			Settings::settings.SetDestFactor(destFactor);
+			
+			this->destFactor = destFactor;
 
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
@@ -1396,9 +1415,7 @@ void CApp::OnLoop(const Delta &time) {
 
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		// Don't try to blend into the blank background
-		if (!pulseBackground)
-			glDisable(GL_BLEND);
+		glBlendFunc(sourceFactor, destFactor);
 		
 		context->Use("blur"_hash);
 		context->GetShaderProgram().Uniform1f(
@@ -1428,8 +1445,7 @@ void CApp::OnLoop(const Delta &time) {
 
 		lastFrame->DrawMultisampled(0, 0, *context);
 
-		if (!pulseBackground)
-			glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 		context->With("rotate"_hash, [this](Context::Shader &shader) {
 			shader.program.Uniform2f("screenSize", maxDimension, maxDimension);
@@ -1437,8 +1453,7 @@ void CApp::OnLoop(const Delta &time) {
 
 		renderer->Draw(time, frameCount, color, blurOffset, *context);
 
-		if (!pulseBackground)
-			glDisable(GL_BLEND);
+		glBlendFunc(sourceFactor, destFactor);
 
 		context->LoadIdentity();
 		blurFbo->Unbind();
@@ -1448,8 +1463,7 @@ void CApp::OnLoop(const Delta &time) {
 		glClear(GL_COLOR_BUFFER_BIT);
 		blurFbo->Draw(0, 0, *context, lastFrame.get());
 
-		if (!pulseBackground)
-			glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 		context->SetIdentity(std::move(identity));
 		glViewport(oldViewport[0], oldViewport[1], oldViewport[2], oldViewport[3]);
@@ -2436,6 +2450,8 @@ void CApp::LoadPreset(const Preset &preset) {
 	SetDecayTime(preset.GetDecayTime());
 	SetFadeTime(preset.GetFadeTime());
 	renderer->SetPulse(preset.GetPulse());
+	pulseBackground = preset.GetPulseBackground();
+	Settings::settings.SetPulseBackground(pulseBackground);
 	renderer->SetPulseTime(preset.GetPulseTime());
 
 	if (const auto &rendererOffset = preset.GetRendererOffset()) {
@@ -2464,6 +2480,10 @@ void CApp::LoadPreset(const Preset &preset) {
 
 	auto blur = preset.GetBlur();
 	SetBlur(blur && *blur);
+	sourceFactor = preset.GetSourceFactor();
+	Settings::settings.SetSourceFactor(sourceFactor);
+	destFactor = preset.GetDestFactor();
+	Settings::settings.SetDestFactor(destFactor);
 	if (blur && *blur) {
 		SetBlurIntensity(preset.GetBlurIntensity());
 

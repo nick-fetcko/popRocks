@@ -344,4 +344,7 @@ private:
 	bool darkenPulseOnBrightColors = Settings::settings.GetDarkenPulseOnBrightColors();
 
 	bool pulseBackground = Settings::settings.GetPulseBackground();
+
+	GLenum sourceFactor = Settings::settings.GetSourceFactor();
+	GLenum destFactor = Settings::settings.GetDestFactor();
 };

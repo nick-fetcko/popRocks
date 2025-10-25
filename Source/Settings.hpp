@@ -4,6 +4,8 @@
 
 #include <SDL_video.h>
 
+#include <glad/glad.h>
+
 #include "MathCPP/Duration.hpp"
 
 #include "Serial/Json.hpp"
@@ -18,6 +20,8 @@ using namespace serial;
 
 class Settings {
 public:
+	static std::map<GLenum, std::string> BlendModes;
+
 	struct ColorSelection {
 		double minPercentage = 0.02;
 		double minSaturation = 0.1;
@@ -226,6 +230,12 @@ public:
 	const int &GetRendererOffset() const { return rendererOffset; }
 	void SetRendererOffset(int rendererOffset);
 
+	const GLenum &GetSourceFactor() const { return sourceFactor; }
+	void SetSourceFactor(GLenum sourceFactor);
+
+	const GLenum &GetDestFactor() const { return destFactor; }
+	void SetDestFactor(GLenum destFactor);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -312,13 +322,15 @@ private:
 
 	float scale = 1.0f;
 
-	// 7: Ripples
-	// 8: Conway
-	// 10: Eye of the Storm
-	// 11: Tunnel
-	// 12: Sinkhole
-	// 13: Horizon
-	std::set<std::size_t> selectedPresets = { 7, 8, 10, 11, 12, 13, 14, 15 };
+	// 8: Ripples
+	// 9: Conway
+	// 11: Eye of the Storm
+	// 12: Tunnel
+	// 13: Sinkhole
+	// 14: Horizon
+	// 15: Galaxy
+	// 16: Tubular
+	std::set<std::size_t> selectedPresets = { 8, 9, 11, 12, 13, 14, 15, 16 };
 	bool randomizePresets = false;
 	Duration<Microseconds> randomizePresetsTime = 2.5s;
 	bool randomizePresetsByBeats = false;
@@ -334,4 +346,7 @@ private:
 	int rendererOffset = 0.0f;
 
 	bool pulseBackground = false;
+
+	GLenum sourceFactor = GL_ONE;
+	GLenum destFactor = GL_ZERO;
 };

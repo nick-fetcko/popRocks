@@ -8,6 +8,28 @@
 
 Settings Settings::settings = Settings::Load();
 
+std::map<GLenum, std::string> Settings::BlendModes = {
+	{ GL_ZERO, "GL_ZERO" },
+	{ GL_ONE, "GL_ONE" },
+	{ GL_SRC_COLOR, "GL_SRC_COLOR" },
+	{ GL_ONE_MINUS_SRC_COLOR, "GL_ONE_MINUS_SRC_COLOR"},
+	{ GL_DST_COLOR, "GL_DST_COLOR"},
+	{ GL_ONE_MINUS_DST_COLOR, "GL_ONE_MINUS_DST_COLOR"},
+	{ GL_SRC_ALPHA, "GL_SRC_ALPHA"},
+	{ GL_ONE_MINUS_SRC_ALPHA, "GL_ONE_MINUS_SRC_ALPHA"},
+	{ GL_DST_ALPHA, "GL_DST_ALPHA"},
+	{ GL_ONE_MINUS_DST_ALPHA, "GL_ONE_MINUS_DST_ALPHA"},
+	{ GL_CONSTANT_COLOR, "GL_CONSTANT_COLOR"},
+	{ GL_ONE_MINUS_CONSTANT_COLOR, "GL_ONE_MINUS_CONSTANT_COLOR"},
+	{ GL_CONSTANT_ALPHA, "GL_CONSTANT_ALPHA"},
+	{ GL_ONE_MINUS_CONSTANT_ALPHA, "GL_ONE_MINUS_CONSTANT_ALPHA"},
+	{ GL_SRC_ALPHA_SATURATE, "GL_SRC_ALPHA_SATURATE"},
+	{ GL_SRC1_COLOR, "GL_SRC1_COLOR"},
+	{ GL_ONE_MINUS_SRC1_COLOR, "GL_ONE_MINUS_SRC1_COLOR"},
+	{ GL_SRC1_ALPHA, "GL_SRC1_ALPHA"},
+	{ GL_ONE_MINUS_SRC1_ALPHA, "GL_ONE_MINUS_SRC1_ALPHA"}
+};
+
 std::filesystem::path Settings::GetPath(const std::string &fileName) {
 	std::filesystem::path ret;
 
@@ -501,6 +523,20 @@ void Settings::SetPulseBackground(bool pulseBackground) {
 	}
 }
 
+void Settings::SetSourceFactor(GLenum sourceFactor) {
+	if (this->sourceFactor != sourceFactor) {
+		this->sourceFactor = sourceFactor;
+		Save();
+	}
+}
+
+void Settings::SetDestFactor(GLenum destFactor) {
+	if (this->destFactor != destFactor) {
+		this->destFactor = destFactor;
+		Save();
+	}
+}
+
 void Settings::Save() {
 	if (auto path = GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
@@ -727,6 +763,11 @@ const Node &operator>>(const Node &node, Settings &settings) {
 
 	if (node.has("rendererOffset"))
 		node["rendererOffset"]->get(settings.rendererOffset);
+
+	if (node.has("sourceFactor"))
+		node["sourceFactor"]->get(settings.sourceFactor);
+	if (node.has("destFactor"))
+		node["destFactor"]->get(settings.destFactor);
 		
 	return node;
 }
@@ -794,6 +835,8 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["saveRenderer"]->set(settings.saveRenderer);
 	node["saveScale"]->set(settings.saveScale);
 	node["rendererOffset"]->set(settings.rendererOffset);
+	node["sourceFactor"]->set(settings.sourceFactor);
+	node["destFactor"]->set(settings.destFactor);
 
 	return node;
 }

@@ -268,6 +268,32 @@ public:
 					onBlurChanged(!Settings::settings.GetBlur());
 			}
 
+			sourceFactor = Settings::settings.GetSourceFactor();
+			if (ImGui::BeginMenu("Blending source factor")) {
+				for (const auto &[factor, name] : Settings::BlendModes) {
+					bool selected = sourceFactor == factor;
+
+					if (ImGui::MenuItem(name.c_str(), nullptr, &selected)) {
+						if (onSourceFactorChanged)
+							onSourceFactorChanged(factor);
+					}
+				}
+				ImGui::EndMenu();
+			}
+
+			destFactor = Settings::settings.GetDestFactor();
+			if (ImGui::BeginMenu("Blending destination factor")) {
+				for (const auto &[factor, name] : Settings::BlendModes) {
+					bool selected = destFactor == factor;
+
+					if (ImGui::MenuItem(name.c_str(), nullptr, &selected)) {
+						if (onDestFactorChanged)
+							onDestFactorChanged(factor);
+					}
+				}
+				ImGui::EndMenu();
+			}
+
 			blurIntensity = Settings::settings.GetBlurIntensity();
 			ImGui::BeginDisabled(!blur);
 			if (ImGui::SliderFloat("Blur intensity", &blurIntensity, 0.01f, 2.0f, "%.2f")) {
@@ -617,12 +643,15 @@ public:
 						Settings::settings.GetDecayTime(),
 						Settings::settings.GetFadeTime(),
 						Settings::settings.GetPulse(),
+						Settings::settings.GetPulseBackground(),
 						Settings::settings.GetPulseTime(),
 						Settings::settings.GetStrobe(),
 						Settings::settings.GetStrobeIntensity(),
 						Settings::settings.GetRotating(),
 						Settings::settings.GetRotationSpeed(),
 						Settings::settings.GetBlur(),
+						Settings::settings.GetSourceFactor(),
+						Settings::settings.GetDestFactor(),
 						Settings::settings.GetBlurIntensity(),
 						Settings::settings.GetBlurOpacity(),
 						Settings::settings.GetEffect(),
@@ -959,6 +988,8 @@ public:
 	void SetOnLightPackFocusAreaChanged(std::function<void(const std::string &)> f) { onLightPackFocusAreaChanged = f; }
 
 	void SetOnBlurChanged(std::function<void(bool)> f) { onBlurChanged = f; }
+	void SetOnSourceFactorChanged(std::function<void(GLenum)> f) { onSourceFactorChanged = f; }
+	void SetOnDestFactorChanged(std::function<void(GLenum)> f) { onDestFactorChanged = f; }
 	void SetOnRotatingChanged(std::function<void(bool)> f) { onRotatingChanged = f; }
 	void SetOnDetectBpmChanged(std::function<void(bool)> f) { onDetectBpmChanged = f; }
 	void SetOnHalveBpmChanged(std::function<void(bool)> f) { onHalveBpmChanged = f; }
@@ -1067,6 +1098,8 @@ private:
 	bool detectBpm = Settings::settings.GetDetectBpm();
 	bool halveBpm = Settings::settings.GetHalveBpm();
 	bool blur = Settings::settings.GetBlur();
+	GLenum sourceFactor = Settings::settings.GetSourceFactor();
+	GLenum destFactor = Settings::settings.GetDestFactor();
 
 	float rpm = Settings::settings.GetRotationSpeed() / (360.0f / 60.0f);
 
@@ -1157,6 +1190,8 @@ private:
 	std::function<void(bool)> onPulseBackgroundChanged;
 	std::function<void(bool)> onDarkenPulseOnBrightColorsChanged;
 	std::function<void(bool)> onBlurChanged;
+	std::function<void(GLenum)> onSourceFactorChanged;
+	std::function<void(GLenum)> onDestFactorChanged;
 	std::function<void(bool)> onRotatingChanged;
 	std::function<void(bool)> onDetectBpmChanged;
 	std::function<void(bool)> onHalveBpmChanged;

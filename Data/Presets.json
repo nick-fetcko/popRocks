@@ -43,7 +43,35 @@
 		"renderer" : "fft",
 		"scale" : 1.0
 	},
-	"4" : {
+	"4": {
+		"name": "Neon Flower",
+		"bufferSize": 256,
+		"decayTime": 0.370000,
+		"fadeTime": 1.720000,
+		"pulse": true,
+		"pulseBackground": false,
+		"pulseTime": 1.000000,
+		"strobe": false,
+		"strobeIntensity": 0.660000,
+		"rotating": true,
+		"rotationSpeed": 66.599998,
+		"blur": true,
+		"sourceFactor": 768,
+		"destFactor": 0,
+		"blurIntensity": 2.000000,
+		"blurOpacity": 1.000000,
+		"effect": "smoke",
+		"effectIntensity": 5.190000,
+		"effectXOffset": 0.000000,
+		"effectYOffset": 0.000000,
+		"effectRadiation": 10.000000,
+		"effectHorizontalSpread": 0.000000,
+		"effectVerticalSpread": 0.000000,
+		"effectRotation": 0.000000,
+		"renderer": "fft",
+		"scale": 1.000000
+	},
+	"5" : {
 		"name" : "Smoke",
 		"bufferSize" : 95,
 		"decayTime" : 1.09,
@@ -63,7 +91,7 @@
 		"renderer" : "fft",
 		"scale" : 1.0
 	},
-	"5" : {
+	"6" : {
 		"name" : "Mist",
 		"bufferSize" : 95,
 		"decayTime" : 1.09,
@@ -83,7 +111,7 @@
 		"renderer" : "fft",
 		"scale" : 1.0
 	},
-	"6": {
+	"7": {
 		"name": "Black Hole",
 		"bufferSize": 95,
 		"decayTime": 1.090000,
@@ -103,7 +131,7 @@
 		"renderer" : "fft",
 		"scale" : 1.0
 	},
-	"7": {
+	"8": {
 		"name": "Ripples",
 		"bufferSize": 95,
 		"decayTime": 1.090000,
@@ -123,7 +151,7 @@
 		"renderer" : "osc",
 		"scale" : 1.15
 	},
-	"8": {
+	"9": {
 		"name": "Conway",
 		"bufferSize": 95,
 		"decayTime": 1.090000,
@@ -143,7 +171,7 @@
 		"renderer" : "osc",
 		"scale" : 1.15
 	},
-	"9": {
+	"10": {
 		"name": "Fountain",
 		"bufferSize": 257,
 		"decayTime": 1.090000,
@@ -163,7 +191,7 @@
 		"renderer" : "fft",
 		"scale" : 1.15
 	},
-	"10": {
+	"11": {
 		"name": "Eye of the Storm",
 		"bufferSize": 460,
 		"decayTime": 0.922800,
@@ -187,7 +215,7 @@
 		"renderer" : "osc",
 		"scale" : 1.15
 	},
-	"11": {
+	"12": {
 		"name": "Tunnel",
 		"bufferSize": 460,
 		"decayTime": 0.922800,
@@ -211,7 +239,7 @@
 		"renderer" : "osc",
 		"scale" : 1.15
 	},
-	"12": {
+	"13": {
 		"name": "Sinkhole",
 		"bufferSize": 460,
 		"decayTime": 0.922800,
@@ -235,7 +263,7 @@
 		"renderer" : "osc",
 		"scale" : 1.15
 	},
-	"13": {
+	"14": {
 		"name": "Horizon",
 		"bufferSize": 460,
 		"decayTime": 0.170000,
@@ -259,7 +287,7 @@
 		"renderer" : "osc",
 		"scale" : 1.15
 	},
-	"14": {
+	"15": {
 		"name": "Galaxy",
 		"bufferSize": 95,
 		"decayTime": 1.090000,
@@ -284,7 +312,7 @@
 		"renderer" : "osc",
 		"scale" : 1.15
 	},
-	"15": {
+	"16": {
 		"name": "Tubular",
 		"bufferSize": 95,
 		"decayTime": 1.090000,
@@ -309,7 +337,7 @@
 		"renderer" : "osc",
 		"scale" : 1.15
 	},
-	"16": {
+	"17": {
 		"name": "In The Clouds",
 		"bufferSize": 4096,
 		"decayTime": 0.209999,
@@ -334,7 +362,7 @@
 		"renderer" : "fft",
 		"scale" : 0.25
 	},
-	"17": {
+	"18": {
 		"name": "Hurricane",
 		"bufferSize": 4096,
 		"decayTime": 0.209999,
@@ -359,7 +387,7 @@
 		"renderer": "fft",
 		"scale": 0.170000
 	},
-	"18": {
+	"19": {
 		"name": "Sandstorm",
 		"bufferSize": 4096,
 		"decayTime": 0.209999,
@@ -384,7 +412,7 @@
 		"renderer": "fft",
 		"scale": 0.190000
 	},
-	"19": {
+	"20": {
 		"name": "Cotton Candy",
 		"bufferSize": 95,
 		"decayTime": 1.090000,
@@ -409,7 +437,7 @@
 		"renderer": "osc",
 		"scale": 1.150000
 	},
-	"20": {
+	"21": {
 		"name": "Sunburst",
 		"bufferSize": 405,
 		"decayTime": 0.070000,
@@ -434,7 +462,7 @@
 		"renderer": "fft",
 		"scale": 0.300000
 	},
-	"21": {
+	"22": {
 		"name": "Faultline",
 		"bufferSize": 499,
 		"decayTime": 1.090000,
@@ -459,7 +487,7 @@
 		"renderer": "fftline",
 		"scale": 5.000000
 	},
-	"22": {
+	"23": {
 		"name": "Think Inside the Box",
 		"bufferSize": 499,
 		"decayTime": 1.090000,
@@ -484,5 +512,62 @@
 		"renderer": "fftline",
 		"scale": 5.000000,
 		"rendererOffset": -94
+	},
+	"24": {
+		"name": "Double Slit Experiment",
+		"bufferSize": 499,
+		"decayTime": 1.090000,
+		"fadeTime": 0.600000,
+		"pulse": true,
+		"pulseBackground": false,
+		"pulseTime": 0.110000,
+		"strobe": false,
+		"strobeIntensity": 0.660000,
+		"rotating": true,
+		"rotationSpeed": 18.000000,
+		"blur": true,
+		"sourceFactor": 1,
+		"destFactor": 0,
+		"blurIntensity": 36.000000,
+		"blurOpacity": 1.000000,
+		"effect": "smoke",
+		"effectIntensity": 3.450000,
+		"effectXOffset": 0.000000,
+		"effectYOffset": 0.000000,
+		"effectRadiation": -1.980000,
+		"effectHorizontalSpread": 2.300000,
+		"effectVerticalSpread": 1.970000,
+		"effectRotation": 0.000000,
+		"renderer": "fftline",
+		"scale": 1.500000,
+		"rendererOffset": 38
+	},
+	"25": {
+		"name": "Starburst",
+		"bufferSize": 256,
+		"decayTime": 0.370000,
+		"fadeTime": 1.720000,
+		"pulse": true,
+		"pulseBackground": true,
+		"pulseTime": 1.000000,
+		"strobe": false,
+		"strobeIntensity": 0.660000,
+		"rotating": true,
+		"rotationSpeed": 66.599998,
+		"blur": true,
+		"sourceFactor": 768,
+		"destFactor": 0,
+		"blurIntensity": 2.000000,
+		"blurOpacity": 1.000000,
+		"effect": "smoke",
+		"effectIntensity": 5.190000,
+		"effectXOffset": 0.000000,
+		"effectYOffset": 0.000000,
+		"effectRadiation": 10.000000,
+		"effectHorizontalSpread": 0.000000,
+		"effectVerticalSpread": 0.000000,
+		"effectRotation": 0.000000,
+		"renderer": "fft",
+		"scale": 1.000000
 	}
 }

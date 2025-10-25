@@ -2,6 +2,8 @@
 
 #include <vector>
 
+#include <glad/glad.h>
+
 #include "MathCPP/Duration.hpp"
 #include "Serial/Json.hpp"
 #include "Utils/Logger.hpp"
@@ -20,12 +22,15 @@ public:
 		Duration<Microseconds> decayTime,
 		Duration<Microseconds> fadeTime,
 		bool pulse,
+		bool pulseBackground,
 		Duration<Microseconds> pulseTime,
 		bool strobe,
 		float strobeIntensity,
 		bool rotating,
 		float rotationSpeed,
 		bool blur,
+		GLenum sourceFactor,
+		GLenum destFactor,
 		float blurIntensity,
 		float blurOpacity,
 		const std::string &effect,
@@ -44,12 +49,15 @@ public:
 		decayTime(decayTime),
 		fadeDecayTime(fadeTime),
 		pulse(pulse),
+		pulseBackground(pulseBackground),
 		pulseTime(pulseTime),
 		strobe(strobe),
 		strobeIntensity(strobeIntensity),
 		rotating(rotating),
 		rotationSpeed(rotationSpeed),
 		blur(blur),
+		sourceFactor(sourceFactor),
+		destFactor(destFactor),
 		blurIntensity(blurIntensity),
 		blurOpacity(blurOpacity),
 		effect(effect),
@@ -77,12 +85,15 @@ public:
 	const Duration<Microseconds> &GetDecayTime() const { return decayTime; }
 	const Duration<Microseconds> &GetFadeTime() const { return fadeDecayTime; }
 	const bool GetPulse() const { return pulse; }
+	const bool GetPulseBackground() const { return pulseBackground; }
 	const Duration<Microseconds> &GetPulseTime() const { return pulseTime; }
 	const bool GetStrobe() const { return strobe; }
 	const float GetStrobeIntensity() const { return strobeIntensity; }
 	const std::optional<bool> &GetRotating() const { return rotating; }
 	const float GetRotationSpeed() const { return rotationSpeed; }
 	const std::optional<bool> &GetBlur() const { return blur; }
+	const GLenum &GetSourceFactor() const { return sourceFactor; }
+	const GLenum &GetDestFactor() const { return destFactor; }
 	const float GetBlurIntensity() const { return blurIntensity; }
 	const float GetBlurOpacity() const { return blurOpacity; }
 	const std::string &GetEffect() const { return effect; }
@@ -113,6 +124,7 @@ private:
 	Duration<Microseconds> decayTime = 0.5s;
 
 	bool pulse = false;
+	bool pulseBackground = false;
 	Duration<Microseconds> pulseTime = 0.1s;
 
 	bool strobe = false;
@@ -122,6 +134,8 @@ private:
 	float rotationSpeed = 1.0f;
 
 	std::optional<bool> blur = std::nullopt;
+	GLenum sourceFactor = GL_ONE;
+	GLenum destFactor = GL_ZERO;
 	float blurIntensity = 0.5;
 	float blurOpacity = 1.0f;
 
