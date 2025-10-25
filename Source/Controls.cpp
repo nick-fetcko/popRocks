@@ -82,7 +82,7 @@ void Controls::OnInit(int windowWidth, int windowHeight, Context &context, float
 
 	OpenFont(&context);
 
-	playlist.OnInit(windowWidth, windowHeight, font, &context, scale);
+	playlist.OnInit(windowWidth, windowHeight, font, outlineFont, &context, scale);
 	albumArt->AddColorChangeListener(&volume);
 }
 

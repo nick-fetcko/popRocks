@@ -273,12 +273,15 @@ inline void Playlist::UpdateSize() {
 	vbo->Unbind();
 }
 
-void Playlist::OnInit(int windowWidth, int windowHeight, OpenGLFont *font, Context *context, float scale) {
+void Playlist::OnInit(int windowWidth, int windowHeight, OpenGLFont *font, OpenGLFont *outlineFont, Context *context, float scale) {
 	this->windowWidth = windowWidth;
 	this->windowHeight = windowHeight;
 	this->font = font;
+	this->outlineFont = outlineFont;
 	this->context = context;
 	this->scale = scale;
+
+	outline.OnInit(outlineFont, context);
 
 	vao = std::make_unique<VertexArray>();
 	vbo = std::make_unique<ArrayBuffer>();

@@ -34,7 +34,7 @@ public:
 		std::function<HSTREAM(const std::filesystem::path &, const std::string &, DWORD)> openWithFlags
 	);
 
-	void OnInit(int windowWidth, int windowHeight, OpenGLFont *font, Context *context, float scale = 1.0f);
+	void OnInit(int windowWidth, int windowHeight, OpenGLFont *font, OpenGLFont *outlineFont, Context *context, float scale = 1.0f);
 	void OnResize(int windowWidth, int windowHeight, float scale = 1.0f);
 	void OnDestroy();
 
@@ -205,9 +205,12 @@ private:
 			if (pos.y + title.GetBounds().height > maxHeight)
 				return;
 
-			if (iter == current)
-				context.Color(1.0f, 1.0f, 1.0f, currentSongVisible ? std::max(0.5f, alpha) : alpha);
-			else if (current != tracks.begin() && iter == current - 1)
+			if (currentSongVisible && iter == current) {
+				outline.SetText(title.GetText());
+				context.Color(0.0f, 0.0f, 0.0f, std::max(0.5f, alpha));
+				outline.OnLoop(pos.x, pos.y);
+				context.Color(1.0f, 1.0f, 1.0f, std::max(0.5f, alpha));
+			} else if (current != tracks.begin() && iter == current - 1)
 				context.Color(0.6f, 0.6f, 0.6f, 0.4f * alpha);
 			else
 				context.Color(0.6f, 0.6f, 0.6f, alpha - (static_cast<float>(i - distance) / maxIndex));
@@ -236,8 +239,10 @@ private:
 
 	int windowWidth = 0, windowHeight = 0;
 	OpenGLFont *font = nullptr;
+	OpenGLFont *outlineFont = nullptr;
 	Context *context = nullptr;
 	std::vector<Text> titles;
+	Text outline;
 
 	Vector2i pos{ 0, 0 };
 	Vector2i size{ 0, 0 };
