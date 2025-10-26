@@ -167,6 +167,9 @@ private:
 			vbo->Unbind();
 		}
 
+		if (this->maxHeight != maxHeight)
+			this->maxHeight = maxHeight;
+
 		context.Use("color"_hash);
 		context.Translate(static_cast<GLfloat>(pos.x), static_cast<GLfloat>(pos.y), 0.0f);
 		context.Apply();
@@ -260,4 +263,6 @@ private:
 	float height = 0.0f;
 
 	bool currentSongVisible = Settings::settings.GetCurrentSongVisible();
+
+	float maxHeight = 0.0f;
 };

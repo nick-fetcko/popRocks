@@ -143,8 +143,10 @@ int main(int argc, char *argv[]) {
 						&& !io.WantCaptureMouse
 #endif
 						) {
-						app.OnMouseClicked(mousePos);
-						mouseButtonDown = false;
+						if (!mouseButtonDown)
+							app.OnMouseClicked(mousePos);
+						else
+							mouseButtonDown = false;
 					}
 					break;
 				case SDL_DROPFILE: {

@@ -405,7 +405,7 @@ void Playlist::OnLoop(Vector2i pos, float maxHeight, float alpha, Context &conte
 }
 
 std::optional<Playlist::Track> Playlist::OnMouseClicked(const Vector2i &mousePos) {
-	if (!titles.empty() && mousePos.y >= pos.y) {
+	if (!titles.empty() && mousePos.y >= pos.y && mousePos.y <= maxHeight) {
 		const auto offset = 
 			cue ?
 				std::distance(cue->GetTracks().begin(), cue->GetCurrentTrack()) :
