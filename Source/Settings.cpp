@@ -41,7 +41,9 @@ std::filesystem::path Settings::GetPath(const std::string &fileName) {
 		CoTaskMemFree(folder);
 	}
 #elif defined(__linux__)
-	ret = "~/.config";
+	ret = std::filesystem::path(getenv("HOME")) / ".config";
+	if (!std::filesystem::exists(ret))
+		std::filesystem::create_directory(ret);
 #endif
 
 	if (!ret.empty()) {

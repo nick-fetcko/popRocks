@@ -11,7 +11,7 @@
 // Embedded cover art seems largely undocumented, so I used
 // MusicBee to embed art into an APE file and based my
 // implementation off of what it did.
-class APE : public MetadataReader {
+class APE : public virtual MetadataReader {
 protected:
 	struct ApeTagEx {
 		uint64_t preamble;

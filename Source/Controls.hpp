@@ -8,7 +8,7 @@
 #include <bass.h>
 #include <glad/glad.h>
 
-#include <event.h>
+#include <Event.h>
 
 #include "MathCPP/Duration.hpp"
 

@@ -1,6 +1,8 @@
 #include "CApp.h"
 
+#ifdef WIN32
 #include <atlstr.h>
+#endif
 #include <filesystem>
 #include <map>
 #include <math.h>
@@ -19,7 +21,11 @@
 #include <bassape.h>
 #include <basswv.h>
 
+#ifdef WIN32
 #include <basswasapi.h>
+#else
+#include <bassalac.h>
+#endif
 
 #include <imgui.h>
 #include <backends/imgui_impl_sdl2.h>
@@ -42,6 +48,7 @@ using namespace MathsCPP;
 // =====================================================
 // ===================== Callbacks =====================
 // =====================================================
+#ifdef WIN32
 const std::map<DWORD, SDL_KeyCode> KeyMap = {
 	{ VK_VOLUME_DOWN, SDLK_VOLUMEDOWN },
 	{ VK_VOLUME_UP, SDLK_VOLUMEUP },
@@ -126,6 +133,7 @@ DWORD CALLBACK OutputWasapiProc(void *buffer, DWORD length, void *user) {
 
 	return c;
 }
+#endif
 
 // =====================================================
 // ======================= CApp ========================
@@ -182,8 +190,10 @@ void CApp::SetBufferLength(std::size_t bufferLength) {
 
 	renderer->SetBufferLength(bufferLength, changed);
 
+#ifdef WIN32
 	if (listening && changed)
 		Listen(audioSink->loopback);
+#endif
 }
 
 void CApp::SetFftLength(std::size_t length) {
@@ -276,6 +286,7 @@ int CApp::GetDeviceIndex(const std::string &device) {
 			}
 		}
 	} else {
+#ifdef WIN32
 		BASS_WASAPI_DEVICEINFO info;
 
 		for (; index != -1 && BASS_WASAPI_GetDeviceInfo(index, &info); ++index) {
@@ -284,6 +295,7 @@ int CApp::GetDeviceIndex(const std::string &device) {
 				break;
 			}
 		}
+#endif
 	}
 
 	// Reset to default device if we can't find
@@ -364,8 +376,8 @@ void CApp::UpdateBeatCounter() {
 	const auto elapsedBeats = beatDetect->GetNumberOfElapsedBeats();
 	beatCounter = elapsedBeats % *randomizePresetsBeats;
 
-	logger.LogDebug("Number of elapsed beats: ", elapsedBeats);
-	logger.LogDebug("\t% randomizePresetsBeats: ", beatCounter);
+	LogDebug("Number of elapsed beats: ", elapsedBeats);
+	LogDebug("\t% randomizePresetsBeats: ", beatCounter);
 }
 
 void CApp::LoadRenderer(const std::string &rendererName) {
@@ -395,15 +407,24 @@ void CApp::OnInit() {
 	// https://tgui.eu/tutorials/latest-stable/dpi-scaling/
 	SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
 
-	logger.LogDebug("SDL_Init() returned ", SDL_Init(SDL_INIT_EVERYTHING));
-	auto ret = IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG | IMG_INIT_WEBP);
+	auto ret = SDL_Init(
+		SDL_INIT_TIMER |
+		SDL_INIT_VIDEO |
+		SDL_INIT_EVENTS
+	);
+
+	LogDebug("SDL_Init() returned ", ret);
+	if (ret < 0)
+		LogDebug("SDL_GetError = ", SDL_GetError());
+
+	ret = IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG | IMG_INIT_WEBP);
 
 	std::stringstream stream;
 	stream << "IMG_Init loaded ";
 	if (ret & IMG_INIT_JPG) stream << "JPG ";
 	if (ret & IMG_INIT_PNG) stream << "PNG ";
 	if (ret & IMG_INIT_WEBP) stream << "WEBP";
-	logger.LogDebug(stream.str());
+	LogDebug(stream.str());
 
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
@@ -689,11 +710,13 @@ void CApp::OnInit() {
 					BASS_ChannelGetPosition(streamHandle, BASS_POS_BYTE)
 				) : 0.0;
 
+#ifdef WIN32
 				if (controls.GetExclusiveIndicator().IsExclusive() && Open(loadedFile, loadedFileExtension, true, streamHandle, true)) {
 					SeekTo(pos);
 					BASS_WASAPI_Start();
 					playing = true;
 				} else {
+#endif
 					// Free the old device
 					BASS_Free();
 
@@ -704,7 +727,9 @@ void CApp::OnInit() {
 
 					SeekTo(pos);
 					TogglePlaying();
+#ifdef WIN32
 				}
+#endif
 			}
 		});
 		menu.SetOnInputDeviceChanged([this](const std::string &inputDevice) {
@@ -924,10 +949,10 @@ void CApp::OnInit() {
 			LoadPreset(std::nullopt);
 		});
 #endif
-	} else logger.LogError("Could not create OpenGL context: ", SDL_GetError());
+	} else LogError("Could not create OpenGL context: ", SDL_GetError());
 
-	logger.LogDebug("gladLoadGL() returned ", gladLoadGL());
-	logger.LogDebug("OpenGL Version: ", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
+	LogDebug("gladLoadGL() returned ", gladLoadGL());
+	LogDebug("OpenGL Version: ", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
 
 	// Prefer adaptive sync over regular vsync
 	if (SDL_GL_SetSwapInterval(-1) == -1)
@@ -1014,15 +1039,25 @@ void CApp::OnInit() {
 	// This updates the scale variable for us
 	GetScale(sdlWindow, &windowWidth, &windowHeight);
 
+#ifdef WIN32
 	if (!BASS_PluginLoad("bassflac.dll", 0))
-		logger.LogError("Could not load FLAC plugin! Error code ", BASS_ErrorGetCode());
+		LogError("Could not load FLAC plugin! Error code ", BASS_ErrorGetCode());
 	if (!BASS_PluginLoad("bassape.dll", 0))
-		logger.LogError("Could not load APE plugin! Error code ", BASS_ErrorGetCode());
+		LogError("Could not load APE plugin! Error code ", BASS_ErrorGetCode());
 	if (!BASS_PluginLoad("basswv.dll", 0))
-		logger.LogError("Could not load WavPack plugin! Error code ", BASS_ErrorGetCode());
-
+		LogError("Could not load WavPack plugin! Error code ", BASS_ErrorGetCode());
+#else
+	if (!BASS_PluginLoad("./libbassflac.so", 0))
+		LogError("Could not load FLAC plugin! Error code ", BASS_ErrorGetCode());
+	if (!BASS_PluginLoad("./libbassape.so", 0))
+		LogError("Could not load APE plugin! Error code ", BASS_ErrorGetCode());
+	if (!BASS_PluginLoad("./libbasswv.so", 0))
+		LogError("Could not load WavPack plugin! Error code ", BASS_ErrorGetCode());
+	if (!BASS_PluginLoad("./libbassalac.so", 0))
+		LogError("Could not load ALAC plugin! Error code ", BASS_ErrorGetCode());
+#endif
 	if (BASS_Init(GetDeviceIndex<true>(Settings::settings.GetOutputDevice()), freq, 0, 0, nullptr) != TRUE)
-		logger.LogError("Could not initialize audio device!");
+		LogError("Could not initialize audio device!");
 
 	lightPack.OnInit();
 	albumArt.OnInit(windowWidth, windowHeight, scale);
@@ -1047,7 +1082,9 @@ void CApp::OnInit() {
  CApp::~CApp() {
 	 delete renderer;
 	 delete[] buffer;
+#ifdef WIN32
 	 delete audioSink;
+#endif
 
 	 if(in) fftwf_free(in);
 	 if(out) fftwf_free(out);
@@ -1056,18 +1093,21 @@ void CApp::OnInit() {
 
  inline void CApp::StopListening() {
 	 if (listening) {
+#ifdef WIN32
 		audioSink->done = true;
+#endif
 		if (listenThread.joinable())
 			listenThread.join();
 
 		fftwf_free(in);
 		fftwf_free(out);
 		fftwf_destroy_plan(plan);
-
+#ifdef WIN32
 		delete audioSink;
+#endif
 
 		listening = false;
-	 }
+	 } 
 }
 
 void CApp::Listen(bool loopback) {
@@ -1089,6 +1129,8 @@ void CApp::Listen(bool loopback) {
 	//BASS_ChannelSetAttribute(streamHandle, BASS_ATTRIB_MUSIC_VOL_GLOBAL, 0);
 	//BASS_ChannelSetAttribute(streamHandle, BASS_ATTRIB_VOL, 0);
 	//BASS_ChannelPlay(streamHandle, false);
+
+#ifdef WIN32
 	audioSink = new MyAudioSink(maxLength * 4 /* we're assuming stereo, for now */);
 	audioSink->loopback = loopback;
 
@@ -1112,6 +1154,7 @@ void CApp::Listen(bool loopback) {
 	//BASS_WASAPI_Start();
 
 	listenThread = std::thread(RecordAudioStream, audioSink);
+#endif
 
 	listening = true;
 }
@@ -1253,6 +1296,7 @@ void CApp::OnLoop(const Delta &time) {
 
 	if(fileLoaded) {
 		if (renderer->IsFloatingPoint()) {
+#ifdef WIN32
 			if (controls.GetExclusiveIndicator().IsExclusive()) {
 				BASS_WASAPI_GetData(buffer, fftFlag);
 
@@ -1261,8 +1305,11 @@ void CApp::OnLoop(const Delta &time) {
 				for (auto i = 0; i < bufferLength; ++i)
 					floatBuffer[i] *= inverseVolume;
 
-			} else BASS_ChannelGetData(streamHandle, buffer, fftFlag);
+			} else 
+#endif
+				BASS_ChannelGetData(streamHandle, buffer, fftFlag);
 		} else {
+#ifdef WIN32
 			if (controls.GetExclusiveIndicator().IsExclusive()) {
 				BASS_WASAPI_GetData(buffer, static_cast<DWORD>(bufferLength * sizeof(float) * channelInfo.chans));
 
@@ -1271,9 +1318,12 @@ void CApp::OnLoop(const Delta &time) {
 				for (auto i = 0; i < bufferLength * channelInfo.chans; ++i)
 					shortBuffer[i] = static_cast<short>(floatBuffer[i] * inverseVolume * std::numeric_limits<short>::max());
 			}
-			else BASS_ChannelGetData(streamHandle, buffer, static_cast<DWORD>(bufferLength * sizeof(short) * channelInfo.chans));
+			else 
+#endif
+				BASS_ChannelGetData(streamHandle, buffer, static_cast<DWORD>(bufferLength * sizeof(short) * channelInfo.chans));
 		}
 	} else {
+#ifdef WIN32
 		std::unique_lock lock(audioSink->mutex);
 		if (audioSink->dataChanged) {
 			if (renderer->IsFloatingPoint()) {
@@ -1327,6 +1377,7 @@ void CApp::OnLoop(const Delta &time) {
 
 			audioSink->dataChanged = false;
 		}
+#endif
 	}
 
 	//rect.x = 0;
@@ -1523,7 +1574,7 @@ void CApp::OnLoop(const Delta &time) {
 
 			Open(next->path, extension, true, nextStreamHandle);
 
-			logger.LogDebug("Loaded next track: ", next->path);
+			LogDebug("Loaded next track: ", next->path);
 		}
 	}
 
@@ -1535,7 +1586,7 @@ void CApp::OnLoop(const Delta &time) {
 	} else if (auto &cue = controls.GetPlaylist().GetCue();
 		(!controls.GetExclusiveIndicator().IsExclusive() || cue) && elapsed >= controls.GetCurrentSongLength()) {
 		if (auto next = controls.GetPlaylist().Next()) {
-			logger.LogDebug("Reached the end of the current song and loading the next");
+			LogDebug("Reached the end of the current song and loading the next");
 
 			LoadFile(next->path, true);
 			SeekTo(next->startTime);
@@ -1651,22 +1702,26 @@ void CApp::SyncToNearestBeat() {
 	if (beatCounter == -1)
 		resyncBeats = true;
 
-	logger.LogDebug("Setting beatCounter to ", beatCounter);
+	LogDebug("Setting beatCounter to ", beatCounter);
 }
 
 void CApp::OnDestroy() {
 	shuttingDown = true;
 
+#ifdef WIN32
 	if (keyboardHook) {
 		UnhookWindowsHookEx(keyboardHook);
 		keyboardHook = nullptr;
 	}
+#endif
 
 	for (auto &detector : beatDetectors)
 		detector.Cancel();
 
 	if (listening) {
+#ifdef WIN32
 		audioSink->done = true;
+#endif
 		if (listenThread.joinable())
 			listenThread.join();
 		listening = false;
@@ -1697,7 +1752,9 @@ void CApp::OnDestroy() {
 	ImGui::DestroyContext();
 #endif
 
+#ifdef WIN32
 	BASS_WASAPI_Free();
+#endif
 	BASS_Free();
 	IMG_Quit();
 
@@ -1705,17 +1762,80 @@ void CApp::OnDestroy() {
 }
 
 HSTREAM CApp::OpenWithFlags(const std::filesystem::path &path, const std::string &extension, DWORD flags) {
-	auto ret = BASS_StreamCreateFile(FALSE, path.wstring().c_str(), 0, 0, flags);
+	auto ret = BASS_StreamCreateFile(
+		FALSE,
+#ifdef WIN32
+		path.wstring().c_str(),
+#else
+		path.u8string().c_str(),
+#endif
+		0,
+		0,
+		flags
+	);
 	if (!ret) {
 		// In case our plugins didn't properly load
-		if (extension == ".flac")
-			ret = BASS_FLAC_StreamCreateFile(FALSE, path.wstring().c_str(), 0, 0, flags);
-		else if (extension == ".ape")
-			ret = BASS_APE_StreamCreateFile(FALSE, path.wstring().c_str(), 0, 0, flags);
-		else if (extension == ".wv")
-			ret = BASS_WV_StreamCreateFile(FALSE, path.wstring().c_str(), 0, 0, flags);
-		else
-			ret = BASS_StreamCreateFile(FALSE, path.wstring().c_str(), 0, 0, flags);
+		if (extension == ".flac") {
+			ret = BASS_FLAC_StreamCreateFile(
+				FALSE,
+#ifdef WIN32
+				path.wstring().c_str(),
+#else
+				path.u8string().c_str(),
+#endif
+				0,
+				0,
+				flags
+			);
+		} else if (extension == ".ape") {
+			ret = BASS_APE_StreamCreateFile(
+				FALSE,
+#ifdef WIN32
+				path.wstring().c_str(),
+#else
+				path.u8string().c_str(),
+#endif
+				0,
+				0,
+				flags
+			);
+		} else if (extension == ".wv") {
+			ret = BASS_WV_StreamCreateFile(
+				FALSE,
+#ifdef WIN32
+				path.wstring().c_str(),
+#else
+				path.u8string().c_str(),
+#endif
+				0,
+				0,
+				flags
+			);
+		}
+#ifndef WIN32
+		else if (extension == ".m4a" || extension == ".mp4") {
+			ret = BASS_ALAC_StreamCreateFile(
+				FALSE,
+				path.u8string().c_str(),
+				0,
+				0,
+				flags
+			);
+		}
+#endif
+		else {
+			ret = BASS_StreamCreateFile(
+				FALSE,
+#ifdef WIN32
+				path.wstring().c_str(),
+#else
+				path.u8string().c_str(),
+#endif
+				0,
+				0,
+				flags
+			);
+		}
 	}
 
 	return ret;
@@ -1723,6 +1843,7 @@ HSTREAM CApp::OpenWithFlags(const std::filesystem::path &path, const std::string
 
 bool CApp::Open(const std::filesystem::path &path, const std::string &extension, bool exclusive, HSTREAM &target, bool force) {
 	if (exclusive) {
+#ifdef WIN32
 		if (wasapiInfo.freq != channelInfo.freq || force) {
 			if (wasapiInfo.freq != 0) StopExclusive(TRUE);
 
@@ -1752,26 +1873,32 @@ bool CApp::Open(const std::filesystem::path &path, const std::string &extension,
 				BASS_WASAPI_GetInfo(&wasapiInfo);
 				if (wasapiInfo.freq == channelInfo.freq) {
 					keyboardHook = SetWindowsHookExA(WH_KEYBOARD_LL, LowLevelKeyboardProc, NULL, 0);
-					logger.LogDebug("Channel and device frequencies (", wasapiInfo.freq, ") match!");
+					LogDebug("Channel and device frequencies (", wasapiInfo.freq, ") match!");
 
 					return exclusive;
 				} else {
-					logger.LogError("Could not initialize exclusive mode! Error code ", BASS_ErrorGetCode());
+					LogError("Could not initialize exclusive mode! Error code ", BASS_ErrorGetCode());
 					exclusive = false;
 				}
 			} else {
-				logger.LogError("Could not initialize exclusive mode! Error code ", BASS_ErrorGetCode());
+				LogError("Could not initialize exclusive mode! Error code ", BASS_ErrorGetCode());
 				exclusive = false;
 			}
-		} else {
+		} 
+		else {
 			target = OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
 			return exclusive;
 		}
+#else
+		exclusive = false;
+#endif
 	}
 
 	if (!exclusive) {
+#ifdef WIN32
 		if (BASS_WASAPI_GetDevice() != -1)
 			BASS_WASAPI_Free();
+#endif
 
 		controls.GetExclusiveIndicator().SetExclusive(false);
 		BASS_StreamFree(streamHandle);
@@ -1798,33 +1925,40 @@ void CApp::StopExclusive() {
 }
 
 void CApp::StopExclusive(BOOL reset) {
+#ifdef WIN32
 	BASS_WASAPI_Stop(reset);
 
 	if (keyboardHook) {
 		UnhookWindowsHookEx(keyboardHook);
 		keyboardHook = nullptr;
 	}
+#endif
 
 	if (reset == TRUE) {
+#ifdef WIN32
 		if (BASS_WASAPI_GetDevice() != -1)
 			BASS_WASAPI_Free();
-
+#endif
 		BASS_StreamFree(streamHandle);
+#ifdef WIN32
 		wasapiInfo = { 0 };
+#endif
 	}
 
 	playing = false;
 }
 
 void CApp::Unmute() {
+#ifdef WIN32
 	// Unmute system volume if it's muted
 	if (BASS_WASAPI_GetMute(1) == TRUE) {
 		if (BASS_WASAPI_SetMute(1, FALSE) == FALSE)
-			logger.LogWarning("Could not unmute system volume!");
+			LogWarning("Could not unmute system volume!");
 	}
+#endif
 }
 
-void CApp::LoadBeats(
+inline void CApp::LoadBeats(
 	HSTREAM streamHandle,
 	std::filesystem::path path, // not a reference because we pass this to the callback lambda
 	bool pingPong
@@ -1842,7 +1976,7 @@ void CApp::LoadBeats(
 	if (pingPong && nextDetector->GetState() > BeatDetect::State::Idle) {
 		auto temp = nextDetector;
 
-		logger.LogDebug("Ping-ponging beat detectors");
+		LogDebug("Ping-ponging beat detectors");
 		nextDetector = beatDetect;
 		beatDetect = temp;
 	} else {
@@ -1855,7 +1989,7 @@ void CApp::LoadBeats(
 			channelInfo.freq,
 			channelInfo.chans,
 			[this, fileName] {
-				logger.LogDebug(
+				LogDebug(
 					"Beat detection finished for the current song in the playlist (",
 					fileName,
 					")!"
@@ -1864,12 +1998,12 @@ void CApp::LoadBeats(
 				// Set beat counter to how many beats we _skipped_
 				beatCounter = beatDetect->SeekTo(controls.GetCurrentPosition());
 
-				logger.LogDebug("\tSkipped first ", beatCounter, " beats");
+				LogDebug("\tSkipped first ", beatCounter, " beats");
 
 				if (randomizePresetsBeats)
 					beatCounter %= *randomizePresetsBeats;
 
-				logger.LogDebug("\tStarting beat counter at ", beatCounter);
+				LogDebug("\tStarting beat counter at ", beatCounter);
 			},
 			cue ? cue->GetCurrentTrack()->startTime : static_cast<std::optional<double>>(std::nullopt),
 			cue ? controls.GetCurrentSongLength() : static_cast<std::optional<double>>(std::nullopt)
@@ -1890,7 +2024,7 @@ void CApp::LoadBeats(
 			nextChannelInfo.chans,
 			[this, next, nextDetector] {
 				if (nextDetector->IsDetecting()) {
-					logger.LogDebug(
+					LogDebug(
 						"Beat detection finished for the next song in the playlist (",
 						next->title.empty() ? next->path.stem().u8string() : next->title,
 						")!"
@@ -1904,7 +2038,7 @@ void CApp::LoadBeats(
 }
 
 void CApp::ResetBeatDetection() {
-	logger.LogDebug("Resetting beat detectors");
+	LogDebug("Resetting beat detectors");
 	for (auto &detector : beatDetectors) {
 		detector.Reset();
 	}
@@ -1982,7 +2116,7 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 			) {
 				path = ret->path;
 			} else {
-				logger.LogError("Could not load playlist ", path);
+				LogError("Could not load playlist ", path);
 				return;
 			}
 
@@ -2055,14 +2189,14 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 			// tracks are changed by the user
 			if (nextStreamHandle) {
 				BASS_StreamFree(nextStreamHandle);
-				nextStreamHandle = NULL;
+				nextStreamHandle = 0;
 			}
 
 			Open(path, extension, controls.GetExclusiveIndicator().IsExclusive(), this->streamHandle, !fromPlaylist);
 		} else if (advanceOnNextLoop) {
 			BASS_StreamFree(this->streamHandle);
 			this->streamHandle = nextStreamHandle;
-			nextStreamHandle = NULL;
+			nextStreamHandle = 0;
 		}
 
 		metadata.OnLoad(
@@ -2076,7 +2210,14 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 		// Always look for external art,
 		// in case it's higher resolution
 		// than the embedded
-		albumArt.Load(path.wstring(), originalPath);
+		albumArt.Load(
+#ifdef WIN32
+			path.wstring(),
+#else
+			path.u8string(),
+#endif
+			originalPath
+		);
 
 		// Once we have our final art,
 		// scale it down
@@ -2087,6 +2228,7 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 		// else
 		controls.LoadFromCue();
 
+#ifdef WIN32
 		if (controls.GetExclusiveIndicator().IsExclusive()) {
 			// Only unmute if this is the first / only song
 			if (!fromPlaylist)
@@ -2099,8 +2241,11 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 			if (!fileLoaded || !advanceOnNextLoop)
 				BASS_WASAPI_Start();
 		} else {
+#endif
 			BASS_ChannelPlay(this->streamHandle, false);
+#ifdef WIN32
 		}
+#endif
 
 		playing = true;
 
@@ -2158,7 +2303,7 @@ void CApp::SetBlur(bool blur) {
 
 	this->blur = blur;
 
-	logger.LogDebug("Turning blur ", blur ? "on" : "off");
+	LogDebug("Turning blur ", blur ? "on" : "off");
 	Settings::settings.SetBlur(blur);
 	if (blur) {
 		maxDimension = std::sqrt(std::pow(windowWidth, 2) + std::pow(windowHeight, 2));
@@ -2219,7 +2364,7 @@ void CApp::Seek(double seconds) {
 	auto pos = BASS_ChannelGetPosition(streamHandle, BASS_POS_BYTE);
 	auto absolute = BASS_ChannelBytes2Seconds(streamHandle, pos + bytes);
 
-	logger.LogDebug(
+	LogDebug(
 		"Seeking by ",
 		seconds,
 		" seconds (",
@@ -2229,7 +2374,7 @@ void CApp::Seek(double seconds) {
 
 	if (BASS_ChannelSetPosition(streamHandle, pos + bytes, BASS_POS_BYTE) == FALSE) {
 		auto code = BASS_ErrorGetCode();
-		logger.LogError("Seek failed! Error code ", code);
+		LogError("Seek failed! Error code ", code);
 	} else {
 		// Refresh our times
 		controls.SetElapsedSeconds(-1);
@@ -2250,7 +2395,7 @@ void CApp::SeekTo(double seconds) {
 			BASS_POS_BYTE
 	) == FALSE) {
 		auto code = BASS_ErrorGetCode();
-		logger.LogError("Seek failed! Error code ", code);
+		LogError("Seek failed! Error code ", code);
 	} else {
 		// Refresh our times
 		controls.SetElapsedSeconds(-1);
@@ -2275,6 +2420,7 @@ void CApp::TogglePlaying() {
 			pos == -1 || BASS_ChannelBytes2Seconds(streamHandle, pos) >= controls.GetCurrentFileLength())
 			SeekTo(0.0);
 
+#ifdef WIN32
 		if (controls.GetExclusiveIndicator().IsExclusive()) {
 			if (BASS_WASAPI_IsStarted()) {
 				BASS_WASAPI_Stop(FALSE);
@@ -2284,6 +2430,7 @@ void CApp::TogglePlaying() {
 				playing = true;
 			}
 		} else {
+#endif
 			if (BASS_ChannelIsActive(streamHandle) != BASS_ACTIVE_PLAYING) {
 				BASS_ChannelPlay(streamHandle, FALSE);
 				playing = true;
@@ -2291,7 +2438,9 @@ void CApp::TogglePlaying() {
 				BASS_ChannelPause(streamHandle);
 				playing = false;
 			}
+#ifdef WIN32
 		}
+#endif
 	}
 }
 
@@ -2376,17 +2525,21 @@ inline void CApp::ToggleExclusive() {
 		BASS_POS_BYTE
 	);
 
+#ifdef WIN32
 	if (controls.GetExclusiveIndicator().IsExclusive()) {
 		Unmute();
 		BASS_WASAPI_Start();
 
 		playing = true;
 	} else {
+#endif
 		BASS_Start();
 		BASS_ChannelPlay(streamHandle, false);
 
 		playing = true;
+#ifdef WIN32
 	}
+#endif
 }
 
 void CApp::OnMouseClicked(const Vector2i &mousePos) {
@@ -2431,7 +2584,7 @@ void CApp::LoadPreset(std::optional<std::size_t> index) {
 }
 
 void CApp::LoadPreset(const Preset &preset) {
-	logger.LogDebug("Loading preset '", preset.GetName(), "'");
+	LogDebug("Loading preset '", preset.GetName(), "'");
 
 	if (preset.GetName() == "Random") {
 		presetIndex = std::nullopt;
@@ -2525,7 +2678,7 @@ void CApp::SaveBlurFBO() {
 
 void CApp::OnColorChanged(const MathsCPP::Colour<float> &color, bool silent) {
 	if (!silent)
-		logger.LogDebug("Color changed!");
+		LogDebug("Color changed!");
 
 	auto hsv = color.ToHsv();
 	hsv.v = 1.0f;

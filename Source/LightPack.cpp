@@ -93,7 +93,7 @@ void LightPack::OnInit() {
 		while (running) {
 			{
 				if (queue.size() > 16)
-					logger.LogWarning("LightPack is running over a second late!");
+					LogWarning("LightPack is running over a second late!");
 
 				if (queue.size()) {
 					if (auto &front = queue.front())
@@ -134,14 +134,14 @@ bool LightPack::CanConnect() {
 
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData)) {
-		logger.LogError("Could not initialize WSA!");
+		LogError("Could not initialize WSA!");
 		return false;
 	}
 
 	PADDRINFOA addr;
 
 	if (getaddrinfo("localhost", "3636", NULL, &addr)) {
-		logger.LogError("Could not get address info!");
+		LogError("Could not get address info!");
 		return false;
 	}
 
@@ -202,21 +202,21 @@ void LightPack::_OnInit() {
 				// Get previous settings first
 				auto gammaString = WriteString("getgamma\r\n");
 				gammaString->erase(gammaString->size() - 2); // Trim the lazy way
-				logger.LogDebug(*gammaString);
+				LogDebug(*gammaString);
 				previousGamma = std::stof(
 					gammaString->substr(gammaString->find(':') + 1)
 				);
 
 				auto smoothString = WriteString("getsmooth\r\n");
 				smoothString->erase(smoothString->size() - 2); // Trim the lazy way
-				logger.LogDebug(*smoothString);
+				LogDebug(*smoothString);
 				previousSmooth = std::stoi(
 					smoothString->substr(smoothString->find(':') + 1)
 				);
 
 				auto countLeds = WriteString("getcountleds\r\n");
 				countLeds->erase(countLeds->size() - 2); // Trim the lazy way
-				logger.LogDebug(*countLeds);
+				LogDebug(*countLeds);
 				numberOfLights = std::stoi(
 					countLeds->substr(countLeds->find(':') + 1)
 				);
@@ -229,19 +229,19 @@ void LightPack::_OnInit() {
 
 				// Set user-defined settings
 				auto ret = WriteString("setbrightness:100\r\n");
-				logger.LogDebug("setbrightness:100 = ", ret->substr(0, ret->size() - 2));
+				LogDebug("setbrightness:100 = ", ret->substr(0, ret->size() - 2));
 
 				std::stringstream gamma;
 				gamma << "setgamma:" << std::fixed << std::setprecision(2) << std::setfill('0') << Settings::settings.GetGamma();
 				ret = WriteString(gamma.str() + "\r\n");
-				logger.LogDebug(gamma.str() + " = ", ret->substr(0, ret->size() - 2));
+				LogDebug(gamma.str() + " = ", ret->substr(0, ret->size() - 2));
 
 				auto smooth = "setsmooth:" + std::to_string(static_cast<int>(Settings::settings.GetSmooth()));
 				ret = WriteString(smooth + "\r\n");
-				logger.LogDebug(smooth + " = ", ret->substr(0, ret->size() - 2));
+				LogDebug(smooth + " = ", ret->substr(0, ret->size() - 2));
 			} else {
 				if (firstTry) {
-					logger.LogWarning(
+					LogWarning(
 						"Could not open a socket to LightPack host. Retrying until we can..."
 					);
 
@@ -251,14 +251,14 @@ void LightPack::_OnInit() {
 					RetryConnection();
 			}
 		} else {
-			logger.LogWarning(
+			LogWarning(
 				"Could not connect to LightPack host. Error: ", SDLNet_GetError(), ". Retrying in 5 seconds..."
 			);
 			if (running)
 				RetryConnection();
 		}
 	} else {
-		logger.LogError(
+		LogError(
 			"Could not initialize SDL_Net! Error: ", SDLNet_GetError()
 		);
 	}
@@ -531,7 +531,7 @@ void LightPack::SetGamma(float gamma, bool silent) {
 
 		std::stringstream stream;
 		stream << "setgamma:" << std::fixed << std::setprecision(2) << std::setfill('0') << gamma;
-		if (!silent) logger.LogDebug(stream.str());
+		if (!silent) LogDebug(stream.str());
 		stream << "\r\n";
 		lp->WriteString(stream.str());
 	});

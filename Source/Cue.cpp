@@ -24,12 +24,12 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 	} else {
 		inFile.close();
 
-		std::wifstream wInFile(path, std::ios::in | std::ios::binary);
+		std::basic_ifstream<char16_t> wInFile(path, std::ios::in | std::ios::binary);
 
 		wInFile.imbue(
 			std::locale(
 				wInFile.getloc(),
-				new std::codecvt_utf16<wchar_t, 0x10ffff, std::consume_header>
+				new std::codecvt_utf16<char16_t, 0x10ffff, std::consume_header>
 			)
 		);
 
@@ -45,23 +45,50 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 		if (line[0] == "FILE") {
 			// tracks + .cue not supported
 			if (!filePath.empty()) {
-				logger.LogWarning("tracks + .cue not supported! Ignoring .cue file");
+				LogWarning("tracks + .cue not supported! Ignoring .cue file");
 				return std::nullopt;
 			}
 
 			std::filesystem::path originalFilePath;
 			try {
-				originalFilePath = filePath = path.parent_path() / Utils::ToUTF16(line[1]);
+				originalFilePath = filePath = 
+					path.parent_path() / 
+#ifdef WIN32
+						Utils::ToUTF16(
+#endif
+							line[1]
+#ifdef WIN32
+						)
+#endif
+					;
 			}
 			catch (const std::exception &e) {
 				// As these are single lines, lower threshold to a single match
 				auto encoding = Utils::GuessEncoding(line[1], 1);
 
-				if (encoding == Utils::Encoding::Windows1252)
-					originalFilePath = filePath = path.parent_path() / Windows1252::ToUtf16(line[1]);
-				else if (encoding == Utils::Encoding::ShiftJis)
-					originalFilePath = filePath = path.parent_path() / Utils::ToUTF16(ShiftJIS::ToUtf8(line[1]));
-				else if (encoding == Utils::Encoding::Ascii) // Should be treated as UTF-8, but just in case
+				if (encoding == Utils::Encoding::Windows1252) {
+					originalFilePath = filePath = 
+						path.parent_path() / 
+#ifndef WIN32
+							Utils::ToUTF8(
+#endif
+								Windows1252::ToUtf16(line[1])
+#ifndef WIN32
+							)
+#endif
+						;
+				} else if (encoding == Utils::Encoding::ShiftJis) {
+					originalFilePath = filePath = 
+						path.parent_path() / 
+#ifdef WIN32
+							Utils::ToUTF16(
+#endif
+								ShiftJIS::ToUtf8(line[1])
+#ifdef WIN32
+							)
+#endif
+						;
+				} else if (encoding == Utils::Encoding::Ascii) // Should be treated as UTF-8, but just in case
 					originalFilePath = filePath = path.parent_path() / line[1];
 			}
 			track.filePath = filePath;
@@ -80,7 +107,7 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 			//          but the original, unsplit cue still
 			//          exists in the folder.
 			if (!std::filesystem::exists(filePath)) {
-				logger.LogWarning("Could not find audio file ", originalFilePath, " referenced in .cue file! Ignoring...");
+				LogWarning("Could not find audio file ", originalFilePath, " referenced in .cue file! Ignoring...");
 				return std::nullopt;
 			}
 
@@ -113,7 +140,7 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 					track.startTime = std::stoi(*split.rbegin()) / 75.0;
 
 					for (auto iter = split.rbegin() + 1; iter != split.rend(); ++iter)
-						track.startTime += (std::stoi(*iter) * std::max(1LL, (60 * (iter - split.rbegin() - 1))));
+						track.startTime += (std::stoi(*iter) * std::max(1LL, (60LL * (iter - split.rbegin() - 1LL))));
 				}
 			} else if (line[0] == "TRACK") {
 				inTrackSection = true;

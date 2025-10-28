@@ -74,13 +74,26 @@ public:
 			if (ImGui::MenuItem("Open File", "Ctrl-O", false, true)) {
 				nfdnchar_t *outPath;
 
+#ifdef WIN32
 				std::wstring extensions;
+#else
+				std::string extensions;
+#endif
 				for (const auto &[i, extension] : Utils::Enumerate(Playlist::GetSupportedExtensions())) {
 					const auto noDot = extension.substr(1);
-					extensions += std::wstring(noDot.begin(), noDot.end()) + (i == Playlist::GetSupportedExtensions().size() - 1 ? L"" : L",");
+					extensions += 
+#ifdef WIN32
+						std::wstring(noDot.begin(), noDot.end()) + (i == Playlist::GetSupportedExtensions().size() - 1 ? L"" : L",");
+#else
+						std::string(noDot.begin(), noDot.end()) + (i == Playlist::GetSupportedExtensions().size() - 1 ? "" : ",");
+#endif
 				}
 
+#ifdef WIN32
 				nfdnfilteritem_t filters[2] = { { L"Music", extensions.c_str() }, { L"Cue", L"cue" }};
+#else
+				nfdnfilteritem_t filters[2] = { { "Music", extensions.c_str() }, { "Cue", "cue" }};
+#endif
 				nfdopendialognargs_t args = { 0 };
 				args.filterList = filters;
 				args.filterCount = 2;
@@ -798,6 +811,7 @@ public:
 			open = true;
 
 			if (ImGui::BeginMenu("Input device")) {
+#ifdef WIN32
 				BASS_WASAPI_DEVICEINFO info;
 				const auto &inputDevice = Settings::settings.GetInputDevice();
 				for (int i = 0; BASS_WASAPI_GetDeviceInfo(i, &info); ++i) {
@@ -813,7 +827,7 @@ public:
 						}
 					}
 				}
-
+#endif
 				ImGui::EndMenu();
 			}
 
@@ -889,12 +903,12 @@ public:
 			}
 
 			if (ImGui::BeginMenu("LightPack Mapping", lightPack.IsActive())) {
-				default = Settings::settings.GetLightPackMapping() == "default";
+				defaultMapping = Settings::settings.GetLightPackMapping() == "default";
 				mine = Settings::settings.GetLightPackMapping() == "mine";
 				topToBottom = Settings::settings.GetLightPackMapping() == "ttb";
 				bottomToTop = Settings::settings.GetLightPackMapping() == "btt";
 
-				if (ImGui::MenuItem("Default", nullptr, &default)) {
+				if (ImGui::MenuItem("Default", nullptr, &defaultMapping)) {
 					if (onLightPackMappingChanged)
 						onLightPackMappingChanged("default");
 				} else if (ImGui::MenuItem("Mine", nullptr, &mine)) {
@@ -1081,7 +1095,7 @@ private:
 	bool color = Settings::settings.GetLightPackVisualizationType() == "color";
 	bool colorAndIntensity = Settings::settings.GetLightPackVisualizationType() == "colorintensity";
 
-	bool default = Settings::settings.GetLightPackMapping() == "default";
+	bool defaultMapping = Settings::settings.GetLightPackMapping() == "default";
 	bool mine = Settings::settings.GetLightPackMapping() == "mine";
 	bool topToBottom = Settings::settings.GetLightPackMapping() == "ttb";
 	bool bottomToTop = Settings::settings.GetLightPackMapping() == "btt";

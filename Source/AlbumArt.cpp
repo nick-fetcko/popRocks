@@ -62,7 +62,7 @@ void AlbumArt::OnResize(int windowWidth, int windowHeight, float scale) {
 		this->scale = scale;
 		radius *= scale;
 
-		logger.LogDebug("Scale changed! New radius is ", radius);
+		LogDebug("Scale changed! New radius is ", radius);
 
 		UpdateVertexCoords();
 
@@ -475,7 +475,7 @@ void AlbumArt::ProcessColors(Histogram *destination, SDL_Surface *surface, const
 			if (this->histogram.empty()) {
 				this->histogram.emplace(*iter);
 			} else if (std::abs(this->histogram.begin()->h - iter->h) > 25.0) {
-				logger.LogDebug(
+				LogDebug(
 					"Placing in histogram because hue is ",
 					iter->h,
 					" vs last bin's hue of ",
@@ -653,7 +653,7 @@ bool AlbumArt::Load(const std::filesystem::path &fileName, const std::filesystem
 		auto contents = Fetcko::Utils::GetStringFromFile(found);
 		auto hash = hash_32_fnv1a_const(contents.c_str(), contents.size());
 		if (hash == lastHash) {
-			logger.LogDebug("External art has already been loaded for this album");
+			LogDebug("External art has already been loaded for this album");
 			albumLoaded = true;
 			albumWidth = lastWidth;
 			albumHeight = lastHeight;
@@ -668,19 +668,19 @@ bool AlbumArt::Load(const std::filesystem::path &fileName, const std::filesystem
 		auto surface = IMG_Load(utf8.c_str());
 
 		if (!surface) {
-			logger.LogError("Could not load external album art from file " + utf8);
+			LogError("Could not load external album art from file " + utf8);
 			return false;
 		} else if (!force && surface->w < albumWidth && surface->h < albumHeight) {
-			logger.LogWarning("External album art is smaller than what's already loaded");
+			LogWarning("External album art is smaller than what's already loaded");
 			SDL_FreeSurface(surface);
 			return false;
 		} else if (albumWidth != 0 && albumHeight != 0) {
-			logger.LogDebug("External album art is larger than embedded. Using it instead.");
+			LogDebug("External album art is larger than embedded. Using it instead.");
 		}
 
 		LoadFromSurface(surface);
 	} else {
-		logger.LogWarning("Could not load external album art for " + fileName.u8string());
+		LogWarning("Could not load external album art for " + fileName.u8string());
 		return false;
 	}
 
@@ -690,7 +690,7 @@ bool AlbumArt::Load(const std::filesystem::path &fileName, const std::filesystem
 bool AlbumArt::Load(const std::string &mimeType, const void *data, std::size_t length) {
 	auto hash = hash_32_fnv1a_const(reinterpret_cast<const char *>(data), length);
 	if (hash == lastEmbeddedHash) {
-		logger.LogDebug("Embedded art has already been loaded for this album");
+		LogDebug("Embedded art has already been loaded for this album");
 		albumLoaded = true;
 		albumWidth = lastWidth;
 		albumHeight = lastHeight;
@@ -709,10 +709,10 @@ bool AlbumArt::Load(const std::string &mimeType, const void *data, std::size_t l
 
 	auto surface = IMG_LoadTyped_RW(file, 1, type.c_str());
 	if (!surface) {
-		logger.LogError("Could not load embedded album art!");
+		LogError("Could not load embedded album art!");
 		return false;
 	} else if (surface->w < albumWidth && surface->h < albumHeight) {
-		logger.LogWarning("Embedded album art is smaller than what's already loaded");
+		LogWarning("Embedded album art is smaller than what's already loaded");
 		SDL_FreeSurface(surface);
 		return false;
 	}
@@ -745,7 +745,7 @@ void AlbumArt::NextBin(bool silent) {
 			bool found = true;
 			for (const auto &bin : previousBins) {
 				if (std::abs(binIter->second.h - bin->second.h) < 20.0f) {
-					logger.LogDebug("Skipping bin at hue ", bin->second.h);
+					LogDebug("Skipping bin at hue ", bin->second.h);
 					found = false;
 					break;
 				}
@@ -821,7 +821,7 @@ void AlbumArt::UpdateBin(bool silent) {
 }
 
 void AlbumArt::PrintBin() {
-	logger.LogDebug("Setting bin to hue ", binIter->h, ", saturation ", binIter->s, ", value ", binIter->v, " with count of ", binIter->count);
+	LogDebug("Setting bin to hue ", binIter->h, ", saturation ", binIter->s, ", value ", binIter->v, " with count of ", binIter->count);
 }
 
 void AlbumArt::AddColorChangeListener(ColorChangeListener *listener) { 
@@ -898,7 +898,7 @@ void AlbumArt::Scale(bool force) {
 		if (scaling) {
 			surfaceToLoad = resized;
 
-			logger.LogDebug("Image resizing took " + std::to_string(Duration<Microseconds>(end - start).AsSeconds()) + " seconds");
+			LogDebug("Image resizing took " + std::to_string(Duration<Microseconds>(end - start).AsSeconds()) + " seconds");
 		}
 	});
 }

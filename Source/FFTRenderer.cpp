@@ -262,5 +262,5 @@ void FFTRenderer::PrintMax() const {
 	}
 
 	stream << "max = " << max;
-	logger.LogDebug(stream.str());
+	LogDebug(stream.str());
 }

@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include "Utils/Logger.hpp"
+
 // BASS_TAG_MP4 does not get iTunes-style metadata
 // Embedded album art (the "moov.udta.meta.ilst.covr" atom)
 // needs to be fetched manually
@@ -65,9 +67,9 @@ public:
 
 private:
 	static inline const std::map<std::string, std::string> RelevantAtoms = {
-		{ "©art", "artist" },
-		{ "©alb", "album" },
-		{ "©nam", "title"},
+		{ "\251art", "artist" },
+		{ "\251alb", "album" },
+		{ "\251nam", "title"},
 		{ "disk", "discnumber" },
 		{ "trkn", "tracknumber" },
 		{ "covr", "art"}

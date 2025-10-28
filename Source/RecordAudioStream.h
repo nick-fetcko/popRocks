@@ -1,3 +1,4 @@
+#ifdef WIN32
 #pragma once
 
 #include <windows.h>
@@ -224,3 +225,4 @@ Exit:
 
     return hr;
 }
+#endif

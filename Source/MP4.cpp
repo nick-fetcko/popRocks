@@ -1,5 +1,7 @@
 #include "MP4.hpp"
 
+#include <cstring>
+
 #include "ID3V2.hpp"
 
 MP4::Atom::Atom(std::ifstream *file) : file(file) {
@@ -104,8 +106,9 @@ bool MP4::Atom::IsValid() const {
 	};
 
 	if (std::find_if(
-		// iTunes tags can begin with '©'
-		*name.begin() == '©' ? name.begin() + 1 : name.begin(),
+		// iTunes tags can begin with 'ï¿½' (copyright sign)
+		// which is 0xA9 in Windows-1252
+		*name.begin() == static_cast<char>(0xA9) ? name.begin() + 1 : name.begin(),
 		name.end(),
 		isValid
 	) != name.end())

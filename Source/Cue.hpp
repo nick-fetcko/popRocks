@@ -36,6 +36,9 @@ private:
 		}
 	};
 
+	std::vector<Track> tracks;
+	std::vector<Track>::const_iterator currentTrack = tracks.end();
+
 public:
 	std::optional<std::filesystem::path> OnLoad(const std::filesystem::path &path, bool append = false);
 
@@ -104,7 +107,7 @@ private:
 				}
 			}
 
-			if constexpr (std::is_same<C, wchar_t>::value) {
+			if constexpr (std::is_same<C, wchar_t>::value || std::is_same<C, char16_t>::value) {
 				std::vector<std::string> utf8;
 				for (const auto &utf16 : merged)
 					utf8.emplace_back(Utils::ToUTF8(utf16));
@@ -121,9 +124,6 @@ private:
 
 	std::string title;
 	std::string performer;
-
-	std::vector<Track> tracks;
-	std::vector<Track>::iterator currentTrack;
 
 	uint8_t discIndex = 1;
 };

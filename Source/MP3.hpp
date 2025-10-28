@@ -5,7 +5,7 @@
 #include "ID3V2.hpp"
 #include "MetadataReader.hpp"
 
-class MP3 : public MetadataReader {
+class MP3 : public virtual MetadataReader {
 protected:
 	struct ID3 {
 		char id[3] = { 0 };

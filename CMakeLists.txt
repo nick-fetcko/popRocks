@@ -30,8 +30,18 @@ find_package(SDL2_mixer CONFIG REQUIRED)
 find_package(JPEG REQUIRED)
 find_package(SDL2_image CONFIG REQUIRED)
 find_package(SDL2_net CONFIG REQUIRED)
-find_package(FFTW3f CONFIG REQUIRED)
-find_package(Freetype CONFIG REQUIRED)
+if (WIN32)
+	find_package(FFTW3 CONFIG REQUIRED)
+	find_package(Freetype CONFIG REQUIRED)
+else ()
+	find_package(PkgConfig REQUIRED)
+	pkg_search_module(FFTW REQUIRED fftw3f IMPORTED_TARGET)
+	include_directories(PkgConfig::FFTW)
+	link_libraries(PkgConfig::FFTW)
+	pkg_search_module(Freetype REQUIRED freetype2 IMPORTED_TARGET)
+	include_directories(PkgConfig::Freetype)
+	link_libraries(PkgConfig::Freetype)
+endif()
 
 add_subdirectory(Serial/src)
 add_subdirectory(OpenGL)
@@ -208,51 +218,100 @@ target_compile_definitions(popRocks PUBLIC NOGDI NOBITMAP)
 find_package(OpenGL REQUIRED)
 
 add_library(bass SHARED IMPORTED)
-set_target_properties(bass PROPERTIES
-	INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bass/include"
-	IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bass/lib/bass.dll"
-	IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bass/lib/bass.dll"
-	IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bass/lib/bass.lib"
-	IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bass/lib/bass.lib"
-	)
+if (WIN32)
+	set_target_properties(bass PROPERTIES
+		INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bass/include"
+		IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bass/lib/bass.dll"
+		IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bass/lib/bass.dll"
+		IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bass/lib/bass.lib"
+		IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bass/lib/bass.lib"
+		)
+else()
+	set_target_properties(bass PROPERTIES
+		INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bass/include"
+		IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bass/lib/libbass.so"
+		IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bass/lib/bass.lib"
+		IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bass/lib/bass.lib"
+		)
+endif()
 
 add_library(bassflac SHARED IMPORTED)
-set_target_properties(bassflac PROPERTIES
-	INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassflac/include"
-	IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassflac/lib/bassflac.dll"
-	IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassflac/lib/bassflac.dll"
-	IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassflac/lib/bassflac.lib"
-	IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassflac/lib/bassflac.lib"
-	)
+if (WIN32)
+	set_target_properties(bassflac PROPERTIES
+		INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassflac/include"
+		IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassflac/lib/bassflac.dll"
+		IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassflac/lib/bassflac.dll"
+		IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassflac/lib/bassflac.lib"
+		IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassflac/lib/bassflac.lib"
+		)
+else()
+	set_target_properties(bassflac PROPERTIES
+		INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassflac/include"
+		IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassflac/lib/libbassflac.so"
+		IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassflac/lib/bassflac.lib"
+		IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassflac/lib/bassflac.lib"
+		)
+endif()
 
 add_library(bassape SHARED IMPORTED)
-set_target_properties(bassape PROPERTIES
-	INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassape/include"
-	IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassape/lib/bassape.dll"
-	IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassape/lib/bassape.dll"
-	IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassape/lib/bassape.lib"
-	IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassape/lib/bassape.lib"
-	)
+if (WIN32)
+	set_target_properties(bassape PROPERTIES
+		INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassape/include"
+		IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassape/lib/bassape.dll"
+		IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassape/lib/bassape.dll"
+		IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassape/lib/bassape.lib"
+		IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassape/lib/bassape.lib"
+		)
+else()
+	set_target_properties(bassape PROPERTIES
+		INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassape/include"
+		IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassape/lib/libbassape.so"
+		IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassape/lib/bassape.lib"
+		IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassape/lib/bassape.lib"
+		)
+endif()
 
 add_library(basswv SHARED IMPORTED)
-set_target_properties(basswv PROPERTIES
-	INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswv/include"
-	IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswv/lib/basswv.dll"
-	IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswv/lib/basswv.dll"
-	IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswv/lib/basswv.lib"
-	IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswv/lib/basswv.lib"
-	)
+if (WIN32)
+	set_target_properties(basswv PROPERTIES
+		INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswv/include"
+		IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswv/lib/basswv.dll"
+		IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswv/lib/basswv.dll"
+		IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswv/lib/basswv.lib"
+		IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswv/lib/basswv.lib"
+		)
+else()
+	set_target_properties(basswv PROPERTIES
+		INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswv/include"
+		IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswv/lib/libbasswv.so"
+		IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswv/lib/basswv.lib"
+		IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswv/lib/basswv.lib"
+		)
+endif()
 
-add_library(basswasapi SHARED IMPORTED)
-set_target_properties(basswasapi PROPERTIES
-	INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswasapi/include"
-	IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswasapi/lib/basswasapi.dll"
-	IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswasapi/lib/basswasapi.dll"
-	IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswasapi/lib/basswasapi.lib"
-	IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswasapi/lib/basswasapi.lib"
-	)
+if (WIN32)
+	add_library(basswasapi SHARED IMPORTED)
+	set_target_properties(basswasapi PROPERTIES
+		INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswasapi/include"
+		IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswasapi/lib/basswasapi.dll"
+		IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswasapi/lib/basswasapi.dll"
+		IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswasapi/lib/basswasapi.lib"
+		IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswasapi/lib/basswasapi.lib"
+		)
+else()
+	add_library(bassalac SHARED IMPORTED)
+	set_target_properties(bassalac PROPERTIES
+		INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassalac/include"
+		IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassalac/lib/libbassalac.so"
+		)
+endif()
 
-target_link_libraries(popRocks PRIVATE Utils ${OPENGL_LIBRARIES} OpenGL SDL2::SDL2 SDL2::SDL2main SDL2_mixer::SDL2_mixer SDL2_image::SDL2_image SDL2_net::SDL2_net freetype bass bassflac bassape basswv basswasapi FFTW3::fftw3f serial nfd ${JPEG_LIBRARIES})
+target_link_libraries(popRocks PRIVATE Utils ${OPENGL_LIBRARIES} OpenGL SDL2::SDL2 SDL2::SDL2main SDL2_mixer::SDL2_mixer SDL2_image::SDL2_image SDL2_net::SDL2_net freetype bass bassflac bassape basswv serial nfd ${JPEG_LIBRARIES})
+if (WIN32)
+	target_link_libraries(popRocks PRIVATE FFTW3::fftw3 basswasapi)
+else()
+	target_link_libraries(popRocks PRIVATE bassalac)
+endif()
 target_include_directories(popRocks PRIVATE ${JPEG_INCLUDE_DIR})
 
 add_custom_command(TARGET popRocks POST_BUILD
@@ -261,12 +320,29 @@ add_custom_command(TARGET popRocks POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:bassflac> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CONFIGURATION_TYPES}
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:bassape> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CONFIGURATION_TYPES}
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:basswv> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CONFIGURATION_TYPES}
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:basswasapi> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CONFIGURATION_TYPES}
 	)
 
+if (WIN32)
+	add_custom_command(TARGET popRocks POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:basswasapi> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CONFIGURATION_TYPES}
+		)
+else()
+	add_custom_command(TARGET popRocks POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:bassalac> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CONFIGURATION_TYPES}
+		)
+
+	install(IMPORTED_RUNTIME_ARTIFACTS bass bassflac bassape basswv bassalac)
+endif()
+
 # Copy data files when building in Release
-if (${CMAKE_CONFIGURATION_TYPES} STREQUAL "Release")
+if (WIN32)
+	if (${CMAKE_CONFIGURATION_TYPES} STREQUAL "Release")
+		add_custom_command(TARGET popRocks POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different "${CMAKE_CURRENT_SOURCE_DIR}/Data" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CONFIGURATION_TYPES}/Data"
+			)
+	endif()
+else()
 	add_custom_command(TARGET popRocks POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different "${CMAKE_CURRENT_SOURCE_DIR}/Data" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CONFIGURATION_TYPES}/Data"
-		)
+	)
 endif()

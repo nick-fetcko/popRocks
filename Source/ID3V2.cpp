@@ -1,5 +1,8 @@
 #include "ID3V2.hpp"
 
+#include <cmath>
+#include <cstring>
+
 // ===============================================
 // ================ ID3V2::Header ================
 // ===============================================
@@ -120,7 +123,7 @@ ID3V2::Frame::Frame(ID3V2 &parent) : parent(parent) {
 
 }
 
-ID3V2::Frame::Frame(Frame &&other) noexcept : parent(std::move(other.parent)) {
+ID3V2::Frame::Frame(Frame &&other) noexcept : parent(other.parent) {
 	id = std::move(other.id);
 	size = std::move(other.size);
 	flags = std::move(other.flags);
@@ -226,7 +229,7 @@ std::map<std::string, std::string> ID3V2::Read(const char **tag, bool textOnly) 
 			if (frame.id.empty() || frame.id[0] == '\0') // we hit padding
 				break;
 
-			logger.LogInfo("Skipping frame ", frame.id);
+			LogInfo("Skipping frame ", frame.id);
 		}
 	}
 
@@ -259,16 +262,17 @@ std::string ID3V2::ToUTF8(const char *tag, uint32_t size, Encoding encoding) {
 	//        by default and _only_ switch to a wistringstream when
 	//        we encounter UTF-16.
 	bool rounded = false;
-	if (auto round = static_cast<uint32_t>(std::round(std::round(size) / sizeof(wchar_t)) * sizeof(wchar_t));
+	if (auto round = static_cast<uint32_t>(std::round(std::round(size) / sizeof(char16_t)) * sizeof(char16_t));
 		round != size) {
 		size = round;
 		rounded = true;
 	}
 
-	std::wistringstream stream(
-		std::wstring(
-			reinterpret_cast<const wchar_t *>(tag),
-			reinterpret_cast<const wchar_t *>(tag + size)
+	//std::wistringstream stream(
+	std::basic_istringstream<char16_t> stream(
+		std::basic_string<char16_t>(
+			reinterpret_cast<const char16_t *>(tag),
+			reinterpret_cast<const char16_t *>(tag + size)
 		),
 		std::ios::in | std::ios::binary
 	);
@@ -277,7 +281,7 @@ std::string ID3V2::ToUTF8(const char *tag, uint32_t size, Encoding encoding) {
 	stream.imbue(
 		std::locale(
 			stream.getloc(),
-			new std::codecvt_utf8<wchar_t>
+			new std::codecvt_utf8<char16_t>
 		)
 	);
 
@@ -285,11 +289,12 @@ std::string ID3V2::ToUTF8(const char *tag, uint32_t size, Encoding encoding) {
 		if (auto bom = Fetcko::Utils::GetBom(stream)) {
 			switch (*bom) {
 			case Fetcko::Utils::BOM::UTF_16_BE:
+				std::cout << "UTF-16 BE" << std::endl;
 				encoding = Encoding::UTF_16_BE;
 				stream.imbue(
 					std::locale(
 						stream.getloc(),
-						new std::codecvt_utf16<wchar_t, 0x10ffff>
+						new std::codecvt_utf16<char16_t, 0x10ffff>
 					)
 				);
 
@@ -297,10 +302,11 @@ std::string ID3V2::ToUTF8(const char *tag, uint32_t size, Encoding encoding) {
 				size -= 2;
 				break;
 			case Fetcko::Utils::BOM::UTF_16_LE:
+				std::cout << "UTF-16 LE" << std::endl;
 				stream.imbue(
 					std::locale(
 						stream.getloc(),
-						new std::codecvt_utf16<wchar_t, 0x10ffff, std::little_endian>
+						new std::codecvt_utf16<char16_t, 0x10ffff, std::little_endian>
 					)
 				);
 
@@ -318,16 +324,16 @@ std::string ID3V2::ToUTF8(const char *tag, uint32_t size, Encoding encoding) {
 		}
 	}
 
-	size /= sizeof(wchar_t);
+	size /= sizeof(char16_t);
 
 	if (encoding == Encoding::Latin || encoding == Encoding::UTF_8) {
-		auto *chars = new char[size * sizeof(wchar_t) + (rounded ? 0 : 1)];
-		stream.read(reinterpret_cast<wchar_t*>(chars), size);
+		auto *chars = new char[size * sizeof(char16_t) + (rounded ? 0 : 1)];
+		stream.read(reinterpret_cast<char16_t*>(chars), size);
 
 		// The spec _says_ these should already
 		// be null-terminated, but I've found
 		// multiple examples of no terminator
-		chars[size * sizeof(wchar_t) - (rounded ? 1 : 0)] = '\0';
+		chars[size * sizeof(char16_t) - (rounded ? 1 : 0)] = '\0';
 
 		// I've encountered a single malformed file
 		// (MisterWives' "Reflection") that wrongly
@@ -339,12 +345,12 @@ std::string ID3V2::ToUTF8(const char *tag, uint32_t size, Encoding encoding) {
 			return "";
 		}
 
-		auto ret = std::string(chars, chars + size * sizeof(wchar_t));
+		auto ret = std::string(chars, chars + size * sizeof(char16_t));
 		delete[] chars;
 
 		return ret;
 	} else {
-		wchar_t *wideChars = new wchar_t[size + 1];
+		char16_t *wideChars = new char16_t[size + 1];
 		stream.read(wideChars, size);
 
 		// The spec _says_ these should already

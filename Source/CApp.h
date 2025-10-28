@@ -11,16 +11,18 @@
 #include <string>
 #include <bass.h>
 #include <bassflac.h>
+#ifdef WIN32
 #include <basswasapi.h>
-
+#endif
 #include <glad/glad.h>
 #include <SDL_net.h>
 
+#ifdef WIN32
 #include <Mmdeviceapi.h>
-
+#endif
 #include <SDL.h>
 
-#include "FFtw3.h"
+#include "fftw3.h"
 
 #include "MathCPP/Duration.hpp"
 
@@ -192,8 +194,8 @@ private:
 	std::filesystem::path loadedFile;
 	std::string loadedFileExtension;
 	int freq = 48000; // Sample rate (Hz)
-	HSTREAM streamHandle = NULL; // Handle for open stream
-	HSTREAM nextStreamHandle = NULL; // Handle for next track in playlist
+	HSTREAM streamHandle = 0; // Handle for open stream
+	HSTREAM nextStreamHandle = 0; // Handle for next track in playlist
 
 	// We start assuming 2 channels
 	BASS_CHANNELINFO channelInfo = { 0, 2, 0, 0, 0, 0, 0 };
@@ -214,8 +216,10 @@ private:
 
 	std::wstring savedFile;
 
+#ifdef WIN32
 	IMMDevice *audioDevice = nullptr;
 	MyAudioSink *audioSink = nullptr;
+#endif
 
 	float *in = nullptr;
 	fftwf_complex *out = nullptr;
@@ -286,7 +290,9 @@ private:
 	std::atomic<bool> advanceOnNextLoop = false;
 	std::atomic<bool> stopWasapiOnNextLoop = false;
 
+#ifdef WIN32
 	BASS_WASAPI_INFO wasapiInfo{ 0 };
+#endif
 
 	float scale = 1.0f;
 

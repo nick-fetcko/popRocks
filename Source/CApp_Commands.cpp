@@ -86,7 +86,7 @@ void CApp::AddCommands() {
 						else
 							SetFftLength(std::stoi(args[1]));
 					} catch (std::exception &e) {
-						logger.LogError("Could not set FFT length: ", e.what());
+						LogError("Could not set FFT length: ", e.what());
 					}
 				}
 			}
@@ -118,7 +118,7 @@ void CApp::AddCommands() {
 							std::stoi(args[3])
 						);
 					} catch (std::exception &e) {
-						logger.LogError("Could not set color: ", e.what());
+						LogError("Could not set color: ", e.what());
 					}
 				} else {
 					overrideColor = false;
@@ -128,43 +128,43 @@ void CApp::AddCommands() {
 		{
 			"light intensity", [&](const std::vector<std::string> &args) {
 				lightPack.SetLightType(LightPack::LightType::Intensity);
-				logger.LogDebug("Set to light intensity");
+				LogDebug("Set to light intensity");
 			}
 		},
 		{
 			"light color intensity", [&](const std::vector<std::string> &args) {
 				lightPack.SetLightType(LightPack::LightType::ColorIntensity);
-				logger.LogDebug("Setting to light color intensity");
+				LogDebug("Setting to light color intensity");
 			}
 		},
 		{
 			"light color", [&](const std::vector<std::string> &args) {
 				lightPack.SetLightType(LightPack::LightType::Color);
-				logger.LogDebug("Set to light color");
+				LogDebug("Set to light color");
 			}
 		},
 		{
 			"mapping default", [&](const std::vector<std::string> &args) {
 				lightPack.SetMapping(Mappings::DEFAULT);
-				logger.LogDebug("Set to default");
+				LogDebug("Set to default");
 			}
 		},
 		{
 			"mapping mine", [&](const std::vector<std::string> &args) {
 				lightPack.SetMapping(Mappings::MINE);
-				logger.LogDebug("Set to mine");
+				LogDebug("Set to mine");
 			}
 		},
 		{
 			"mapping btt", [&](const std::vector<std::string> &args) {
 				lightPack.SetMapping(Mappings::BOTTOM_TO_TOP);
-				logger.LogDebug("Set to bottom to top");
+				LogDebug("Set to bottom to top");
 			}
 		},
 		{
 			"mapping ttb", [&](const std::vector<std::string> &args) {
 				lightPack.SetMapping(Mappings::TOP_TO_BOTTOM);
-				logger.LogDebug("Set to top to bottom");
+				LogDebug("Set to top to bottom");
 			}
 		},
 		{
@@ -172,7 +172,7 @@ void CApp::AddCommands() {
 				lightPack.SetFocusArea(
 					LightPack::FocusArea::SubBass
 				);
-				logger.LogDebug("Setting focus area to subbass");
+				LogDebug("Setting focus area to subbass");
 			}
 		},
 		{
@@ -180,7 +180,7 @@ void CApp::AddCommands() {
 				lightPack.SetFocusArea(
 					LightPack::FocusArea::BassAndMid
 				);
-				logger.LogDebug("Setting focus area to bass and mid");
+				LogDebug("Setting focus area to bass and mid");
 			}
 		},
 		{
@@ -188,7 +188,7 @@ void CApp::AddCommands() {
 				lightPack.SetFocusArea(
 					LightPack::FocusArea::HalfNyquist
 				);
-				logger.LogDebug("Setting focus area to half Nyquist");
+				LogDebug("Setting focus area to half Nyquist");
 			}
 		},
 		{
@@ -196,7 +196,7 @@ void CApp::AddCommands() {
 				lightPack.SetFocusArea(
 					LightPack::FocusArea::Nyquist
 				);
-				logger.LogDebug("Setting focus area to Nyquist");
+				LogDebug("Setting focus area to Nyquist");
 			}
 		},
 		{
@@ -204,7 +204,7 @@ void CApp::AddCommands() {
 				lightPack.SetFocusArea(
 					LightPack::FocusArea::SuperBass
 				);
-				logger.LogDebug("Setting focus area to SUPER bass");
+				LogDebug("Setting focus area to SUPER bass");
 			}
 		},
 		{
@@ -212,7 +212,7 @@ void CApp::AddCommands() {
 				lightPack.SetFocusArea(
 					LightPack::FocusArea::BassMidAndHigh
 				);
-				logger.LogDebug("Setting focus area to bass, mid, and a little high end");
+				LogDebug("Setting focus area to bass, mid, and a little high end");
 			}
 		},
 		{
@@ -220,19 +220,19 @@ void CApp::AddCommands() {
 				lightPack.SetFocusArea(
 					LightPack::FocusArea::Bass
 				);
-				logger.LogDebug("Setting focus area to bass");
+				LogDebug("Setting focus area to bass");
 			}
 		},
 		{
 			"listen", [&](const std::vector<std::string> &args) {
 				Listen();
-				logger.LogDebug("Now listening to primary recording device");
+				LogDebug("Now listening to primary recording device");
 			}
 		},
 		{
 			"loopback", [&](const std::vector<std::string> &args) {
 				Listen(true);
-				logger.LogDebug("Now listening to primary output device");
+				LogDebug("Now listening to primary output device");
 			}
 		},
 		{
@@ -264,7 +264,7 @@ void CApp::AddCommands() {
 								fftRenderer->SetDistribution(std::stof(args[1]));
 						}
 					} catch (std::exception &e) {
-						logger.LogError("Could not set distribution: ", e.what());
+						LogError("Could not set distribution: ", e.what());
 					}
 				}
 			}
@@ -281,7 +281,7 @@ void CApp::AddCommands() {
 						// We deviated from a preset
 						LoadPreset(std::nullopt);
 					} catch (std::exception &e) {
-						logger.LogError("Could not set buffer length: ", e.what());
+						LogError("Could not set buffer length: ", e.what());
 					}
 				}
 			}
@@ -298,7 +298,7 @@ void CApp::AddCommands() {
 						// We deviated from a preset
 						LoadPreset(std::nullopt);
 					} catch (std::exception &e) {
-						logger.LogError("Could not set rotation speed: ", e.what());
+						LogError("Could not set rotation speed: ", e.what());
 					}
 				} else {
 					SetRotating(!GetRotating());
@@ -324,7 +324,7 @@ void CApp::AddCommands() {
 						// We deviated from a preset
 						LoadPreset(std::nullopt);
 					} catch (std::exception &e) {
-						logger.LogError("Could not set decay: ", e.what());
+						LogError("Could not set decay: ", e.what());
 					}
 				}
 			}
@@ -345,7 +345,7 @@ void CApp::AddCommands() {
 						// We deviated from a preset
 						LoadPreset(std::nullopt);
 					} catch (std::exception &e) {
-						logger.LogError("Could not set fade: ", e.what());
+						LogError("Could not set fade: ", e.what());
 					}
 				}
 			}
@@ -361,7 +361,7 @@ void CApp::AddCommands() {
 								std::stof(args[1])
 							);
 					} catch (std::exception &e) {
-						logger.LogError("Could not set gain: ", e.what());
+						LogError("Could not set gain: ", e.what());
 					}
 				}
 			}
@@ -395,7 +395,7 @@ void CApp::AddCommands() {
 						// We deviated from a preset
 						LoadPreset(std::nullopt);
 					} catch (std::exception &e) {
-						logger.LogError("Could not set RPM: ", e.what());
+						LogError("Could not set RPM: ", e.what());
 					}
 				}
 			}
@@ -411,7 +411,7 @@ void CApp::AddCommands() {
 							lightPack.SetSmooth(smooth);
 						}
 					} catch (std::exception &e) {
-						logger.LogError("Could not set smooth: ", e.what());
+						LogError("Could not set smooth: ", e.what());
 					}
 				}
 			}
@@ -425,7 +425,7 @@ void CApp::AddCommands() {
 						else
 							lightPack.SetGamma(std::stof(args[1]));
 					} catch (std::exception &e) {
-						logger.LogError("Could not set gamma: ", e.what());
+						LogError("Could not set gamma: ", e.what());
 					}
 				}
 			}
@@ -442,7 +442,7 @@ void CApp::AddCommands() {
 						// We deviated from a preset
 						LoadPreset(std::nullopt);
 					} catch (std::exception &e) {
-						logger.LogError("Could not set blur factor: ", e.what());
+						LogError("Could not set blur factor: ", e.what());
 					}
 				} else {
 					ToggleBlur();
@@ -462,7 +462,7 @@ void CApp::AddCommands() {
 						albumArt.Scale(true);
 						controls.GetVolume().SetRadius(radius);
 					} catch (std::exception &e) {
-						logger.LogError("Could not set radius: ", e.what());
+						LogError("Could not set radius: ", e.what());
 					}
 				}
 			}
@@ -504,7 +504,7 @@ void CApp::AddCommands() {
 						}
 					}
 					catch (std::exception &e) {
-						logger.LogError("Could not set width: ", e.what());
+						LogError("Could not set width: ", e.what());
 					}
 				}
 			}
@@ -528,7 +528,7 @@ void CApp::AddCommands() {
 						else
 							lightPack.SetSaturationMultiplier(std::stof(args[1]));
 					} catch (std::exception &e) {
-						logger.LogError("Could not set saturation multiplier: ", e.what());
+						LogError("Could not set saturation multiplier: ", e.what());
 					}
 				}
 			}
@@ -554,7 +554,7 @@ void CApp::AddCommands() {
 						// We deviated from a preset
 						LoadPreset(std::nullopt);
 					} catch (std::exception &e) {
-						logger.LogError("Could not set pulse time: ", e.what());
+						LogError("Could not set pulse time: ", e.what());
 					}
 				}
 			}

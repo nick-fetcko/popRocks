@@ -6,7 +6,7 @@
 class WV : public virtual APE, public virtual MP3 {
 private:
 public:
-	WV(const std::filesystem::path &path) : APE(path), MP3(path) {
+	WV(const std::filesystem::path &path) : APE(path), MP3(path), MetadataReader(path) {
 
 	}
 

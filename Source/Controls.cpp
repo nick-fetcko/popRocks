@@ -43,7 +43,7 @@ inline void Controls::OpenFont(Context *context) {
 		exclusiveIndicator.OnInit(font, outlineFont, context);
 		volume.OnInit(FontRoot, context);
 	} else {
-		logger.LogError("Could not open font!");
+		LogError("Could not open font!");
 	}
 }
 
@@ -111,7 +111,7 @@ QWORD Controls::OnLoad(HSTREAM streamHandle) {
 			streamHandle,
 			totalBytes
 		);
-		logger.LogDebug("Song is ", currentFileLength, " seconds long");
+		LogDebug("Song is ", currentFileLength, " seconds long");
 	}
 	currentPos = 0.0;
 	elapsedSeconds = -1;

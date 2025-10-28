@@ -150,7 +150,15 @@ int main(int argc, char *argv[]) {
 					}
 					break;
 				case SDL_DROPFILE: {
-					app.LoadFile(Utils::ToUTF16(const_cast<const char*>(event.drop.file)));
+					app.LoadFile(
+#ifdef WIN32
+						Utils::ToUTF16(const_cast<const char*>(
+#endif
+							event.drop.file
+#ifdef WIN32
+						))
+#endif
+					);
 					SDL_free(event.drop.file);
 					break;
 				}

@@ -8,6 +8,7 @@
 #include <queue>
 #include <functional>
 #include <chrono>
+#include <condition_variable>
 
 #include <SDL_net.h>
 

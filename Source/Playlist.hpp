@@ -151,7 +151,7 @@ private:
 	template<typename T>
 	void OnLoop(
 		const std::vector<T> &tracks,
-		typename const std::vector<T>::const_iterator &current,
+		const typename std::vector<T>::const_iterator &current,
 		Vector2i pos, // need a local pos var because we modify it
 		float maxHeight,
 		float alpha,

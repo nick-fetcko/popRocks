@@ -86,7 +86,7 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 					index = std::stoll(Fetcko::Utils::Split(track->second, '/')[0]);
 				}
 				catch (std::exception &e) {
-					logger.LogWarning("Track number '", track->second, "' is not a number: ", e.what());
+					LogWarning("Track number '", track->second, "' is not a number: ", e.what());
 				}
 			}
 			auto disc = tags.find("discnumber");
@@ -97,7 +97,7 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 					this->disc = std::stoll(Fetcko::Utils::Split(disc->second, '/')[0]);
 				}
 				catch (std::exception &e) {
-					logger.LogWarning("Disc number '", disc->second + "' is not a number: ", e.what());
+					LogWarning("Disc number '", disc->second + "' is not a number: ", e.what());
 				}
 			}
 		}

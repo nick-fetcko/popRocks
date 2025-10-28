@@ -16,7 +16,7 @@ void Metadata::OnLoad(
 
 		auto tags = flac.GetTags(false);
 		tagLoader->LoadFromTags(tags);
-		if (auto &[mimeType, data] = flac.GetArt(); data.size()) {
+		if (const auto &[mimeType, data] = flac.GetArt(); data.size()) {
 			albumArt->Load(
 				mimeType,
 				data.data(),
@@ -32,7 +32,7 @@ void Metadata::OnLoad(
 		auto tags = mp4.GetTags(false);
 		tagLoader->LoadFromTags(tags);
 		if (auto &art = mp4.GetArt(); art && albumArt->Load(art->mimeType, art->data, art->dataSize))
-			logger.LogDebug("Found iTunes-style embedded album art");
+			LogDebug("Found iTunes-style embedded album art");
 
 		return;
 	} else if (extension == ".ape") {
@@ -111,14 +111,14 @@ void Metadata::OnLoad(
 
 				tagLoader->LoadFromTags(tags);
 			} else {
-				logger.LogError("Could not fully populate tags!");
+				LogError("Could not fully populate tags!");
 			}
 		}
 	}
 
 	// If title is STILL empty, use the filename
 	if (!tagLoader->HasTitle()) {
-		logger.LogWarning("Using filename in lieu of title");
+		LogWarning("Using filename in lieu of title");
 		tagLoader->SetTitle(path.stem().u8string());
 	}
 
