@@ -100,8 +100,9 @@ protected:
 		inFile.read(reinterpret_cast<char *>(&mediaTypeLength), sizeof(uint32_t));
 		mediaTypeLength = Utils::LittleEndian(mediaTypeLength);
 
-		char *mediaType = new char[mediaTypeLength];
+		char *mediaType = new char[mediaTypeLength + 1];
 		inFile.read(mediaType, mediaTypeLength);
+		mediaType[mediaTypeLength] = '\0';
 		artMimeType = mediaType;
 		delete[] mediaType;
 
@@ -110,8 +111,9 @@ protected:
 		inFile.read(reinterpret_cast<char *>(&descriptionLength), sizeof(uint32_t));
 		descriptionLength = Utils::LittleEndian(descriptionLength);
 
-		char *description = new char[descriptionLength];
+		char *description = new char[descriptionLength + 1];
 		inFile.read(description, descriptionLength);
+		description[descriptionLength] = '\0';
 		delete[] description;
 
 		uint32_t width, height, depth, colors, dataLength;

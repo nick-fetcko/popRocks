@@ -22,7 +22,7 @@ void Metadata::OnLoad(
 				data.data(),
 				data.size()
 			);
-		}
+		} else albumArt->ClearEmbedded();
 
 		return;
 	}
@@ -46,7 +46,7 @@ void Metadata::OnLoad(
 				art->second.data,
 				art->second.size
 			);
-		}
+		} else albumArt->ClearEmbedded();
 		
 		return;
 	} else if (extension == ".wv") {
@@ -60,7 +60,7 @@ void Metadata::OnLoad(
 				art->second.data,
 				art->second.size
 			);
-		}
+		} else albumArt->ClearEmbedded();
 
 		return;
 	} else if (extension == ".ogg") {
@@ -76,7 +76,7 @@ void Metadata::OnLoad(
 				data.data(),
 				data.size()
 			);
-		}
+		} else albumArt->ClearEmbedded();
 
 		return;
 	}

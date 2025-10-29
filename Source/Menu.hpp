@@ -730,6 +730,45 @@ public:
 			ImGui::EndMenu();
 		}
 
+		if (ImGui::BeginMenu("Album Art")) {
+			bool none = !albumArt.Loaded() || albumArt.IsHidden();
+			if (ImGui::MenuItem("None", nullptr, &none))
+				albumArt.SetHidden(true);
+
+			if (albumArt.HasEmbedded()) {
+				bool embedded = albumArt.GetCurrentFile().empty() && !albumArt.IsHidden();
+				if (ImGui::MenuItem("Embedded", nullptr, &embedded)) {
+					albumArt.SetHidden(false);
+					albumArt.LoadEmbedded();
+					albumArt.Scale();
+				}
+			}
+
+			for (const auto &art : albumArt.GetPreferred()) {
+				auto name = art.second.u8string().substr(albumArt.GetSearchFolder().u8string().size() + 1);
+				std::replace(name.begin(), name.end(), '\\', '/');
+
+				bool selected = albumArt.GetCurrentFile() == art.second && !albumArt.IsHidden();
+				if (ImGui::MenuItem(name.c_str(), nullptr, &selected)) {
+					albumArt.SetHidden(false);
+					albumArt.Load(art.second, art.second.parent_path(), true);
+					albumArt.Scale();
+				}
+			}
+			for (const auto &art : albumArt.GetFound()) {
+				auto name = art.u8string().substr(albumArt.GetSearchFolder().u8string().size() + 1);
+				std::replace(name.begin(), name.end(), '\\', '/');
+
+				bool selected = albumArt.GetCurrentFile() == art && !albumArt.IsHidden();
+				if (ImGui::MenuItem(name.c_str(), nullptr, &selected)) {
+					albumArt.SetHidden(false);
+					albumArt.Load(art, art.parent_path(), true);
+					albumArt.Scale();
+				}
+			}
+			ImGui::EndMenu();
+		}
+
 		if (ImGui::BeginMenu("Color Selection")) {
 			open = true;
 

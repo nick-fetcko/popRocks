@@ -39,6 +39,7 @@ public:
 	enum class ColorMethod { Average, Dominant };
 
 	AlbumArt(std::unique_ptr<Context> &context);
+	virtual ~AlbumArt();
 
 	void OnInit(int windowWidth, int windowHeight, float scale = 1.0f);
 	void OnResize(int windowWidth, int windowHeight, float scale = 1.0f);
@@ -68,7 +69,7 @@ public:
 	//     ...
 	bool Load(const std::filesystem::path &fileName, const std::filesystem::path &parentPath = "", bool force = false);
 
-	bool Load(const std::string &mimeType, const void *data, std::size_t length);
+	bool Load(const std::string &mimeType, const void *data, std::size_t length, bool force = false);
 
 	void Reset(const Colour<float> &color);
 
@@ -97,10 +98,27 @@ public:
 
 	std::unique_lock<std::mutex> Lock() { return std::move(std::unique_lock(histogramMutex)); }
 
+	const std::multimap<int, std::filesystem::path> &GetPreferred() const { return preferred; }
+	const std::set<std::filesystem::path> &GetFound() const { return found; }
+
+	const std::filesystem::path &GetCurrentFile() const { return currentFile; }
+
+	void ClearEmbedded();
+
+	bool HasEmbedded() const { return embeddedData; }
+	bool LoadEmbedded();
+
+	const std::filesystem::path &GetSearchFolder() const { return searchFolder; }
+
+	const Colour<float> &GetAverageColor() const { return averageColor; }
+
+	const bool &IsHidden() const { return hidden; }
+	void SetHidden(bool hidden) { this->hidden = hidden; }
+
 private:
 	constexpr inline static std::array<std::string_view, 3> SupportedExtensions = { ".jpg", ".png", ".webp" };
 
-	std::filesystem::path FindArt(const std::filesystem::path &folder) const;
+	std::filesystem::path FindArt(const std::filesystem::path &folder);
 
 	// This frees the surface once it's done
 	void LoadFromSurface(SDL_Surface *surface, bool scaled = false);
@@ -181,4 +199,15 @@ private:
 
 	std::thread colorProcessingThread;
 	bool processingColors = false;
+
+	std::filesystem::path searchFolder;
+	std::multimap<int, std::filesystem::path> preferred;
+	std::set<std::filesystem::path> found;
+	std::filesystem::path currentFile;
+
+	uint8_t *embeddedData = nullptr;
+	std::size_t embeddedDataLength = 0;
+	std::string embeddedDataMimeType;
+
+	bool hidden = false;
 };

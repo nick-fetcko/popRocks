@@ -19,6 +19,10 @@ AlbumArt::AlbumArt(std::unique_ptr<Context> &context) : context(context) {
 	radius = Settings::settings.GetRadius();
 }
 
+AlbumArt::~AlbumArt() {
+	delete[] embeddedData;
+}
+
 void AlbumArt::OnInit(int windowWidth, int windowHeight, float scale) {
 	this->scale = scale;
 	radius *= scale;
@@ -106,7 +110,7 @@ void AlbumArt::OnLoop(GLfloat x, GLfloat y, float frameCount, Context &context) 
 		scalingMutex.unlock();
 	}
 
-	if (albumLoaded) {
+	if (albumLoaded && !hidden) {
 		context.Color(1.0f, 1.0f, 1.0f, 1.0f);
 
 		context.Translate(
@@ -131,7 +135,7 @@ void AlbumArt::OnLoop(GLfloat x, GLfloat y, float frameCount, Context &context) 
 }
 
 int AlbumArt::DrawSquare(int x, int y, int height, GLfloat alpha, Context &context) {
-	if (albumLoaded) {
+	if (albumLoaded && !hidden) {
 		// If our size changed, update the vertex buffer
 		if (squareHeight != height ||
 			squareWidth != height * aspectRatio) {
@@ -199,17 +203,16 @@ void AlbumArt::OnDestroy() {
 	squareEab.reset();
 }
 
-std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder) const {
-	std::filesystem::path found;
-	std::multimap<int, std::filesystem::path> preferred;
+std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder) {
+	preferred.clear();
+	found.clear();
+
+	searchFolder = folder;
 
 	auto find = [&](const std::filesystem::directory_entry &entry, bool breakOnFind = false) {
 		auto extension = entry.path().extension().u8string();
 		std::transform(extension.begin(), extension.end(), extension.begin(), tolower);
 		if (IsSupported(extension)) {
-			if (found.empty())
-				found = entry.path();
-
 			auto filename = entry.path().filename().u8string();
 			std::transform(filename.begin(), filename.end(), filename.begin(), tolower);
 
@@ -220,8 +223,6 @@ std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder) con
 			if (cover == 0 ||
 				front != std::string::npos ||
 				folder == 0) {
-				found = entry.path();
-
 				// Sort by digits in the filename (if there are any), ascending
 				//
 				// For example, if a folder has:
@@ -251,7 +252,7 @@ std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder) con
 				// litmus test for this specific case would look like.
 				if (breakOnFind)
 					return true;
-			}
+			} else if (found.find(entry.path()) == found.end()) found.emplace(entry.path());
 		}
 
 		return false;
@@ -262,13 +263,13 @@ std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder) con
 		find(iter);
 
 	// Then try any subfolders
-	// FIXME: we don't need to re-check files in the current folder
-	if (found.empty() && (albumWidth == 0 || albumHeight == 0) /* only scan subfolders if we don't already have embedded art */) {
-		for (const auto &iter : std::filesystem::recursive_directory_iterator(folder))
-			if (find(iter, true)) break;
+	for (const auto &iter : std::filesystem::recursive_directory_iterator(folder)) {
+		// We don't need to re-check files in the current folder
+		if (iter.path().parent_path() == folder) continue;
+		if (find(iter, true)) break;
 	}
 
-	return preferred.empty() ? found : preferred.begin()->second;
+	return preferred.empty() ? found.empty() ? "" : *found.begin() : preferred.begin()->second;
 }
 
 void AlbumArt::ReprocessColors() {
@@ -639,18 +640,16 @@ bool AlbumArt::Load(const std::filesystem::path &fileName, const std::filesystem
 	auto extension = fileName.extension().u8string();
 	std::transform(extension.begin(), extension.end(), extension.begin(), tolower);
 
-	std::filesystem::path found;
-
 	// Do we have cover art?
 	if (IsSupported(extension))
-		found = fileName;
+		currentFile = fileName;
 	else if (!parentPath.empty())
-		found = FindArt(parentPath);
+		currentFile = FindArt(parentPath);
 	else
-		found = FindArt(fileName.parent_path());
+		currentFile = FindArt(fileName.parent_path());
 
-	if (!found.empty()) {
-		auto contents = Fetcko::Utils::GetStringFromFile(found);
+	if (!currentFile.empty()) {
+		auto contents = Fetcko::Utils::GetStringFromFile(currentFile);
 		auto hash = hash_32_fnv1a_const(contents.c_str(), contents.size());
 		if (hash == lastHash) {
 			LogDebug("External art has already been loaded for this album");
@@ -664,7 +663,7 @@ bool AlbumArt::Load(const std::filesystem::path &fileName, const std::filesystem
 
 		lastHash = hash;
 
-		auto utf8 = found.u8string();
+		auto utf8 = currentFile.u8string();
 		auto surface = IMG_Load(utf8.c_str());
 
 		if (!surface) {
@@ -687,9 +686,20 @@ bool AlbumArt::Load(const std::filesystem::path &fileName, const std::filesystem
 	return true;
 }
 
-bool AlbumArt::Load(const std::string &mimeType, const void *data, std::size_t length) {
+void AlbumArt::ClearEmbedded() {
+	delete[] embeddedData;
+	embeddedData = nullptr;
+	embeddedDataLength = 0;
+	embeddedDataMimeType.clear();
+}
+
+bool AlbumArt::LoadEmbedded() {
+	return Load(embeddedDataMimeType, embeddedData, embeddedDataLength, true);
+}
+
+bool AlbumArt::Load(const std::string &mimeType, const void *data, std::size_t length, bool force) {
 	auto hash = hash_32_fnv1a_const(reinterpret_cast<const char *>(data), length);
-	if (hash == lastEmbeddedHash) {
+	if (!force && hash == lastEmbeddedHash) {
 		LogDebug("Embedded art has already been loaded for this album");
 		albumLoaded = true;
 		albumWidth = lastWidth;
@@ -697,17 +707,22 @@ bool AlbumArt::Load(const std::string &mimeType, const void *data, std::size_t l
 		std::unique_lock lock(histogramMutex);
 		UpdateBin(true);
 		return true;
-	}
+	} else if (hash != lastEmbeddedHash) {
+		delete[] embeddedData;
+		embeddedData = new uint8_t[length];
+		memcpy(embeddedData, data, length);
+		embeddedDataLength = length;
 
-	lastEmbeddedHash = hash;
+		lastEmbeddedHash = hash;
+	}
 
 	auto file = SDL_RWFromMem(
 		const_cast<void*>(data),
 		static_cast<int>(length)
 	);
-	auto type = mimeType.substr(mimeType.find('/') + 1);
+	embeddedDataMimeType = mimeType.substr(mimeType.find('/') + 1);
 
-	auto surface = IMG_LoadTyped_RW(file, 1, type.c_str());
+	auto surface = IMG_LoadTyped_RW(file, 1, embeddedDataMimeType.c_str());
 	if (!surface) {
 		LogError("Could not load embedded album art!");
 		return false;
@@ -718,6 +733,8 @@ bool AlbumArt::Load(const std::string &mimeType, const void *data, std::size_t l
 	}
 
 	LoadFromSurface(surface);
+
+	currentFile.clear();
 
 	return true;
 }
@@ -734,6 +751,7 @@ void AlbumArt::Reset(const Colour<float> &color) {
 	albumWidth = 0;
 	albumHeight = 0;
 	averageColor = color;
+	hidden = false;
 }
 
 void AlbumArt::NextBin(bool silent) {
