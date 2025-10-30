@@ -104,6 +104,9 @@ public:
 	const bool &GetDetectBpm() const { return detectBpm; }
 	void SetDetectBpm(bool detectBpm);
 
+	const bool &GetCacheDetectionResults() const { return cacheDetectionResults; }
+	void SetCacheDetectionResults(bool cacheDetectionResults);
+
 	const bool &GetHalveBpm() const { return halveBpm; }
 	void SetHalveBpm(bool halveBpm);
 
@@ -272,6 +275,7 @@ private:
 	float radius = 200;
 
 	bool detectBpm = true;
+	bool cacheDetectionResults = true;
 	bool halveBpm = false;
 
 	float width = 4.0f;

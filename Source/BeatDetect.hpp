@@ -26,6 +26,8 @@ public:
 	};
 
 	void OnLoad(
+		const std::filesystem::path &path,
+		bool cache,
 		HSTREAM streamHandle,
 		const DWORD freq,
 		const DWORD chans,
@@ -54,6 +56,8 @@ public:
 
 private:
 	inline void _OnLoad(
+		const std::filesystem::path &path,
+		bool cache,
 		HSTREAM streamHandle,
 		DWORD freq,
 		DWORD chans,

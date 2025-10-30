@@ -14,7 +14,7 @@
 
 using namespace Fetcko;
 
-class Menu {
+class Menu : public LoggableClass {
 public:
 	Menu() {
 		NFD_Init();
@@ -265,6 +265,17 @@ public:
 			if (ImGui::MenuItem("Detect BPM", nullptr, &detectBpm)) {
 				if (onDetectBpmChanged)
 					onDetectBpmChanged(!Settings::settings.GetDetectBpm());
+			}
+
+			cacheDetectionResults = Settings::settings.GetCacheDetectionResults();
+			if (ImGui::MenuItem("Cache detection results?", nullptr, &cacheDetectionResults)) {
+				Settings::settings.SetCacheDetectionResults(cacheDetectionResults);
+			}
+
+			if (ImGui::MenuItem("Clear detection cache")) {
+				std::error_code ec;
+				if (std::filesystem::remove_all(Settings::GetPath("cache"), ec) == static_cast<std::uintmax_t>(-1))
+					LogError("Could not clear detection cache! ", ec.message());
 			}
 
 			halveBpm = Settings::settings.GetHalveBpm();
@@ -1149,6 +1160,7 @@ private:
 
 	bool rotate = Settings::settings.GetRotating();
 	bool detectBpm = Settings::settings.GetDetectBpm();
+	bool cacheDetectionResults = Settings::settings.GetCacheDetectionResults();
 	bool halveBpm = Settings::settings.GetHalveBpm();
 	bool blur = Settings::settings.GetBlur();
 	GLenum sourceFactor = Settings::settings.GetSourceFactor();

@@ -1985,6 +1985,8 @@ inline void CApp::LoadBeats(
 			path.stem().u8string();
 
 		beatDetect->OnLoad(
+			path,
+			Settings::settings.GetCacheDetectionResults() && !cue,
 			streamHandle,
 			channelInfo.freq,
 			channelInfo.chans,
@@ -2019,6 +2021,8 @@ inline void CApp::LoadBeats(
 		BASS_ChannelGetInfo(nextHandle, &nextChannelInfo);
 
 		nextDetector->OnLoad(
+			next->path,
+			Settings::settings.GetCacheDetectionResults() && !cue,
 			nextHandle,
 			nextChannelInfo.freq,
 			nextChannelInfo.chans,

@@ -1,6 +1,11 @@
 #include "BeatDetect.hpp"
 
+#include "Utils/Hash.hpp"
+#include "Utils/Utils.hpp"
+
 void BeatDetect::OnLoad(
+	const std::filesystem::path &path,
+	bool cache,
 	HSTREAM streamHandle,
 	const DWORD freq,
 	const DWORD chans,
@@ -10,8 +15,8 @@ void BeatDetect::OnLoad(
 ) {
 	canceled = false;
 
-	thread = std::thread([this, streamHandle, freq, chans, onLoaded, startTime, endTime] {
-		_OnLoad(streamHandle, freq, chans, onLoaded, startTime, endTime);
+	thread = std::thread([this, path, cache, streamHandle, freq, chans, onLoaded, startTime, endTime] {
+		_OnLoad(path, cache, streamHandle, freq, chans, onLoaded, startTime, endTime);
 	});
 }
 
@@ -88,6 +93,8 @@ void BeatDetect::Reset() {
 const BeatDetect::State BeatDetect::GetState() const { return state; }
 
 inline void BeatDetect::_OnLoad(
+	const std::filesystem::path &path,
+	bool cache,
 	HSTREAM streamHandle,
 	DWORD freq,
 	DWORD chans,
@@ -97,8 +104,43 @@ inline void BeatDetect::_OnLoad(
 	std::optional<double> hopTime,
 	std::optional<AgentParameters> parameters
 ) {
+	std::filesystem::path cachePath;
 	if (detectBpm) {
 		std::unique_lock lock(mutex);
+
+		// Do we have cached results?
+		if (cache) {
+			auto start = std::chrono::system_clock::now();
+
+			auto data = Utils::GetStringFromFile(path);
+			auto hash = hash_64_fnv1a_const(data.data(), data.size());
+			std::stringstream stream;
+			stream << std::setw(sizeof(hash) * 2) << std::setfill('0') << std::uppercase << std::hex << hash;
+			if (auto cacheFolder = Settings::GetPath("cache/"); !std::filesystem::exists(cacheFolder))
+				std::filesystem::create_directory(cacheFolder);
+
+			cachePath = Settings::GetPath("cache/" + stream.str());
+			if (std::filesystem::exists(cachePath)) {
+				std::ifstream inFile(cachePath, std::ios::in | std::ios::binary);
+				eventList.clear();
+				while (inFile) {
+					Event event;
+					inFile.read(reinterpret_cast<char *>(&event), sizeof(Event));
+					eventList.emplace_back(std::move(event));
+				}
+				eventListIter = eventList.begin();
+				state = State::Loaded;
+				canceled = true;
+
+				auto end = std::chrono::system_clock::now();
+
+				LogDebug("Loading BeatRoot cache took ", Duration<Microseconds>(end - start).AsSeconds(), " seconds");
+
+				onLoaded();
+
+				return;
+			}
+		}
 
 		state = State::Loading;
 
@@ -259,7 +301,7 @@ inline void BeatDetect::_OnLoad(
 
 				lock.unlock();
 
-				_OnLoad(streamHandle, freq, chans, onLoaded, startTime ? startTime : 0.0, endTime, 0.010);
+				_OnLoad(path, cache, streamHandle, freq, chans, onLoaded, startTime ? startTime : 0.0, endTime, 0.010);
 
 				// Return so we don't try to free the stream twice
 				return;
@@ -270,7 +312,7 @@ inline void BeatDetect::_OnLoad(
 
 				AgentParameters newParameters;
 				newParameters.expiryTime = 100.0;
-				_OnLoad(streamHandle, freq, chans, onLoaded, startTime ? startTime : 0.0, endTime, 0.010, newParameters);
+				_OnLoad(path, cache, streamHandle, freq, chans, onLoaded, startTime ? startTime : 0.0, endTime, 0.010, newParameters);
 
 				// Return so we don't try to free the stream twice
 				return;
@@ -289,8 +331,14 @@ inline void BeatDetect::_OnLoad(
 	// Only call the callback if we're
 	// actually detecting and weren't
 	// canceled
-	if (detectBpm && !canceled)
+	if (detectBpm && !canceled) {
+		if (!cachePath.empty()) {
+			std::ofstream outFile(cachePath, std::ios::out | std::ios::binary);
+			for (const auto &event : eventList)
+				outFile.write(reinterpret_cast<const char *>(&event), sizeof(Event));
+		}
 		onLoaded();
+	}
 
 	canceled = true;
 }

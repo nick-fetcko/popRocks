@@ -222,6 +222,13 @@ void Settings::SetDetectBpm(bool detectBpm) {
 	}
 }
 
+void Settings::SetCacheDetectionResults(bool cacheDetectionResults) {
+	if (cacheDetectionResults != this->cacheDetectionResults) {
+		this->cacheDetectionResults = cacheDetectionResults;
+		Save();
+	}
+}
+
 void Settings::SetHalveBpm(bool halveBpm) {
 	if (halveBpm != this->halveBpm) {
 		this->halveBpm = halveBpm;
@@ -649,6 +656,8 @@ const Node &operator>>(const Node &node, Settings &settings) {
 
 	if (node.has("detectBpm"))
 		node["detectBpm"]->get(settings.detectBpm);
+	if (node.has("cacheDetectionResults"))
+		node["cacheDetectionResults"]->get(settings.cacheDetectionResults);
 	if (node.has("halveBpm"))
 		node["halveBpm"]->get(settings.halveBpm);
 
@@ -795,6 +804,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["rotationSpeed"]->set(settings.rotationSpeed);
 	node["radius"]->set(settings.radius);
 	node["detectBpm"]->set(settings.detectBpm);
+	node["cacheDetectionResults"]->set(settings.cacheDetectionResults);
 	node["halveBpm"]->set(settings.halveBpm);
 	node["width"]->set(settings.width);
 	node["renderer"]->set(settings.renderer);
