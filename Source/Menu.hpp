@@ -278,6 +278,31 @@ public:
 					LogError("Could not clear detection cache! ", ec.message());
 			}
 
+			// Only update our cache info every second
+			if (auto now = std::chrono::system_clock::now();  Duration<Microseconds>(now - lastFrame).AsSeconds() > 1.0) {
+				auto dirIter = std::filesystem::directory_iterator(Settings::GetPath("cache"));
+				std::size_t bytes = 0;
+
+				cacheFileCount = std::count_if(
+					begin(dirIter),
+					end(dirIter),
+					[&](auto &entry) {
+						if (entry.is_regular_file()) {
+							bytes += std::filesystem::file_size(entry.path());
+							return true;
+						}
+						return false;
+					}
+				);
+
+				cacheSize = Utils::GetFriendlyBytes(bytes);
+
+				lastFrame = now;
+			}
+
+			ImGui::Text("\tCached songs: %d", cacheFileCount);
+			ImGui::Text("\tCache size: %s", cacheSize.c_str());
+
 			halveBpm = Settings::settings.GetHalveBpm();
 			if (ImGui::MenuItem("Halve detected BPM?", nullptr, &halveBpm)) {
 				if (onHalveBpmChanged)
@@ -1322,4 +1347,9 @@ private:
 	float lastScale = 1.0f;
 	std::optional<ImGuiStyle> originalStyle = std::nullopt;
 	ImFont *font = nullptr;
+
+	ptrdiff_t cacheFileCount = 0;
+	std::string cacheSize;
+
+	std::chrono::system_clock::time_point lastFrame = std::chrono::system_clock::now();
 };
