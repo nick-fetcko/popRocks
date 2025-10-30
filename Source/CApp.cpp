@@ -1986,7 +1986,7 @@ inline void CApp::LoadBeats(
 
 		beatDetect->OnLoad(
 			path,
-			Settings::settings.GetCacheDetectionResults() && !cue,
+			Settings::settings.GetCacheDetectionResults(),
 			streamHandle,
 			channelInfo.freq,
 			channelInfo.chans,
@@ -2008,7 +2008,8 @@ inline void CApp::LoadBeats(
 				LogDebug("\tStarting beat counter at ", beatCounter);
 			},
 			cue ? cue->GetCurrentTrack()->startTime : static_cast<std::optional<double>>(std::nullopt),
-			cue ? controls.GetCurrentSongLength() : static_cast<std::optional<double>>(std::nullopt)
+			cue ? controls.GetCurrentSongLength() : static_cast<std::optional<double>>(std::nullopt),
+			cue ? cue->GetCurrentTrack()->index : static_cast<std::optional<uint8_t>>(std::nullopt)
 		);
 	}
 
@@ -2022,7 +2023,7 @@ inline void CApp::LoadBeats(
 
 		nextDetector->OnLoad(
 			next->path,
-			Settings::settings.GetCacheDetectionResults() && !cue,
+			Settings::settings.GetCacheDetectionResults(),
 			nextHandle,
 			nextChannelInfo.freq,
 			nextChannelInfo.chans,
@@ -2036,7 +2037,8 @@ inline void CApp::LoadBeats(
 				}
 			},
 			next->startTime > DBL_EPSILON ? next->startTime : static_cast<std::optional<double>>(std::nullopt),
-			controls.GetNextSongLength()
+			controls.GetNextSongLength(),
+			cue ? const_cast<const Cue*>(cue.get())->Next().index : static_cast<std::optional<uint8_t>>(std::nullopt)
 		);
 	}
 }
@@ -2556,7 +2558,7 @@ void CApp::OnMouseClicked(const Vector2i &mousePos) {
 	if (auto file = controls.GetPlaylist().OnMouseClicked(mousePos)) {
 		// If we didn't select the _next_ song in the playlist,
 		// we need to reset beat detection.
-		if (!next || file->path != next->path)
+		if (!next || file->path != next->path || next->title != file->title)
 			ResetBeatDetection();
 
 		LoadFile(file->path, true);

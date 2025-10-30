@@ -11,12 +11,13 @@ void BeatDetect::OnLoad(
 	const DWORD chans,
 	std::function<void()> onLoaded,
 	std::optional<double> startTime,
-	std::optional<double> endTime
+	std::optional<double> endTime,
+	std::optional<uint8_t> index
 ) {
 	canceled = false;
 
-	thread = std::thread([this, path, cache, streamHandle, freq, chans, onLoaded, startTime, endTime] {
-		_OnLoad(path, cache, streamHandle, freq, chans, onLoaded, startTime, endTime);
+	thread = std::thread([this, path, cache, streamHandle, freq, chans, onLoaded, startTime, endTime, index] {
+		_OnLoad(path, cache, streamHandle, freq, chans, onLoaded, startTime, endTime, index);
 	});
 }
 
@@ -101,6 +102,7 @@ inline void BeatDetect::_OnLoad(
 	std::function<void()> onLoaded,
 	std::optional<double> startTime,
 	std::optional<double> endTime,
+	std::optional<uint8_t> index,
 	std::optional<double> hopTime,
 	std::optional<AgentParameters> parameters
 ) {
@@ -116,6 +118,7 @@ inline void BeatDetect::_OnLoad(
 			auto hash = hash_64_fnv1a_const(data.data(), data.size());
 			std::stringstream stream;
 			stream << std::setw(sizeof(hash) * 2) << std::setfill('0') << std::uppercase << std::hex << hash;
+			if (index) stream << std::dec << "-" << static_cast<int>(*index);
 			if (auto cacheFolder = Settings::GetPath("cache/"); !std::filesystem::exists(cacheFolder))
 				std::filesystem::create_directory(cacheFolder);
 
@@ -301,7 +304,7 @@ inline void BeatDetect::_OnLoad(
 
 				lock.unlock();
 
-				_OnLoad(path, cache, streamHandle, freq, chans, onLoaded, startTime ? startTime : 0.0, endTime, 0.010);
+				_OnLoad(path, cache, streamHandle, freq, chans, onLoaded, startTime ? startTime : 0.0, endTime, index, 0.010);
 
 				// Return so we don't try to free the stream twice
 				return;
@@ -312,7 +315,7 @@ inline void BeatDetect::_OnLoad(
 
 				AgentParameters newParameters;
 				newParameters.expiryTime = 100.0;
-				_OnLoad(path, cache, streamHandle, freq, chans, onLoaded, startTime ? startTime : 0.0, endTime, 0.010, newParameters);
+				_OnLoad(path, cache, streamHandle, freq, chans, onLoaded, startTime ? startTime : 0.0, endTime, index, 0.010, newParameters);
 
 				// Return so we don't try to free the stream twice
 				return;

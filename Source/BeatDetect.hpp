@@ -33,7 +33,8 @@ public:
 		const DWORD chans,
 		std::function<void()> onLoaded,
 		std::optional<double> startTime = std::nullopt,
-		std::optional<double> endTime = std::nullopt
+		std::optional<double> endTime = std::nullopt,
+		std::optional<uint8_t> index = std::nullopt
 	);
 
 	bool OnLoop(double elapsed);
@@ -64,6 +65,7 @@ private:
 		std::function<void()> onLoaded,
 		std::optional<double> startTime = std::nullopt,
 		std::optional<double> endTime = std::nullopt,
+		std::optional<uint8_t> index = std::nullopt,
 		std::optional<double> hopTime = std::nullopt,
 		std::optional<AgentParameters> parameters = std::nullopt
 	);
