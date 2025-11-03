@@ -13,6 +13,7 @@
 #include "Buffer.hpp"
 #include "Cue.hpp"
 #include "Hash.hpp"
+#include "HDR.hpp"
 #include "Metadata.hpp"
 #include "Settings.hpp"
 #include "TagLoader.hpp"
@@ -213,12 +214,12 @@ private:
 					outline.SetText(title.GetText());
 					context.Color(0.0f, 0.0f, 0.0f, std::max(0.5f, alpha));
 					outline.OnLoop(pos.x, pos.y);
-					context.Color(1.0f, 1.0f, 1.0f, std::max(0.5f, alpha));
+					context.Color(1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, std::max(0.5f, alpha));
 				} else context.Color(1.0f, 1.0f, 1.0f, alpha);
 			} else if (current != tracks.begin() && iter == current - 1)
-				context.Color(0.6f, 0.6f, 0.6f, 0.4f * alpha);
+				context.Color(0.6f * HDR::WhiteLevel, 0.6f * HDR::WhiteLevel, 0.6f * HDR::WhiteLevel, 0.4f * alpha);
 			else
-				context.Color(0.6f, 0.6f, 0.6f, alpha - (static_cast<float>(i - distance) / maxIndex));
+				context.Color(0.6f * HDR::WhiteLevel, 0.6f * HDR::WhiteLevel, 0.6f * HDR::WhiteLevel, std::max(0.0f, alpha - (static_cast<float>(i - distance) / maxIndex)));
 
 			title.OnLoop(pos.x, pos.y);
 

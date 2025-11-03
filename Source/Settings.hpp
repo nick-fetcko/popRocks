@@ -2,7 +2,7 @@
 
 #include <filesystem>
 
-#include <SDL_video.h>
+#include <SDL3/SDL_video.h>
 
 #include <glad/glad.h>
 
@@ -239,6 +239,18 @@ public:
 	const GLenum &GetDestFactor() const { return destFactor; }
 	void SetDestFactor(GLenum destFactor);
 
+	const std::string &GetLut() const { return lut; }
+	void SetLut(const std::string &lut);
+
+	const float &GetAlbumArtGamma() const { return albumArtGamma; }
+	void SetAlbumArtGamma(float albumArtGamma);
+
+	const float &GetAlbumArtContrast() const { return albumArtContrast; }
+	void SetAlbumArtContrast(float albumArtContrast);
+
+	const float &GetAlbumArtBrightness() const { return albumArtBrightness; }
+	void SetAlbumArtBrightness(float albumArtBrightness);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -353,4 +365,9 @@ private:
 
 	GLenum sourceFactor = GL_ONE;
 	GLenum destFactor = GL_ZERO;
+
+	std::string lut = "BT709_to_HLG.cube";
+	float albumArtGamma = 0.5f;
+	float albumArtContrast = 1.25f;
+	float albumArtBrightness = 1.50f;
 };

@@ -25,11 +25,10 @@ endif()
 #	vcpkg install freetype:x64-windows
 #
 #	fftw3 requires 3 configuration / build steps (for different precisions)
-find_package(SDL2 CONFIG REQUIRED)
-find_package(SDL2_mixer CONFIG REQUIRED)
-find_package(JPEG REQUIRED)
-find_package(SDL2_image CONFIG REQUIRED)
-find_package(SDL2_net CONFIG REQUIRED)
+find_package(SDL3 CONFIG REQUIRED)
+#find_package(SDL2_mixer CONFIG REQUIRED)
+#find_package(JPEG REQUIRED)
+find_package(SDL3_image CONFIG REQUIRED)
 if (WIN32)
 	find_package(FFTW3f CONFIG REQUIRED)
 	find_package(Freetype CONFIG REQUIRED)
@@ -47,6 +46,8 @@ add_subdirectory(Serial/src)
 add_subdirectory(OpenGL)
 add_subdirectory(Utils)
 add_subdirectory(nativefiledialog-extended)
+# There's no vcpkg port for SDL3_net
+add_subdirectory(third_party/SDL_net-main EXCLUDE_FROM_ALL)
 
 set(_poprocks_cpp_headers
 	Source/AlbumArt.hpp
@@ -66,6 +67,7 @@ set(_poprocks_cpp_headers
 	Source/FLAC.hpp
 	Source/FPSCounter.hpp
 	Source/Gaussian.hpp
+	Source/HDR.hpp
 	Source/ID3V2.hpp
 	Source/imconfig.h
 	Source/LightPack.hpp
@@ -165,12 +167,12 @@ set(_imgui_sources
 set(_imgui_backend_headers
 	${_imgui_dir}/backends/imgui_impl_opengl3_loader.h
 	${_imgui_dir}/backends/imgui_impl_opengl3.h
-	${_imgui_dir}/backends/imgui_impl_sdl2.h
+	${_imgui_dir}/backends/imgui_impl_sdl3.h
 	)
 
 set(_imgui_backend_sources
 	${_imgui_dir}/backends/imgui_impl_opengl3.cpp
-	${_imgui_dir}/backends/imgui_impl_sdl2.cpp
+	${_imgui_dir}/backends/imgui_impl_sdl3.cpp
 	)
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES
@@ -306,13 +308,12 @@ else()
 		)
 endif()
 
-target_link_libraries(popRocks PRIVATE Utils ${OPENGL_LIBRARIES} OpenGL SDL2::SDL2 SDL2::SDL2main SDL2_mixer::SDL2_mixer SDL2_image::SDL2_image SDL2_net::SDL2_net freetype bass bassflac bassape basswv serial nfd ${JPEG_LIBRARIES})
+target_link_libraries(popRocks PRIVATE Utils ${OPENGL_LIBRARIES} OpenGL $<IF:$<TARGET_EXISTS:SDL3_image::SDL3_image-shared>,SDL3_image::SDL3_image-shared,SDL3_image::SDL3_image-static> SDL3_net::SDL3_net freetype bass bassflac bassape basswv serial nfd SDL3::SDL3)
 if (WIN32)
 	target_link_libraries(popRocks PRIVATE FFTW3::fftw3f basswasapi)
 else()
 	target_link_libraries(popRocks PRIVATE bassalac)
 endif()
-target_include_directories(popRocks PRIVATE ${JPEG_INCLUDE_DIR})
 
 add_custom_command(TARGET popRocks POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CONFIGURATION_TYPES}

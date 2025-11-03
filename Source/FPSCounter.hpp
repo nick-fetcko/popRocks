@@ -7,6 +7,7 @@
 #include "OpenGL/Context.hpp"
 #include "OpenGL/OpenGLFont.hpp"
 
+#include "HDR.hpp"
 #include "Text.hpp"
 
 using namespace Fetcko;
@@ -43,7 +44,7 @@ public:
 	void Draw(float alpha) {
 		context->Color(0.0f, 0.0f, 0.0f, alpha);
 		outline.OnLoop(Margin, Margin + context->GetYOffset());
-		context->Color(1.0f, 1.0f, 1.0f, alpha);
+		context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 		text.OnLoop(Margin, Margin + context->GetYOffset());
 	}
 

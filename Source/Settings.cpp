@@ -546,6 +546,34 @@ void Settings::SetDestFactor(GLenum destFactor) {
 	}
 }
 
+void Settings::SetLut(const std::string &lut) {
+	if (this->lut != lut) {
+		this->lut = lut;
+		Save();
+	}
+}
+
+void Settings::SetAlbumArtGamma(float albumArtGamma) {
+	if (this->albumArtGamma != albumArtGamma) {
+		this->albumArtGamma = albumArtGamma;
+		Save();
+	}
+}
+
+void Settings::SetAlbumArtContrast(float albumArtContrast) {
+	if (this->albumArtContrast != albumArtContrast) {
+		this->albumArtContrast = albumArtContrast;
+		Save();
+	}
+}
+
+void Settings::SetAlbumArtBrightness(float albumArtBrightness) {
+	if (this->albumArtBrightness != albumArtBrightness) {
+		this->albumArtBrightness = albumArtBrightness;
+		Save();
+	}
+}
+
 void Settings::Save() {
 	if (auto path = GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
@@ -779,6 +807,15 @@ const Node &operator>>(const Node &node, Settings &settings) {
 		node["sourceFactor"]->get(settings.sourceFactor);
 	if (node.has("destFactor"))
 		node["destFactor"]->get(settings.destFactor);
+
+	if (node.has("lut"))
+		node["lut"]->get(settings.lut);
+	if (node.has("albumArtGamma"))
+		node["albumArtGamma"]->get(settings.albumArtGamma);
+	if (node.has("albumArtContrast"))
+		node["albumArtContrast"]->get(settings.albumArtContrast);
+	if (node.has("albumArtBrightness"))
+		node["albumArtBrightness"]->get(settings.albumArtBrightness);
 		
 	return node;
 }
@@ -849,6 +886,10 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["rendererOffset"]->set(settings.rendererOffset);
 	node["sourceFactor"]->set(settings.sourceFactor);
 	node["destFactor"]->set(settings.destFactor);
+	node["lut"]->set(settings.lut);
+	node["albumArtGamma"]->set(settings.albumArtGamma);
+	node["albumArtContrast"]->set(settings.albumArtContrast);
+	node["albumArtBrightness"]->set(settings.albumArtBrightness);
 
 	return node;
 }

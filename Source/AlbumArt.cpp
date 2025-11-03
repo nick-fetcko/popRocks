@@ -4,12 +4,15 @@
 #include <algorithm>
 #include <thread>
 
+#include <lodepng.h>
+
 #include "MathCPP/Duration.hpp"
 
 #include "Bicubic.hpp"
 #include "Buffer.hpp"
 #include "Gaussian.hpp"
 #include "Hash.hpp"
+#include "HDR.hpp"
 #include "Settings.hpp"
 #include "Utils.hpp"
 
@@ -57,6 +60,10 @@ void AlbumArt::OnInit(int windowWidth, int windowHeight, float scale) {
 	squareEab->Bind();
 	squareEab->BufferData<std::size(Buffers::SquareBuffer)>(Buffers::SquareBuffer);
 	squareEab->Unbind();
+
+	cube = std::make_unique<Cube>(Utils::GetResource(
+		std::filesystem::path("LUTs") / Settings::settings.GetLut()
+	));
 }
 
 void AlbumArt::OnResize(int windowWidth, int windowHeight, float scale) {
@@ -111,7 +118,9 @@ void AlbumArt::OnLoop(GLfloat x, GLfloat y, float frameCount, Context &context) 
 	}
 
 	if (albumLoaded && !hidden) {
-		context.Color(1.0f, 1.0f, 1.0f, 1.0f);
+		context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, 1.0f);
+
+		context.GetShaderProgram().Uniform1i("hdr", HDR::Enabled);
 
 		context.Translate(
 			x,
@@ -126,9 +135,19 @@ void AlbumArt::OnLoop(GLfloat x, GLfloat y, float frameCount, Context &context) 
 		);
 		context.Apply();
 
+		glActiveTexture(GL_TEXTURE0 + 0);
 		glBindTexture(GL_TEXTURE_2D, album);
 
+		glActiveTexture(GL_TEXTURE0 + 1);
+		cube->Bind();
+
 		Circle::OnLoop(0, 0, context);
+
+		cube->Unbind();
+
+		glActiveTexture(GL_TEXTURE0 + 0);
+
+		context.GetShaderProgram().Uniform1i("hdr", 0);
 
 		context.LoadIdentity();
 	}
@@ -150,7 +169,8 @@ int AlbumArt::DrawSquare(int x, int y, int height, GLfloat alpha, Context &conte
 			squareVbo->Unbind();
 		}
 		
-		context.Color(1.0f, 1.0f, 1.0f, alpha);
+		context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
+		context.GetShaderProgram().Uniform1i("hdr", HDR::Enabled);
 
 		context.Translate(
 			static_cast<GLfloat>(x),
@@ -160,11 +180,20 @@ int AlbumArt::DrawSquare(int x, int y, int height, GLfloat alpha, Context &conte
 		context.Apply();
 		glBindTexture(GL_TEXTURE_2D, album);
 
+		glActiveTexture(GL_TEXTURE0 + 1);
+		cube->Bind();
+
 		squareVao->Bind();
 		squareEab->Bind();
 		squareEab->DrawElements(GL_TRIANGLES);
 		squareEab->Unbind();
 		squareVao->Unbind();
+
+		cube->Unbind();
+
+		glActiveTexture(GL_TEXTURE0 + 0);
+
+		context.GetShaderProgram().Uniform1i("hdr", 0);
 
 		context.LoadIdentity();
 
@@ -193,7 +222,7 @@ void AlbumArt::OnDestroy() {
 	Circle::OnDestroy();
 
 	if (lastSurface)
-		SDL_FreeSurface(lastSurface);
+		SDL_DestroySurface(lastSurface);
 
 	glDeleteTextures(1, &album);
 	album = 0;
@@ -201,6 +230,8 @@ void AlbumArt::OnDestroy() {
 	squareVao.reset();
 	squareVbo.reset();
 	squareEab.reset();
+
+	cube.reset();
 }
 
 std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder) {
@@ -320,7 +351,7 @@ void AlbumArt::ProcessColors(Histogram *destination, SDL_Surface *surface, const
 		uint64_t averageB = 0;
 		for (auto x = 0; x < surface->w && processingColors; ++x) {
 			for (auto y = 0; y < surface->h && processingColors; ++y) {
-				auto pos = y * surface->format->BytesPerPixel * surface->w + x * surface->format->BytesPerPixel;
+				auto pos = y * SDL_BYTESPERPIXEL(surface->format) * surface->w + x * SDL_BYTESPERPIXEL(surface->format);
 
 				averageR += pixels[pos];
 				averageG += pixels[pos + 1];
@@ -369,7 +400,7 @@ void AlbumArt::ProcessColors(Histogram *destination, SDL_Surface *surface, const
 		while (histogram.empty()) {
 			for (auto x = 0; x < surface->w && processingColors; x += hstep) {
 				for (auto y = 0; y < surface->h && processingColors; y += vstep) {
-					auto index = (y * surface->w + x) * surface->format->BytesPerPixel;
+					auto index = (y * surface->w + x) * SDL_BYTESPERPIXEL(surface->format);
 
 					color.r = pixels[index] / 255.0f;
 					color.g = pixels[index + 1] / 255.0f;
@@ -554,15 +585,15 @@ void AlbumArt::ProcessColors(Histogram *destination, SDL_Surface *surface, const
 }
 
 inline uint8_t *AlbumArt::GetPixels(SDL_Surface *surface) {
-	if (surface->pitch == surface->w * surface->format->BytesPerPixel) {
+	if (surface->pitch == surface->w * SDL_BYTESPERPIXEL(surface->format)) {
 		return reinterpret_cast<uint8_t *>(surface->pixels);
 	} else {
-		auto pixels = new uint8_t[surface->w * surface->h * surface->format->BytesPerPixel];
+		auto pixels = new uint8_t[surface->w * surface->h * SDL_BYTESPERPIXEL(surface->format)];
 		for (int y = 0; y < surface->h; ++y) {
 			memcpy(
-				&pixels[y * surface->w * surface->format->BytesPerPixel],
+				&pixels[y * surface->w * SDL_BYTESPERPIXEL(surface->format)],
 				&((reinterpret_cast<uint8_t *>(surface->pixels))[y * surface->pitch]),
-				surface->w * surface->format->BytesPerPixel
+				surface->w * SDL_BYTESPERPIXEL(surface->format)
 			);
 		}
 		return pixels;
@@ -584,14 +615,14 @@ void AlbumArt::LoadFromSurface(SDL_Surface *surface, bool scaled) {
 
 	uint8_t *pixels = GetPixels(surface);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, surface->format->BitsPerPixel == 32 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, pixels);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, SDL_BITSPERPIXEL(surface->format) == 32 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, pixels);
 
 	if (!scaled) {
 		// lastSurface is the last surface
 		// _before_ scaling, so only update
 		// it when we aren't scaling
 		if (lastSurface)
-			SDL_FreeSurface(lastSurface);
+			SDL_DestroySurface(lastSurface);
 
 		lastSurface = surface;
 
@@ -667,11 +698,11 @@ bool AlbumArt::Load(const std::filesystem::path &fileName, const std::filesystem
 		auto surface = IMG_Load(utf8.c_str());
 
 		if (!surface) {
-			LogError("Could not load external album art from file " + utf8);
+			LogError("Could not load external album art from file " + utf8, " error: ", SDL_GetError());
 			return false;
 		} else if (!force && surface->w < albumWidth && surface->h < albumHeight) {
 			LogWarning("External album art is smaller than what's already loaded");
-			SDL_FreeSurface(surface);
+			SDL_DestroySurface(surface);
 			return false;
 		} else if (albumWidth != 0 && albumHeight != 0) {
 			LogDebug("External album art is larger than embedded. Using it instead.");
@@ -716,19 +747,19 @@ bool AlbumArt::Load(const std::string &mimeType, const void *data, std::size_t l
 		lastEmbeddedHash = hash;
 	}
 
-	auto file = SDL_RWFromMem(
+	auto file = SDL_IOFromMem(
 		const_cast<void*>(data),
 		static_cast<int>(length)
 	);
 	embeddedDataMimeType = mimeType.substr(mimeType.find('/') + 1);
 
-	auto surface = IMG_LoadTyped_RW(file, 1, embeddedDataMimeType.c_str());
+	auto surface = IMG_LoadTyped_IO(file, 1, embeddedDataMimeType.c_str());
 	if (!surface) {
 		LogError("Could not load embedded album art!");
 		return false;
 	} else if (surface->w < albumWidth && surface->h < albumHeight) {
 		LogWarning("Embedded album art is smaller than what's already loaded");
-		SDL_FreeSurface(surface);
+		SDL_DestroySurface(surface);
 		return false;
 	}
 
@@ -876,19 +907,18 @@ void AlbumArt::Scale(bool force) {
 		// Wrap pixels in a new surface. This way, we can
 		// free the surface without losing the original
 		// pixel data.
-		SDL_Surface *resized = SDL_CreateRGBSurfaceWithFormatFrom(
-			lastSurface->pixels,
+		SDL_Surface *resized = SDL_CreateSurfaceFrom(
 			lastSurface->w,
 			lastSurface->h,
-			lastSurface->format->BytesPerPixel,
-			lastSurface->pitch,
-			lastSurface->format->format
+			lastSurface->format,
+			lastSurface->pixels,
+			lastSurface->pitch
 		);
 
 		auto start = std::chrono::system_clock::now();
 
 		// TODO: RGBA support
-		if (lastSurface->format->BitsPerPixel == 24) {
+		if (SDL_BITSPERPIXEL(lastSurface->format) == 24) {
 			Gaussian gaussian;
 
 			auto w = lastSurface->w / 2;

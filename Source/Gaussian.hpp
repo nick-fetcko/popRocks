@@ -3,7 +3,7 @@
 #include <cmath>
 #include <sstream>
 
-#include <SDL_image.h>
+#include <SDL3_image/SDL_image.h>
 #include "MathCPP/Maths.hpp"
 
 using namespace MathsCPP;

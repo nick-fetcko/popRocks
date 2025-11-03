@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <map>
 #include <math.h>
+#include <cmath>
 #include <sstream>
 #include <vector>
 #include <fstream>
@@ -14,9 +15,8 @@
 #include <shlobj.h>
 #endif
 
-#include <SDL.h>
-#include <SDL_image.h>
-#include <SDL_mixer.h>
+#include <SDL3/SDL.h>
+#include <SDL3_Image/SDL_image.h>
 
 #include <bassape.h>
 #include <basswv.h>
@@ -28,7 +28,7 @@
 #endif
 
 #include <imgui.h>
-#include <backends/imgui_impl_sdl2.h>
+#include <backends/imgui_impl_sdl3.h>
 #include <backends/imgui_impl_opengl3.h>
 
 #include "MathCPP/Colour.hpp"
@@ -38,6 +38,7 @@
 #include "FFTLineRenderer.hpp"
 #include "FFTRenderer.hpp"
 #include "Hash.hpp"
+#include "HDR.hpp"
 #include "ID3V2.hpp"
 #include "MP4.hpp"
 #include "OscilloscopeRenderer.hpp"
@@ -49,12 +50,12 @@ using namespace MathsCPP;
 // ===================== Callbacks =====================
 // =====================================================
 #ifdef WIN32
-const std::map<DWORD, SDL_KeyCode> KeyMap = {
+const std::map<DWORD, SDL_Keycode> KeyMap = {
 	{ VK_VOLUME_DOWN, SDLK_VOLUMEDOWN },
 	{ VK_VOLUME_UP, SDLK_VOLUMEUP },
-	{ VK_MEDIA_NEXT_TRACK, SDLK_AUDIONEXT },
-	{ VK_MEDIA_PREV_TRACK, SDLK_AUDIOPREV },
-	{ VK_MEDIA_PLAY_PAUSE, SDLK_AUDIOPLAY }
+	{ VK_MEDIA_NEXT_TRACK, SDLK_MEDIA_NEXT_TRACK },
+	{ VK_MEDIA_PREV_TRACK, SDLK_MEDIA_PREVIOUS_TRACK },
+	{ VK_MEDIA_PLAY_PAUSE, SDLK_MEDIA_PLAY }
 };
 
 HHOOK keyboardHook = nullptr;
@@ -75,8 +76,8 @@ LRESULT CALLBACK LowLevelKeyboardProc(
 	if (KeyMap.find(hookStruct->vkCode) != KeyMap.end()) {
 		if (wParam == WM_KEYDOWN) {
 			SDL_Event event;
-			event.type = SDL_KEYDOWN;
-			event.key.keysym.sym = KeyMap.at(hookStruct->vkCode);
+			event.type = SDL_EVENT_KEY_DOWN;
+			event.key.key = KeyMap.at(hookStruct->vkCode);
 			SDL_PushEvent(&event);
 		}
 		return 1;
@@ -405,10 +406,9 @@ void CApp::SetVisualizerScale(float scale) {
 
 void CApp::OnInit() {
 	// https://tgui.eu/tutorials/latest-stable/dpi-scaling/
-	SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
+	//SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
 
 	auto ret = SDL_Init(
-		SDL_INIT_TIMER |
 		SDL_INIT_VIDEO |
 		SDL_INIT_EVENTS
 	);
@@ -417,6 +417,24 @@ void CApp::OnInit() {
 	if (ret < 0)
 		LogDebug("SDL_GetError = ", SDL_GetError());
 
+	int num_displays;
+	SDL_DisplayID *displays = SDL_GetDisplays(&num_displays);
+
+	for (int i = 0; i < num_displays; i++) {
+		SDL_PropertiesID prop_id = SDL_GetDisplayProperties(displays[i]);
+
+		if (!SDL_GetBooleanProperty(prop_id, SDL_PROP_DISPLAY_HDR_ENABLED_BOOLEAN, false)) {
+			//SDL_Log("Display with ID %"SDL_PRIu32 " does not have HDR enabled.", displays[i]);
+			LogDebug("Display with ID ", displays[i], " does not have HDR enabled");
+		} else {
+			//SDL_Log("Display with ID %"SDL_PRIu32 " has HDR enabled.", displays[i]);
+			LogDebug("Display with ID ", displays[i], " DOES have HDR enabled");
+		}
+	}
+
+	SDL_free(displays);
+
+	/*
 	ret = IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG | IMG_INIT_WEBP);
 
 	std::stringstream stream;
@@ -425,6 +443,7 @@ void CApp::OnInit() {
 	if (ret & IMG_INIT_PNG) stream << "PNG ";
 	if (ret & IMG_INIT_WEBP) stream << "WEBP";
 	LogDebug(stream.str());
+	*/
 
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
@@ -435,8 +454,14 @@ void CApp::OnInit() {
 	// For some reason we need to explicitly
 	// request an 8-bit alpha channel on certain
 	// OpenGL implementations (namely VBoxSVGA's)
-	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
-
+	/*
+	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 16);
+	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 16);
+	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 16);
+	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 16);
+	SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE, 64); // For RGBA16F
+	SDL_GL_SetAttribute(SDL_GL_FLOATBUFFERS, 1);
+	*/
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -444,15 +469,50 @@ void CApp::OnInit() {
 	windowWidth = Settings::settings.GetWindowWidth();
 	windowHeight = Settings::settings.GetWindowHeight();
 
-	sdlWindow = SDL_CreateWindow(
-		"popRocks",
-		Settings::settings.GetWindowX(),
-		Settings::settings.GetWindowY(),
-		windowWidth,
-		windowHeight,
-		SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
+	SDL_PropertiesID props = SDL_CreateProperties();
+
+	SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "popRocks");
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, windowWidth);
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, windowHeight);
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, Settings::settings.GetWindowX());
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, Settings::settings.GetWindowY());
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_OPENGL_BOOLEAN, true);
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
+
+	sdlWindow = SDL_CreateWindowWithProperties(
+		props
 	);
+
+	SDL_PropertiesID windowProps = SDL_GetWindowProperties(sdlWindow);
+	HDR::Enabled = SDL_GetBooleanProperty(windowProps, SDL_PROP_WINDOW_HDR_ENABLED_BOOLEAN, false);
+	HDR::WhiteLevel = SDL_GetFloatProperty(windowProps, SDL_PROP_WINDOW_SDR_WHITE_LEVEL_FLOAT, 1.0f);
+	HDR::Headroom = SDL_GetFloatProperty(windowProps, SDL_PROP_WINDOW_HDR_HEADROOM_FLOAT, 1.0f);
+
+#ifdef WIN32
+	// Get the HWND from SDL
+	HWND hwnd = (HWND)SDL_GetPointerProperty(SDL_GetWindowProperties(sdlWindow), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
+	int width = 0, height = 0;
+	SDL_GetWindowSize(sdlWindow, &width, &height);
+
+	int adapterIndex = 0;
+	int outputIndex = 0;
+
+	if (!SDL_GetDXGIOutputInfo(SDL_GetDisplayForWindow(sdlWindow),
+		&adapterIndex, &outputIndex)) {
+		LogError(
+			"SDL_DXGIGetOutputInfo() failed: ",
+			SDL_GetError()
+		);
+	}
+#endif
 	if (auto context = SDL_GL_CreateContext(sdlWindow)) {
+		LogDebug("gladLoadGL() returned ", gladLoadGL());
+
+#ifdef WIN32
+		if (HDR::Enabled)
+			dxgi.OnInit(hwnd, adapterIndex, width, height);
+#endif
+
 #if GUI
 		// Setup Dear ImGui context
 		IMGUI_CHECKVERSION();
@@ -461,7 +521,7 @@ void CApp::OnInit() {
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;	// Enable Keyboard Controls
 
 		// Setup Platform/Renderer backends
-		ImGui_ImplSDL2_InitForOpenGL(sdlWindow, context);
+		ImGui_ImplSDL3_InitForOpenGL(sdlWindow, context);
 		ImGui_ImplOpenGL3_Init();
 
 		menu.SetOnOpen([this](const std::filesystem::path &path) {
@@ -911,7 +971,7 @@ void CApp::OnInit() {
 		});
 		menu.SetOnQuit([this] {
 			SDL_Event event;
-			event.type = SDL_QUIT;
+			event.type = SDL_EVENT_QUIT;
 			SDL_PushEvent(&event);
 		});
 		menu.SetOnRandom([this] {
@@ -948,17 +1008,42 @@ void CApp::OnInit() {
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
+		menu.SetOnLutChanged([this](const std::string &lut) {
+			Settings::settings.SetLut(lut);
+
+			albumArt.GetCube()->Load(Utils::GetResource(std::filesystem::path("LUTs") / lut));
+		});
+		menu.SetOnAlbumArtGammaChanged([this](float gamma) {
+			Settings::settings.SetAlbumArtGamma(gamma);
+
+			this->context->With("texture"_hash, [this, gamma](Context::Shader &shader) {
+				shader.program.Uniform1f("gamma", gamma);
+			});
+		});
+		menu.SetOnAlbumArtContrastChanged([this](float contrast) {
+			Settings::settings.SetAlbumArtContrast(contrast);
+
+			this->context->With("texture"_hash, [this, contrast](Context::Shader &shader) {
+				shader.program.Uniform1f("contrast", contrast);
+			});
+		});
+		menu.SetOnAlbumArtBrightnessChanged([this](float brightness) {
+			Settings::settings.SetAlbumArtBrightness(brightness);
+
+			this->context->With("texture"_hash, [this, brightness](Context::Shader &shader) {
+				shader.program.Uniform1f("brightness", brightness);
+			});
+		});
 #endif
 	} else LogError("Could not create OpenGL context: ", SDL_GetError());
 
-	LogDebug("gladLoadGL() returned ", gladLoadGL());
 	LogDebug("OpenGL Version: ", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
 
 	// Prefer adaptive sync over regular vsync
 	if (SDL_GL_SetSwapInterval(-1) == -1)
 		SDL_GL_SetSwapInterval(1);
 
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -1024,6 +1109,26 @@ void CApp::OnInit() {
 			shader.program.CacheUniformLocation("screenSize");
 			shader.program.CacheUniformLocation("radius");
 		}
+
+		if (hash == "texture"_hash) {
+			shader.program.CacheUniformLocation("hdr");
+			shader.program.Uniform1i("hdr", 0);
+			shader.program.CacheUniformLocation("multiplier");
+			shader.program.Uniform1f("multiplier", HDR::WhiteLevel * HDR::Headroom);
+			shader.program.CacheUniformLocation("contrast");
+			shader.program.Uniform1f("contrast", Settings::settings.GetAlbumArtContrast());
+			shader.program.CacheUniformLocation("brightness");
+			shader.program.Uniform1f("brightness", Settings::settings.GetAlbumArtBrightness());
+
+			shader.program.CacheUniformLocation("text");
+			shader.program.Uniform1i("text", 0);
+
+			shader.program.CacheUniformLocation("cube");
+			shader.program.Uniform1i("cube", 1);
+
+			shader.program.CacheUniformLocation("gamma");
+			shader.program.Uniform1f("gamma", Settings::settings.GetAlbumArtGamma());
+		}
 	}
 
 	// Initialize our buffers now that we have an OpenGL context
@@ -1066,7 +1171,8 @@ void CApp::OnInit() {
 	controls.OnInit(windowWidth, windowHeight, *context, scale);
 
 	controls.SetFadeCallback([this](bool in) {
-		SDL_ShowCursor(in ? SDL_ENABLE : SDL_DISABLE);
+		if (in) SDL_ShowCursor();
+		else SDL_HideCursor();
 	});
 
 	spindle.OnInit(albumArt.GetRadius() / SpindleSize);
@@ -1174,8 +1280,17 @@ void CApp::OnResize(int width, int height, float scale) {
 	Settings::settings.SetWindowWidth(width / scale);
 	Settings::settings.SetWindowHeight(height / scale);
 
-	context->SetIdentity(glm::ortho(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f));
-	context->Apply();
+#ifdef WIN32
+	if (HDR::Enabled) {
+		dxgi.OnResize(width, height);
+		context->SetIdentity(glm::ortho(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height)));
+	} else {
+#endif
+		context->SetIdentity(glm::ortho(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f));
+		context->Apply();
+#ifdef WIN32
+	}
+#endif
 
 	glViewport(0, 0, windowWidth, windowHeight);
 
@@ -1190,8 +1305,15 @@ void CApp::OnResize(int width, int height, float scale) {
 			windowHeight - maxDimension
 		};
 
-		blurFbo = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension);
-		lastFrame = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension);
+		blurFbo = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension, HDR::Enabled ? GL_RGBA16F : GL_RGBA);
+		lastFrame = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension, HDR::Enabled ? GL_RGBA16F : GL_RGBA);
+
+#ifdef WIN32
+		if (HDR::Enabled) {
+			blurFbo->SetDefaultFramebuffer(dxgi.GetFramebuffer());
+			lastFrame->SetDefaultFramebuffer(dxgi.GetFramebuffer());
+		}
+#endif
 
 		context->With("blur"_hash, [this](Context::Shader &shader) {
 			shader.program.Uniform1f("intensity", blurIntensity);
@@ -1211,7 +1333,12 @@ void CApp::OnResize(int width, int height, float scale) {
 	renderer->OnResize(windowWidth, windowHeight, maxDimension);
 
 #if GUI
-	uiFbo = std::make_unique<MultisampledFramebufferObject>(windowWidth, windowHeight);
+	uiFbo = std::make_unique<MultisampledFramebufferObject>(windowWidth, windowHeight, HDR::Enabled ? GL_RGBA16F : GL_RGBA);
+
+#ifdef WIN32
+	if (HDR::Enabled)
+		uiFbo->SetDefaultFramebuffer(dxgi.GetFramebuffer());
+#endif
 
 	menu.OnResize(width, height, scale);
 
@@ -1276,9 +1403,14 @@ void CApp::LoadRandomPreset() {
 void CApp::OnLoop(const Delta &time) {
 	Logger::ProcessCommands();
 
+#ifdef WIN32
+	if (HDR::Enabled)
+		dxgi.OnLoop();
+#endif
+		
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
-
+	
 	context->Use("texture"_hash);
 
 	if (!fileLoaded && !listening) {
@@ -1389,11 +1521,12 @@ void CApp::OnLoop(const Delta &time) {
 		lightPack.NextSamples(floatBuffer, bufferLength);
 
 	auto color = GetColor();
+
 	currentFadeTime += playing ? time.change.AsSeconds() : 0.0f;
 	auto lerp = std::min(1.0f, currentFadeTime / fadeTime);
 
 	if (playing && ((renderer->GetPulse() && !renderer->GetPulses()) || strobe)) {
-		auto hsv = color.ToHsv();
+		auto hsv = (color).ToHsv();
 
 		if (!darkenPulseOnBrightColors || hsv.v < 0.66) {
 			auto brightHsv = brightColor.ToHsv();
@@ -1407,7 +1540,7 @@ void CApp::OnLoop(const Delta &time) {
 	}
 
 	if (playing || listening) {
-		auto hsv = color.ToHsv();
+		auto hsv = GetColor().ToHsv();
 		auto brightHsv = this->brightColor.ToHsv();
 		brightHsv.v = std::max(0.0f, brightHsv.v - strobeIntensity * lerp);
 
@@ -1520,7 +1653,7 @@ void CApp::OnLoop(const Delta &time) {
 		glViewport(oldViewport[0], oldViewport[1], oldViewport[2], oldViewport[3]);
 		context->LoadIdentity();
 		
-		context->Color(1.0f, 1.0f, 1.0f, blurOpacity - (strobe ? lerp * strobeIntensity : 0.0));
+		context->Color(1.0f, 1.0f, 1.0f, blurOpacity - (strobe ? lerp * (strobeIntensity) : 0.0));
 		blurFbo->Draw(blurOffset.x / 2.0f, blurOffset.y / 2.0f, *context);
 
 		context->LoadIdentity();
@@ -1562,7 +1695,7 @@ void CApp::OnLoop(const Delta &time) {
 		time,
 		streamHandle,
 		*context,
-		GetColor()
+		GetColor() * HDR::WhiteLevel
 	);
 	
 	// Line up the next file at >= 90% completion of current file
@@ -1657,10 +1790,11 @@ inline void CApp::SwapBuffers(const Delta &time) {
 
 #if GUI
 	ImGui_ImplOpenGL3_NewFrame();
-	ImGui_ImplSDL2_NewFrame();
+	ImGui_ImplSDL3_NewFrame();
 	ImGui::NewFrame();
 
 	// Keep the controls on screen if a menu is open
+	context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, 1.0f);
 	if (menu.OnLoop(lightPack, albumArt, *context))
 		controls.Fade(true);
 
@@ -1688,10 +1822,37 @@ inline void CApp::SwapBuffers(const Delta &time) {
 		uiAccum = 0.0;
 	} else ImGui::EndFrame();
 
-	context->Color(1.0f, 1.0f, 1.0f, 0.95f * controls.GetAlpha());
+	if (HDR::Enabled) {
+		context->Color(1.0f, 1.0f, 1.0f, 0.99f * controls.GetAlpha());
+
+		context->GetShaderProgram().Uniform1i("hdr", true);
+
+		context->GetShaderProgram().Uniform1f("gamma", 0.5f);
+		context->GetShaderProgram().Uniform1f("contrast", 1.15f);
+		context->GetShaderProgram().Uniform1f("brightness", 1.0f);
+
+		glActiveTexture(GL_TEXTURE0 + 1);
+		albumArt.GetCube()->Bind();
+		glActiveTexture(GL_TEXTURE0 + 0);
+	} else context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, 0.95f * controls.GetAlpha());
+
 	uiFbo->Draw(0, 0, *context);
+
+	if (HDR::Enabled) {
+		albumArt.GetCube()->Unbind();
+		context->GetShaderProgram().Uniform1i("hdr", 0);
+		context->GetShaderProgram().Uniform1f("gamma", Settings::settings.GetAlbumArtGamma());
+		context->GetShaderProgram().Uniform1f("contrast", Settings::settings.GetAlbumArtContrast());
+		context->GetShaderProgram().Uniform1f("brightness", Settings::settings.GetAlbumArtBrightness());
+	}
 #endif
-	SDL_GL_SwapWindow(sdlWindow);
+
+#ifdef WIN32
+	if (HDR::Enabled)
+		dxgi.SwapBuffers();
+	else
+#endif
+		SDL_GL_SwapWindow(sdlWindow);
 
 	frameStart = std::chrono::steady_clock::now() - std::chrono::duration_cast<std::chrono::microseconds>(over);
 }
@@ -1713,6 +1874,9 @@ void CApp::OnDestroy() {
 		UnhookWindowsHookEx(keyboardHook);
 		keyboardHook = nullptr;
 	}
+
+	if (HDR::Enabled)
+		dxgi.OnDestroy();
 #endif
 
 	for (auto &detector : beatDetectors)
@@ -1748,7 +1912,7 @@ void CApp::OnDestroy() {
 
 #if GUI
 	ImGui_ImplOpenGL3_Shutdown();
-	ImGui_ImplSDL2_Shutdown();
+	ImGui_ImplSDL3_Shutdown();
 	ImGui::DestroyContext();
 #endif
 
@@ -1756,7 +1920,7 @@ void CApp::OnDestroy() {
 	BASS_WASAPI_Free();
 #endif
 	BASS_Free();
-	IMG_Quit();
+//	IMG_Quit();
 
 	Logger::OnDestroy();
 }
@@ -2320,8 +2484,15 @@ void CApp::SetBlur(bool blur) {
 			windowHeight - maxDimension
 		};
 
-		blurFbo = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension);
-		lastFrame = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension);
+		blurFbo = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension, HDR::Enabled ? GL_RGBA16F : GL_RGBA);
+		lastFrame = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension, HDR::Enabled ? GL_RGBA16F : GL_RGBA);
+
+#ifdef WIN32
+		if (HDR::Enabled) {
+			blurFbo->SetDefaultFramebuffer(dxgi.GetFramebuffer());
+			lastFrame->SetDefaultFramebuffer(dxgi.GetFramebuffer());
+		}
+#endif
 
 		context->With("blur"_hash, [this](Context::Shader &shader) {
 			shader.program.Uniform1f("intensity", blurIntensity);
@@ -2451,10 +2622,10 @@ void CApp::TogglePlaying() {
 }
 
 void CApp::ToggleFullscreen() {
-	if (SDL_GetWindowFlags(sdlWindow) & SDL_WINDOW_FULLSCREEN_DESKTOP)
+	if (SDL_GetWindowFlags(sdlWindow) & SDL_WINDOW_FULLSCREEN)
 		SDL_SetWindowFullscreen(sdlWindow, 0);
 	else
-		SDL_SetWindowFullscreen(sdlWindow, SDL_WINDOW_FULLSCREEN_DESKTOP);
+		SDL_SetWindowFullscreen(sdlWindow, SDL_WINDOW_FULLSCREEN);
 }
 
 void CApp::NextTrack() {
@@ -2688,11 +2859,32 @@ void CApp::OnColorChanged(const MathsCPP::Colour<float> &color, bool silent) {
 
 	auto hsv = color.ToHsv();
 	hsv.v = 1.0f;
-	//hsv.s = 1.0f;
 	brightColor = Colour<float>::FromHsv(hsv);
+	if (HDR::Enabled) {
+		brightColor.r = std::pow(brightColor.r, 1.0f / Settings::settings.GetAlbumArtGamma());
+		brightColor.g = std::pow(brightColor.g, 1.0f / Settings::settings.GetAlbumArtGamma());
+		brightColor.b = std::pow(brightColor.b, 1.0f / Settings::settings.GetAlbumArtGamma());
+
+		brightColor.r = ((brightColor.r - 0.5f) * std::max(Settings::settings.GetAlbumArtContrast(), 0.0f)) + 0.5f;
+		brightColor.g = ((brightColor.g - 0.5f) * std::max(Settings::settings.GetAlbumArtContrast(), 0.0f)) + 0.5f;
+		brightColor.b = ((brightColor.b - 0.5f) * std::max(Settings::settings.GetAlbumArtContrast(), 0.0f)) + 0.5f;
+
+		brightColor *= HDR::WhiteLevel * HDR::Headroom;
+		brightColor += Settings::settings.GetAlbumArtBrightness();
+
+		// Reset alpha
+		brightColor.a = 1.0f;
+	}
 
 	hsv.v = 0.50f;
 	darkColor = Colour<float>::FromHsv(hsv);
+
+	if (HDR::Enabled) {
+		darkColor *= HDR::WhiteLevel;
+
+		// Reset alpha
+		darkColor.a = 1.0f;
+	}
 
 	// Simple, linear function
 	//SetGamma(2.8f - color.ToHsv().s * 2.0f);

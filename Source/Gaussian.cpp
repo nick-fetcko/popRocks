@@ -26,12 +26,10 @@ Gaussian::~Gaussian() {
 }
 
 SDL_Surface *Gaussian::Blur(SDL_Surface *surface, bool *running) {
-	SDL_Surface *ret = SDL_CreateRGBSurfaceWithFormat(
-		surface->flags,
+	SDL_Surface *ret = SDL_CreateSurface(
 		surface->w,
 		surface->h,
-		surface->format->BytesPerPixel,
-		surface->format->format
+		surface->format
 	);
 
 	const auto pixels = reinterpret_cast<uint8_t *>(ret->pixels);
@@ -65,7 +63,7 @@ SDL_Surface *Gaussian::Blur(SDL_Surface *surface, bool *running) {
 	}
 #endif
 
-	SDL_FreeSurface(surface);
+	SDL_DestroySurface(surface);
 
 	return ret;
 }

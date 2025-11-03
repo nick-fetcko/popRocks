@@ -2,12 +2,12 @@
 #include <locale>
 #include <codecvt>
 
-#include <SDL.h>
-#include <SDL_mixer.h>
+#include <SDL3/SDL.h>
+//#include <SDL_mixer.h>
 #include <bass.h>
 #include <bassflac.h>
 
-#include <backends/imgui_impl_sdl2.h>
+#include <backends/imgui_impl_sdl3.h>
 
 #include "MathCPP/Duration.hpp"
 
@@ -50,77 +50,79 @@ int main(int argc, char *argv[]) {
 	while(running) {
 		while(SDL_PollEvent(&event)) {
 #if GUI
-			ImGui_ImplSDL2_ProcessEvent(&event);
+			ImGui_ImplSDL3_ProcessEvent(&event);
 			if (io.WantCaptureKeyboard || io.WantCaptureMouse)
 				app.UpdateUi();
 #endif
 
 			switch(event.type) {
-				case SDL_QUIT:
+				case SDL_EVENT_QUIT:
 					running = false;
 					break;
-				case SDL_WINDOWEVENT:
-					if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
-						auto window = SDL_GetWindowFromID(event.window.windowID);
-						int w = 0, h = 0;
-						auto scale = app.GetScale(window, &w, &h);
+				case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: {
+					auto window = SDL_GetWindowFromID(event.window.windowID);
+					int w = 0, h = 0;
+					auto scale = app.GetScale(window, &w, &h);
 
-						app.OnResize(w, h, scale);
-					} else if (event.window.event == SDL_WINDOWEVENT_MOVED) {
-						Settings::settings.SetWindowX(event.window.data1);
-						Settings::settings.SetWindowY(event.window.data2);
-						logger.LogDebug("Window moved to (", event.window.data1, ", ", event.window.data2, ")");
-					}
+					app.OnResize(w, h, scale);
 					break;
-				case SDL_KEYDOWN:
+				} case SDL_EVENT_WINDOW_MOVED:
+					Settings::settings.SetWindowX(event.window.data1);
+					Settings::settings.SetWindowY(event.window.data2);
+					logger.LogDebug("Window moved to (", event.window.data1, ", ", event.window.data2, ")");
+					break;
+				case SDL_EVENT_KEY_DOWN:
+#if GUI
 					if (io.WantCaptureKeyboard) break;
 
-					else if (event.key.keysym.sym == SDLK_AUDIONEXT ||
-						(event.key.keysym.sym == SDLK_d && (event.key.keysym.mod & KMOD_CTRL)) ||
-						(event.key.keysym.sym == SDLK_RIGHT && (event.key.keysym.mod & KMOD_CTRL)))
+					else 
+#endif
+						if (event.key.key == SDLK_MEDIA_NEXT_TRACK ||
+						(event.key.key == SDLK_D && (event.key.mod & SDL_KMOD_CTRL)) ||
+						(event.key.key == SDLK_RIGHT && (event.key.mod & SDL_KMOD_CTRL)))
 						app.NextTrack();
-					else if (event.key.keysym.sym == SDLK_AUDIOPREV ||
-						(event.key.keysym.sym == SDLK_a && (event.key.keysym.mod & KMOD_CTRL)) ||
-						(event.key.keysym.sym == SDLK_LEFT && (event.key.keysym.mod & KMOD_CTRL)))
+					else if (event.key.key == SDLK_MEDIA_PREVIOUS_TRACK ||
+						(event.key.key == SDLK_A && (event.key.mod & SDL_KMOD_CTRL)) ||
+						(event.key.key == SDLK_LEFT && (event.key.mod & SDL_KMOD_CTRL)))
 						app.PreviousTrack();
-					else if ((event.key.keysym.sym == SDLK_VOLUMEUP ||
-						(event.key.keysym.sym == SDLK_w && (event.key.keysym.mod & KMOD_CTRL)) ||
-						(event.key.keysym.sym == SDLK_UP && (event.key.keysym.mod & KMOD_CTRL))) &&
+					else if ((event.key.key == SDLK_VOLUMEUP ||
+						(event.key.key == SDLK_W && (event.key.mod & SDL_KMOD_CTRL)) ||
+						(event.key.key== SDLK_UP && (event.key.mod & SDL_KMOD_CTRL))) &&
 						app.GetControls().GetExclusiveIndicator().IsExclusive())
 						app.GetControls().GetVolume().VolumeUp();
-					else if ((event.key.keysym.sym == SDLK_VOLUMEDOWN ||
-						(event.key.keysym.sym == SDLK_s && (event.key.keysym.mod & KMOD_CTRL)) ||
-						(event.key.keysym.sym == SDLK_DOWN && (event.key.keysym.mod & KMOD_CTRL))) &&
+					else if ((event.key.key == SDLK_VOLUMEDOWN ||
+						(event.key.key == SDLK_S && (event.key.mod & SDL_KMOD_CTRL)) ||
+						(event.key.key == SDLK_DOWN && (event.key.mod & SDL_KMOD_CTRL))) &&
 						app.GetControls().GetExclusiveIndicator().IsExclusive())
 						app.GetControls().GetVolume().VolumeDown();
-					else if (event.key.keysym.sym == SDLK_RIGHT ||
-						event.key.keysym.sym == SDLK_d)
+					else if (event.key.key == SDLK_RIGHT ||
+						event.key.key == SDLK_D)
 						app.GetAlbumArt().NextBin();
-					else if (event.key.keysym.sym == SDLK_LEFT ||
-						event.key.keysym.sym == SDLK_a)
+					else if (event.key.key == SDLK_LEFT ||
+						event.key.key == SDLK_A)
 						app.GetAlbumArt().PreviousBin();
-					else if (event.key.keysym.sym == SDLK_UP ||
-						event.key.keysym.sym == SDLK_w) {
+					else if (event.key.key == SDLK_UP ||
+						event.key.key == SDLK_W) {
 						auto lock = app.GetAlbumArt().Lock();
 						app.GetAlbumArt().ResetBin();
-					} else if (event.key.keysym.sym == SDLK_p)
+					} else if (event.key.key == SDLK_P)
 						app.SaveBlurFBO();
-					else if (event.key.keysym.sym == SDLK_SPACE || event.key.keysym.sym == SDLK_AUDIOPLAY)
+					else if (event.key.key == SDLK_SPACE || event.key.key == SDLK_MEDIA_PLAY)
 						app.TogglePlaying();
-					else if (event.key.keysym.sym == SDLK_RETURN && event.key.keysym.mod & KMOD_ALT)
+					else if (event.key.key == SDLK_RETURN && event.key.mod & SDL_KMOD_ALT)
 						app.ToggleFullscreen();
-					else if (event.key.keysym.sym == SDLK_ESCAPE)
+					else if (event.key.key == SDLK_ESCAPE)
 						running = false;
-					else if (event.key.keysym.sym == SDLK_v)
+					else if (event.key.key == SDLK_V)
 						app.GetControls().GetVolume().ToggleVolumeControl();
-					else if (event.key.keysym.sym >= SDLK_F1 && event.key.keysym.sym <= SDLK_F12)
-						app.LoadPreset(event.key.keysym.sym - SDLK_F1);
-					else if (event.key.keysym.sym == SDLK_s)
+					else if (event.key.key >= SDLK_F1 && event.key.key <= SDLK_F12)
+						app.LoadPreset(event.key.key - SDLK_F1);
+					else if (event.key.key == SDLK_S)
 						app.SyncToNearestBeat();
-					else if (event.key.keysym.sym == SDLK_r)
+					else if (event.key.key == SDLK_R)
 						app.LoadPreset(Preset::Random());
 					break;
-				case SDL_MOUSEMOTION:
+				case SDL_EVENT_MOUSE_MOTION:
 					mousePos.x = static_cast<int32_t>(event.motion.x * app.GetScale());
 					mousePos.y = static_cast<int32_t>(event.motion.y * app.GetScale());
 
@@ -128,7 +130,7 @@ int main(int argc, char *argv[]) {
 						app.OnMouseDragged(mousePos);
 					}
 					break;
-				case SDL_MOUSEBUTTONDOWN:
+				case SDL_EVENT_MOUSE_BUTTON_DOWN:
 					if (event.button.button == SDL_BUTTON_LEFT
 #if GUI
 						&& !io.WantCaptureMouse
@@ -137,7 +139,7 @@ int main(int argc, char *argv[]) {
 						mouseButtonDown = true;
 					}
 					break;
-				case SDL_MOUSEBUTTONUP:
+				case SDL_EVENT_MOUSE_BUTTON_UP:
 					if (event.button.button == SDL_BUTTON_LEFT
 #if GUI
 						&& !io.WantCaptureMouse
@@ -149,17 +151,16 @@ int main(int argc, char *argv[]) {
 							mouseButtonDown = false;
 					}
 					break;
-				case SDL_DROPFILE: {
+				case SDL_EVENT_DROP_FILE: {
 					app.LoadFile(
 #ifdef WIN32
 						Utils::ToUTF16(const_cast<const char*>(
 #endif
-							event.drop.file
+							event.drop.data
 #ifdef WIN32
 						))
 #endif
 					);
-					SDL_free(event.drop.file);
 					break;
 				}
 				default:

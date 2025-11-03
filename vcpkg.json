@@ -2,16 +2,16 @@
   "dependencies": [
     "glm",
     "fftw3",
-    "libjpeg-turbo",
-    "sdl2",
+    "sdl3",
     {
-      "name": "sdl2-image",
+      "name": "sdl3-image",
       "features": [
-        "libjpeg-turbo"
+        "jpeg",
+        "png",
+        "webp",
+        "tiff"
       ]
     },
-    "sdl2-mixer",
-    "sdl2-net",
     "freetype"
   ]
 }

@@ -83,7 +83,6 @@ LightPack::LightPack() {
 
 LightPack::~LightPack() {
 	delete[] lightBin;
-	if (socketSet) SDLNet_FreeSocketSet(socketSet);
 }
 
 void LightPack::OnInit() {
@@ -181,20 +180,21 @@ bool LightPack::CanConnect() {
 void LightPack::_OnInit() {
 	if (!running) return;
 
-	if (SDLNet_Init() != -1) {
-		IPaddress ip;
-		if (SDLNet_ResolveHost(&ip, "localhost", 3636) != -1) {
+	if (NET_Init()) {
+		if (auto ip = NET_ResolveHostname("127.0.0.1")) {
+			auto status = NET_WaitUntilResolved(ip, -1);
 			if (CanConnect())
-				tcpsock = SDLNet_TCP_Open(&ip);
+				tcpsock = NET_CreateClient(ip, 3636);
+
+			status = NET_WaitUntilConnected(tcpsock, -1);
+
+			auto error = SDL_GetError();
 
 			if (tcpsock) {
 				// Only lock if we manage to open a socket
 				// since SDLNet_TCP_Open() blocks until
 				// timeout.
 				std::unique_lock lock(mutex);
-
-				socketSet = SDLNet_AllocSocketSet(1);
-				SDLNet_TCP_AddSocket(socketSet, tcpsock);
 
 				// Flush whatever's in the buffer
 				ReadString();
@@ -252,14 +252,14 @@ void LightPack::_OnInit() {
 			}
 		} else {
 			LogWarning(
-				"Could not connect to LightPack host. Error: ", SDLNet_GetError(), ". Retrying in 5 seconds..."
+				"Could not connect to LightPack host. Error: ", SDL_GetError(), ". Retrying in 5 seconds..."
 			);
 			if (running)
 				RetryConnection();
 		}
 	} else {
 		LogError(
-			"Could not initialize SDL_Net! Error: ", SDLNet_GetError()
+			"Could not initialize SDL_Net! Error: ", SDL_GetError()
 		);
 	}
 }
@@ -294,8 +294,7 @@ void LightPack::OnDestroy() {
 			stream << "setgamma:" << std::setprecision(2) << std::fixed << std::setfill('0') << lp->previousGamma << "\r\n";
 			lp->WriteString(stream.str());
 			lp->WriteString("unlock\r\n");
-			SDLNet_TCP_Close(lp->tcpsock);
-			SDLNet_Quit();
+			NET_DestroyStreamSocket(lp->tcpsock);
 		});
 	}
 
@@ -562,11 +561,16 @@ std::string LightPack::GetStringForMassColorChangeCommand(int start, int end, un
 	return stream.str();
 }
 
-std::optional<std::string> LightPack::ReadString() const {
-	if (tcpsock && SDLNet_CheckSockets(socketSet, 250) > 0) {
+std::optional<std::string> LightPack::ReadString(bool block) const {
+	if (tcpsock) {
 		char msg[128] = { 0 };
-		if (SDLNet_TCP_Recv(tcpsock, msg, 127) <= 0)
-			return std::nullopt;
+		if (!block) {
+			if (NET_ReadFromStreamSocket(tcpsock, msg, 127) <= 0)
+				return std::nullopt;
+		} else {
+			while (NET_ReadFromStreamSocket(tcpsock, msg, 127) <= 0)
+				std::this_thread::sleep_for(1ms);
+		}
 
 		return std::string(msg);
 	}
@@ -576,10 +580,14 @@ std::optional<std::string> LightPack::ReadString() const {
 
 std::optional<std::string> LightPack::WriteString(std::string str, bool response) const {
 	if (tcpsock) {
-		SDLNet_TCP_Send(tcpsock, str.c_str(), static_cast<int>(str.length()));
+		NET_WriteToStreamSocket(tcpsock, str.c_str(), static_cast<int>(str.length()));
 
-		if (response)
-			return ReadString();
+		if (response) {
+			while (NET_GetStreamSocketPendingWrites(tcpsock))
+				std::this_thread::sleep_for(1ms);
+
+			return ReadString(true);
+		}
 	}
 
 	return std::nullopt;

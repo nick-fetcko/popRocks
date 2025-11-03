@@ -10,13 +10,15 @@
 #include <vector>
 
 #include <glad/glad.h>
-#include <SDL_image.h>
+#include <SDL3_image/SDL_image.h>
 
 #include "MathCPP/Colour.hpp"
 
 #include "OpenGL/Context.hpp"
+#include "OpenGL/Cube.hpp"
 #include "OpenGL/VertexArray.hpp"
 #include "OpenGL/Buffer.hpp"
+#include "OpenGL/Texture.hpp"
 
 #include "Utils/Logger.hpp"
 
@@ -115,6 +117,8 @@ public:
 	const bool &IsHidden() const { return hidden; }
 	void SetHidden(bool hidden) { this->hidden = hidden; }
 
+	const std::unique_ptr<Cube> &GetCube() { return cube; }
+
 private:
 	constexpr inline static std::array<std::string_view, 3> SupportedExtensions = { ".jpg", ".png", ".webp" };
 
@@ -210,4 +214,6 @@ private:
 	std::string embeddedDataMimeType;
 
 	bool hidden = false;
+
+	std::unique_ptr<Cube> cube;
 };

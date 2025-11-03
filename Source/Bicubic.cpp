@@ -7,12 +7,10 @@
 #define MULTITHREADED 1
 
 SDL_Surface *Bicubic::ResizeImage(SDL_Surface *surface, float scale, bool *running) {
-	SDL_Surface *ret = SDL_CreateRGBSurfaceWithFormat(
-		surface->flags,
+	SDL_Surface *ret = SDL_CreateSurface(
 		static_cast<int>(std::ceil(surface->w * scale)),
 		static_cast<int>(std::ceil(surface->h * scale)),
-		surface->format->BytesPerPixel,
-		surface->format->format
+		surface->format
 	);
 
 	if (!ret) return surface;
@@ -55,7 +53,7 @@ SDL_Surface *Bicubic::ResizeImage(SDL_Surface *surface, float scale, bool *runni
 	}
 #endif
 
-	SDL_FreeSurface(surface);
+	SDL_DestroySurface(surface);
 
 	return ret;
 }

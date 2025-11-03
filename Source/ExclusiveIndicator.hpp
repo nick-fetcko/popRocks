@@ -3,6 +3,7 @@
 #include "OpenGL/Context.hpp"
 #include "OpenGL/OpenGLFont.hpp"
 
+#include "HDR.hpp"
 #include "Settings.hpp"
 #include "Text.hpp"
 
@@ -25,14 +26,14 @@ public:
 		if (IsExclusive())
 			context.Color(0.0f, 0.0f, 0.0f, alpha);
 		else
-			context.Color(0.25f, 0.25f, 0.25f, alpha);
+			context.Color(0.25f * HDR::WhiteLevel, 0.25f * HDR::WhiteLevel, 0.25f * HDR::WhiteLevel, alpha);
 
 		outline.OnLoop(x, y - text.GetSize().y / 2);
 
 		if (IsExclusive())
-			context.Color(1.0f, 1.0f, 1.0f, alpha);
+			context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 		else
-			context.Color(0.5f, 0.5f, 0.5f, alpha);
+			context.Color(0.5f * HDR::WhiteLevel, 0.5f * HDR::WhiteLevel, 0.5f * HDR::WhiteLevel, alpha);
 
 		text.OnLoop(x, y - text.GetSize().y / 2);
 	}

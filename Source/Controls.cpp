@@ -3,6 +3,7 @@
 #include <sstream>
 
 #include "Hash.hpp"
+#include "HDR.hpp"
 
 Controls::Controls(AlbumArt *const albumArt) : 
 	albumArt(albumArt), 
@@ -290,7 +291,7 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 					),
 					windowHeight - yOffset - elapsedText.GetSize().y - outlineFont->GetOutlineRadius()
 				);
-				context.Color(1.0f, 1.0f, 1.0f, alpha);
+				context.Color(1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, alpha);
 			}
 
 			context.Color(0.0f, 0.0f, 0.0f, alpha);
@@ -299,7 +300,7 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 					windowWidth - remainingText.GetSize().x - margin,
 					windowHeight - yOffset / 2 - remainingText.GetSize().y / 2 + outlineFont->GetOutlineRadius()
 				);
-				context.Color(1.0f, 1.0f, 1.0f, alpha);
+				context.Color(1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, alpha);
 			}
 
 			int xOffset = 0;
@@ -339,7 +340,7 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 					margin + xOffset,
 					windowHeight - (yOffset + albumText.GetBounds().height)
 				);
-				context.Color(1.0f, 1.0f, 1.0f, alpha);
+				context.Color(1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, alpha);
 				albumText.OnLoop(
 					margin + xOffset,
 					windowHeight - (yOffset += albumText.GetBounds().height)
@@ -351,7 +352,7 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 					margin + xOffset,
 					windowHeight - (yOffset + artistText.GetBounds().height)
 				);
-				context.Color(1.0f, 1.0f, 1.0f, alpha);
+				context.Color(1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, alpha);
 				artistText.OnLoop(
 					margin + xOffset,
 					windowHeight - (yOffset += artistText.GetBounds().height)
@@ -363,7 +364,7 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 					margin + xOffset,
 					windowHeight - (yOffset + titleText.GetBounds().height)
 				);
-				context.Color(1.0f, 1.0f, 1.0f, alpha);
+				context.Color(1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, alpha);
 				titleText.OnLoop(
 					margin + xOffset,
 					windowHeight - (yOffset += titleText.GetBounds().height)

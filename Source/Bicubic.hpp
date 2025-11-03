@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <array>
 
-#include <SDL_image.h>
+#include <SDL3_image/SDL_image.h>
 
 // Derived from https://blog.demofox.org/2015/08/15/resizing-images-with-bicubic-interpolation/
 class Bicubic {

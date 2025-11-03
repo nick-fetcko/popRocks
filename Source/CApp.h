@@ -1,5 +1,10 @@
 #pragma once
 
+#ifdef WIN32
+#include <Windows.h>
+#include <shlobj.h>
+#endif
+
 #include <iostream>
 #include <array>
 #include <map>
@@ -15,18 +20,21 @@
 #include <basswasapi.h>
 #endif
 #include <glad/glad.h>
-#include <SDL_net.h>
+#include <SDL3_net/SDL_net.h>
 
 #ifdef WIN32
 #include <Mmdeviceapi.h>
 #endif
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #include "fftw3.h"
 
 #include "MathCPP/Duration.hpp"
 
 #include "OpenGL/Context.hpp"
+#ifdef WIN32
+#include "OpenGL/DXGI.hpp"
+#endif
 #include "OpenGL/Polyline.hpp"
 
 #include "Utils/Logger.hpp"
@@ -353,4 +361,8 @@ private:
 
 	GLenum sourceFactor = Settings::settings.GetSourceFactor();
 	GLenum destFactor = Settings::settings.GetDestFactor();
+
+#ifdef WIN32
+	DXGI dxgi;
+#endif
 };

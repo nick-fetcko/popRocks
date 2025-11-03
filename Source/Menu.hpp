@@ -9,6 +9,7 @@
 
 #include "Utils/Utils.hpp"
 
+#include "HDR.hpp"
 #include "Playlist.hpp"
 #include "Preset.hpp"
 
@@ -802,6 +803,55 @@ public:
 					albumArt.Scale();
 				}
 			}
+
+			if (HDR::Enabled) {
+				ImGui::Separator();
+
+				if (ImGui::BeginMenu("LUT")) {
+					lut = Settings::settings.GetLut();
+
+					auto files = Utils::GetFiles(Utils::GetResourceFolder() / "LUTs");
+
+					for (auto &file : files) {
+						bool selected = file.filename().u8string() == lut;
+
+						if (ImGui::MenuItem(file.filename().u8string().c_str(), nullptr, &selected)) {
+							if (onLutChanged)
+								onLutChanged(file.filename().u8string());
+						}
+					}
+
+					ImGui::EndMenu();
+				}
+
+				albumArtGamma = Settings::settings.GetAlbumArtGamma();
+				if (ImGui::SliderFloat("Gamma", &albumArtGamma, 0.1f, 3.0f, "%.2f")) {
+					if (onAlbumArtGammaChanged)
+						onAlbumArtGammaChanged(albumArtGamma);
+				}
+				albumArtContrast = Settings::settings.GetAlbumArtContrast();
+				if (ImGui::SliderFloat("Contrast", &albumArtContrast, 0.1f, 3.0f, "%.2f")) {
+					if (onAlbumArtContrastChanged)
+						onAlbumArtContrastChanged(albumArtContrast);
+				}
+				albumArtBrightness = Settings::settings.GetAlbumArtBrightness();
+				if (ImGui::SliderFloat("Brightness", &albumArtBrightness, -HDR::WhiteLevel * HDR::Headroom, HDR::WhiteLevel * HDR::Headroom, "%.2f")) {
+					if (onAlbumArtBrightnessChanged)
+						onAlbumArtBrightnessChanged(albumArtBrightness);
+				}
+
+				if (ImGui::MenuItem("Reset to default...")) {
+					if (onLutChanged)
+						onLutChanged("BT709_to_HLG.cube");
+					if (onAlbumArtGammaChanged)
+						onAlbumArtGammaChanged(0.5f);
+					if (onAlbumArtContrastChanged)
+						onAlbumArtContrastChanged(1.25f);
+					if (onAlbumArtBrightnessChanged)
+						onAlbumArtBrightnessChanged(1.50f);
+				}
+			}
+
 			ImGui::EndMenu();
 		}
 
@@ -1158,6 +1208,11 @@ public:
 
 	void SetOnRendererOffsetChanged(std::function<void(int)> f) { onRendererOffsetChanged = f; }
 
+	void SetOnLutChanged(std::function<void(const std::string &)> f) { onLutChanged = f; }
+	void SetOnAlbumArtGammaChanged(std::function<void(float)> f) { onAlbumArtGammaChanged = f; }
+	void SetOnAlbumArtContrastChanged(std::function<void(float)> f) { onAlbumArtContrastChanged = f; }
+	void SetOnAlbumArtBrightnessChanged(std::function<void(float)> f) { onAlbumArtBrightnessChanged = f; }
+
 private:
 	int windowWidth = 0, windowHeight = 0;
 	int width = 0, height = 0;
@@ -1334,6 +1389,10 @@ private:
 	std::function<void(bool)> onExclusiveChanged;
 	std::function<void(int)> onExclusiveVolumeChanged;
 	std::function<void(int)> onRendererOffsetChanged;
+	std::function<void(const std::string &)> onLutChanged;
+	std::function<void(float)> onAlbumArtGammaChanged;
+	std::function<void(float)> onAlbumArtContrastChanged;
+	std::function<void(float)> onAlbumArtBrightnessChanged;
 
 	std::function<void()> onResetRotation;
 	std::function<void()> onClearBlurFbo;
@@ -1352,4 +1411,9 @@ private:
 	std::string cacheSize;
 
 	std::chrono::system_clock::time_point lastFrame = std::chrono::system_clock::now();
+
+	std::string lut = Settings::settings.GetLut();
+	float albumArtGamma = Settings::settings.GetAlbumArtGamma();
+	float albumArtContrast = Settings::settings.GetAlbumArtContrast();
+	float albumArtBrightness = Settings::settings.GetAlbumArtBrightness();
 };
