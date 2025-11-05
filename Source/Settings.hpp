@@ -42,6 +42,18 @@ public:
 
 	static Settings settings;
 
+	static constexpr bool IsColorBlend(GLenum blend) {
+		return
+			blend == GL_SRC_COLOR ||
+			blend == GL_ONE_MINUS_SRC_COLOR ||
+			blend == GL_DST_COLOR ||
+			blend == GL_ONE_MINUS_DST_COLOR ||
+			blend == GL_CONSTANT_COLOR ||
+			blend == GL_ONE_MINUS_CONSTANT_COLOR ||
+			blend == GL_SRC1_COLOR ||
+			blend == GL_ONE_MINUS_SRC1_COLOR;
+	}
+
 	static std::filesystem::path GetPath(const std::string &fileName = "Settings.json");
 
 	const float &GetVolume() const { return volume; }

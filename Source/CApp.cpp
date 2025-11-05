@@ -1108,11 +1108,17 @@ void CApp::OnInit() {
 		if (hash == "rotate"_hash) {
 			shader.program.CacheUniformLocation("screenSize");
 			shader.program.CacheUniformLocation("radius");
+			shader.program.CacheUniformLocation("multiplier");
+			shader.program.Uniform1f("multiplier", HDR::WhiteLevel * HDR::Headroom);
+			shader.program.CacheUniformLocation("normalize");
+			shader.program.Uniform1i("normalize", 0);
 		}
 
 		if (hash == "texture"_hash) {
 			shader.program.CacheUniformLocation("hdr");
 			shader.program.Uniform1i("hdr", 0);
+			shader.program.CacheUniformLocation("expand");
+			shader.program.Uniform1f("expand", 0);
 			shader.program.CacheUniformLocation("multiplier");
 			shader.program.Uniform1f("multiplier", HDR::WhiteLevel * HDR::Headroom);
 			shader.program.CacheUniformLocation("contrast");
@@ -1593,7 +1599,7 @@ void CApp::OnLoop(const Delta &time) {
 		glViewport(0, 0, maxDimension, maxDimension);
 
 		if (pulseBackground)
-			glClearColor(color.r, color.g, color.b, 1.0f);
+			glClearColor(brightColor.r, brightColor.g, brightColor.b, 1.0f);
 		else
 			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -1633,9 +1639,15 @@ void CApp::OnLoop(const Delta &time) {
 
 		context->With("rotate"_hash, [this](Context::Shader &shader) {
 			shader.program.Uniform2f("screenSize", maxDimension, maxDimension);
+
+			if (Settings::IsColorBlend(sourceFactor))
+				shader.program.Uniform1i("normalize", 1);
 		});
 
 		renderer->Draw(time, frameCount, color, blurOffset, *context);
+
+		if (Settings::IsColorBlend(sourceFactor))
+			context->GetShaderProgram().Uniform1i("expand", 1);
 
 		glBlendFunc(sourceFactor, destFactor);
 
@@ -1655,6 +1667,7 @@ void CApp::OnLoop(const Delta &time) {
 		
 		context->Color(1.0f, 1.0f, 1.0f, blurOpacity - (strobe ? lerp * (strobeIntensity) : 0.0));
 		blurFbo->Draw(blurOffset.x / 2.0f, blurOffset.y / 2.0f, *context);
+		context->GetShaderProgram().Uniform1i("expand", 0);
 
 		context->LoadIdentity();
 
@@ -1663,6 +1676,9 @@ void CApp::OnLoop(const Delta &time) {
 		});
 	}
 
+	context->With("rotate"_hash, [this](Context::Shader &shader) {
+		shader.program.Uniform1i("normalize", 0);
+	});
 	renderer->Draw(time, frameCount, color, {0, 0}, *context);
 
 	if (!shuttingDown)
@@ -2808,6 +2824,11 @@ void CApp::LoadPreset(const Preset &preset) {
 
 	auto blur = preset.GetBlur();
 	SetBlur(blur && *blur);
+
+	// Make sure we don't blow out any existing colors
+	if (Settings::IsColorBlend(sourceFactor) != Settings::IsColorBlend(preset.GetSourceFactor()))
+		ClearBlurFbo();
+
 	sourceFactor = preset.GetSourceFactor();
 	Settings::settings.SetSourceFactor(sourceFactor);
 	destFactor = preset.GetDestFactor();
@@ -2871,6 +2892,11 @@ void CApp::OnColorChanged(const MathsCPP::Colour<float> &color, bool silent) {
 
 		brightColor *= HDR::WhiteLevel * HDR::Headroom;
 		brightColor += Settings::settings.GetAlbumArtBrightness();
+
+		auto max = std::max(brightColor.r, std::max(brightColor.g, brightColor.b));
+		brightColor.r = brightColor.r / max * HDR::WhiteLevel * HDR::Headroom;
+		brightColor.g = brightColor.g / max * HDR::WhiteLevel * HDR::Headroom;
+		brightColor.b = brightColor.b / max * HDR::WhiteLevel * HDR::Headroom;
 
 		// Reset alpha
 		brightColor.a = 1.0f;

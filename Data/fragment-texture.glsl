@@ -7,6 +7,7 @@ uniform sampler3D cube;
 uniform vec4 color;
 
 uniform int hdr;
+uniform int expand;
 uniform float multiplier;
 
 uniform float contrast;
@@ -29,5 +30,7 @@ void main() {
         outColor.w = sampled.w * color.w;
     } else { 
         outColor = color * sampled;
+        if (expand == 1)
+            outColor.rgb *= multiplier;
     }
 }
