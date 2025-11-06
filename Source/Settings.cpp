@@ -574,6 +574,13 @@ void Settings::SetAlbumArtBrightness(float albumArtBrightness) {
 	}
 }
 
+void Settings::SetHdrWhitePoint(std::optional<float> hdrWhitePoint) {
+	if (this->hdrWhitePoint != hdrWhitePoint) {
+		this->hdrWhitePoint = hdrWhitePoint;
+		Save();
+	}
+}
+
 void Settings::Save() {
 	if (auto path = GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
@@ -816,6 +823,9 @@ const Node &operator>>(const Node &node, Settings &settings) {
 		node["albumArtContrast"]->get(settings.albumArtContrast);
 	if (node.has("albumArtBrightness"))
 		node["albumArtBrightness"]->get(settings.albumArtBrightness);
+
+	if (node.has("hdrWhitePoint"))
+		node["hdrWhitePoint"]->get(settings.hdrWhitePoint);
 		
 	return node;
 }
@@ -890,6 +900,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["albumArtGamma"]->set(settings.albumArtGamma);
 	node["albumArtContrast"]->set(settings.albumArtContrast);
 	node["albumArtBrightness"]->set(settings.albumArtBrightness);
+	node["hdrWhitePoint"]->set(settings.hdrWhitePoint);
 
 	return node;
 }

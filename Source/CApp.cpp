@@ -488,6 +488,13 @@ void CApp::OnInit() {
 	HDR::WhiteLevel = SDL_GetFloatProperty(windowProps, SDL_PROP_WINDOW_SDR_WHITE_LEVEL_FLOAT, 1.0f);
 	HDR::Headroom = SDL_GetFloatProperty(windowProps, SDL_PROP_WINDOW_HDR_HEADROOM_FLOAT, 1.0f);
 
+	if (HDR::Enabled) {
+		if (!Settings::settings.GetHdrWhitePoint())
+			Settings::settings.SetHdrWhitePoint(HDR::WhiteLevel);
+		else
+			HDR::SetWhiteLevel(*Settings::settings.GetHdrWhitePoint());
+	}
+
 #ifdef WIN32
 	// Get the HWND from SDL
 	HWND hwnd = (HWND)SDL_GetPointerProperty(SDL_GetWindowProperties(sdlWindow), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
@@ -1033,6 +1040,12 @@ void CApp::OnInit() {
 			this->context->With("texture"_hash, [this, brightness](Context::Shader &shader) {
 				shader.program.Uniform1f("brightness", brightness);
 			});
+		});
+		menu.SetOnHdrWhitePointChanged([this](std::optional<float> hdrWhitePoint) {
+			Settings::settings.SetHdrWhitePoint(hdrWhitePoint);
+
+			if (hdrWhitePoint)
+				HDR::SetWhiteLevel(*hdrWhitePoint);
 		});
 #endif
 	} else LogError("Could not create OpenGL context: ", SDL_GetError());

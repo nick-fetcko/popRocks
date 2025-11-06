@@ -263,6 +263,9 @@ public:
 	const float &GetAlbumArtBrightness() const { return albumArtBrightness; }
 	void SetAlbumArtBrightness(float albumArtBrightness);
 
+	const std::optional<float> &GetHdrWhitePoint() const { return hdrWhitePoint; }
+	void SetHdrWhitePoint(std::optional<float> hdrWhitePoint);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -382,4 +385,6 @@ private:
 	float albumArtGamma = 0.5f;
 	float albumArtContrast = 1.25f;
 	float albumArtBrightness = 1.50f;
+
+	std::optional<float> hdrWhitePoint = std::nullopt;
 };

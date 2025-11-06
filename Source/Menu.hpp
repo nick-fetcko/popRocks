@@ -753,6 +753,15 @@ public:
 					onAutoFadeSpeedChanged(autoFadeSpeed);
 			}
 
+			hdrWhitePoint = Settings::settings.GetHdrWhitePoint();
+			if (HDR::Enabled && hdrWhitePoint) {
+				ImGui::Separator();
+				if (ImGui::SliderFloat("White Point", &*hdrWhitePoint, 0.0f, HDR::WhiteLevel * HDR::Headroom, "%.2f")) {
+					if (onHdrWhitePointChanged)
+						onHdrWhitePointChanged(hdrWhitePoint);
+				}
+			}
+
 			ImGui::EndMenu();
 		}
 
@@ -1213,6 +1222,8 @@ public:
 	void SetOnAlbumArtContrastChanged(std::function<void(float)> f) { onAlbumArtContrastChanged = f; }
 	void SetOnAlbumArtBrightnessChanged(std::function<void(float)> f) { onAlbumArtBrightnessChanged = f; }
 
+	void SetOnHdrWhitePointChanged(std::function<void(std::optional<float>)> f) { onHdrWhitePointChanged = f; }
+
 private:
 	int windowWidth = 0, windowHeight = 0;
 	int width = 0, height = 0;
@@ -1393,6 +1404,7 @@ private:
 	std::function<void(float)> onAlbumArtGammaChanged;
 	std::function<void(float)> onAlbumArtContrastChanged;
 	std::function<void(float)> onAlbumArtBrightnessChanged;
+	std::function<void(std::optional<float>)> onHdrWhitePointChanged;
 
 	std::function<void()> onResetRotation;
 	std::function<void()> onClearBlurFbo;
@@ -1416,4 +1428,6 @@ private:
 	float albumArtGamma = Settings::settings.GetAlbumArtGamma();
 	float albumArtContrast = Settings::settings.GetAlbumArtContrast();
 	float albumArtBrightness = Settings::settings.GetAlbumArtBrightness();
+
+	std::optional<float> hdrWhitePoint = Settings::settings.GetHdrWhitePoint();
 };
