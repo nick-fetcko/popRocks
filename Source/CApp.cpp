@@ -1540,9 +1540,9 @@ void CApp::OnLoop(const Delta &time) {
 	auto lerp = std::min(1.0f, currentFadeTime / fadeTime);
 
 	if (playing && ((renderer->GetPulse() && !renderer->GetPulses()) || strobe)) {
-		auto hsv = (color).ToHsv();
+		auto hsv = color.ToHsv();
 
-		if (!darkenPulseOnBrightColors || hsv.v < 0.66) {
+		if (!darkenPulseOnBrightColors || hsv.v < 0.66 * HDR::WhiteLevel * HDR::Headroom) {
 			auto brightHsv = brightColor.ToHsv();
 			brightHsv.v = brightHsv.v + ((strobe ? hsv.v - strobeIntensity : hsv.v) - brightHsv.v) * lerp;
 			color = Colour<float>::FromHsv(brightHsv);
@@ -1554,7 +1554,7 @@ void CApp::OnLoop(const Delta &time) {
 	}
 
 	if (playing || listening) {
-		auto hsv = GetColor().ToHsv();
+		auto hsv = color.ToHsv();
 		auto brightHsv = this->brightColor.ToHsv();
 		brightHsv.v = std::max(0.0f, brightHsv.v - strobeIntensity * lerp);
 
@@ -1563,8 +1563,8 @@ void CApp::OnLoop(const Delta &time) {
 			fileLoaded,
 			hStep,
 			*context,
-			!darkenPulseOnBrightColors || hsv.v < 0.66 ? color : darkColor,
-			((strobe && playing) ? Colour<float>::FromHsv(brightHsv) : ((!darkenPulseOnBrightColors || hsv.v < 0.66) ? this->brightColor : color)),
+			!darkenPulseOnBrightColors || hsv.v < 0.66 * HDR::WhiteLevel * HDR::Headroom ? color : darkColor,
+			((strobe && playing) ? Colour<float>::FromHsv(brightHsv) : ((!darkenPulseOnBrightColors || hsv.v < 0.66 * HDR::WhiteLevel * HDR::Headroom) ? this->brightColor : color)),
 			frameCount,
 			maxHeardSample,
 			resetGain
@@ -1596,9 +1596,10 @@ void CApp::OnLoop(const Delta &time) {
 			frameCount -= 360.0f;
 	}
 
-	GLint oldViewport[4];
-	auto identity = context->GetIdentity();
 	if (blur) {
+		GLint oldViewport[4];
+		auto identity = context->GetIdentity();
+
 		blurFbo->Bind();
 
 		glGetIntegerv(GL_VIEWPORT, oldViewport);
@@ -1607,7 +1608,7 @@ void CApp::OnLoop(const Delta &time) {
 		glViewport(0, 0, maxDimension, maxDimension);
 
 		if (pulseBackground)
-			glClearColor(brightColor.r, brightColor.g, brightColor.b, 1.0f);
+			glClearColor(color.r, color.g, color.b, 1.0f);
 		else
 			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -1648,13 +1649,13 @@ void CApp::OnLoop(const Delta &time) {
 		context->With("rotate"_hash, [this](Context::Shader &shader) {
 			shader.program.Uniform2f("screenSize", maxDimension, maxDimension);
 
-			if (Settings::IsColorBlend(sourceFactor))
+			if (Settings::IsColorBlend(sourceFactor) && HDR::Enabled)
 				shader.program.Uniform1i("normalize", 1);
 		});
 
 		renderer->Draw(time, frameCount, color, blurOffset, *context);
 
-		if (Settings::IsColorBlend(sourceFactor))
+		if (Settings::IsColorBlend(sourceFactor) && HDR::Enabled)
 			context->GetShaderProgram().Uniform1i("expand", 1);
 
 		glBlendFunc(sourceFactor, destFactor);
@@ -1681,12 +1682,10 @@ void CApp::OnLoop(const Delta &time) {
 
 		context->With("rotate"_hash, [this](Context::Shader &shader) {
 			shader.program.Uniform2f("screenSize", windowWidth, windowHeight);
+			shader.program.Uniform1i("normalize", 0);
 		});
 	}
 
-	context->With("rotate"_hash, [this](Context::Shader &shader) {
-		shader.program.Uniform1i("normalize", 0);
-	});
 	renderer->Draw(time, frameCount, color, {0, 0}, *context);
 
 	if (!shuttingDown)
@@ -1719,7 +1718,7 @@ void CApp::OnLoop(const Delta &time) {
 		time,
 		streamHandle,
 		*context,
-		GetColor() * HDR::WhiteLevel
+		GetColor()
 	);
 	
 	// Line up the next file at >= 90% completion of current file
@@ -2890,31 +2889,23 @@ void CApp::OnColorChanged(const MathsCPP::Colour<float> &color, bool silent) {
 	hsv.v = 1.0f;
 	brightColor = Colour<float>::FromHsv(hsv);
 	if (HDR::Enabled) {
-		brightColor.r = std::pow(brightColor.r, 1.0f / Settings::settings.GetAlbumArtGamma());
-		brightColor.g = std::pow(brightColor.g, 1.0f / Settings::settings.GetAlbumArtGamma());
-		brightColor.b = std::pow(brightColor.b, 1.0f / Settings::settings.GetAlbumArtGamma());
-
-		brightColor.r = ((brightColor.r - 0.5f) * std::max(Settings::settings.GetAlbumArtContrast(), 0.0f)) + 0.5f;
-		brightColor.g = ((brightColor.g - 0.5f) * std::max(Settings::settings.GetAlbumArtContrast(), 0.0f)) + 0.5f;
-		brightColor.b = ((brightColor.b - 0.5f) * std::max(Settings::settings.GetAlbumArtContrast(), 0.0f)) + 0.5f;
-
-		brightColor *= HDR::WhiteLevel * HDR::Headroom;
-		brightColor += Settings::settings.GetAlbumArtBrightness();
-
-		auto max = std::max(brightColor.r, std::max(brightColor.g, brightColor.b));
-		brightColor.r = brightColor.r / max * HDR::WhiteLevel * HDR::Headroom;
-		brightColor.g = brightColor.g / max * HDR::WhiteLevel * HDR::Headroom;
-		brightColor.b = brightColor.b / max * HDR::WhiteLevel * HDR::Headroom;
-
-		// Reset alpha
-		brightColor.a = 1.0f;
+		brightColor.Tone(
+			Settings::settings.GetAlbumArtGamma(),
+			Settings::settings.GetAlbumArtContrast(),
+			Settings::settings.GetAlbumArtBrightness(),
+			HDR::WhiteLevel * HDR::Headroom
+		);
 	}
 
-	hsv.v = 0.50f;
+	hsv.v = 0.55f;
 	darkColor = Colour<float>::FromHsv(hsv);
-
 	if (HDR::Enabled) {
-		darkColor *= HDR::WhiteLevel;
+		darkColor.Tone(
+			Settings::settings.GetAlbumArtGamma(),
+			Settings::settings.GetAlbumArtContrast(),
+			Settings::settings.GetAlbumArtBrightness(),
+			HDR::WhiteLevel * HDR::Headroom
+		);
 
 		// Reset alpha
 		darkColor.a = 1.0f;

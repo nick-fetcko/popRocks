@@ -867,6 +867,15 @@ void AlbumArt::UpdateBin(bool silent) {
 
 	for (const auto &listener : colorChangeListeners)
 		listener->OnColorChanged(averageColor, silent);
+
+	if (HDR::Enabled) {
+		averageColor.Tone(
+			Settings::settings.GetAlbumArtGamma(),
+			Settings::settings.GetAlbumArtContrast(),
+			Settings::settings.GetAlbumArtBrightness(),
+			HDR::WhiteLevel * HDR::Headroom
+		);
+	}
 }
 
 void AlbumArt::PrintBin() {
