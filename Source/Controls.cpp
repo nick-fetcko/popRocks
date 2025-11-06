@@ -11,17 +11,19 @@ Controls::Controls(AlbumArt *const albumArt) :
 
 }
 
-inline void Controls::OpenFont(Context *context) {
+inline void Controls::OpenFont(Context *context, GLuint defaultFramebuffer) {
 	if (font)
 		font->SetFontSize(static_cast<int>(18 * scale));
 	else {
 		font = new OpenGLFont();
+		font->SetDefaultFramebuffer(defaultFramebuffer);
 		font->OnInit(
 			FontRoot,
 			static_cast<FT_UInt>(18 * scale)
 		);
 
 		outlineFont = new OpenGLFont();
+		outlineFont->SetDefaultFramebuffer(defaultFramebuffer);
 		outlineFont->OnInit(
 			FontRoot,
 			static_cast<FT_UInt>(18 * scale),
@@ -48,7 +50,7 @@ inline void Controls::OpenFont(Context *context) {
 	}
 }
 
-void Controls::OnInit(int windowWidth, int windowHeight, Context &context, float scale) {
+void Controls::OnInit(int windowWidth, int windowHeight, Context &context, float scale, GLuint defaultFramebuffer) {
 	this->windowWidth = windowWidth;
 	this->windowHeight = windowHeight;
 	this->scale = scale;
@@ -81,19 +83,19 @@ void Controls::OnInit(int windowWidth, int windowHeight, Context &context, float
 	sepEab->BufferData<std::size(Buffers::SquareBuffer)>(Buffers::SquareBuffer);
 	sepEab->Unbind();
 
-	OpenFont(&context);
+	OpenFont(&context, defaultFramebuffer);
 
 	playlist.OnInit(windowWidth, windowHeight, font, outlineFont, &context, scale);
 	albumArt->AddColorChangeListener(&volume);
 }
 
-void Controls::OnResize(int windowWidth, int windowHeight, Context &context, float scale) {
+void Controls::OnResize(int windowWidth, int windowHeight, Context &context, float scale, GLuint defaultFramebuffer) {
 	this->windowWidth = windowWidth;
 	this->windowHeight = windowHeight;
 
 	if (scale != this->scale) {
 		this->scale = scale;
-		OpenFont(&context);
+		OpenFont(&context, defaultFramebuffer);
 
 		// Note: albumArt's radius _must_ be updated
 		//       first.

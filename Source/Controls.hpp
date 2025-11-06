@@ -36,8 +36,8 @@ public:
 
 	Controls(AlbumArt *const albumArt);
 
-	void OnInit(int windowWidth, int windowHeight, Context &context, float scale = 1.0f);
-	void OnResize(int windowWidth, int windowHeight, Context &context, float scale = 1.0f);
+	void OnInit(int windowWidth, int windowHeight, Context &context, float scale = 1.0f, GLuint defaultFramebuffer = 0);
+	void OnResize(int windowWidth, int windowHeight, Context &context, float scale = 1.0f, GLuint defaultFramebuffer = 0);
 
 	QWORD OnLoad(HSTREAM streamHandle);
 	void LoadFromCue();
@@ -67,7 +67,7 @@ public:
 	ExclusiveIndicator &GetExclusiveIndicator() { return exclusiveIndicator; }
 
 private:
-	inline void OpenFont(Context *context);
+	inline void OpenFont(Context *context, GLuint defaultFramebuffer);
 	std::string FormatSeconds(int seconds) const;
 
 	AlbumArt * const albumArt = nullptr;

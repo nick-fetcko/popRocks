@@ -1174,7 +1174,11 @@ void CApp::OnInit() {
 	albumArt.OnInit(windowWidth, windowHeight, scale);
 	renderer->OnInit(windowWidth, windowHeight);
 	albumArt.AddColorChangeListener(this);
-	controls.OnInit(windowWidth, windowHeight, *context, scale);
+	controls.OnInit(windowWidth, windowHeight, *context, scale
+#ifdef WIN32
+		, HDR::Enabled ? dxgi.GetFramebuffer() : 0
+#endif
+	);
 
 	controls.SetFadeCallback([this](bool in) {
 		if (in) SDL_ShowCursor();
@@ -1300,7 +1304,11 @@ void CApp::OnResize(int width, int height, float scale) {
 
 	glViewport(0, 0, windowWidth, windowHeight);
 
-	controls.OnResize(windowWidth, windowHeight, *context, scale);
+	controls.OnResize(windowWidth, windowHeight, *context, scale
+#ifdef WIN32
+		, HDR::Enabled ? dxgi.GetFramebuffer() : 0
+#endif
+	);
 
 	if (blur) {
 		maxDimension = std::sqrt(std::pow(windowWidth, 2) + std::pow(windowHeight, 2));
