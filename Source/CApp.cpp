@@ -139,7 +139,11 @@ DWORD CALLBACK OutputWasapiProc(void *buffer, DWORD length, void *user) {
 // =====================================================
 // ======================= CApp ========================
 // =====================================================
-CApp::CApp() : albumArt(context), controls(&albumArt), circleLine(12.0f), prng(time(nullptr)) {
+CApp::CApp() : albumArt(context), controls(&albumArt), circleLine(12.0f), prng(time(nullptr))
+#ifdef WIN32
+	, dxgi(false)
+#endif
+{
 	renderer = RendererFactory::Build(
 		Settings::settings.GetRenderer(),
 		&dynamicGain,
@@ -357,16 +361,16 @@ inline void CApp::SetEffect(const std::string &effect) {
 		blurShader->program.Use();
 	}
 
-	blurShader->program.Uniform1f("intensity", blurIntensity);
-	blurShader->program.Uniform2f("screenSize", maxDimension, maxDimension);
-	blurShader->program.Uniform1f("effectIntensity", Settings::settings.GetEffectIntensity());
-	blurShader->program.Uniform1f("effectXOffset", Settings::settings.GetEffectXOffset());
-	blurShader->program.Uniform1f("effectYOffset", Settings::settings.GetEffectYOffset());
-	blurShader->program.Uniform1f("effectRadiation", Settings::settings.GetEffectRadiation());
-	blurShader->program.Uniform1f("effectHorizontalSpread", Settings::settings.GetEffectHorizontalSpread());
-	blurShader->program.Uniform1f("effectVerticalSpread", Settings::settings.GetEffectVerticalSpread());
-	blurShader->program.Uniform1f("effectRotation", Settings::settings.GetEffectRotation());
-	blurShader->program.Uniform1f("effectEnabled", (playing || listening) ? 1.0f : 0.0f);
+	blurShader->program.Uniform1f("intensity"_hash, blurIntensity);
+	blurShader->program.Uniform2f("screenSize"_hash, maxDimension, maxDimension);
+	blurShader->program.Uniform1f("effectIntensity"_hash, Settings::settings.GetEffectIntensity());
+	blurShader->program.Uniform1f("effectXOffset"_hash, Settings::settings.GetEffectXOffset());
+	blurShader->program.Uniform1f("effectYOffset"_hash, Settings::settings.GetEffectYOffset());
+	blurShader->program.Uniform1f("effectRadiation"_hash, Settings::settings.GetEffectRadiation());
+	blurShader->program.Uniform1f("effectHorizontalSpread"_hash, Settings::settings.GetEffectHorizontalSpread());
+	blurShader->program.Uniform1f("effectVerticalSpread"_hash, Settings::settings.GetEffectVerticalSpread());
+	blurShader->program.Uniform1f("effectRotation"_hash, Settings::settings.GetEffectRotation());
+	blurShader->program.Uniform1f("effectEnabled"_hash, (playing || listening) ? 1.0f : 0.0f);
 
 	context->Use("texture"_hash);
 }
@@ -413,8 +417,8 @@ void CApp::OnInit() {
 		SDL_INIT_EVENTS
 	);
 
-	LogDebug("SDL_Init() returned ", ret);
-	if (ret < 0)
+	LogDebug("SDL_Init() returned ", ret ? "true" : "false");
+	if (!ret)
 		LogDebug("SDL_GetError = ", SDL_GetError());
 
 	int num_displays;
@@ -448,7 +452,7 @@ void CApp::OnInit() {
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
 
-	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	//SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
 
 	// For some reason we need to explicitly
@@ -815,7 +819,7 @@ void CApp::OnInit() {
 			Settings::settings.SetEffectIntensity(effectIntensity);
 
 			this->context->With("blur"_hash, [effectIntensity](Context::Shader &shader) {
-				shader.program.Uniform1f("effectIntensity", effectIntensity);
+				shader.program.Uniform1f("effectIntensity"_hash, effectIntensity);
 			});
 
 			// We deviated from a preset
@@ -825,7 +829,7 @@ void CApp::OnInit() {
 			Settings::settings.SetEffectXOffset(effectXOffset);
 
 			this->context->With("blur"_hash, [effectXOffset](Context::Shader &shader) {
-				shader.program.Uniform1f("effectXOffset", effectXOffset);
+				shader.program.Uniform1f("effectXOffset"_hash, effectXOffset);
 			});
 
 			// We deviated from a preset
@@ -835,7 +839,7 @@ void CApp::OnInit() {
 			Settings::settings.SetEffectYOffset(effectYOffset);
 
 			this->context->With("blur"_hash, [effectYOffset](Context::Shader &shader) {
-				shader.program.Uniform1f("effectYOffset", effectYOffset);
+				shader.program.Uniform1f("effectYOffset"_hash, effectYOffset);
 			});
 
 			// We deviated from a preset
@@ -846,7 +850,7 @@ void CApp::OnInit() {
 			Settings::settings.SetEffectRadiation(effectRadiation);
 
 			this->context->With("blur"_hash, [effectRadiation](Context::Shader &shader) {
-				shader.program.Uniform1f("effectRadiation", effectRadiation);
+				shader.program.Uniform1f("effectRadiation"_hash, effectRadiation);
 			});
 
 			// We deviated from a preset
@@ -856,7 +860,7 @@ void CApp::OnInit() {
 			Settings::settings.SetEffectHorizontalSpread(effectHorizontalSpread);
 
 			this->context->With("blur"_hash, [effectHorizontalSpread](Context::Shader &shader) {
-				shader.program.Uniform1f("effectHorizontalSpread", effectHorizontalSpread);
+				shader.program.Uniform1f("effectHorizontalSpread"_hash, effectHorizontalSpread);
 			});
 
 			// We deviated from a preset
@@ -866,7 +870,7 @@ void CApp::OnInit() {
 			Settings::settings.SetEffectVerticalSpread(effectVerticalSpread);
 
 			this->context->With("blur"_hash, [effectVerticalSpread](Context::Shader &shader) {
-				shader.program.Uniform1f("effectVerticalSpread", effectVerticalSpread);
+				shader.program.Uniform1f("effectVerticalSpread"_hash, effectVerticalSpread);
 			});
 
 			// We deviated from a preset
@@ -876,7 +880,7 @@ void CApp::OnInit() {
 			Settings::settings.SetEffectRotation(effectRotation);
 
 			this->context->With("blur"_hash, [effectRotation](Context::Shader &shader) {
-				shader.program.Uniform1f("effectRotation", effectRotation);
+				shader.program.Uniform1f("effectRotation"_hash, effectRotation);
 			});
 
 			// We deviated from a preset
@@ -1024,21 +1028,21 @@ void CApp::OnInit() {
 			Settings::settings.SetAlbumArtGamma(gamma);
 
 			this->context->With("texture"_hash, [this, gamma](Context::Shader &shader) {
-				shader.program.Uniform1f("gamma", gamma);
+				shader.program.Uniform1f("gamma"_hash, gamma);
 			});
 		});
 		menu.SetOnAlbumArtContrastChanged([this](float contrast) {
 			Settings::settings.SetAlbumArtContrast(contrast);
 
 			this->context->With("texture"_hash, [this, contrast](Context::Shader &shader) {
-				shader.program.Uniform1f("contrast", contrast);
+				shader.program.Uniform1f("contrast"_hash, contrast);
 			});
 		});
 		menu.SetOnAlbumArtBrightnessChanged([this](float brightness) {
 			Settings::settings.SetAlbumArtBrightness(brightness);
 
 			this->context->With("texture"_hash, [this, brightness](Context::Shader &shader) {
-				shader.program.Uniform1f("brightness", brightness);
+				shader.program.Uniform1f("brightness"_hash, brightness);
 			});
 		});
 		menu.SetOnHdrWhitePointChanged([this](std::optional<float> hdrWhitePoint) {
@@ -1053,8 +1057,10 @@ void CApp::OnInit() {
 	LogDebug("OpenGL Version: ", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
 
 	// Prefer adaptive sync over regular vsync
-	if (SDL_GL_SetSwapInterval(-1) == -1)
+	if (!HDR::Enabled && !SDL_GL_SetSwapInterval(-1))
 		SDL_GL_SetSwapInterval(1);
+	else 
+		SDL_GL_SetSwapInterval(0);
 
 	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glEnable(GL_BLEND);
@@ -1094,6 +1100,11 @@ void CApp::OnInit() {
 		},
 		"blur"_hash
 	);
+	context->AddShader(
+		Utils::GetResource("vertex-blit.glsl"),
+		Utils::GetResource("fragment-blit.glsl"),
+		"blit"_hash
+	);
 
 	// Cache our uniforms
 	for (auto &[hash, shader] : *context) {
@@ -1104,49 +1115,55 @@ void CApp::OnInit() {
 
 		if (hash != "blur"_hash) {
 			shader.program.CacheUniformLocation("color");
-			shader.program.Uniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
+			shader.program.Uniform4f("color"_hash, 1.0f, 1.0f, 1.0f, 1.0f);
 		} else {
 			CacheBlurUniforms(shader);
 
-			shader.program.Uniform1f("effectIntensity", Settings::settings.GetEffectIntensity());
-			shader.program.Uniform1f("effectXOffset", Settings::settings.GetEffectXOffset());
-			shader.program.Uniform1f("effectYOffset", Settings::settings.GetEffectYOffset());
-			shader.program.Uniform1f("effectRadiation", Settings::settings.GetEffectRadiation());
-			shader.program.Uniform1f("effectHorizontalSpread", Settings::settings.GetEffectHorizontalSpread());
-			shader.program.Uniform1f("effectVerticalSpread", Settings::settings.GetEffectVerticalSpread());
-			shader.program.Uniform1f("effectRotation", Settings::settings.GetEffectRotation());
-			shader.program.Uniform1f("effectEnabled", (playing || listening) ? 1.0f : 0.0f);
+			shader.program.Uniform1f("effectIntensity"_hash, Settings::settings.GetEffectIntensity());
+			shader.program.Uniform1f("effectXOffset"_hash, Settings::settings.GetEffectXOffset());
+			shader.program.Uniform1f("effectYOffset"_hash, Settings::settings.GetEffectYOffset());
+			shader.program.Uniform1f("effectRadiation"_hash, Settings::settings.GetEffectRadiation());
+			shader.program.Uniform1f("effectHorizontalSpread"_hash, Settings::settings.GetEffectHorizontalSpread());
+			shader.program.Uniform1f("effectVerticalSpread"_hash, Settings::settings.GetEffectVerticalSpread());
+			shader.program.Uniform1f("effectRotation"_hash, Settings::settings.GetEffectRotation());
+			shader.program.Uniform1f("effectEnabled"_hash, (playing || listening) ? 1.0f : 0.0f);
 		}
 
 		if (hash == "rotate"_hash) {
 			shader.program.CacheUniformLocation("screenSize");
 			shader.program.CacheUniformLocation("radius");
 			shader.program.CacheUniformLocation("multiplier");
-			shader.program.Uniform1f("multiplier", HDR::WhiteLevel * HDR::Headroom);
+			shader.program.Uniform1f("multiplier"_hash, HDR::WhiteLevel * HDR::Headroom);
 			shader.program.CacheUniformLocation("normalize");
-			shader.program.Uniform1i("normalize", 0);
+			shader.program.Uniform1i("normalize"_hash, 0);
+		}
+
+		if (hash == "blit"_hash) {
+			shader.program.CacheUniformLocation("screenSize");
+			shader.program.CacheUniformLocation("yOffset");
+			shader.program.Uniform1f("yOffset"_hash, 0.0f);
 		}
 
 		if (hash == "texture"_hash) {
 			shader.program.CacheUniformLocation("hdr");
-			shader.program.Uniform1i("hdr", 0);
+			shader.program.Uniform1i("hdr"_hash, 0);
 			shader.program.CacheUniformLocation("expand");
-			shader.program.Uniform1f("expand", 0);
+			shader.program.Uniform1f("expand"_hash, 0);
 			shader.program.CacheUniformLocation("multiplier");
-			shader.program.Uniform1f("multiplier", HDR::WhiteLevel * HDR::Headroom);
+			shader.program.Uniform1f("multiplier"_hash, HDR::WhiteLevel * HDR::Headroom);
 			shader.program.CacheUniformLocation("contrast");
-			shader.program.Uniform1f("contrast", Settings::settings.GetAlbumArtContrast());
+			shader.program.Uniform1f("contrast"_hash, Settings::settings.GetAlbumArtContrast());
 			shader.program.CacheUniformLocation("brightness");
-			shader.program.Uniform1f("brightness", Settings::settings.GetAlbumArtBrightness());
+			shader.program.Uniform1f("brightness"_hash, Settings::settings.GetAlbumArtBrightness());
 
 			shader.program.CacheUniformLocation("text");
-			shader.program.Uniform1i("text", 0);
+			shader.program.Uniform1i("text"_hash, 0);
 
 			shader.program.CacheUniformLocation("cube");
-			shader.program.Uniform1i("cube", 1);
+			shader.program.Uniform1i("cube"_hash, 1);
 
 			shader.program.CacheUniformLocation("gamma");
-			shader.program.Uniform1f("gamma", Settings::settings.GetAlbumArtGamma());
+			shader.program.Uniform1f("gamma"_hash, Settings::settings.GetAlbumArtGamma());
 		}
 	}
 
@@ -1343,17 +1360,20 @@ void CApp::OnResize(int width, int height, float scale) {
 #endif
 
 		context->With("blur"_hash, [this](Context::Shader &shader) {
-			shader.program.Uniform1f("intensity", blurIntensity);
-			shader.program.Uniform2f("screenSize", maxDimension, maxDimension);
+			shader.program.Uniform1f("intensity"_hash, blurIntensity);
+			shader.program.Uniform2f("screenSize"_hash, maxDimension, maxDimension);
 		});
 		context->With("rotate"_hash, [this](Context::Shader &shader) {
-			shader.program.Uniform2f("screenSize", maxDimension, maxDimension);
+			shader.program.Uniform2f("screenSize"_hash, maxDimension, maxDimension);
+		});
+		context->With("blit"_hash, [this](Context::Shader &shader) {
+			shader.program.Uniform2f("screenSize"_hash, maxDimension, maxDimension);
 		});
 	} else {
 		maxDimension = windowWidth;
 		hStep = static_cast<float>(windowWidth) / bufferLength;
 		context->With("rotate"_hash, [width, height](Context::Shader &shader) {
-			shader.program.Uniform2f("screenSize", width, height);
+			shader.program.Uniform2f("screenSize"_hash, width, height);
 		});
 	}
 
@@ -1631,7 +1651,7 @@ void CApp::OnLoop(const Delta &time) {
 		
 		context->Use("blur"_hash);
 		context->GetShaderProgram().Uniform1f(
-			"timeDelta",
+			"timeDelta"_hash,
 			(playing || listening) ?
 				(
 					// We currently treat anything >= 3
@@ -1644,32 +1664,32 @@ void CApp::OnLoop(const Delta &time) {
 		);
 
 		context->GetShaderProgram().Uniform1f(
-			"effectTimeDelta",
+			"effectTimeDelta"_hash,
 			(playing || listening) ?
 				// Effects were written with a framerate
 				// of 240 in mind, so scale accordingly
 				time.change.AsSeconds() / (1.0 / 240.0) :
 				0.0f
 		);
-		context->GetShaderProgram().Uniform1f("randomX", prng() / static_cast<float>(prng.max()));
-		context->GetShaderProgram().Uniform1f("randomY", prng() / static_cast<float>(prng.max()));
-		context->GetShaderProgram().Uniform1f("effectEnabled", (playing || listening) ? 1.0f : 0.0f);
+		context->GetShaderProgram().Uniform1f("randomX"_hash, prng() / static_cast<float>(prng.max()));
+		context->GetShaderProgram().Uniform1f("randomY"_hash, prng() / static_cast<float>(prng.max()));
+		context->GetShaderProgram().Uniform1f("effectEnabled"_hash, (playing || listening) ? 1.0f : 0.0f);
 
 		lastFrame->DrawMultisampled(0, 0, *context);
 
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 		context->With("rotate"_hash, [this](Context::Shader &shader) {
-			shader.program.Uniform2f("screenSize", maxDimension, maxDimension);
+			shader.program.Uniform2f("screenSize"_hash, maxDimension, maxDimension);
 
 			if (Settings::IsColorBlend(sourceFactor) && HDR::Enabled)
-				shader.program.Uniform1i("normalize", 1);
+				shader.program.Uniform1i("normalize"_hash, 1);
 		});
 
 		renderer->Draw(time, frameCount, color, blurOffset, *context);
 
 		if (Settings::IsColorBlend(sourceFactor) && HDR::Enabled)
-			context->GetShaderProgram().Uniform1i("expand", 1);
+			context->GetShaderProgram().Uniform1i("expand"_hash, 1);
 
 		glBlendFunc(sourceFactor, destFactor);
 
@@ -1683,19 +1703,22 @@ void CApp::OnLoop(const Delta &time) {
 
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+		blurFbo->Blit(*context);
+
+		context->Color(1.0f, 1.0f, 1.0f, blurOpacity - (strobe ? lerp * (strobeIntensity) : 0.0));
 		context->SetIdentity(std::move(identity));
 		glViewport(oldViewport[0], oldViewport[1], oldViewport[2], oldViewport[3]);
 		context->LoadIdentity();
-		
-		context->Color(1.0f, 1.0f, 1.0f, blurOpacity - (strobe ? lerp * (strobeIntensity) : 0.0));
-		blurFbo->Draw(blurOffset.x / 2.0f, blurOffset.y / 2.0f, *context);
-		context->GetShaderProgram().Uniform1i("expand", 0);
+
+		blurFbo->DrawWithoutBlitting(blurOffset.x / 2.0f, blurOffset.y / 2.0f, *context);
+
+		context->GetShaderProgram().Uniform1i("expand"_hash, 0);
 
 		context->LoadIdentity();
 
 		context->With("rotate"_hash, [this](Context::Shader &shader) {
-			shader.program.Uniform2f("screenSize", windowWidth, windowHeight);
-			shader.program.Uniform1i("normalize", 0);
+			shader.program.Uniform2f("screenSize"_hash, windowWidth, windowHeight);
+			shader.program.Uniform1i("normalize"_hash, 0);
 		});
 	}
 
@@ -1861,25 +1884,37 @@ inline void CApp::SwapBuffers(const Delta &time) {
 	if (HDR::Enabled) {
 		context->Color(1.0f, 1.0f, 1.0f, 0.99f * controls.GetAlpha());
 
-		context->GetShaderProgram().Uniform1i("hdr", true);
+		context->GetShaderProgram().Uniform1i("hdr"_hash, true);
 
-		context->GetShaderProgram().Uniform1f("gamma", 0.5f);
-		context->GetShaderProgram().Uniform1f("contrast", 1.15f);
-		context->GetShaderProgram().Uniform1f("brightness", 1.0f);
+		context->GetShaderProgram().Uniform1f("gamma"_hash, 0.5f);
+		context->GetShaderProgram().Uniform1f("contrast"_hash, 1.15f);
+		context->GetShaderProgram().Uniform1f("brightness"_hash, 1.0f);
 
 		glActiveTexture(GL_TEXTURE0 + 1);
 		albumArt.GetCube()->Bind();
 		glActiveTexture(GL_TEXTURE0 + 0);
+
+		// FIXME: this is the only FBO that's rendered upside down
+		//
+		// The yOffset uniform is a stopgap until a better
+		// solution can be found.
+		context->With("blit"_hash, [this](Context::Shader &shader) {
+			shader.program.Uniform1f("yOffset"_hash, -windowHeight);
+		});
 	} else context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, 0.95f * controls.GetAlpha());
 
 	uiFbo->Draw(0, 0, *context);
 
 	if (HDR::Enabled) {
 		albumArt.GetCube()->Unbind();
-		context->GetShaderProgram().Uniform1i("hdr", 0);
-		context->GetShaderProgram().Uniform1f("gamma", Settings::settings.GetAlbumArtGamma());
-		context->GetShaderProgram().Uniform1f("contrast", Settings::settings.GetAlbumArtContrast());
-		context->GetShaderProgram().Uniform1f("brightness", Settings::settings.GetAlbumArtBrightness());
+		context->GetShaderProgram().Uniform1i("hdr"_hash, 0);
+		context->GetShaderProgram().Uniform1f("gamma"_hash, Settings::settings.GetAlbumArtGamma());
+		context->GetShaderProgram().Uniform1f("contrast"_hash, Settings::settings.GetAlbumArtContrast());
+		context->GetShaderProgram().Uniform1f("brightness"_hash, Settings::settings.GetAlbumArtBrightness());
+
+		context->With("blit"_hash, [this](Context::Shader &shader) {
+			shader.program.Uniform1f("yOffset"_hash, 0.0f);
+		});
 	}
 #endif
 
@@ -2531,10 +2566,10 @@ void CApp::SetBlur(bool blur) {
 #endif
 
 		context->With("blur"_hash, [this](Context::Shader &shader) {
-			shader.program.Uniform1f("intensity", blurIntensity);
+			shader.program.Uniform1f("intensity"_hash, blurIntensity);
 		});
 		context->With("rotate"_hash, [this](Context::Shader &shader) {
-			shader.program.Uniform2f("screenSize", maxDimension, maxDimension);
+			shader.program.Uniform2f("screenSize"_hash, maxDimension, maxDimension);
 		});
 	} else {
 		blurFbo.reset();
@@ -2546,7 +2581,7 @@ void CApp::SetBlur(bool blur) {
 		maxDimension = windowWidth;
 
 		context->With("rotate"_hash, [this](Context::Shader &shader) {
-			shader.program.Uniform2f("screenSize", windowWidth, windowHeight);
+			shader.program.Uniform2f("screenSize"_hash, windowWidth, windowHeight);
 		});
 	}
 
@@ -2562,7 +2597,7 @@ void CApp::SetBlurIntensity(float intensity) {
 	Settings::settings.SetBlurIntensity(intensity);
 
 	context->With("blur"_hash, [this](Context::Shader &shader) {
-		shader.program.Uniform1f("intensity", blurIntensity);
+		shader.program.Uniform1f("intensity"_hash, blurIntensity);
 	});
 }
 

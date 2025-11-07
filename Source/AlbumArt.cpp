@@ -32,7 +32,7 @@ void AlbumArt::OnInit(int windowWidth, int windowHeight, float scale) {
 
 	if (context) {
 		context->With("rotate"_hash, [this](Context::Shader &shader) {
-			shader.program.Uniform1f("radius", radius);
+			shader.program.Uniform1f("radius"_hash, radius);
 		});
 	}
 
@@ -91,7 +91,7 @@ void AlbumArt::UpdateVertexCoords() {
 
 	if (context) {
 		context->With("rotate"_hash, [this](Context::Shader &shader) {
-			shader.program.Uniform1f("radius", radius);
+			shader.program.Uniform1f("radius"_hash, radius);
 		});
 	}
 }
@@ -120,7 +120,7 @@ void AlbumArt::OnLoop(GLfloat x, GLfloat y, float frameCount, Context &context) 
 	if (albumLoaded && !hidden) {
 		context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, 1.0f);
 
-		context.GetShaderProgram().Uniform1i("hdr", HDR::Enabled);
+		context.GetShaderProgram().Uniform1i("hdr"_hash, HDR::Enabled);
 
 		context.Translate(
 			x,
@@ -147,7 +147,7 @@ void AlbumArt::OnLoop(GLfloat x, GLfloat y, float frameCount, Context &context) 
 
 		glActiveTexture(GL_TEXTURE0 + 0);
 
-		context.GetShaderProgram().Uniform1i("hdr", 0);
+		context.GetShaderProgram().Uniform1i("hdr"_hash, 0);
 
 		context.LoadIdentity();
 	}
@@ -170,7 +170,7 @@ int AlbumArt::DrawSquare(int x, int y, int height, GLfloat alpha, Context &conte
 		}
 		
 		context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
-		context.GetShaderProgram().Uniform1i("hdr", HDR::Enabled);
+		context.GetShaderProgram().Uniform1i("hdr"_hash, HDR::Enabled);
 
 		context.Translate(
 			static_cast<GLfloat>(x),
@@ -193,7 +193,7 @@ int AlbumArt::DrawSquare(int x, int y, int height, GLfloat alpha, Context &conte
 
 		glActiveTexture(GL_TEXTURE0 + 0);
 
-		context.GetShaderProgram().Uniform1i("hdr", 0);
+		context.GetShaderProgram().Uniform1i("hdr"_hash, 0);
 
 		context.LoadIdentity();
 

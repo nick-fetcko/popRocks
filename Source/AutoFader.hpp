@@ -42,16 +42,18 @@ public:
 	}
 
 	void Fade(bool in) {
-		if (in) {
-			targetAlpha = 1.0f;
-			lastEventTime = std::chrono::system_clock::now();
-		} else {
-			targetAlpha = 0.0f;
-		}
+		if (!lastFade || *lastFade != in) {
+			if (in) {
+				targetAlpha = 1.0f;
+				lastEventTime = std::chrono::system_clock::now();
+			} else {
+				targetAlpha = 0.0f;
+			}
 
-		if (fadeCallback && (!lastFade || *lastFade != in)) {
-			fadeCallback(in);
-			lastFade = in;
+			if (fadeCallback) {
+				fadeCallback(in);
+				lastFade = in;
+			}
 		}
 	}
 
