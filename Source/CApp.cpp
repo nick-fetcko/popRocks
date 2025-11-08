@@ -2693,10 +2693,36 @@ void CApp::TogglePlaying() {
 }
 
 void CApp::ToggleFullscreen() {
-	if (SDL_GetWindowFlags(sdlWindow) & SDL_WINDOW_FULLSCREEN)
-		SDL_SetWindowFullscreen(sdlWindow, 0);
-	else
-		SDL_SetWindowFullscreen(sdlWindow, SDL_WINDOW_FULLSCREEN);
+	// It appears Windows captures Alt-Enter when using DXGI
+#ifdef WIN32
+	return;
+#endif
+
+#ifdef WIN32
+	BOOL fullscreen = FALSE;
+	if (HDR::Enabled)
+		dxgi.GetSwapChain()->GetFullscreenState(&fullscreen, NULL);
+#endif
+
+	if (SDL_GetWindowFlags(sdlWindow) & SDL_WINDOW_FULLSCREEN
+#ifdef WIN32
+		|| fullscreen
+#endif
+		) {
+#ifdef WIN32
+		if (HDR::Enabled)
+			dxgi.GetSwapChain()->SetFullscreenState(FALSE, NULL);
+		else
+#endif
+			SDL_SetWindowFullscreen(sdlWindow, 0);
+	} else {
+#ifdef WIN32
+		if (HDR::Enabled)
+			dxgi.GetSwapChain()->SetFullscreenState(TRUE, NULL);
+		else
+#endif
+			SDL_SetWindowFullscreen(sdlWindow, SDL_WINDOW_FULLSCREEN);
+	}
 }
 
 void CApp::NextTrack() {
