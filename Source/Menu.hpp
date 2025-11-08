@@ -756,7 +756,7 @@ public:
 			hdrWhitePoint = Settings::settings.GetHdrWhitePoint();
 			if (HDR::Enabled && hdrWhitePoint) {
 				ImGui::Separator();
-				if (ImGui::SliderFloat("White Point", &*hdrWhitePoint, 0.0f, HDR::WhiteLevel * HDR::Headroom, "%.2f")) {
+				if (ImGui::SliderFloat("White Point", &*hdrWhitePoint, 0.1f, HDR::WhiteLevel * HDR::Headroom, "%.2f")) {
 					if (onHdrWhitePointChanged)
 						onHdrWhitePointChanged(hdrWhitePoint);
 				}
