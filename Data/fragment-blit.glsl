@@ -19,4 +19,6 @@ void main() {
     vec4 sample4 = texelFetch(text, coords, 3);
 
     outColor = vec4(sample1 + sample2 + sample3 + sample4) / 4.0f;
+
+    outColor.w = clamp(outColor.w, 0.0, 1.0);
 }

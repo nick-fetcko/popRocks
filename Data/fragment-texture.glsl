@@ -33,4 +33,6 @@ void main() {
         if (expand == 1)
             outColor.rgb *= multiplier;
     }
+
+    outColor.w = clamp(outColor.w, 0.0, 1.0);
 }

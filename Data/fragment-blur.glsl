@@ -25,6 +25,7 @@ void main() {
 
     vec4 sampled = vec4(sample1 + sample2 + sample3 + sample4) / 4.0f;
     
-    sampled.w -= (1.0 / intensity) * timeDelta;
+    sampled.w = clamp(sampled.w - (1.0 / intensity) * timeDelta, 0.0, 1.0);
+
     outColor = sampled;
 }
