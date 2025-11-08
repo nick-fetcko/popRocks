@@ -121,8 +121,6 @@ void FFTRenderer::OnLoop(
 	float maxHeardSample,
 	bool resetGain
 ) {
-	std::size_t maxUpdates = 0;
-
 	for (int i = 0; i < fullBufferLength; i++) {
 		auto rawValue = floatBuffer[i];
 
@@ -158,10 +156,6 @@ void FFTRenderer::OnLoop(
 
 		shrinkDecays[i].Update(time);
 		if (scaledValue > shrinkDecays[i].Get()) {
-			// Ignore higher-frequency bins
-			if (i < bufferLength / 2)
-				++maxUpdates;
-
 			shrinkDecays[i].Reset(scaledValue);
 			fadeDecays[i].Reset(1.0f);
 		}
