@@ -77,7 +77,12 @@ public:
 		context.Translate(-maxDimension / 2.0f, 0, 0);
 
 		context.Apply();
-		line.SetPoints<Polyline::Join::None>(points, bufferLength);
+
+		if (newPoints) {
+			line.SetPoints<Polyline::Join::None>(points, bufferLength);
+			newPoints = false;
+		}
+
 		line.Draw<true>(context);
 
 		context.Use("texture"_hash);

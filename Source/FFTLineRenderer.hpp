@@ -80,7 +80,11 @@ public:
 		context.Translate(0, (offset / 2.0f / 100.0f) * windowHeight, 0);
 
 		context.Apply();
-		line.SetPoints<Polyline::Join::None>(points, bufferLength);
+
+		if (newPoints) {
+			line.SetPoints<Polyline::Join::None>(points, bufferLength);
+			newPoints = false;
+		}
 		line.Draw<false>(context);
 
 		context.Translate(0, -(offset / 2.0f / 100.0f) * windowHeight, 0);
