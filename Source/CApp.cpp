@@ -1886,8 +1886,8 @@ inline void CApp::SwapBuffers(const Delta &time) {
 
 		context->GetShaderProgram().Uniform1i("hdr"_hash, true);
 
-		context->GetShaderProgram().Uniform1f("gamma"_hash, 0.5f);
-		context->GetShaderProgram().Uniform1f("contrast"_hash, 1.15f);
+		context->GetShaderProgram().Uniform1f("gamma"_hash, 0.33f);
+		context->GetShaderProgram().Uniform1f("contrast"_hash, 1.1f);
 		context->GetShaderProgram().Uniform1f("brightness"_hash, 1.0f);
 
 		glActiveTexture(GL_TEXTURE0 + 1);
