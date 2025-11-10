@@ -613,6 +613,14 @@ void AlbumArt::LoadFromSurface(SDL_Surface *surface, bool scaled) {
 	albumWidth = surface->w;
 	albumHeight = surface->h;
 
+	// Handle indexed color
+	if (auto bpp = SDL_BITSPERPIXEL(surface->format); bpp == 8) {
+		LogWarning("Found indexed color! Converting to RGB...");
+		auto newSurface = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGB24);
+		SDL_DestroySurface(surface);
+		surface = newSurface;
+	}
+
 	uint8_t *pixels = GetPixels(surface);
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, SDL_BITSPERPIXEL(surface->format) == 32 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, pixels);
