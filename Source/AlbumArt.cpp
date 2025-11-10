@@ -251,7 +251,7 @@ std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder) {
 			auto front = filename.find("front");
 			auto folder = filename.find("folder");
 
-			if (cover == 0 ||
+			if (cover != std::string::npos ||
 				front != std::string::npos ||
 				folder == 0) {
 				// Sort by digits in the filename (if there are any), ascending
