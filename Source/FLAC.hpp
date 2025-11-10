@@ -172,6 +172,14 @@ public:
 
 					// Do we have album art next?
 					inFile.read(reinterpret_cast<char *>(&block), sizeof(MetadataBlock));
+
+					// Skip any padding blocks between comment and picture
+					while ((block.type & 0x7F) == 1) { // Padding
+						auto length = block.GetLength();
+						inFile.seekg(length, std::ios::cur);
+						inFile.read(reinterpret_cast<char *>(&block), sizeof(MetadataBlock));
+					}
+
 					if ((block.type & 0x7F) == 6) // Picture
 						ReadAlbumArt();
 
