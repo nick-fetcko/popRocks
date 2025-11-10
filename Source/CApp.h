@@ -149,6 +149,8 @@ public:
 
 	void SaveBlurFBO();
 
+	void UpdateHdrProperties();
+
 private:
 	void AddCommands();
 
@@ -192,6 +194,10 @@ private:
 	inline void SetVisualizerScale(float scale);
 
 	inline void ClearBlurFbo();
+
+	inline void LoadShaders();
+
+	inline void SetHdr(bool enabled);
 
 	int windowWidth = 1920;
 	int windowHeight = 1080;
@@ -365,4 +371,6 @@ private:
 #ifdef WIN32
 	DXGI dxgi;
 #endif
+
+	SDL_GLContext openGlContext;
 };

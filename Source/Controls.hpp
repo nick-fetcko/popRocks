@@ -66,6 +66,9 @@ public:
 	Volume &GetVolume() { return volume; }
 	ExclusiveIndicator &GetExclusiveIndicator() { return exclusiveIndicator; }
 
+	OpenGLFont *GetFont() { return font; }
+	OpenGLFont *GetOutlineFont() { return outlineFont; }
+
 private:
 	inline void OpenFont(Context *context, GLuint defaultFramebuffer);
 	std::string FormatSeconds(int seconds) const;

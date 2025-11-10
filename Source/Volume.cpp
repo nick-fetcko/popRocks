@@ -1,6 +1,7 @@
 #include "Volume.hpp"
 
 #include "Hash.hpp"
+#include "HDR.hpp"
 
 void Volume::OnInit(const std::string &fontRoot, Context *context) {
 	ring.SetWidth(radius / 10);
@@ -116,6 +117,15 @@ void Volume::OnColorChanged(const Colour<float> &color, bool silent) {
 	auto hsv = color.ToHsv();
 	hsv.v = 1.0f;
 	this->color = Colour<float>::FromHsv(hsv.h, hsv.s, hsv.v);
+
+	if (HDR::Enabled) {
+		this->color.Tone(
+			Settings::settings.GetAlbumArtGamma(),
+			Settings::settings.GetAlbumArtContrast(),
+			Settings::settings.GetAlbumArtBrightness(),
+			HDR::WhiteLevel * HDR::Headroom
+		);
+	}
 }
 
 inline void Volume::UpdateVolume(bool force) {

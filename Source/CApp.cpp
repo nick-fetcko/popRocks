@@ -408,6 +408,293 @@ void CApp::SetVisualizerScale(float scale) {
 		renderer->SetScale(scale);
 }
 
+inline void CApp::SetHdr(bool enabled) {
+	int width = 0, height = 0;
+	HWND hwnd = NULL;
+
+	if (HDR::Enabled != enabled) {
+		hwnd = (HWND)SDL_GetPointerProperty(SDL_GetWindowProperties(sdlWindow), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
+
+		SDL_GetWindowSize(sdlWindow, &width, &height);
+
+		if (blur) {
+			blurFbo = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension, enabled ? GL_RGBA16F : GL_RGBA);
+			lastFrame = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension, enabled ? GL_RGBA16F : GL_RGBA);
+		}
+
+		uiFbo = std::make_unique<MultisampledFramebufferObject>(windowWidth, windowHeight, enabled ? GL_RGBA16F : GL_RGBA);
+
+		updateUi = true;
+	}
+
+	if (HDR::Enabled && !enabled) {
+		dxgi.OnDestroy();
+
+		if (blurFbo)
+			blurFbo->SetDefaultFramebuffer(0);
+		if (lastFrame)
+			lastFrame->SetDefaultFramebuffer(0);
+		if (uiFbo)
+			uiFbo->SetDefaultFramebuffer(0);
+
+		if (auto font = controls.GetFont())
+			font->SetDefaultFramebuffer(0);
+		if (auto outlineFont = controls.GetOutlineFont())
+			outlineFont->SetDefaultFramebuffer(0);
+
+		if (context) {
+			context->SetIdentity(glm::ortho(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f));
+			context->Apply();
+		}
+
+		ImGui_ImplOpenGL3_Shutdown();
+		ImGui_ImplSDL3_Shutdown();
+
+		// FIXME: It appears that calling swapChain->Present(1, 0)
+		//        prevents us from restoring the window's original
+		//        OpenGL context.
+		//
+		//        Destroying the window is only a workaround until
+		//        a better solution is found.
+		SDL_DestroyWindow(sdlWindow);
+
+		SDL_PropertiesID props = SDL_CreateProperties();
+
+		SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "popRocks");
+		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, windowWidth);
+		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, windowHeight);
+		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, Settings::settings.GetWindowX());
+		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, Settings::settings.GetWindowY());
+		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_OPENGL_BOOLEAN, true);
+		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
+		sdlWindow = SDL_CreateWindowWithProperties(
+			props
+		);
+
+		SDL_GL_MakeCurrent(sdlWindow, openGlContext);
+
+		// Setup Platform/Renderer backends
+		ImGui_ImplSDL3_InitForOpenGL(sdlWindow, openGlContext);
+		ImGui_ImplOpenGL3_Init();
+
+		//SDL_GL_SetSwapInterval(0);
+	} else if (!HDR::Enabled && enabled) {
+		HWND hwnd = (HWND)SDL_GetPointerProperty(SDL_GetWindowProperties(sdlWindow), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
+		int width = 0, height = 0;
+		SDL_GetWindowSize(sdlWindow, &width, &height);
+
+		if (blur) {
+			blurFbo = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension, enabled ? GL_RGBA16F : GL_RGBA);
+			lastFrame = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension, enabled ? GL_RGBA16F : GL_RGBA);
+		}
+
+		uiFbo = std::make_unique<MultisampledFramebufferObject>(windowWidth, windowHeight, enabled ? GL_RGBA16F : GL_RGBA);
+
+		dxgi.OnCreate(hwnd, width, height);
+		dxgi.OnResize(width, height);
+
+		if (context)
+			context->SetIdentity(glm::ortho(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height)));
+
+		if (blurFbo)
+			blurFbo->SetDefaultFramebuffer(dxgi.GetFramebuffer());
+		if (lastFrame)
+			lastFrame->SetDefaultFramebuffer(dxgi.GetFramebuffer());
+		if (uiFbo)
+			uiFbo->SetDefaultFramebuffer(dxgi.GetFramebuffer());
+
+		if (auto font = controls.GetFont())
+			font->SetDefaultFramebuffer(dxgi.GetFramebuffer());
+		if (auto outlineFont = controls.GetOutlineFont())
+			outlineFont->SetDefaultFramebuffer(dxgi.GetFramebuffer());
+	}
+}
+
+void CApp::LoadShaders() {
+	context->AddShader(
+		Utils::GetResource("vertex-texture.glsl"),
+		Utils::GetResource("fragment-texture.glsl"),
+		"texture"_hash
+	);
+	context->AddShader(
+		Utils::GetResource("vertex.glsl"),
+		Utils::GetResource("fragment.glsl"),
+		"basic"_hash
+	);
+	context->AddShader(
+		Utils::GetResource("vertex-color.glsl"),
+		Utils::GetResource("fragment-color.glsl"),
+		"color"_hash
+	);
+	context->AddShader(
+		Utils::GetResource("vertex-rotate.glsl"),
+		Utils::GetResource("fragment-rotate.glsl"),
+		"rotate"_hash
+	);
+	context->AddShader(
+		Utils::GetResource("vertex-font.glsl"),
+		Utils::GetResource("fragment-font.glsl"),
+		"font"_hash
+	);
+	context->AddShader(
+		Utils::GetResource("vertex-blur.glsl"),
+		std::vector<std::filesystem::path>{
+		Utils::GetResource("fragment-blur.glsl"),
+			Utils::GetResource(std::string("Effects/fragment-") + Settings::settings.GetEffect() + ".glsl")
+	},
+		"blur"_hash
+	);
+	context->AddShader(
+		Utils::GetResource("vertex-blit.glsl"),
+		Utils::GetResource("fragment-blit.glsl"),
+		"blit"_hash
+	);
+
+	// Cache our uniforms
+	for (auto &[hash, shader] : *context) {
+		// by calling program.Use() instead of context->Use()
+		// we avoid changing the currentProgram
+		shader.program.Use();
+		shader.program.CacheUniformLocation("projection");
+
+		if (hash != "blur"_hash) {
+			shader.program.CacheUniformLocation("color");
+			shader.program.Uniform4f("color"_hash, 1.0f, 1.0f, 1.0f, 1.0f);
+		} else {
+			CacheBlurUniforms(shader);
+
+			shader.program.Uniform1f("effectIntensity"_hash, Settings::settings.GetEffectIntensity());
+			shader.program.Uniform1f("effectXOffset"_hash, Settings::settings.GetEffectXOffset());
+			shader.program.Uniform1f("effectYOffset"_hash, Settings::settings.GetEffectYOffset());
+			shader.program.Uniform1f("effectRadiation"_hash, Settings::settings.GetEffectRadiation());
+			shader.program.Uniform1f("effectHorizontalSpread"_hash, Settings::settings.GetEffectHorizontalSpread());
+			shader.program.Uniform1f("effectVerticalSpread"_hash, Settings::settings.GetEffectVerticalSpread());
+			shader.program.Uniform1f("effectRotation"_hash, Settings::settings.GetEffectRotation());
+			shader.program.Uniform1f("effectEnabled"_hash, (playing || listening) ? 1.0f : 0.0f);
+		}
+
+		if (hash == "rotate"_hash) {
+			shader.program.CacheUniformLocation("screenSize");
+			shader.program.CacheUniformLocation("radius");
+			shader.program.CacheUniformLocation("multiplier");
+			shader.program.Uniform1f("multiplier"_hash, HDR::WhiteLevel * HDR::Headroom);
+			shader.program.CacheUniformLocation("normalize");
+			shader.program.Uniform1i("normalize"_hash, 0);
+		}
+
+		if (hash == "blit"_hash) {
+			shader.program.CacheUniformLocation("screenSize");
+			shader.program.CacheUniformLocation("yOffset");
+			shader.program.Uniform1f("yOffset"_hash, 0.0f);
+		}
+
+		if (hash == "texture"_hash) {
+			shader.program.CacheUniformLocation("hdr");
+			shader.program.Uniform1i("hdr"_hash, 0);
+			shader.program.CacheUniformLocation("expand");
+			shader.program.Uniform1f("expand"_hash, 0);
+			shader.program.CacheUniformLocation("multiplier");
+			shader.program.Uniform1f("multiplier"_hash, HDR::WhiteLevel * HDR::Headroom);
+			shader.program.CacheUniformLocation("contrast");
+			shader.program.Uniform1f("contrast"_hash, Settings::settings.GetAlbumArtContrast());
+			shader.program.CacheUniformLocation("brightness");
+			shader.program.Uniform1f("brightness"_hash, Settings::settings.GetAlbumArtBrightness());
+
+			shader.program.CacheUniformLocation("text");
+			shader.program.Uniform1i("text"_hash, 0);
+
+			shader.program.CacheUniformLocation("cube");
+			shader.program.Uniform1i("cube"_hash, 1);
+
+			shader.program.CacheUniformLocation("gamma");
+			shader.program.Uniform1f("gamma"_hash, Settings::settings.GetAlbumArtGamma());
+		}
+	}
+}
+
+void CApp::UpdateHdrProperties() {
+	// SDL does NOT update white level or headroom
+	// when the window moves between monitors with 
+	// different HDR properties on Windows
+
+	/*
+	auto displayId = SDL_GetDisplayForWindow(sdlWindow);
+	SDL_PropertiesID displayProps = SDL_GetDisplayProperties(
+		displayId
+	);
+	SDL_PropertiesID windowProps = SDL_GetWindowProperties(sdlWindow);
+
+	static bool first = false;
+	if (!first) {
+		HDR::Enabled = SDL_GetBooleanProperty(displayProps, SDL_PROP_DISPLAY_HDR_ENABLED_BOOLEAN, false);
+		first = true;
+	}
+	HDR::WhiteLevel = SDL_GetFloatProperty(windowProps, SDL_PROP_WINDOW_SDR_WHITE_LEVEL_FLOAT, 1.0f);
+	HDR::Headroom = SDL_GetFloatProperty(windowProps, SDL_PROP_WINDOW_HDR_HEADROOM_FLOAT, 1.0f);
+
+	LogDebug("HDR state changed!");
+	LogDebug("\tDisplay ID: ", displayId);
+	LogDebug("\tEnabled: ", HDR::Enabled ? "Yes" : "No");
+	LogDebug("\tWhiteLevel: ", HDR::WhiteLevel);
+	LogDebug("\tHeadroom: ", HDR::Headroom);
+	*/
+
+#ifdef WIN32
+	int adapterIndex = 0;
+	int outputIndex = 0;
+
+	if (!SDL_GetDXGIOutputInfo(SDL_GetDisplayForWindow(sdlWindow),
+		&adapterIndex, &outputIndex)) {
+		LogError(
+			"SDL_DXGIGetOutputInfo() failed: ",
+			SDL_GetError()
+		);
+	}
+	if (auto properties = dxgi.GetHdrProperties(outputIndex)) {
+		LogDebug("HDR properties changed: ");
+
+		auto &[enabled, whitePoint, headroom] = *properties;
+#else
+		bool enabled = false;
+		float whitePoint = 1.0f;
+		float headroom = 1.0f;
+#endif
+		LogDebug("\tEnabled: ", enabled ? "Yes" : "No");
+		LogDebug("\tWhitePoint: ", whitePoint);
+		LogDebug("\tHeadroom: ", headroom);
+
+		SetHdr(enabled);
+
+		HDR::Enabled = enabled;
+		HDR::WhiteLevel = whitePoint;
+		HDR::Headroom = headroom;
+
+		if (context) {
+			context->With("rotate"_hash, [this, &whitePoint, &headroom](Context::Shader &shader) {
+				shader.program.Uniform1f("multiplier"_hash, HDR::Enabled ? HDR::WhiteLevel * HDR::Headroom : 1.0f);
+			});
+			context->With("texture"_hash, [this, &whitePoint, &headroom](Context::Shader &shader) {
+				shader.program.Uniform1f("multiplier"_hash, HDR::Enabled ? HDR::WhiteLevel * HDR::Headroom : 1.0f);
+			});
+		}
+
+		if (HDR::Enabled) {
+			if (!Settings::settings.GetHdrWhitePoint())
+				Settings::settings.SetHdrWhitePoint(HDR::WhiteLevel);
+			else
+				HDR::SetWhiteLevel(*Settings::settings.GetHdrWhitePoint());
+		}
+
+		// Prefer adaptive sync over regular vsync
+		if (!HDR::Enabled && !SDL_GL_SetSwapInterval(-1))
+			SDL_GL_SetSwapInterval(1);
+		else
+			SDL_GL_SetSwapInterval(0);
+#ifdef WIN32
+	}
+#endif
+}
+
 void CApp::OnInit() {
 	// https://tgui.eu/tutorials/latest-stable/dpi-scaling/
 	//SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
@@ -420,23 +707,6 @@ void CApp::OnInit() {
 	LogDebug("SDL_Init() returned ", ret ? "true" : "false");
 	if (!ret)
 		LogDebug("SDL_GetError = ", SDL_GetError());
-
-	int num_displays;
-	SDL_DisplayID *displays = SDL_GetDisplays(&num_displays);
-
-	for (int i = 0; i < num_displays; i++) {
-		SDL_PropertiesID prop_id = SDL_GetDisplayProperties(displays[i]);
-
-		if (!SDL_GetBooleanProperty(prop_id, SDL_PROP_DISPLAY_HDR_ENABLED_BOOLEAN, false)) {
-			//SDL_Log("Display with ID %"SDL_PRIu32 " does not have HDR enabled.", displays[i]);
-			LogDebug("Display with ID ", displays[i], " does not have HDR enabled");
-		} else {
-			//SDL_Log("Display with ID %"SDL_PRIu32 " has HDR enabled.", displays[i]);
-			LogDebug("Display with ID ", displays[i], " DOES have HDR enabled");
-		}
-	}
-
-	SDL_free(displays);
 
 	/*
 	ret = IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG | IMG_INIT_WEBP);
@@ -487,24 +757,7 @@ void CApp::OnInit() {
 		props
 	);
 
-	SDL_PropertiesID windowProps = SDL_GetWindowProperties(sdlWindow);
-	HDR::Enabled = SDL_GetBooleanProperty(windowProps, SDL_PROP_WINDOW_HDR_ENABLED_BOOLEAN, false);
-	HDR::WhiteLevel = SDL_GetFloatProperty(windowProps, SDL_PROP_WINDOW_SDR_WHITE_LEVEL_FLOAT, 1.0f);
-	HDR::Headroom = SDL_GetFloatProperty(windowProps, SDL_PROP_WINDOW_HDR_HEADROOM_FLOAT, 1.0f);
-
-	if (HDR::Enabled) {
-		if (!Settings::settings.GetHdrWhitePoint())
-			Settings::settings.SetHdrWhitePoint(HDR::WhiteLevel);
-		else
-			HDR::SetWhiteLevel(*Settings::settings.GetHdrWhitePoint());
-	}
-
 #ifdef WIN32
-	// Get the HWND from SDL
-	HWND hwnd = (HWND)SDL_GetPointerProperty(SDL_GetWindowProperties(sdlWindow), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
-	int width = 0, height = 0;
-	SDL_GetWindowSize(sdlWindow, &width, &height);
-
 	int adapterIndex = 0;
 	int outputIndex = 0;
 
@@ -516,13 +769,18 @@ void CApp::OnInit() {
 		);
 	}
 #endif
-	if (auto context = SDL_GL_CreateContext(sdlWindow)) {
+	if (openGlContext = SDL_GL_CreateContext(sdlWindow)) {
 		LogDebug("gladLoadGL() returned ", gladLoadGL());
 
+		context = std::make_unique<Context>();
+
+		LoadShaders();
+
 #ifdef WIN32
-		if (HDR::Enabled)
-			dxgi.OnInit(hwnd, adapterIndex, width, height);
+		dxgi.OnInit(adapterIndex);
 #endif
+
+		UpdateHdrProperties();
 
 #if GUI
 		// Setup Dear ImGui context
@@ -532,7 +790,7 @@ void CApp::OnInit() {
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;	// Enable Keyboard Controls
 
 		// Setup Platform/Renderer backends
-		ImGui_ImplSDL3_InitForOpenGL(sdlWindow, context);
+		ImGui_ImplSDL3_InitForOpenGL(sdlWindow, openGlContext);
 		ImGui_ImplOpenGL3_Init();
 
 		menu.SetOnOpen([this](const std::filesystem::path &path) {
@@ -1056,116 +1314,9 @@ void CApp::OnInit() {
 
 	LogDebug("OpenGL Version: ", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
 
-	// Prefer adaptive sync over regular vsync
-	if (!HDR::Enabled && !SDL_GL_SetSwapInterval(-1))
-		SDL_GL_SetSwapInterval(1);
-	else 
-		SDL_GL_SetSwapInterval(0);
-
 	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	context = std::make_unique<Context>();
-	context->AddShader(
-		Utils::GetResource("vertex-texture.glsl"),
-		Utils::GetResource("fragment-texture.glsl"),
-		"texture"_hash
-	);
-	context->AddShader(
-		Utils::GetResource("vertex.glsl"),
-		Utils::GetResource("fragment.glsl"),
-		"basic"_hash
-	);
-	context->AddShader(
-		Utils::GetResource("vertex-color.glsl"),
-		Utils::GetResource("fragment-color.glsl"),
-		"color"_hash
-	);
-	context->AddShader(
-		Utils::GetResource("vertex-rotate.glsl"),
-		Utils::GetResource("fragment-rotate.glsl"),
-		"rotate"_hash
-	);
-	context->AddShader(
-		Utils::GetResource("vertex-font.glsl"),
-		Utils::GetResource("fragment-font.glsl"),
-		"font"_hash
-	);
-	context->AddShader(
-		Utils::GetResource("vertex-blur.glsl"),
-		std::vector<std::filesystem::path>{ 
-			Utils::GetResource("fragment-blur.glsl"),
-			Utils::GetResource(std::string("Effects/fragment-") + Settings::settings.GetEffect() + ".glsl")
-		},
-		"blur"_hash
-	);
-	context->AddShader(
-		Utils::GetResource("vertex-blit.glsl"),
-		Utils::GetResource("fragment-blit.glsl"),
-		"blit"_hash
-	);
-
-	// Cache our uniforms
-	for (auto &[hash, shader] : *context) {
-		// by calling program.Use() instead of context->Use()
-		// we avoid changing the currentProgram
-		shader.program.Use();
-		shader.program.CacheUniformLocation("projection");
-
-		if (hash != "blur"_hash) {
-			shader.program.CacheUniformLocation("color");
-			shader.program.Uniform4f("color"_hash, 1.0f, 1.0f, 1.0f, 1.0f);
-		} else {
-			CacheBlurUniforms(shader);
-
-			shader.program.Uniform1f("effectIntensity"_hash, Settings::settings.GetEffectIntensity());
-			shader.program.Uniform1f("effectXOffset"_hash, Settings::settings.GetEffectXOffset());
-			shader.program.Uniform1f("effectYOffset"_hash, Settings::settings.GetEffectYOffset());
-			shader.program.Uniform1f("effectRadiation"_hash, Settings::settings.GetEffectRadiation());
-			shader.program.Uniform1f("effectHorizontalSpread"_hash, Settings::settings.GetEffectHorizontalSpread());
-			shader.program.Uniform1f("effectVerticalSpread"_hash, Settings::settings.GetEffectVerticalSpread());
-			shader.program.Uniform1f("effectRotation"_hash, Settings::settings.GetEffectRotation());
-			shader.program.Uniform1f("effectEnabled"_hash, (playing || listening) ? 1.0f : 0.0f);
-		}
-
-		if (hash == "rotate"_hash) {
-			shader.program.CacheUniformLocation("screenSize");
-			shader.program.CacheUniformLocation("radius");
-			shader.program.CacheUniformLocation("multiplier");
-			shader.program.Uniform1f("multiplier"_hash, HDR::WhiteLevel * HDR::Headroom);
-			shader.program.CacheUniformLocation("normalize");
-			shader.program.Uniform1i("normalize"_hash, 0);
-		}
-
-		if (hash == "blit"_hash) {
-			shader.program.CacheUniformLocation("screenSize");
-			shader.program.CacheUniformLocation("yOffset");
-			shader.program.Uniform1f("yOffset"_hash, 0.0f);
-		}
-
-		if (hash == "texture"_hash) {
-			shader.program.CacheUniformLocation("hdr");
-			shader.program.Uniform1i("hdr"_hash, 0);
-			shader.program.CacheUniformLocation("expand");
-			shader.program.Uniform1f("expand"_hash, 0);
-			shader.program.CacheUniformLocation("multiplier");
-			shader.program.Uniform1f("multiplier"_hash, HDR::WhiteLevel * HDR::Headroom);
-			shader.program.CacheUniformLocation("contrast");
-			shader.program.Uniform1f("contrast"_hash, Settings::settings.GetAlbumArtContrast());
-			shader.program.CacheUniformLocation("brightness");
-			shader.program.Uniform1f("brightness"_hash, Settings::settings.GetAlbumArtBrightness());
-
-			shader.program.CacheUniformLocation("text");
-			shader.program.Uniform1i("text"_hash, 0);
-
-			shader.program.CacheUniformLocation("cube");
-			shader.program.Uniform1i("cube"_hash, 1);
-
-			shader.program.CacheUniformLocation("gamma");
-			shader.program.Uniform1f("gamma"_hash, Settings::settings.GetAlbumArtGamma());
-		}
-	}
 
 	// Initialize our buffers now that we have an OpenGL context
 	SetBufferLength(Settings::settings.GetBufferLength());
@@ -1575,7 +1726,7 @@ void CApp::OnLoop(const Delta &time) {
 	if (playing && ((renderer->GetPulse() && !renderer->GetPulses()) || strobe)) {
 		auto hsv = color.ToHsv();
 
-		if (!darkenPulseOnBrightColors || hsv.v < 0.66 * HDR::WhiteLevel * HDR::Headroom) {
+		if (!darkenPulseOnBrightColors || hsv.v < 0.66 * (HDR::Enabled ? HDR::WhiteLevel * HDR::Headroom : 1.0f)) {
 			auto brightHsv = brightColor.ToHsv();
 			brightHsv.v = brightHsv.v + ((strobe ? hsv.v - strobeIntensity : hsv.v) - brightHsv.v) * lerp;
 			color = Colour<float>::FromHsv(brightHsv);
@@ -1596,8 +1747,8 @@ void CApp::OnLoop(const Delta &time) {
 			fileLoaded,
 			hStep,
 			*context,
-			!darkenPulseOnBrightColors || hsv.v < 0.66 * HDR::WhiteLevel * HDR::Headroom ? color : darkColor,
-			((strobe && playing) ? Colour<float>::FromHsv(brightHsv) : ((!darkenPulseOnBrightColors || hsv.v < 0.66 * HDR::WhiteLevel * HDR::Headroom) ? this->brightColor : color)),
+			!darkenPulseOnBrightColors || hsv.v < 0.66 * (HDR::Enabled ? HDR::WhiteLevel * HDR::Headroom : 1.0f) ? color : darkColor,
+			((strobe && playing) ? Colour<float>::FromHsv(brightHsv) : ((!darkenPulseOnBrightColors || hsv.v < 0.66 * (HDR::Enabled ? HDR::WhiteLevel * HDR::Headroom : 1.0f)) ? this->brightColor : color)),
 			frameCount,
 			maxHeardSample,
 			resetGain
@@ -1682,13 +1833,13 @@ void CApp::OnLoop(const Delta &time) {
 		context->With("rotate"_hash, [this](Context::Shader &shader) {
 			shader.program.Uniform2f("screenSize"_hash, maxDimension, maxDimension);
 
-			if (Settings::IsColorBlend(sourceFactor) && HDR::Enabled)
+			if ((Settings::IsColorBlend(sourceFactor) || Settings::IsColorBlend(destFactor)) && HDR::Enabled)
 				shader.program.Uniform1i("normalize"_hash, 1);
 		});
 
 		renderer->Draw(time, frameCount, color, blurOffset, *context);
 
-		if (Settings::IsColorBlend(sourceFactor) && HDR::Enabled)
+		if ((Settings::IsColorBlend(sourceFactor) || Settings::IsColorBlend(destFactor)) && HDR::Enabled)
 			context->GetShaderProgram().Uniform1i("expand"_hash, 1);
 
 		glBlendFunc(sourceFactor, destFactor);
@@ -1992,6 +2143,7 @@ void CApp::OnDestroy() {
 #endif
 	BASS_Free();
 //	IMG_Quit();
+	SDL_GL_DestroyContext(openGlContext);
 
 	Logger::OnDestroy();
 }
@@ -2907,7 +3059,8 @@ void CApp::LoadPreset(const Preset &preset) {
 	SetBlur(blur && *blur);
 
 	// Make sure we don't blow out any existing colors
-	if (Settings::IsColorBlend(sourceFactor) != Settings::IsColorBlend(preset.GetSourceFactor()))
+	if (Settings::IsColorBlend(sourceFactor) != Settings::IsColorBlend(preset.GetSourceFactor()) ||
+		Settings::IsColorBlend(destFactor) != Settings::IsColorBlend(preset.GetDestFactor()))
 		ClearBlurFbo();
 
 	sourceFactor = preset.GetSourceFactor();

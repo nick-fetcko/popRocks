@@ -70,6 +70,10 @@ int main(int argc, char *argv[]) {
 					Settings::settings.SetWindowX(event.window.data1);
 					Settings::settings.SetWindowY(event.window.data2);
 					logger.LogDebug("Window moved to (", event.window.data1, ", ", event.window.data2, ")");
+					app.UpdateHdrProperties();
+					break;
+				case SDL_EVENT_WINDOW_HDR_STATE_CHANGED:
+					app.UpdateHdrProperties();
 					break;
 				case SDL_EVENT_KEY_DOWN:
 #if GUI
@@ -77,7 +81,7 @@ int main(int argc, char *argv[]) {
 
 					else 
 #endif
-						if (event.key.key == SDLK_MEDIA_NEXT_TRACK ||
+					if (event.key.key == SDLK_MEDIA_NEXT_TRACK ||
 						(event.key.key == SDLK_D && (event.key.mod & SDL_KMOD_CTRL)) ||
 						(event.key.key == SDLK_RIGHT && (event.key.mod & SDL_KMOD_CTRL)))
 						app.NextTrack();
