@@ -114,6 +114,9 @@ HRESULT RecordAudioStream(MyAudioSink *pMySink)
     BYTE *pData;
     DWORD flags;
 
+	hr = CoInitialize(NULL);
+	EXIT_ON_ERROR(hr)
+
     hr = CoCreateInstance(
            CLSID_MMDeviceEnumerator, NULL,
            CLSCTX_ALL, IID_IMMDeviceEnumerator,

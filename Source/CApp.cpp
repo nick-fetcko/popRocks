@@ -158,9 +158,6 @@ CApp::CApp() : albumArt(context), controls(&albumArt), circleLine(12.0f), prng(t
 
 	// Add our console commands
 	AddCommands();
-
-	// Set our initial visualizer color
-	OnColorChanged(visColor, true);
 }
 
 void CApp::UpdateMaxBufferLength() {
@@ -690,6 +687,11 @@ void CApp::UpdateHdrProperties() {
 			SDL_GL_SetSwapInterval(1);
 		else
 			SDL_GL_SetSwapInterval(0);
+
+		// Update our visualizer color
+		// to reflect any changes to white point
+		// and headroom
+		OnColorChanged(visColor, true);
 #ifdef WIN32
 	}
 #endif
