@@ -926,28 +926,26 @@ void AlbumArt::Scale(bool force) {
 
 		auto start = std::chrono::system_clock::now();
 
-		// TODO: RGBA support
-		if (SDL_BITSPERPIXEL(lastSurface->format) == 24) {
-			Gaussian gaussian;
+		Gaussian gaussian(SDL_BYTESPERPIXEL(lastSurface->format));
+		Bicubic bicubic(SDL_BYTESPERPIXEL(lastSurface->format));
 
-			auto w = lastSurface->w / 2;
-			SDL_Surface *next = nullptr;
-			while (w > radius * 2 && scaling) {
-				auto blurred = gaussian.Blur(resized, &scaling);
+		auto w = lastSurface->w / 2;
+		SDL_Surface *next = nullptr;
+		while (w > radius * 2 && scaling) {
+			auto blurred = gaussian.Blur(resized, &scaling);
 
-				resized = Bicubic::ResizeImage(blurred, static_cast<float>(w) / blurred->w, &scaling);
+			resized = bicubic.ResizeImage(blurred, static_cast<float>(w) / blurred->w, &scaling);
 
-				w /= 2;
-			}
+			w /= 2;
+		}
 
-			resized = Bicubic::ResizeImage(resized, (radius * 2) / resized->w, &scaling);
+		resized = bicubic.ResizeImage(resized, (radius * 2) / resized->w, &scaling);
 
-			// [16Jul2025] We now want to keep the un-scaled surface
-			//             around as it might need rescaling when the
-			//             DPI changes
+		// [16Jul2025] We now want to keep the un-scaled surface
+		//             around as it might need rescaling when the
+		//             DPI changes
 //			if (resized)
 //				lastSurface = nullptr;
-		}
 
 		auto end = std::chrono::system_clock::now();
 

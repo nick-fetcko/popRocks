@@ -6,7 +6,8 @@
 
 #define MULTITHREADED 1
 
-Gaussian::Gaussian(int kernelSize, double sigma) :
+Gaussian::Gaussian(std::size_t numBytes, int kernelSize, double sigma) :
+	numBytes(numBytes),
 	kernelSize(kernelSize),
 	sigma(sigma) {
 	kernel = new double *[kernelSize];
@@ -47,8 +48,8 @@ SDL_Surface *Gaussian::Blur(SDL_Surface *surface, bool *running) {
 				for (int row = 0; row < surface->h; ++row) {
 #endif
 				for (int col = 0; col < surface->w && running; ++col) {
-					for (int k = 0; k < 3 && running; k++) {
-						pixels[row * ret->pitch + 3 * col + k] = GetPixel(surface, col, row, k);
+					for (int k = 0; k < numBytes && running; k++) {
+						pixels[row * ret->pitch + numBytes * col + k] = GetPixel(surface, col, row, k);
 					}
 				}
 			}
@@ -94,7 +95,7 @@ inline int Gaussian::GetPixel(SDL_Surface *surface, int col, int row, int k) {
 	for (int j = -(kernelSize / 2); j <= kernelSize / 2; ++j) {
 		for (int i = -(kernelSize / 2); i <= kernelSize / 2; ++i) {
 			if ((row + j) >= 0 && (row + j) < surface->h && (col + i) >= 0 && (col + i) < surface->w) {
-				int color = reinterpret_cast<uint8_t *>(surface->pixels)[(row + j) * surface->pitch + (col + i) * 3 + k];
+				int color = reinterpret_cast<uint8_t *>(surface->pixels)[(row + j) * surface->pitch + (col + i) * numBytes + k];
 				sum += color * kernel[i + kernelSize / 2][j + kernelSize / 2];
 				sumKernel += kernel[i + kernelSize / 2][j + kernelSize / 2];
 			}

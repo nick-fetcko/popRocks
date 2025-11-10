@@ -14,7 +14,7 @@ using namespace MathsCPP;
 // https://stackoverflow.com/questions/42186498/gaussian-blur-image-processing-c
 class Gaussian {
 public:
-	Gaussian(int kernelSize = 3, double sigma = 1.0);
+	Gaussian(std::size_t numBytes = 3, int kernelSize = 3, double sigma = 1.0);
 	~Gaussian();
 
 	SDL_Surface *Blur(SDL_Surface *surface, bool *running);
@@ -23,6 +23,8 @@ private:
 	void GenerateKernel(double **kernel);
 
 	inline int GetPixel(SDL_Surface *surface, int col, int row, int k);
+
+	std::size_t numBytes = 3;
 
 	// This is an int so we can negate
 	// without casting to a signed type
