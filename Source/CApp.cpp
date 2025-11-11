@@ -1311,6 +1311,35 @@ void CApp::OnInit() {
 			if (hdrWhitePoint)
 				HDR::SetWhiteLevel(*hdrWhitePoint);
 		});
+		menu.SetOnRescanAlbumArt([this] {
+			if (loadedFile.empty()) return;
+
+			LogDebug("Re-scanning for album art...");
+
+			auto originalPath =
+				controls.GetPlaylist().GetPath().empty() ?
+					std::filesystem::is_directory(loadedFile) ?
+						loadedFile :
+						""
+					: controls.GetPlaylist().GetPath();
+
+			metadata.OnLoad(
+				loadedFile,
+				loadedFileExtension,
+				this->streamHandle,
+				&controls,
+				&albumArt
+			);
+
+			albumArt.Load(
+#ifdef WIN32
+				loadedFile.wstring(),
+#else
+				loadedFile.u8string(),
+#endif
+				originalPath
+			);
+		});
 #endif
 	} else LogError("Could not create OpenGL context: ", SDL_GetError());
 

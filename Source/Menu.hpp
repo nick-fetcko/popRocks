@@ -813,6 +813,13 @@ public:
 				}
 			}
 
+			ImGui::Separator();
+
+			if (ImGui::MenuItem("Rescan album art...")) {
+				if (onRescanAlbumArt)
+					onRescanAlbumArt();
+			}
+
 			if (HDR::Enabled) {
 				ImGui::Separator();
 
@@ -1224,6 +1231,8 @@ public:
 
 	void SetOnHdrWhitePointChanged(std::function<void(std::optional<float>)> f) { onHdrWhitePointChanged = f; }
 
+	void SetOnRescanAlbumArt(std::function<void()> f) { onRescanAlbumArt = f; }
+
 private:
 	int windowWidth = 0, windowHeight = 0;
 	int width = 0, height = 0;
@@ -1405,6 +1414,7 @@ private:
 	std::function<void(float)> onAlbumArtContrastChanged;
 	std::function<void(float)> onAlbumArtBrightnessChanged;
 	std::function<void(std::optional<float>)> onHdrWhitePointChanged;
+	std::function<void()> onRescanAlbumArt;
 
 	std::function<void()> onResetRotation;
 	std::function<void()> onClearBlurFbo;
