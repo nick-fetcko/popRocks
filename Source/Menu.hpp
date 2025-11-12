@@ -15,7 +15,7 @@
 
 using namespace Fetcko;
 
-class Menu : public LoggableClass {
+class Menu : public LoggableClass, public ColorChangeListener {
 public:
 	Menu() {
 		NFD_Init();
@@ -51,6 +51,37 @@ public:
 		ImGui::GetStyle().Colors[ImGuiCol_PopupBg].w = 1.0f;
 		ImGui::GetStyle().Colors[ImGuiCol_FrameBg].w = 1.0f;
 		ImGui::GetStyle().Colors[ImGuiCol_WindowBg].w = 1.0f;
+	}
+
+	void OnColorChanged(const MathsCPP::Colour<float> &color, bool silent = false) override {
+		auto hsv = color.ToHsv();
+		hsv.v = 1.0f;
+		auto brightColor = Colour<float>::FromHsv(hsv);
+
+		ImGui::GetStyle().Colors[ImGuiCol_SliderGrab] = { brightColor.r, brightColor.g, brightColor.b, brightColor.a };
+		ImGui::GetStyle().Colors[ImGuiCol_SliderGrabActive] = { brightColor.r, brightColor.g, brightColor.b, brightColor.a };
+		ImGui::GetStyle().Colors[ImGuiCol_FrameBgHovered] = { brightColor.r, brightColor.g, brightColor.b, brightColor.a - 0.25f };
+
+		hsv.v = 0.5f;
+		auto darkColor = Colour<float>::FromHsv(hsv);
+
+		ImGui::GetStyle().Colors[ImGuiCol_FrameBgActive] = { darkColor.r, darkColor.g, darkColor.b, darkColor.a - 0.25f };
+		ImGui::GetStyle().Colors[ImGuiCol_Header] = { darkColor.r, darkColor.g, darkColor.b, darkColor.a };
+		ImGui::GetStyle().Colors[ImGuiCol_FrameBg] = { darkColor.r, darkColor.g, darkColor.b, darkColor.a };
+
+		hsv = color.ToHsv();
+		if (hsv.v > 0.66f && darkenPulseOnBrightColors)
+			ImGui::GetStyle().Colors[ImGuiCol_HeaderHovered] = { darkColor.r, darkColor.g, darkColor.b, darkColor.a };
+		else
+			ImGui::GetStyle().Colors[ImGuiCol_HeaderHovered] = { color.r, color.g, color.b, color.a };
+
+		colorChanged = true;
+	}
+
+	bool HasColorChanged() {
+		auto ret = colorChanged;
+		colorChanged = false;
+		return ret;
 	}
 
 	bool OnLoop(const LightPack &lightPack, AlbumArt &albumArt, Context &context) {
@@ -745,6 +776,12 @@ public:
 			waitTime = Settings::settings.GetWaitTime().AsSeconds();
 			autoFadeSpeed = Settings::settings.GetAutoFadeSpeed();
 
+			pulseUi = Settings::settings.GetPulseUi();
+			if (ImGui::MenuItem("Pulse?", nullptr, &pulseUi)) {
+				if (onPulseUiChanged)
+					onPulseUiChanged(pulseUi);
+			}
+
 			if (ImGui::MenuItem("Autofade?", nullptr, &autoFade)) {
 				if (onAutoFadeChanged)
 					onAutoFadeChanged(autoFade);
@@ -1239,6 +1276,8 @@ public:
 
 	void SetOnRescanAlbumArt(std::function<void()> f) { onRescanAlbumArt = f; }
 
+	void SetOnPulseUiChanged(std::function<void(bool)> f) { onPulseUiChanged = f; }
+
 private:
 	int windowWidth = 0, windowHeight = 0;
 	int width = 0, height = 0;
@@ -1421,6 +1460,7 @@ private:
 	std::function<void(float)> onAlbumArtBrightnessChanged;
 	std::function<void(std::optional<float>)> onHdrWhitePointChanged;
 	std::function<void()> onRescanAlbumArt;
+	std::function<void(bool)> onPulseUiChanged;
 
 	std::function<void()> onResetRotation;
 	std::function<void()> onClearBlurFbo;
@@ -1446,4 +1486,7 @@ private:
 	float albumArtBrightness = Settings::settings.GetAlbumArtBrightness();
 
 	std::optional<float> hdrWhitePoint = Settings::settings.GetHdrWhitePoint();
+
+	bool colorChanged = false;
+	bool pulseUi = Settings::settings.GetPulseUi();
 };

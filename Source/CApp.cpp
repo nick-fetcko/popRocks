@@ -1342,6 +1342,19 @@ void CApp::OnInit() {
 
 			albumArt.Scale();
 		});
+		menu.SetOnPulseUiChanged([this](bool pulseUi) {
+			Settings::settings.SetPulseUi(pulseUi);
+
+			if (!pulseUi) {
+				albumArt.RemoveColorChangeListener(&menu);
+				menu.OnColorChanged(visColor);
+			} else {
+				albumArt.AddColorChangeListener(&menu);
+				menu.OnColorChanged(GetColor());
+			}
+		});
+
+		menu.OnColorChanged(visColor);
 #endif
 	} else LogError("Could not create OpenGL context: ", SDL_GetError());
 
@@ -1386,6 +1399,9 @@ void CApp::OnInit() {
 
 	lightPack.OnInit();
 	albumArt.OnInit(windowWidth, windowHeight, scale);
+#if GUI
+	albumArt.AddColorChangeListener(&menu);
+#endif
 	renderer->OnInit(windowWidth, windowHeight);
 	albumArt.AddColorChangeListener(this);
 	controls.OnInit(windowWidth, windowHeight, *context, scale
@@ -2040,6 +2056,9 @@ inline void CApp::SwapBuffers(const Delta &time) {
 	context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, 1.0f);
 	if (menu.OnLoop(lightPack, albumArt, *context))
 		controls.Fade(true);
+
+	if (menu.HasColorChanged())
+		updateUi = 1;
 
 	// Keep the UI in an FBO and only update it as needed
 	//
@@ -2698,6 +2717,7 @@ void CApp::SetColor(int r, int g, int b) {
 		overrideColor = true;
 
 	OnColorChanged(visColor);
+	menu.OnColorChanged(visColor);
 }
 
 void CApp::SetDecayTime(Duration<Microseconds> time) {

@@ -581,6 +581,13 @@ void Settings::SetHdrWhitePoint(std::optional<float> hdrWhitePoint) {
 	}
 }
 
+void Settings::SetPulseUi(bool pulseUi) {
+	if (this->pulseUi != pulseUi) {
+		this->pulseUi = pulseUi;
+		Save();
+	}
+}
+
 void Settings::Save() {
 	if (auto path = GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
@@ -826,6 +833,9 @@ const Node &operator>>(const Node &node, Settings &settings) {
 
 	if (node.has("hdrWhitePoint"))
 		node["hdrWhitePoint"]->get(settings.hdrWhitePoint);
+
+	if (node.has("pulseUi"))
+		node["pulseUi"]->get(settings.pulseUi);
 		
 	return node;
 }
@@ -901,6 +911,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["albumArtContrast"]->set(settings.albumArtContrast);
 	node["albumArtBrightness"]->set(settings.albumArtBrightness);
 	node["hdrWhitePoint"]->set(settings.hdrWhitePoint);
+	node["pulseUi"]->set(settings.pulseUi);
 
 	return node;
 }

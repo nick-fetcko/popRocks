@@ -266,6 +266,9 @@ public:
 	const std::optional<float> &GetHdrWhitePoint() const { return hdrWhitePoint; }
 	void SetHdrWhitePoint(std::optional<float> hdrWhitePoint);
 
+	const bool &GetPulseUi() const { return pulseUi; }
+	void SetPulseUi(bool pulseUi);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -387,4 +390,6 @@ private:
 	float albumArtBrightness = 1.50f;
 
 	std::optional<float> hdrWhitePoint = std::nullopt;
+
+	bool pulseUi = true;
 };
