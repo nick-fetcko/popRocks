@@ -47,10 +47,16 @@ public:
 
 			lastScale = scale;
 		}
+
+		ImGui::GetStyle().Colors[ImGuiCol_PopupBg].w = 1.0f;
+		ImGui::GetStyle().Colors[ImGuiCol_FrameBg].w = 1.0f;
+		ImGui::GetStyle().Colors[ImGuiCol_WindowBg].w = 1.0f;
 	}
 
 	bool OnLoop(const LightPack &lightPack, AlbumArt &albumArt, Context &context) {
 		bool open = false;
+
+		//ImGui::ShowStyleEditor();
 
 		ImGui::Begin(
 			"Menu",
