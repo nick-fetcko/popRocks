@@ -2,6 +2,7 @@
 
 #include "APE.hpp"
 #include "FLAC.hpp"
+#include "HDR.hpp"
 #include "MP3.hpp"
 #include "MP4.hpp"
 #include "OGG.hpp"
@@ -242,6 +243,7 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 inline void Playlist::UpdateSize() {
 	height = size.y + font->GetEm().height / 2;
 	std::vector<float> rect = {
+		// Top half
 		-font->GetEm().width / 2.0f,
 		-font->GetEm().height / 2.0f,
 		0.0f,
@@ -249,13 +251,13 @@ inline void Playlist::UpdateSize() {
 		0.0f,
 		0.75f,
 		-font->GetEm().width / 2.0f,
-		height,
+		height - font->GetEm().height,
 		0.0f,
 		0.0f,
 		0.0f,
 		0.0f,
 		size.x + font->GetEm().width / 2.0f,
-		height,
+		height - font->GetEm().height,
 		0.0f,
 		0.0f,
 		0.0f,
@@ -265,7 +267,32 @@ inline void Playlist::UpdateSize() {
 		0.0f,
 		0.0f,
 		0.0f,
-		0.75f
+		0.75f,
+		// Bottom half
+		-font->GetEm().width / 2.0f,
+		height - font->GetEm().height,
+		0.0f,
+		0.0f,
+		0.0f,
+		0.0f,
+		-font->GetEm().width / 2.0f,
+		height,
+		0.0f,
+		0.0f,
+		0.0f,
+		0.0f,
+		size.x + font->GetEm().width / 2.0f,
+		height,
+		0.0f,
+		0.0f,
+		0.0f,
+		0.0f,
+		size.x + font->GetEm().width / 2.0f,
+		height -font->GetEm().height,
+		0.0f,
+		0.0f,
+		0.0f,
+		0.0f
 	};
 
 	vbo->Bind();
@@ -295,7 +322,11 @@ void Playlist::OnInit(int windowWidth, int windowHeight, OpenGLFont *font, OpenG
 	vao->Unbind();
 
 	eab->Bind();
-	eab->BufferData<std::size(Buffers::SquareBuffer)>(Buffers::SquareBuffer);
+	auto squareBuffer = std::vector(Buffers::SquareBuffer.begin(), Buffers::SquareBuffer.end());
+	//std::vector<unsigned short> squareBuffer;
+	for (std::size_t i = 0; i < Buffers::SquareBuffer.size(); ++i)
+		squareBuffer.emplace_back(Buffers::SquareBuffer[i] + 4);
+	eab->BufferData(squareBuffer);
 	eab->Unbind();
 }
 
@@ -312,9 +343,9 @@ void Playlist::OnResize(int windowWidth, int windowHeight, float scale) {
 				size.x = title.GetSize().x;
 		}
 
-		UpdateSize();
+		this->scale = scale;
 	}
-	this->scale = scale;
+	UpdateSize();
 }
 
 void Playlist::OnDestroy() {

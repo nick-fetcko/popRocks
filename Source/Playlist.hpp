@@ -162,9 +162,23 @@ private:
 		// max height
 		if (auto height = maxHeight + font->GetEm().height / 2 - pos.y; this->height > height) {
 			this->height = height;
+
+			const auto heightMinusOne = height - font->GetEm().height * 2;
+
 			vbo->Bind();
-			vbo->BufferSubData(7, sizeof(float), &height);
-			vbo->BufferSubData(13, sizeof(float), &height);
+
+			// Bottom of top half
+			vbo->BufferSubData(7, sizeof(float), &heightMinusOne);
+			vbo->BufferSubData(13, sizeof(float), &heightMinusOne);
+
+			// Top of bottom half
+			vbo->BufferSubData(25, sizeof(float), &heightMinusOne);
+			vbo->BufferSubData(43, sizeof(float), &heightMinusOne);
+
+			// Bottom of bottom half
+			vbo->BufferSubData(31, sizeof(float), &height);
+			vbo->BufferSubData(37, sizeof(float), &height);
+
 			vbo->Unbind();
 		}
 
@@ -175,16 +189,41 @@ private:
 		context.Translate(static_cast<GLfloat>(pos.x), static_cast<GLfloat>(pos.y), 0.0f);
 		context.Apply();
 
+		vbo->Bind();
+
+		// Top of top half
+		vbo->BufferSubData(5, sizeof(float), &alpha);
+		vbo->BufferSubData(23, sizeof(float), &alpha);
+
+		auto fadeOut = alpha;
+
+		if (HDR::Enabled) {
+			fadeOut *= 0.5f;
+		} else {
+			fadeOut = 0.0f;
+		}
+
+		const auto zero = 0.0f;
+		
+		// Bottom of top half
+		vbo->BufferSubData(11, sizeof(float), &fadeOut);
+		vbo->BufferSubData(17, sizeof(float), &fadeOut);
+
+		// Top of bottom half
+		vbo->BufferSubData(29, sizeof(float), &fadeOut);
+		vbo->BufferSubData(47, sizeof(float), &fadeOut);
+
+		// Bottom of bottom half
+		vbo->BufferSubData(35, sizeof(float), &zero);
+		vbo->BufferSubData(41, sizeof(float), &zero);
+
+		vbo->Unbind();
+
 		vao->Bind();
 		eab->Bind();
 		eab->DrawElements(GL_TRIANGLES);
 		eab->Unbind();
 		vao->Unbind();
-
-		vbo->Bind();
-		vbo->BufferSubData(5, sizeof(float), &alpha);
-		vbo->BufferSubData(23, sizeof(float), &alpha);
-		vbo->Unbind();
 
 		context.Use("texture"_hash);
 		context.LoadIdentity();
@@ -214,12 +253,31 @@ private:
 					outline.SetText(title.GetText());
 					context.Color(0.0f, 0.0f, 0.0f, std::max(0.5f, alpha));
 					outline.OnLoop(pos.x, pos.y);
-					context.Color(1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, std::max(0.5f, alpha));
+					context.Color(
+						1.0f * HDR::WhiteLevel,
+						1.0f * HDR::WhiteLevel,
+						1.0f * HDR::WhiteLevel,
+						std::max(0.5f, alpha)
+					);
 				} else context.Color(1.0f, 1.0f, 1.0f, alpha);
-			} else if (current != tracks.begin() && iter == current - 1)
-				context.Color(0.6f * HDR::WhiteLevel, 0.6f * HDR::WhiteLevel, 0.6f * HDR::WhiteLevel, 0.4f * alpha);
-			else
-				context.Color(0.6f * HDR::WhiteLevel, 0.6f * HDR::WhiteLevel, 0.6f * HDR::WhiteLevel, std::max(0.0f, alpha - (static_cast<float>(i - distance) / maxIndex)));
+			} else if (current != tracks.begin() && iter == current - 1) {
+				context.Color(
+					0.6f * HDR::WhiteLevel,
+					0.6f * HDR::WhiteLevel,
+					0.6f * HDR::WhiteLevel,
+					0.4f * alpha
+				);
+			} else {
+				context.Color(
+					0.6f * HDR::WhiteLevel,
+					0.6f * HDR::WhiteLevel,
+					0.6f * HDR::WhiteLevel,
+					std::max(
+						0.0f,
+						alpha - (static_cast<float>(i - distance) / maxIndex)
+					)
+				);
+			}
 
 			title.OnLoop(pos.x, pos.y);
 
@@ -227,9 +285,22 @@ private:
 			if (i == titles.size() - 2 && pos.y < maxHeight) {
 				height = pos.y + font->GetEm().height / 2.0f;
 
+				const auto heightMinusOne = height - font->GetEm().height * 2;
+
 				vbo->Bind();
-				vbo->BufferSubData(7, 1 * sizeof(float), &height);
-				vbo->BufferSubData(13, 1 * sizeof(float), &height);
+
+				// Bottom of top half
+				vbo->BufferSubData(7, sizeof(float), &heightMinusOne);
+				vbo->BufferSubData(13, sizeof(float), &heightMinusOne);
+
+				// Top of bottom half
+				vbo->BufferSubData(25, sizeof(float), &heightMinusOne);
+				vbo->BufferSubData(43, sizeof(float), &heightMinusOne);
+
+				// Bottom of bottom half
+				vbo->BufferSubData(31, sizeof(float), &height);
+				vbo->BufferSubData(37, sizeof(float), &height);
+
 				vbo->Unbind();
 			}
 
