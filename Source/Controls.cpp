@@ -245,7 +245,12 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 		eab->Unbind();
 		vao->Unbind();
 
-		auto inverse = color.Inverse(HDR::Enabled ? HDR::WhiteLevel * HDR::Headroom : 1.0f);
+		auto inverse = color.Inverse(HDR::Enabled ? std::max(color.r, std::max(color.g, color.b)) : 1.0f);
+
+		if (HDR::Enabled) {
+			inverse *= HDR::WhiteLevel * HDR::Headroom;
+			inverse.a = 1.0f;
+		}
 		
 		context.Color(inverse.r, inverse.g, inverse.b, alpha);
 
