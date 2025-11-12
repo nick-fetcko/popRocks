@@ -71,5 +71,5 @@ protected:
 	float minPoint = std::numeric_limits<float>::max();
 	float maxPoint = std::numeric_limits<float>::lowest();
 
-	bool newPoints = false;
+	bool newPoints = true;
 };

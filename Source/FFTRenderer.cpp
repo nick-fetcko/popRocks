@@ -91,6 +91,11 @@ void FFTRenderer::SetBufferLength(std::size_t bufferLength, bool changed) {
 		vao->AddAttribute(VertexArray::Attribute(0, 2, 7 * sizeof(float)));
 		vao->AddAttribute(VertexArray::Attribute(1, 4, 7 * sizeof(float), 2 * sizeof(float)));
 		vao->AddAttribute(VertexArray::Attribute(2, 1, 7 * sizeof(float), 6 * sizeof(float)));
+
+		// Buffer in blank data right away
+		memset(rects, 0, Indices::Total * bufferLength * sizeof(float));
+		vbo->BufferData(rects, bufferLength * Indices::Total, GL_DYNAMIC_DRAW);
+
 		vbo->Unbind();
 		vao->Unbind();
 
