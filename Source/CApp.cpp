@@ -1339,6 +1339,8 @@ void CApp::OnInit() {
 #endif
 				originalPath
 			);
+
+			albumArt.Scale();
 		});
 #endif
 	} else LogError("Could not create OpenGL context: ", SDL_GetError());
