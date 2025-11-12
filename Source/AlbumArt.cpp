@@ -13,6 +13,7 @@
 #include "Gaussian.hpp"
 #include "Hash.hpp"
 #include "HDR.hpp"
+#include "JPEG.hpp"
 #include "Settings.hpp"
 #include "Utils.hpp"
 
@@ -100,7 +101,7 @@ void AlbumArt::OnLoop(GLfloat x, GLfloat y, float frameCount, Context &context) 
 	// try_lock so we don't miss a frame or two
 	if (scalingMutex.try_lock()) {
 		if (surfaceToLoad) {
-			LoadFromSurface(surfaceToLoad, true);
+			LoadFromSurface(surfaceToLoad, "", "", true);
 			surfaceToLoad = nullptr;
 
 			// We only want to keep lastSurface
@@ -600,7 +601,7 @@ inline uint8_t *AlbumArt::GetPixels(SDL_Surface *surface) {
 	}
 }
 
-void AlbumArt::LoadFromSurface(SDL_Surface *surface, bool scaled) {
+void AlbumArt::LoadFromSurface(SDL_Surface *surface, std::filesystem::path path, std::string extension, bool scaled) {
 	glDeleteTextures(1, &album);
 	glGenTextures(1, &album);
 	glBindTexture(GL_TEXTURE_2D, album);
@@ -613,17 +614,50 @@ void AlbumArt::LoadFromSurface(SDL_Surface *surface, bool scaled) {
 	albumWidth = surface->w;
 	albumHeight = surface->h;
 
+	auto bpp = SDL_BYTESPERPIXEL(surface->format);
+
 	// Handle indexed color
-	if (auto bpp = SDL_BITSPERPIXEL(surface->format); bpp == 8) {
+	if (bpp == 1) {
 		LogWarning("Found indexed color! Converting to RGB...");
 		auto newSurface = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGB24);
 		SDL_DestroySurface(surface);
 		surface = newSurface;
+		bpp = 3;
 	}
 
 	uint8_t *pixels = GetPixels(surface);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, SDL_BITSPERPIXEL(surface->format) == 32 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, pixels);
+	if (extension == ".jpg") {
+		JPEG jpeg(path);
+
+		// Handle CMYK because SDL doesn't
+		if (jpeg.GetColorMode() == "CMYK") {
+			for (std::size_t i = 0; i < surface->h * surface->w; ++i) {
+				// For now we can only handle Adobe CMYK
+				// 
+				// Adobe CMYK is inverted... 255 means "no ink"
+				// and 0 means "maximum ink"
+				//
+				// FIXME: this is not 100% accurate because
+				//        we're ignoring the ICC profile
+				auto c = (255 - pixels[i * bpp]) / 255.0f;
+				auto m = (255 - pixels[i * bpp + 1]) / 255.0f;
+				auto y = (255 - pixels[i * bpp + 2]) / 255.0f;
+				auto k = (255 - pixels[i * bpp + 3]) / 255.0f;
+
+				auto r = 255 * (1.0 - c) * (1.0 - k);
+				auto g = 255 * (1.0 - m) * (1.0 - k);
+				auto b = 255 * (1.0 - y) * (1.0 - k);
+
+				pixels[i * bpp] = r;
+				pixels[i * bpp + 1] = g;
+				pixels[i * bpp + 2] = b;
+				pixels[i * bpp + 3] = 255;
+			}
+		}
+	}
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, bpp == 4 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, pixels);
 
 	if (!scaled) {
 		// lastSurface is the last surface
@@ -716,7 +750,10 @@ bool AlbumArt::Load(const std::filesystem::path &fileName, const std::filesystem
 			LogDebug("External album art is larger than embedded. Using it instead.");
 		}
 
-		LoadFromSurface(surface);
+		auto imageExtension = currentFile.extension().u8string();
+		std::transform(imageExtension.begin(), imageExtension.end(), imageExtension.begin(), tolower);
+
+		LoadFromSurface(surface, currentFile, imageExtension);
 	} else {
 		LogWarning("Could not load external album art for " + fileName.u8string());
 		return false;

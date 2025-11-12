@@ -125,7 +125,7 @@ private:
 	std::filesystem::path FindArt(const std::filesystem::path &folder);
 
 	// This frees the surface once it's done
-	void LoadFromSurface(SDL_Surface *surface, bool scaled = false);
+	void LoadFromSurface(SDL_Surface *surface, std::filesystem::path path = "", std::string extension = "", bool scaled = false);
 
 	void UpdateVertexCoords() override;
 

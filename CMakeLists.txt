@@ -70,6 +70,7 @@ set(_poprocks_cpp_headers
 	Source/HDR.hpp
 	Source/ID3V2.hpp
 	Source/imconfig.h
+	Source/JPEG.hpp
 	Source/LightPack.hpp
 	Source/LineRenderer.hpp
 	Source/Mappings.h
