@@ -59,6 +59,7 @@ int main(int argc, char *argv[]) {
 				case SDL_EVENT_QUIT:
 					running = false;
 					break;
+				case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
 				case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: {
 					auto window = SDL_GetWindowFromID(event.window.windowID);
 					int w = 0, h = 0;
@@ -127,8 +128,8 @@ int main(int argc, char *argv[]) {
 						app.LoadPreset(Preset::Random());
 					break;
 				case SDL_EVENT_MOUSE_MOTION:
-					mousePos.x = static_cast<int32_t>(event.motion.x * app.GetScale());
-					mousePos.y = static_cast<int32_t>(event.motion.y * app.GetScale());
+					mousePos.x = static_cast<int32_t>(event.motion.x);
+					mousePos.y = static_cast<int32_t>(event.motion.y);
 
 					if (mouseButtonDown) {
 						app.OnMouseDragged(mousePos);

@@ -269,6 +269,7 @@ float CApp::GetScale(SDL_Window *window, int *w, int *h) {
 	SDL_GetWindowSizeInPixels(window, w, h);
 
 	scale = (virtualW == 0 ? 1.0f : static_cast<float>(*w) / virtualW);
+	scale *= SDL_GetWindowDisplayScale(window);
 
 	return scale;
 }
@@ -754,6 +755,7 @@ void CApp::OnInit() {
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, Settings::settings.GetWindowY());
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_OPENGL_BOOLEAN, true);
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HIGH_PIXEL_DENSITY_BOOLEAN, true);
 
 	sdlWindow = SDL_CreateWindowWithProperties(
 		props
@@ -1517,8 +1519,8 @@ void CApp::OnResize(int width, int height, float scale) {
 	windowWidth = width;
 	windowHeight = height;
 
-	Settings::settings.SetWindowWidth(width / scale);
-	Settings::settings.SetWindowHeight(height / scale);
+	Settings::settings.SetWindowWidth(width);
+	Settings::settings.SetWindowHeight(height);
 
 #ifdef WIN32
 	if (HDR::Enabled) {

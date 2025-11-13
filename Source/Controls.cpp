@@ -12,9 +12,10 @@ Controls::Controls(AlbumArt *const albumArt) :
 }
 
 inline void Controls::OpenFont(Context *context, GLuint defaultFramebuffer) {
-	if (font)
+	if (font && outlineFont) {
 		font->SetFontSize(static_cast<int>(18 * scale));
-	else {
+		outlineFont->SetFontSize(static_cast<int>(18 * scale));
+	} else {
 		font = new OpenGLFont();
 		font->SetDefaultFramebuffer(defaultFramebuffer);
 		font->OnInit(

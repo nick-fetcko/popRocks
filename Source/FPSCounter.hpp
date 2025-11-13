@@ -19,6 +19,8 @@ public:
 		text.OnInit(font, context);
 		outline.OnInit(outlineFont, context);
 		this->context = context;
+		this->font = font;
+		this->outlineFont = outlineFont;
 	}
 
 	void OnFrame() {
@@ -55,14 +57,17 @@ public:
 
 	Vector2i GetSize() {
 		auto ret = text.GetSize();
-		ret.x += Margin * 2;
-		ret.y += Margin * 2 + context->GetYOffset();
+		ret.x += Margin * 2 + font->GetEm().width / 4.0f;
+		ret.y += Margin * 2 + context->GetYOffset() + font->GetEm().height / 4.0f;
 
 		return ret;
 	}
 
 private:
 	constexpr static int Margin = 12;
+
+	OpenGLFont *font = nullptr;
+	OpenGLFont *outlineFont = nullptr;
 
 	Context *context = nullptr;
 

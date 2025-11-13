@@ -44,6 +44,7 @@ public:
 			// https://github.com/ocornut/imgui/issues/5452
 			ImGui::GetStyle() = *originalStyle;
 			ImGui::GetStyle().ScaleAllSizes(scale);
+			ImGui::GetStyle().FontScaleMain = scale;
 
 			lastScale = scale;
 		}
@@ -106,6 +107,7 @@ public:
 
 		ImGui::BeginMenuBar();
 
+		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(windowWidth, windowHeight - height - Controls::SeekbarSize));
 		if (ImGui::BeginMenu("File")) {
 			open = true;
 
@@ -165,6 +167,7 @@ public:
 		randomizePresets = Settings::settings.GetRandomizePresets();
 		randomizePresetsByBeats = Settings::settings.GetRandomizePresetsByBeats();
 
+		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(windowWidth, windowHeight - height - Controls::SeekbarSize));
 		if (ImGui::BeginMenu("Visualizer")) {
 			open = true;
 
@@ -560,7 +563,7 @@ public:
 		}
 
 		presetIndex = Settings::settings.GetPresetIndex();
-		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(windowWidth, windowHeight - height));
+		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(windowWidth, windowHeight - height - Controls::SeekbarSize));
 		if (ImGui::BeginMenu("Presets")) {
 			open = true;
 
@@ -771,6 +774,7 @@ public:
 			newPresetPopup = open;
 		}
 
+		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(windowWidth, windowHeight - height - Controls::SeekbarSize));
 		if (ImGui::BeginMenu("Interface")) {
 			autoFade = Settings::settings.GetAutoFade();
 			waitTime = Settings::settings.GetWaitTime().AsSeconds();
@@ -808,6 +812,7 @@ public:
 			ImGui::EndMenu();
 		}
 
+		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(windowWidth, windowHeight - height - Controls::SeekbarSize));
 		if (ImGui::BeginMenu("Playlist")) {
 			open = true;
 
@@ -819,6 +824,7 @@ public:
 			ImGui::EndMenu();
 		}
 
+		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(windowWidth, windowHeight - height - Controls::SeekbarSize));
 		if (ImGui::BeginMenu("Album Art")) {
 			bool none = !albumArt.Loaded() || albumArt.IsHidden();
 			if (ImGui::MenuItem("None", nullptr, &none))
@@ -914,6 +920,7 @@ public:
 			ImGui::EndMenu();
 		}
 
+		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(windowWidth, windowHeight - height - Controls::SeekbarSize));
 		if (ImGui::BeginMenu("Color Selection")) {
 			open = true;
 
@@ -991,6 +998,7 @@ public:
 			ImGui::EndMenu();
 		}
 
+		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(windowWidth, windowHeight - height - Controls::SeekbarSize));
 		if (ImGui::BeginMenu("Device")) {
 			open = true;
 
@@ -1064,6 +1072,7 @@ public:
 			ImGui::EndMenu();
 		}
 
+		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(windowWidth, windowHeight - height - Controls::SeekbarSize));
 		if (ImGui::BeginMenu("LightPack", lightPack.IsActive())) {
 			open = true;
 
@@ -1161,7 +1170,7 @@ public:
 			ImGui::EndMenu();
 		}
 
-		if (auto height = ImGui::GetFrameHeight() * scale; height != this->height) {
+		if (auto height = ImGui::GetFrameHeight(); height != this->height) {
 			this->height = height;
 			context.SetYOffset(height);
 		}

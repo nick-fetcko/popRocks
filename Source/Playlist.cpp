@@ -342,6 +342,7 @@ void Playlist::OnResize(int windowWidth, int windowHeight, float scale) {
 			if (title.GetSize().x > size.x)
 				size.x = title.GetSize().x;
 		}
+		outline.OnInit(outlineFont, context);
 
 		this->scale = scale;
 	}
