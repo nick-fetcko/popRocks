@@ -16,7 +16,7 @@
 #endif
 
 #include <SDL3/SDL.h>
-#include <SDL3_Image/SDL_image.h>
+#include <SDL3_image/SDL_image.h>
 
 #include <bassape.h>
 #include <basswv.h>
@@ -408,6 +408,9 @@ void CApp::SetVisualizerScale(float scale) {
 
 inline void CApp::SetHdr(bool enabled) {
 	int width = 0, height = 0;
+
+	// TODO: HDR in Linux
+#ifdef WIN32
 	HWND hwnd = NULL;
 
 	if (HDR::Enabled != enabled) {
@@ -481,6 +484,7 @@ inline void CApp::SetHdr(bool enabled) {
 		int width = 0, height = 0;
 		SDL_GetWindowSize(sdlWindow, &width, &height);
 
+#endif
 		if (blur) {
 			blurFbo = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension, enabled ? GL_RGBA16F : GL_RGBA);
 			lastFrame = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension, enabled ? GL_RGBA16F : GL_RGBA);
@@ -488,12 +492,15 @@ inline void CApp::SetHdr(bool enabled) {
 
 		uiFbo = std::make_unique<MultisampledFramebufferObject>(windowWidth, windowHeight, enabled ? GL_RGBA16F : GL_RGBA);
 
+#ifdef WIN32
 		dxgi.OnCreate(hwnd, width, height);
 		dxgi.OnResize(width, height);
+#endif
 
 		if (context)
 			context->SetIdentity(glm::ortho(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height)));
 
+#ifdef WIN32
 		if (blurFbo)
 			blurFbo->SetDefaultFramebuffer(dxgi.GetFramebuffer());
 		if (lastFrame)
@@ -506,6 +513,7 @@ inline void CApp::SetHdr(bool enabled) {
 		if (auto outlineFont = controls.GetOutlineFont())
 			outlineFont->SetDefaultFramebuffer(dxgi.GetFramebuffer());
 	}
+#endif
 }
 
 void CApp::LoadShaders() {
@@ -773,7 +781,7 @@ void CApp::OnInit() {
 		);
 	}
 #endif
-	if (openGlContext = SDL_GL_CreateContext(sdlWindow)) {
+	if ((openGlContext = SDL_GL_CreateContext(sdlWindow))) {
 		LogDebug("gladLoadGL() returned ", gladLoadGL());
 
 		context = std::make_unique<Context>();

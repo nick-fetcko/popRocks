@@ -1,5 +1,6 @@
 #include "AlbumArt.hpp"
 
+#include <float.h> // For DBL_EPSILON
 #include <map>
 #include <algorithm>
 #include <thread>
@@ -544,7 +545,7 @@ void AlbumArt::ProcessColors(Histogram *destination, SDL_Surface *surface, const
 
 					// https://gamedev.stackexchange.com/a/4472
 					// 360 - 0 (in degrees) needs to be 0, not 360
-					if ((180 - abs(abs(iter->h - compare->h) - 180) < Settings::settings.GetColorSelection().minHueSeparation &&
+					if ((180 - std::abs(std::abs(iter->h - compare->h) - 180) < Settings::settings.GetColorSelection().minHueSeparation &&
 						distance < Settings::settings.GetColorSelection().minRgbSeparation) ||
 						(minSaturation <= DBL_EPSILON && std::abs(compare->v - iter->v) < Settings::settings.GetColorSelection().minValueSeparation))
 						found = false;

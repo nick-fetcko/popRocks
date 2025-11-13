@@ -341,7 +341,7 @@ public:
 				lastFrame = now;
 			}
 
-			ImGui::Text("\tCached songs: %d", cacheFileCount);
+			ImGui::Text("\tCached songs: %ld", cacheFileCount);
 			ImGui::Text("\tCache size: %s", cacheSize.c_str());
 
 			halveBpm = Settings::settings.GetHalveBpm();
