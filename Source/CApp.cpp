@@ -3112,8 +3112,8 @@ void CApp::LoadPreset(const Preset &preset) {
 	SetBlur(blur && *blur);
 
 	// Make sure we don't blow out any existing colors
-	if (Settings::IsColorBlend(sourceFactor) != Settings::IsColorBlend(preset.GetSourceFactor()) ||
-		Settings::IsColorBlend(destFactor) != Settings::IsColorBlend(preset.GetDestFactor()))
+	if ((blur && *blur) && (Settings::IsColorBlend(sourceFactor) != Settings::IsColorBlend(preset.GetSourceFactor()) ||
+		Settings::IsColorBlend(destFactor) != Settings::IsColorBlend(preset.GetDestFactor())))
 		ClearBlurFbo();
 
 	sourceFactor = preset.GetSourceFactor();
