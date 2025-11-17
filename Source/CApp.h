@@ -33,8 +33,9 @@
 
 #include "OpenGL/Context.hpp"
 #ifdef WIN32
-#include "OpenGL/DXGI.hpp"
+#include "OpenGL/Interops/DXGI.hpp"
 #endif
+#include "OpenGL/Interops/Vulkan.hpp"
 #include "OpenGL/Polyline.hpp"
 
 #include "Utils/Logger.hpp"
@@ -57,6 +58,7 @@
 #include "Volume.hpp"
 
 #define GUI 1
+#define VULKAN 1
 
 using namespace MathsCPP;
 using namespace Fetcko;
@@ -222,6 +224,7 @@ private:
 
 	float hStep = 0.0f;
 	SDL_Window *sdlWindow = nullptr;
+	SDL_Window *openGlWindow = nullptr;
 	Colour<float> visColor{ 0.0f, 0.5f, 1.0f };
 	Colour<float> brightColor{ 0.0f, 0.0f, 0.0f };
 	Colour<float> darkColor{ 0.0f, 0.0f, 0.0f };
@@ -372,5 +375,15 @@ private:
 	DXGI dxgi;
 #endif
 
+	Vulkan vulkan;
+
 	SDL_GLContext openGlContext;
+
+	Interop *interop =
+#if VULKAN
+		&vulkan;
+#else
+		&dxgi
+#endif
+		;
 };

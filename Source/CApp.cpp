@@ -17,6 +17,7 @@
 
 #include <SDL3/SDL.h>
 #include <SDL3_image/SDL_image.h>
+#include <SDL3/SDL_vulkan.h>
 
 #include <bassape.h>
 #include <basswv.h>
@@ -429,6 +430,13 @@ inline void CApp::SetHdr(bool enabled) {
 	}
 
 	if (HDR::Enabled && !enabled) {
+#if VULKAN
+		vulkan.SetFormat(VK_FORMAT_R8G8B8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR, GL_RGBA8);
+		vulkan.OnResize(width, height);
+
+		if (context)
+			context->SetIdentity(glm::ortho(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height)));
+#else
 		dxgi.OnDestroy();
 
 		if (blurFbo)
@@ -447,7 +455,9 @@ inline void CApp::SetHdr(bool enabled) {
 			context->SetIdentity(glm::ortho(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f));
 			context->Apply();
 		}
+#endif
 
+#if !VULKAN
 		ImGui_ImplOpenGL3_Shutdown();
 		ImGui_ImplSDL3_Shutdown();
 
@@ -477,7 +487,7 @@ inline void CApp::SetHdr(bool enabled) {
 		// Setup Platform/Renderer backends
 		ImGui_ImplSDL3_InitForOpenGL(sdlWindow, openGlContext);
 		ImGui_ImplOpenGL3_Init();
-
+#endif
 		//SDL_GL_SetSwapInterval(0);
 	} else if (!HDR::Enabled && enabled) {
 		HWND hwnd = (HWND)SDL_GetPointerProperty(SDL_GetWindowProperties(sdlWindow), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
@@ -492,9 +502,14 @@ inline void CApp::SetHdr(bool enabled) {
 
 		uiFbo = std::make_unique<MultisampledFramebufferObject>(windowWidth, windowHeight, enabled ? GL_RGBA16F : GL_RGBA);
 
+#if VULKAN
+		vulkan.SetFormat(VK_FORMAT_R16G16B16A16_SFLOAT, VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT, GL_RGBA16F);
+		vulkan.OnResize(width, height);
+#else
 #ifdef WIN32
 		dxgi.OnCreate(hwnd, width, height);
 		dxgi.OnResize(width, height);
+#endif
 #endif
 
 		if (context)
@@ -502,16 +517,16 @@ inline void CApp::SetHdr(bool enabled) {
 
 #ifdef WIN32
 		if (blurFbo)
-			blurFbo->SetDefaultFramebuffer(dxgi.GetFramebuffer());
+			blurFbo->SetDefaultFramebuffer(interop->GetFramebuffer());
 		if (lastFrame)
-			lastFrame->SetDefaultFramebuffer(dxgi.GetFramebuffer());
+			lastFrame->SetDefaultFramebuffer(interop->GetFramebuffer());
 		if (uiFbo)
-			uiFbo->SetDefaultFramebuffer(dxgi.GetFramebuffer());
+			uiFbo->SetDefaultFramebuffer(interop->GetFramebuffer());
 
 		if (auto font = controls.GetFont())
-			font->SetDefaultFramebuffer(dxgi.GetFramebuffer());
+			font->SetDefaultFramebuffer(interop->GetFramebuffer());
 		if (auto outlineFont = controls.GetOutlineFont())
-			outlineFont->SetDefaultFramebuffer(dxgi.GetFramebuffer());
+			outlineFont->SetDefaultFramebuffer(interop->GetFramebuffer());
 	}
 #endif
 }
@@ -761,7 +776,11 @@ void CApp::OnInit() {
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, windowHeight);
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, Settings::settings.GetWindowX());
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, Settings::settings.GetWindowY());
+#if VULKAN
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_VULKAN_BOOLEAN, true);
+#else
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_OPENGL_BOOLEAN, true);
+#endif
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HIGH_PIXEL_DENSITY_BOOLEAN, true);
 
@@ -769,11 +788,28 @@ void CApp::OnInit() {
 		props
 	);
 
+#if VULKAN
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_VULKAN_BOOLEAN, false);
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_OPENGL_BOOLEAN, true);
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HIDDEN_BOOLEAN, true);
+
+	openGlWindow = SDL_CreateWindowWithProperties(
+		props
+	);
+#endif
+
 #ifdef WIN32
 	int adapterIndex = 0;
 	int outputIndex = 0;
 
-	if (!SDL_GetDXGIOutputInfo(SDL_GetDisplayForWindow(sdlWindow),
+	if (!SDL_GetDXGIOutputInfo(
+		SDL_GetDisplayForWindow(
+#if VULKAN
+			openGlWindow
+#else
+			sdlWindow
+#endif
+		),
 		&adapterIndex, &outputIndex)) {
 		LogError(
 			"SDL_DXGIGetOutputInfo() failed: ",
@@ -781,15 +817,38 @@ void CApp::OnInit() {
 		);
 	}
 #endif
-	if ((openGlContext = SDL_GL_CreateContext(sdlWindow))) {
+	if ((openGlContext = SDL_GL_CreateContext(
+#if VULKAN
+		openGlWindow
+#else
+		sdlWindow
+#endif
+	))) {
 		LogDebug("gladLoadGL() returned ", gladLoadGL());
 
 		context = std::make_unique<Context>();
 
 		LoadShaders();
 
+		Interop::InitArgs args;
+		args.adapterIndex = adapterIndex;
+		args.width = windowWidth;
+		args.height = windowHeight;
+		args.surfaceCallback = [&](void *instance) {
+			VkSurfaceKHR surface;
+
+			if (!SDL_Vulkan_CreateSurface(sdlWindow, reinterpret_cast<VkInstance>(instance), nullptr, &surface))
+				LogError("Could not create Vulkan surface: ", SDL_GetError());
+
+			return reinterpret_cast<void*>(surface);
+		};
+
 #ifdef WIN32
-		dxgi.OnInit(adapterIndex);
+		dxgi.OnInit(args);
+#endif
+
+#if VULKAN
+		vulkan.OnInit(args);
 #endif
 
 		UpdateHdrProperties();
@@ -802,7 +861,10 @@ void CApp::OnInit() {
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;	// Enable Keyboard Controls
 
 		// Setup Platform/Renderer backends
-		ImGui_ImplSDL3_InitForOpenGL(sdlWindow, openGlContext);
+		ImGui_ImplSDL3_InitForOpenGL(
+			sdlWindow,
+			openGlContext
+		);
 		ImGui_ImplOpenGL3_Init();
 
 		menu.SetOnOpen([this](const std::filesystem::path &path) {
@@ -1530,6 +1592,7 @@ void CApp::OnResize(int width, int height, float scale) {
 	Settings::settings.SetWindowWidth(width);
 	Settings::settings.SetWindowHeight(height);
 
+#if !VULKAN
 #ifdef WIN32
 	if (HDR::Enabled) {
 		dxgi.OnResize(width, height);
@@ -1541,12 +1604,22 @@ void CApp::OnResize(int width, int height, float scale) {
 #ifdef WIN32
 	}
 #endif
+#else
+	vulkan.OnResize(width, height);
+
+	context->SetIdentity(glm::ortho(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height)));
+	context->Apply();
+#endif
 
 	glViewport(0, 0, windowWidth, windowHeight);
 
-	controls.OnResize(windowWidth, windowHeight, *context, scale
+	controls.OnResize(windowWidth, windowHeight, *context, scale,
+#if VULKAN
+		vulkan.GetFramebuffer()
+#else
 #ifdef WIN32
-		, HDR::Enabled ? dxgi.GetFramebuffer() : 0
+		HDR::Enabled ? dxgi.GetFramebuffer() : 0
+#endif
 #endif
 	);
 
@@ -1562,11 +1635,16 @@ void CApp::OnResize(int width, int height, float scale) {
 		blurFbo = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension, HDR::Enabled ? GL_RGBA16F : GL_RGBA);
 		lastFrame = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension, HDR::Enabled ? GL_RGBA16F : GL_RGBA);
 
+#if VULKAN
+		blurFbo->SetDefaultFramebuffer(vulkan.GetFramebuffer());
+		lastFrame->SetDefaultFramebuffer(vulkan.GetFramebuffer());
+#else
 #ifdef WIN32
 		if (HDR::Enabled) {
 			blurFbo->SetDefaultFramebuffer(dxgi.GetFramebuffer());
 			lastFrame->SetDefaultFramebuffer(dxgi.GetFramebuffer());
 		}
+#endif
 #endif
 
 		context->With("blur"_hash, [this](Context::Shader &shader) {
@@ -1592,9 +1670,13 @@ void CApp::OnResize(int width, int height, float scale) {
 #if GUI
 	uiFbo = std::make_unique<MultisampledFramebufferObject>(windowWidth, windowHeight, HDR::Enabled ? GL_RGBA16F : GL_RGBA);
 
+#if VULKAN
+	uiFbo->SetDefaultFramebuffer(vulkan.GetFramebuffer());
+#else
 #ifdef WIN32
 	if (HDR::Enabled)
 		uiFbo->SetDefaultFramebuffer(dxgi.GetFramebuffer());
+#endif
 #endif
 
 	menu.OnResize(width, height, scale);
@@ -1660,9 +1742,13 @@ void CApp::LoadRandomPreset() {
 void CApp::OnLoop(const Delta &time) {
 	Logger::ProcessCommands();
 
-#ifdef WIN32
-	if (HDR::Enabled)
-		dxgi.OnLoop();
+#if VULKAN
+	vulkan.OnLoop();
+#else
+	#ifdef WIN32
+		if (HDR::Enabled)
+			dxgi.OnLoop();
+	#endif
 #endif
 		
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -2116,6 +2202,12 @@ inline void CApp::SwapBuffers(const Delta &time) {
 		});
 	} else context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, 0.90f * controls.GetAlpha());
 
+#if VULKAN
+	context->With("blit"_hash, [this](Context::Shader &shader) {
+		shader.program.Uniform1f("yOffset"_hash, -windowHeight);
+	});
+#endif
+
 	uiFbo->Draw(0, 0, *context);
 
 	if (HDR::Enabled) {
@@ -2131,12 +2223,34 @@ inline void CApp::SwapBuffers(const Delta &time) {
 	}
 #endif
 
+#if VULKAN
+	context->With("blit"_hash, [this](Context::Shader &shader) {
+		shader.program.Uniform1f("yOffset"_hash, 0.0f);
+	});
+
+	// Wait for the new FBO to be generated before
+	// swapping to it
+	if (!vulkan.SwapBuffers()) {
+		if (blurFbo)
+			blurFbo->SetDefaultFramebuffer(interop->GetFramebuffer());
+		if (lastFrame)
+			lastFrame->SetDefaultFramebuffer(interop->GetFramebuffer());
+		if (uiFbo)
+			uiFbo->SetDefaultFramebuffer(interop->GetFramebuffer());
+
+		if (auto font = controls.GetFont())
+			font->SetDefaultFramebuffer(interop->GetFramebuffer());
+		if (auto outlineFont = controls.GetOutlineFont())
+			outlineFont->SetDefaultFramebuffer(interop->GetFramebuffer());
+	}
+#else
 #ifdef WIN32
 	if (HDR::Enabled)
 		dxgi.SwapBuffers();
 	else
 #endif
 		SDL_GL_SwapWindow(sdlWindow);
+#endif
 
 	frameStart = std::chrono::steady_clock::now() - std::chrono::duration_cast<std::chrono::microseconds>(over);
 }
@@ -2158,9 +2272,14 @@ void CApp::OnDestroy() {
 		UnhookWindowsHookEx(keyboardHook);
 		keyboardHook = nullptr;
 	}
-
+#if !VULKAN
 	if (HDR::Enabled)
 		dxgi.OnDestroy();
+#endif
+#endif
+
+#if VULKAN
+	vulkan.OnDestroy();
 #endif
 
 	for (auto &detector : beatDetectors)
@@ -2206,6 +2325,10 @@ void CApp::OnDestroy() {
 	BASS_Free();
 //	IMG_Quit();
 	SDL_GL_DestroyContext(openGlContext);
+	SDL_DestroyWindow(sdlWindow);
+
+	if (openGlWindow)
+		SDL_DestroyWindow(openGlWindow);
 
 	Logger::OnDestroy();
 }
@@ -2909,29 +3032,29 @@ void CApp::TogglePlaying() {
 
 void CApp::ToggleFullscreen() {
 	// It appears Windows captures Alt-Enter when using DXGI
-#ifdef WIN32
+#if defined(WIN32) && !VULKAN
 	return;
 #endif
 
-#ifdef WIN32
+#if defined(WIN32) && !VULKAN
 	BOOL fullscreen = FALSE;
 	if (HDR::Enabled)
 		dxgi.GetSwapChain()->GetFullscreenState(&fullscreen, NULL);
 #endif
 
 	if (SDL_GetWindowFlags(sdlWindow) & SDL_WINDOW_FULLSCREEN
-#ifdef WIN32
+#if defined(WIN32) && !VULKAN
 		|| fullscreen
 #endif
 		) {
-#ifdef WIN32
+#if defined(WIN32) && !VULKAN
 		if (HDR::Enabled)
 			dxgi.GetSwapChain()->SetFullscreenState(FALSE, NULL);
 		else
 #endif
 			SDL_SetWindowFullscreen(sdlWindow, 0);
 	} else {
-#ifdef WIN32
+#if defined(WIN32) && !VULKAN
 		if (HDR::Enabled)
 			dxgi.GetSwapChain()->SetFullscreenState(TRUE, NULL);
 		else
