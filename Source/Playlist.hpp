@@ -254,12 +254,12 @@ private:
 					context.Color(0.0f, 0.0f, 0.0f, std::max(0.5f, alpha));
 					outline.OnLoop(pos.x, pos.y);
 					context.Color(
-						1.0f * HDR::WhiteLevel,
-						1.0f * HDR::WhiteLevel,
-						1.0f * HDR::WhiteLevel,
+						HDR::WhiteLevel,
+						HDR::WhiteLevel,
+						HDR::WhiteLevel,
 						std::max(0.5f, alpha)
 					);
-				} else context.Color(1.0f, 1.0f, 1.0f, alpha);
+				} else context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 			} else if (current != tracks.begin() && iter == current - 1) {
 				context.Color(
 					0.6f * HDR::WhiteLevel,

@@ -320,7 +320,7 @@ public:
 			}
 
 			// Only update our cache info every second
-			if (auto now = std::chrono::system_clock::now();  Duration<Microseconds>(now - lastFrame).AsSeconds() > 1.0) {
+			if (auto now = std::chrono::system_clock::now(); Duration<Microseconds>(now - lastFrame).AsSeconds() > 1.0 && std::filesystem::exists(Settings::GetPath("cache"))) {
 				auto dirIter = std::filesystem::directory_iterator(Settings::GetPath("cache"));
 				std::size_t bytes = 0;
 
@@ -524,7 +524,7 @@ public:
 					onLimitFramerateChanged(limitFramerate);
 			}
 			ImGui::BeginDisabled(!limitFramerate);
-			if (ImGui::SliderInt("Limit", &frameLimit, 5, 240)) {
+			if (ImGui::SliderInt("Limit", &frameLimit, 5, 360)) {
 				if (onFrameLimitChanged)
 					onFrameLimitChanged(frameLimit);
 			}
@@ -800,12 +800,34 @@ public:
 					onAutoFadeSpeedChanged(autoFadeSpeed);
 			}
 
-			hdrWhitePoint = Settings::settings.GetHdrWhitePoint();
-			if (HDR::Enabled && hdrWhitePoint) {
+			if (HDR::Enabled) {
 				ImGui::Separator();
-				if (ImGui::SliderFloat("White Point", &*hdrWhitePoint, 0.1f, HDR::WhiteLevel * HDR::Headroom, "%.2f")) {
-					if (onHdrWhitePointChanged)
-						onHdrWhitePointChanged(hdrWhitePoint);
+
+				uiGamma = Settings::settings.GetUiGamma();
+				if (ImGui::SliderFloat("Gamma", &uiGamma, 0.1f, 3.0f, "%.2f")) {
+					if (onUiGammaChanged)
+						onUiGammaChanged(uiGamma);
+				}
+
+				uiContrast = Settings::settings.GetUiContrast();
+				if (ImGui::SliderFloat("Contrast", &uiContrast, 0.1f, 3.0f, "%.2f")) {
+					if (onUiContrastChanged)
+						onUiContrastChanged(uiContrast);
+				}
+
+				uiBrightness = Settings::settings.GetUiBrightness();
+				if (ImGui::SliderFloat("Brightness", &uiBrightness, -HDR::WhiteLevel * HDR::Headroom, HDR::WhiteLevel * HDR::Headroom, "%.2f")) {
+					if (onUiBrightnessChanged)
+						onUiBrightnessChanged(uiBrightness);
+				}
+
+				hdrWhitePoint = Settings::settings.GetHdrWhitePoint();
+				if (hdrWhitePoint) {
+					ImGui::Separator();
+					if (ImGui::SliderFloat("White Point", &*hdrWhitePoint, 0.1f, HDR::WhiteLevel * HDR::Headroom, "%.2f")) {
+						if (onHdrWhitePointChanged)
+							onHdrWhitePointChanged(hdrWhitePoint);
+					}
 				}
 			}
 
@@ -1286,6 +1308,9 @@ public:
 	void SetOnRescanAlbumArt(std::function<void()> f) { onRescanAlbumArt = f; }
 
 	void SetOnPulseUiChanged(std::function<void(bool)> f) { onPulseUiChanged = f; }
+	void SetOnUiGammaChanged(std::function<void(float)> f) { onUiGammaChanged = f; }
+	void SetOnUiContrastChanged(std::function<void(float)> f) { onUiContrastChanged = f; }
+	void SetOnUiBrightnessChanged(std::function<void(float)> f) { onUiBrightnessChanged = f; }
 
 private:
 	int windowWidth = 0, windowHeight = 0;
@@ -1470,6 +1495,9 @@ private:
 	std::function<void(std::optional<float>)> onHdrWhitePointChanged;
 	std::function<void()> onRescanAlbumArt;
 	std::function<void(bool)> onPulseUiChanged;
+	std::function<void(float)> onUiGammaChanged;
+	std::function<void(float)> onUiContrastChanged;
+	std::function<void(float)> onUiBrightnessChanged;
 
 	std::function<void()> onResetRotation;
 	std::function<void()> onClearBlurFbo;
@@ -1498,4 +1526,8 @@ private:
 
 	bool colorChanged = false;
 	bool pulseUi = Settings::settings.GetPulseUi();
+
+	float uiGamma = Settings::settings.GetUiGamma();
+	float uiContrast = Settings::settings.GetUiContrast();
+	float uiBrightness = Settings::settings.GetUiBrightness();
 };

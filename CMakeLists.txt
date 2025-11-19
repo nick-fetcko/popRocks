@@ -315,6 +315,11 @@ if (WIN32)
 	target_link_libraries(popRocks PRIVATE FFTW3::fftw3f basswasapi)
 else()
 	target_link_libraries(popRocks PRIVATE bassalac)
+
+	# Here lies wstring_convert
+	# C++11 - C++17
+	# Gone Too Soon
+	target_compile_options(popRocks PRIVATE -Wno-deprecated-declarations)
 endif()
 
 add_custom_command(TARGET popRocks POST_BUILD

@@ -413,10 +413,12 @@ inline void CApp::SetHdr(bool enabled) {
 	// TODO: HDR in Linux
 #ifdef WIN32
 	HWND hwnd = NULL;
+#endif
 
 	if (HDR::Enabled != enabled) {
+#ifdef WIN32
 		hwnd = (HWND)SDL_GetPointerProperty(SDL_GetWindowProperties(sdlWindow), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
-
+#endif
 		SDL_GetWindowSize(sdlWindow, &width, &height);
 
 		if (blur) {
@@ -490,10 +492,10 @@ inline void CApp::SetHdr(bool enabled) {
 #endif
 		//SDL_GL_SetSwapInterval(0);
 	} else if (!HDR::Enabled && enabled) {
+#ifdef WIN32
 		HWND hwnd = (HWND)SDL_GetPointerProperty(SDL_GetWindowProperties(sdlWindow), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
 		int width = 0, height = 0;
 		SDL_GetWindowSize(sdlWindow, &width, &height);
-
 #endif
 		if (blur) {
 			blurFbo = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension, enabled ? GL_RGBA16F : GL_RGBA);
@@ -503,7 +505,11 @@ inline void CApp::SetHdr(bool enabled) {
 		uiFbo = std::make_unique<MultisampledFramebufferObject>(windowWidth, windowHeight, enabled ? GL_RGBA16F : GL_RGBA);
 
 #if VULKAN
-		vulkan.SetFormat(VK_FORMAT_R16G16B16A16_SFLOAT, VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT, GL_RGBA16F);
+		vulkan.SetFormat(
+			VK_FORMAT_R16G16B16A16_SFLOAT,
+			VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT,
+			GL_RGBA16F
+		);
 		vulkan.OnResize(width, height);
 #else
 #ifdef WIN32
@@ -512,10 +518,15 @@ inline void CApp::SetHdr(bool enabled) {
 #endif
 #endif
 
-		if (context)
+		if (context) {
+#if VULKAN
 			context->SetIdentity(glm::ortho(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height)));
+#else
+			context->SetIdentity(glm::ortho(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f));
+#endif
+			context->Apply();
+		}
 
-#ifdef WIN32
 		if (blurFbo)
 			blurFbo->SetDefaultFramebuffer(interop->GetFramebuffer());
 		if (lastFrame)
@@ -528,7 +539,6 @@ inline void CApp::SetHdr(bool enabled) {
 		if (auto outlineFont = controls.GetOutlineFont())
 			outlineFont->SetDefaultFramebuffer(interop->GetFramebuffer());
 	}
-#endif
 }
 
 void CApp::LoadShaders() {
@@ -634,33 +644,10 @@ void CApp::LoadShaders() {
 }
 
 void CApp::UpdateHdrProperties() {
+#ifdef WIN32
 	// SDL does NOT update white level or headroom
 	// when the window moves between monitors with 
 	// different HDR properties on Windows
-
-	/*
-	auto displayId = SDL_GetDisplayForWindow(sdlWindow);
-	SDL_PropertiesID displayProps = SDL_GetDisplayProperties(
-		displayId
-	);
-	SDL_PropertiesID windowProps = SDL_GetWindowProperties(sdlWindow);
-
-	static bool first = false;
-	if (!first) {
-		HDR::Enabled = SDL_GetBooleanProperty(displayProps, SDL_PROP_DISPLAY_HDR_ENABLED_BOOLEAN, false);
-		first = true;
-	}
-	HDR::WhiteLevel = SDL_GetFloatProperty(windowProps, SDL_PROP_WINDOW_SDR_WHITE_LEVEL_FLOAT, 1.0f);
-	HDR::Headroom = SDL_GetFloatProperty(windowProps, SDL_PROP_WINDOW_HDR_HEADROOM_FLOAT, 1.0f);
-
-	LogDebug("HDR state changed!");
-	LogDebug("\tDisplay ID: ", displayId);
-	LogDebug("\tEnabled: ", HDR::Enabled ? "Yes" : "No");
-	LogDebug("\tWhiteLevel: ", HDR::WhiteLevel);
-	LogDebug("\tHeadroom: ", HDR::Headroom);
-	*/
-
-#ifdef WIN32
 	int adapterIndex = 0;
 	int outputIndex = 0;
 
@@ -672,14 +659,21 @@ void CApp::UpdateHdrProperties() {
 		);
 	}
 	if (auto properties = dxgi.GetHdrProperties(outputIndex)) {
-		LogDebug("HDR properties changed: ");
-
 		auto &[enabled, whitePoint, headroom] = *properties;
+		
 #else
-		bool enabled = false;
-		float whitePoint = 1.0f;
-		float headroom = 1.0f;
+		auto displayId = SDL_GetDisplayForWindow(sdlWindow);
+		SDL_PropertiesID displayProps = SDL_GetDisplayProperties(
+			displayId
+		);
+		SDL_PropertiesID windowProps = SDL_GetWindowProperties(sdlWindow);
+		bool enabled = SDL_GetBooleanProperty(displayProps, SDL_PROP_DISPLAY_HDR_ENABLED_BOOLEAN, false);
+		float whitePoint = SDL_GetFloatProperty(windowProps, SDL_PROP_WINDOW_SDR_WHITE_LEVEL_FLOAT, 1.0f);
+		float headroom = SDL_GetFloatProperty(windowProps, SDL_PROP_WINDOW_HDR_HEADROOM_FLOAT, 1.0f);
+
+		enabled |= (headroom > 1.01);
 #endif
+		LogDebug("HDR properties changed: ");
 		LogDebug("\tEnabled: ", enabled ? "Yes" : "No");
 		LogDebug("\tWhitePoint: ", whitePoint);
 		LogDebug("\tHeadroom: ", headroom);
@@ -715,7 +709,8 @@ void CApp::UpdateHdrProperties() {
 		// Update our visualizer color
 		// to reflect any changes to white point
 		// and headroom
-		OnColorChanged(visColor, true);
+		if (!albumArt.Loaded() || overrideColor)
+			OnColorChanged(visColor, true);
 #ifdef WIN32
 	}
 #endif
@@ -831,7 +826,9 @@ void CApp::OnInit() {
 		LoadShaders();
 
 		Interop::InitArgs args;
+#if WIN32
 		args.adapterIndex = adapterIndex;
+#endif
 		args.width = windowWidth;
 		args.height = windowHeight;
 		args.surfaceCallback = [&](void *instance) {
@@ -1425,6 +1422,21 @@ void CApp::OnInit() {
 				menu.OnColorChanged(GetColor());
 			}
 		});
+		menu.SetOnUiGammaChanged([this](float uiGamma) {
+			Settings::settings.SetUiGamma(uiGamma);
+
+			this->uiGamma = uiGamma;
+		});
+		menu.SetOnUiContrastChanged([this](float uiContrast) {
+			Settings::settings.SetUiContrast(uiContrast);
+
+			this->uiContrast = uiContrast;
+		});
+		menu.SetOnUiBrightnessChanged([this](float uiBrightness) {
+			Settings::settings.SetUiBrightness(uiBrightness);
+
+			this->uiBrightness = uiBrightness;
+		});
 
 		menu.OnColorChanged(visColor);
 #endif
@@ -1616,10 +1628,10 @@ void CApp::OnResize(int width, int height, float scale) {
 	controls.OnResize(windowWidth, windowHeight, *context, scale,
 #if VULKAN
 		vulkan.GetFramebuffer()
-#else
-#ifdef WIN32
+#elif defined(WIN32)
 		HDR::Enabled ? dxgi.GetFramebuffer() : 0
-#endif
+#else
+		0
 #endif
 	);
 
@@ -1663,6 +1675,9 @@ void CApp::OnResize(int width, int height, float scale) {
 		context->With("rotate"_hash, [width, height](Context::Shader &shader) {
 			shader.program.Uniform2f("screenSize"_hash, width, height);
 		});
+		context->With("blit"_hash, [width, height](Context::Shader &shader) {
+			shader.program.Uniform2f("screenSize"_hash, width, height);
+		});
 	}
 
 	renderer->OnResize(windowWidth, windowHeight, maxDimension);
@@ -1672,11 +1687,9 @@ void CApp::OnResize(int width, int height, float scale) {
 
 #if VULKAN
 	uiFbo->SetDefaultFramebuffer(vulkan.GetFramebuffer());
-#else
-#ifdef WIN32
+#elif defined (WIN32)
 	if (HDR::Enabled)
 		uiFbo->SetDefaultFramebuffer(dxgi.GetFramebuffer());
-#endif
 #endif
 
 	menu.OnResize(width, height, scale);
@@ -1743,7 +1756,19 @@ void CApp::OnLoop(const Delta &time) {
 	Logger::ProcessCommands();
 
 #if VULKAN
-	vulkan.OnLoop();
+	if (!vulkan.OnLoop()) {
+		if (blurFbo)
+			blurFbo->SetDefaultFramebuffer(interop->GetFramebuffer());
+		if (lastFrame)
+			lastFrame->SetDefaultFramebuffer(interop->GetFramebuffer());
+		if (uiFbo)
+			uiFbo->SetDefaultFramebuffer(interop->GetFramebuffer());
+
+		if (auto font = controls.GetFont())
+			font->SetDefaultFramebuffer(interop->GetFramebuffer());
+		if (auto outlineFont = controls.GetOutlineFont())
+			outlineFont->SetDefaultFramebuffer(interop->GetFramebuffer());
+	}
 #else
 	#ifdef WIN32
 		if (HDR::Enabled)
@@ -2185,9 +2210,9 @@ inline void CApp::SwapBuffers(const Delta &time) {
 
 		context->GetShaderProgram().Uniform1i("hdr"_hash, true);
 
-		context->GetShaderProgram().Uniform1f("gamma"_hash, 0.33f);
-		context->GetShaderProgram().Uniform1f("contrast"_hash, 1.1f);
-		context->GetShaderProgram().Uniform1f("brightness"_hash, 1.0f);
+		context->GetShaderProgram().Uniform1f("gamma"_hash, uiGamma);
+		context->GetShaderProgram().Uniform1f("contrast"_hash, uiContrast);
+		context->GetShaderProgram().Uniform1f("brightness"_hash, uiBrightness);
 
 		glActiveTexture(GL_TEXTURE0 + 1);
 		albumArt.GetCube()->Bind();
@@ -2530,7 +2555,7 @@ void CApp::Unmute() {
 #endif
 }
 
-inline void CApp::LoadBeats(
+void CApp::LoadBeats(
 	HSTREAM streamHandle,
 	std::filesystem::path path, // not a reference because we pass this to the callback lambda
 	bool pingPong

@@ -269,6 +269,15 @@ public:
 	const bool &GetPulseUi() const { return pulseUi; }
 	void SetPulseUi(bool pulseUi);
 
+	const float &GetUiGamma() const { return uiGamma; }
+	void SetUiGamma(float uiGamma);
+
+	const float &GetUiContrast() const { return uiContrast; }
+	void SetUiContrast(float uiContrast);
+
+	const float &GetUiBrightness() const { return uiBrightness; }
+	void SetUiBrightness(float uiBrightness);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -385,11 +394,28 @@ private:
 	GLenum destFactor = GL_ZERO;
 
 	std::string lut = "BT709_to_HLG.cube";
+
+#ifdef WIN32
 	float albumArtGamma = 0.5f;
 	float albumArtContrast = 1.25f;
 	float albumArtBrightness = 1.50f;
+#elif defined (__linux__)
+	float albumArtGamma = 0.5f;
+	float albumArtContrast = 2.0f;
+	float albumArtBrightness = 1.45f;
+#endif
 
 	std::optional<float> hdrWhitePoint = std::nullopt;
 
 	bool pulseUi = true;
+
+#ifdef WIN32
+	float uiGamma = 0.33f;
+	float uiContrast = 1.1f;
+	float uiBrightness = 1.0f;
+#elif defined(__linux__)
+	float uiGamma = 0.33f;
+	float uiContrast = 1.62f;
+	float uiBrightness = 1.0f;
+#endif
 };

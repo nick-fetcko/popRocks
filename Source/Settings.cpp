@@ -69,21 +69,23 @@ Settings Settings::Load() {
 	if (auto path = GetPath(); !path.empty()) {
 		std::ifstream inFile(path, std::ios::in);
 
-		try {
-			Node json;
-			json.parseStream<Json>(inFile);
+		if (inFile) {
+			try {
+				Node json;
+				json.parseStream<Json>(inFile);
 
-			json >> ret;
+				json >> ret;
 
-			// Any setting not loaded will be set
-			// to its default value. Drop those
-			// default values down right away
-			// so the user can edit them if
-			// they'd like to.
-			ret.Save();
-		} catch (std::exception &e) {
-			errorLog.LogWarning("Could not load settings due to ", e.what());
-		}
+				// Any setting not loaded will be set
+				// to its default value. Drop those
+				// default values down right away
+				// so the user can edit them if
+				// they'd like to.
+				ret.Save();
+			} catch (std::exception &e) {
+				errorLog.LogWarning("Could not load settings due to ", e.what());
+			}
+		} else errorLog.LogWarning("Settings file does not yet exist!");
 	}
 
 	return ret;
@@ -588,6 +590,27 @@ void Settings::SetPulseUi(bool pulseUi) {
 	}
 }
 
+void Settings::SetUiGamma(float uiGamma) {
+	if (this->uiGamma != uiGamma) {
+		this->uiGamma = uiGamma;
+		Save();
+	}
+}
+
+void Settings::SetUiContrast(float uiContrast) {
+	if (this->uiContrast != uiContrast) {
+		this->uiContrast = uiContrast;
+		Save();
+	}
+}
+
+void Settings::SetUiBrightness(float uiBrightness) {
+	if (this->uiBrightness != uiBrightness) {
+		this->uiBrightness = uiBrightness;
+		Save();
+	}
+}
+
 void Settings::Save() {
 	if (auto path = GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
@@ -836,6 +859,12 @@ const Node &operator>>(const Node &node, Settings &settings) {
 
 	if (node.has("pulseUi"))
 		node["pulseUi"]->get(settings.pulseUi);
+	if (node.has("uiGamma"))
+		node["uiGamma"]->get(settings.uiGamma);
+	if (node.has("uiContrast"))
+		node["uiContrast"]->get(settings.uiContrast);
+	if (node.has("uiBrightness"))
+		node["uiBrightness"]->get(settings.uiBrightness);
 		
 	return node;
 }
@@ -912,6 +941,9 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["albumArtBrightness"]->set(settings.albumArtBrightness);
 	node["hdrWhitePoint"]->set(settings.hdrWhitePoint);
 	node["pulseUi"]->set(settings.pulseUi);
+	node["uiGamma"]->set(settings.uiGamma);
+	node["uiContrast"]->set(settings.uiContrast);
+	node["uiBrightness"]->set(settings.uiBrightness);
 
 	return node;
 }

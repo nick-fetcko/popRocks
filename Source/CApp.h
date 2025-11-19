@@ -174,7 +174,7 @@ private:
 	
 	inline void Unmute();
 
-	inline void LoadBeats(HSTREAM streamHandle, std::filesystem::path path, bool pingPong = true);
+	void LoadBeats(HSTREAM streamHandle, std::filesystem::path path, bool pingPong = true);
 	void ResetBeatDetection();
 
 	inline bool SeekToMousePos(const Vector2i &mousePos, bool ignoreY = false);
@@ -371,6 +371,10 @@ private:
 	GLenum sourceFactor = Settings::settings.GetSourceFactor();
 	GLenum destFactor = Settings::settings.GetDestFactor();
 
+	float uiGamma = Settings::settings.GetUiGamma();
+	float uiContrast = Settings::settings.GetUiContrast();
+	float uiBrightness = Settings::settings.GetUiBrightness();
+
 #ifdef WIN32
 	DXGI dxgi;
 #endif
@@ -382,8 +386,9 @@ private:
 	Interop *interop =
 #if VULKAN
 		&vulkan;
+#elif defined (WIN32)
+		&dxgi;
 #else
-		&dxgi
+		nullptr;
 #endif
-		;
 };
