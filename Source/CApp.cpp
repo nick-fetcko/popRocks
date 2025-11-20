@@ -26,6 +26,7 @@
 #include <basswasapi.h>
 #else
 #include <bassalac.h>
+#include <bass_aac.h>
 #endif
 
 #include <imgui.h>
@@ -270,7 +271,10 @@ float CApp::GetScale(SDL_Window *window, int *w, int *h) {
 	SDL_GetWindowSizeInPixels(window, w, h);
 
 	scale = (virtualW == 0 ? 1.0f : static_cast<float>(*w) / virtualW);
+
+#ifdef WIN32
 	scale *= SDL_GetWindowDisplayScale(window);
+#endif
 
 	return scale;
 }
@@ -1477,6 +1481,8 @@ void CApp::OnInit() {
 		LogError("Could not load WavPack plugin! Error code ", BASS_ErrorGetCode());
 	if (!BASS_PluginLoad("./libbassalac.so", 0))
 		LogError("Could not load ALAC plugin! Error code ", BASS_ErrorGetCode());
+	if (!BASS_PluginLoad("./libbass_aac.so", 0))
+		LogError("Could not load AAC plugin! Error code ", BASS_ErrorGetCode());
 #endif
 	if (BASS_Init(GetDeviceIndex<true>(Settings::settings.GetOutputDevice()), freq, 0, 0, nullptr) != TRUE)
 		LogError("Could not initialize audio device!");
@@ -1601,8 +1607,18 @@ void CApp::OnResize(int width, int height, float scale) {
 	windowWidth = width;
 	windowHeight = height;
 
-	Settings::settings.SetWindowWidth(width);
-	Settings::settings.SetWindowHeight(height);
+	Settings::settings.SetWindowWidth(
+		width
+#ifdef __linux__
+		/ scale
+#endif
+	);
+	Settings::settings.SetWindowHeight(
+		height
+#ifdef __linux__
+		/ scale
+#endif
+	);
 
 #if !VULKAN
 #ifdef WIN32
@@ -2418,6 +2434,15 @@ HSTREAM CApp::OpenWithFlags(const std::filesystem::path &path, const std::string
 				0,
 				flags
 			);
+			if (!ret) {
+				ret = BASS_AAC_StreamCreateFile(
+					FALSE,
+					path.u8string().c_str(),
+					0,
+					0,
+					flags
+				);
+			}
 		}
 #endif
 		else {
@@ -2926,6 +2951,11 @@ void CApp::SetBlur(bool blur) {
 			blurFbo->SetDefaultFramebuffer(dxgi.GetFramebuffer());
 			lastFrame->SetDefaultFramebuffer(dxgi.GetFramebuffer());
 		}
+#endif
+
+#if VULKAN
+		blurFbo->SetDefaultFramebuffer(vulkan.GetFramebuffer());
+		lastFrame->SetDefaultFramebuffer(vulkan.GetFramebuffer());
 #endif
 
 		context->With("blur"_hash, [this](Context::Shader &shader) {

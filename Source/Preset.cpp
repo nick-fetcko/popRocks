@@ -19,16 +19,18 @@ std::vector<Preset> Preset::Load() {
 
 	LoggableClass errorLog(typeid(Preset).name());
 
-	try {
-		Node json;
-		json.parseStream<Json>(inFile);
+	if (inFile) {
+		try {
+			Node json;
+			json.parseStream<Json>(inFile);
 
-		for (auto &&node : json.get<std::map<std::size_t, Preset>>()) {
-			ret.emplace_back(std::move(node.second));
+			for (auto &&node : json.get<std::map<std::size_t, Preset>>()) {
+				ret.emplace_back(std::move(node.second));
+			}
+		} catch (std::exception &e) {
+			errorLog.LogError("Could not parse presets: ", e.what());
 		}
-	} catch (std::exception &e) {
-		errorLog.LogError("Could not parse presets: ", e.what());
-	}
+	} else errorLog.LogError("Presets file not found!");
 
 	return ret;
 }

@@ -44,7 +44,10 @@ public:
 			// https://github.com/ocornut/imgui/issues/5452
 			ImGui::GetStyle() = *originalStyle;
 			ImGui::GetStyle().ScaleAllSizes(scale);
+
+#ifdef WIN32
 			ImGui::GetStyle().FontScaleMain = scale;
+#endif
 
 			lastScale = scale;
 		}

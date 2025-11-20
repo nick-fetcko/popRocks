@@ -308,13 +308,68 @@ else()
 		INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassalac/include"
 		IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassalac/lib/libbassalac.so"
 		)
+	add_library(bassaac SHARED IMPORTED)
+	set_target_properties(bassaac PROPERTIES
+		INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassaac/include"
+		IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassaac/lib/libbass_aac.so"
+		)
 endif()
 
-target_link_libraries(popRocks PRIVATE Utils ${OPENGL_LIBRARIES} OpenGL Vulkan::Vulkan $<IF:$<TARGET_EXISTS:SDL3_image::SDL3_image-shared>,SDL3_image::SDL3_image-shared,SDL3_image::SDL3_image-static> SDL3_net::SDL3_net freetype bass bassflac bassape basswv serial nfd SDL3::SDL3)
+target_include_directories(popRocks PRIVATE
+		"${CMAKE_CURRENT_SOURCE_DIR}/third_party/bass/include"
+		"${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassflac/include"
+		"${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassape/include"
+		"${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassalac/include"
+		"${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswv/include"
+		"${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassaac/include"
+		)
+
+if (USING_FLATPAK)
+	target_compile_definitions(popRocks PUBLIC USING_FLATPAK)
+	target_link_libraries(popRocks PRIVATE
+			Utils 
+			${OPENGL_LIBRARIES}
+			OpenGL
+			Vulkan::Vulkan
+			$<IF:$<TARGET_EXISTS:SDL3_image::SDL3_image-shared>,SDL3_image::SDL3_image-shared,SDL3_image::SDL3_image-static> 
+			SDL3_net::SDL3_net 
+			freetype 
+			"${CMAKE_CURRENT_SOURCE_DIR}/third_party/bass/lib/libbass.so" 
+			"${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassflac/lib/libbassflac.so"
+			"${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassape/lib/libbassape.so"
+			"${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswv/lib/libbasswv.so"
+			"${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassaac/lib/libbass_aac.so"
+			serial
+			nfd
+			SDL3::SDL3
+			)
+else()
+	target_link_libraries(popRocks PRIVATE
+			Utils 
+			${OPENGL_LIBRARIES}
+			OpenGL
+			Vulkan::Vulkan
+			$<IF:$<TARGET_EXISTS:SDL3_image::SDL3_image-shared>,SDL3_image::SDL3_image-shared,SDL3_image::SDL3_image-static> 
+			SDL3_net::SDL3_net 
+			freetype 
+			bass
+			bassflac
+			bassape
+			basswv
+			serial
+			nfd
+			SDL3::SDL3
+			)
+endif()
+
 if (WIN32)
 	target_link_libraries(popRocks PRIVATE FFTW3::fftw3f basswasapi)
 else()
-	target_link_libraries(popRocks PRIVATE bassalac)
+	if (USING_FLATPAK)
+		target_link_libraries(popRocks PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassalac/lib/libbassalac.so" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassaac/lib/libbass_aac.so")
+	else()
+		target_link_libraries(popRocks PRIVATE bassalac bassaac)
+	endif()
 
 	# Here lies wstring_convert
 	# C++11 - C++17
@@ -337,9 +392,11 @@ if (WIN32)
 else()
 	add_custom_command(TARGET popRocks POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:bassalac> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CONFIGURATION_TYPES}
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:bassaac> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CONFIGURATION_TYPES}
 		)
 
-	install(IMPORTED_RUNTIME_ARTIFACTS bass bassflac bassape basswv bassalac)
+	install(IMPORTED_RUNTIME_ARTIFACTS bass bassflac bassape basswv bassalac bassaac)
+	install(TARGETS popRocks)
 endif()
 
 # Copy data files when building in Release
@@ -349,6 +406,10 @@ if (WIN32)
 			COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different "${CMAKE_CURRENT_SOURCE_DIR}/Data" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CONFIGURATION_TYPES}/Data"
 			)
 	endif()
+elseif(USING_FLATPAK)
+	add_custom_command(TARGET popRocks POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different "${CMAKE_CURRENT_SOURCE_DIR}/Data" "${CMAKE_INSTALL_PREFIX}/bin/Data"
+	)
 else()
 	add_custom_command(TARGET popRocks POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different "${CMAKE_CURRENT_SOURCE_DIR}/Data" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CONFIGURATION_TYPES}/Data"
