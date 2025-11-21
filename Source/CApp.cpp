@@ -607,6 +607,9 @@ void CApp::LoadShaders() {
 			shader.program.Uniform1f("effectVerticalSpread"_hash, Settings::settings.GetEffectVerticalSpread());
 			shader.program.Uniform1f("effectRotation"_hash, Settings::settings.GetEffectRotation());
 			shader.program.Uniform1f("effectEnabled"_hash, (playing || listening) ? 1.0f : 0.0f);
+
+			shader.program.CacheUniformLocation("bgr");
+			shader.program.Uniform1i("bgr"_hash, 0);
 		}
 
 		if (hash == "rotate"_hash) {
@@ -616,12 +619,18 @@ void CApp::LoadShaders() {
 			shader.program.Uniform1f("multiplier"_hash, HDR::WhiteLevel * HDR::Headroom);
 			shader.program.CacheUniformLocation("normalize");
 			shader.program.Uniform1i("normalize"_hash, 0);
+
+			shader.program.CacheUniformLocation("bgr");
+			shader.program.Uniform1i("bgr"_hash, 0);
 		}
 
 		if (hash == "blit"_hash) {
 			shader.program.CacheUniformLocation("screenSize");
 			shader.program.CacheUniformLocation("yOffset");
 			shader.program.Uniform1f("yOffset"_hash, 0.0f);
+
+			shader.program.CacheUniformLocation("bgr");
+			shader.program.Uniform1i("bgr"_hash, 0);
 		}
 
 		if (hash == "texture"_hash) {
@@ -644,6 +653,14 @@ void CApp::LoadShaders() {
 
 			shader.program.CacheUniformLocation("gamma");
 			shader.program.Uniform1f("gamma"_hash, Settings::settings.GetAlbumArtGamma());
+
+			shader.program.CacheUniformLocation("bgr");
+			shader.program.Uniform1i("bgr"_hash, 0);
+		}
+
+		if (hash == "basic"_hash) {
+			shader.program.CacheUniformLocation("bgr");
+			shader.program.Uniform1i("bgr"_hash, 0);
 		}
 	}
 }
@@ -851,6 +868,27 @@ void CApp::OnInit() {
 
 #if VULKAN
 		vulkan.OnInit(args);
+
+		const auto format = vulkan.GetSwapchainImageFormat();
+		if ((format > 29 && format < 37) || (format > 43 && format < 51)) {
+			context->With("texture"_hash, [this] (Context::Shader &shader) {
+				shader.program.Uniform1i("bgr"_hash, 1);
+			});
+			context->With("rotate"_hash, [this] (Context::Shader &shader) {
+				shader.program.Uniform1i("bgr"_hash, 1);
+			});
+			context->With("blur"_hash, [this] (Context::Shader &shader) {
+				shader.program.Uniform1i("bgr"_hash, 1);
+			});
+			context->With("basic"_hash, [this] (Context::Shader &shader) {
+				shader.program.Uniform1i("bgr"_hash, 1);
+			});
+			context->With("blit"_hash, [this] (Context::Shader &shader) {
+				shader.program.Uniform1i("bgr"_hash, 1);
+			});
+
+			bgr = true;
+		}
 #endif
 
 		UpdateHdrProperties();
@@ -1990,7 +2028,7 @@ void CApp::OnLoop(const Delta &time) {
 		glViewport(0, 0, maxDimension, maxDimension);
 
 		if (pulseBackground)
-			glClearColor(color.r, color.g, color.b, 1.0f);
+			glClearColor(bgr ? color.b : color.r, color.g, bgr ? color.r : color.b, 1.0f);
 		else
 			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -2258,6 +2296,8 @@ inline void CApp::SwapBuffers(const Delta &time) {
 #if VULKAN
 	context->With("blit"_hash, [this](Context::Shader &shader) {
 		shader.program.Uniform1f("yOffset"_hash, -windowHeight);
+
+		if (bgr) shader.program.Uniform1i("bgr"_hash, 0);
 	});
 #endif
 
@@ -2279,6 +2319,8 @@ inline void CApp::SwapBuffers(const Delta &time) {
 #if VULKAN
 	context->With("blit"_hash, [this](Context::Shader &shader) {
 		shader.program.Uniform1f("yOffset"_hash, 0.0f);
+		
+		if (bgr) shader.program.Uniform1i("bgr"_hash, 1);
 	});
 
 	// Wait for the new FBO to be generated before

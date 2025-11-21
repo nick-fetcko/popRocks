@@ -50,6 +50,7 @@ modules:
       - -DUSING_FLATPAK=ON
 finish-args:
   - --socket=wayland
+  - --socket=fallback-x11
   - --device=dri
   - --socket=pulseaudio
   - --filesystem=home

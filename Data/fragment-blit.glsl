@@ -7,6 +7,8 @@ uniform sampler2DMS text;
 uniform vec2 screenSize;
 uniform float yOffset;
 
+uniform int bgr;
+
 void main() {
     ivec2 coords = ivec2(
         TexCoords.x * screenSize.x,
@@ -21,4 +23,10 @@ void main() {
     outColor = vec4(sample1 + sample2 + sample3 + sample4) / 4.0f;
 
     outColor.w = clamp(outColor.w, 0.0, 1.0);
+
+    if (bgr == 1) {
+        float temp = outColor.r;
+        outColor.r = outColor.b;
+        outColor.b = temp;
+    }
 }

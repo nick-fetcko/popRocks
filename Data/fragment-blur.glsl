@@ -8,6 +8,8 @@ uniform float timeDelta;
 uniform sampler2DMS texture;
 uniform vec2 screenSize;
 
+uniform int bgr;
+
 vec3 applyEffect(vec2 coords, vec2 screenSize);
 
 void main() {
@@ -28,4 +30,10 @@ void main() {
     sampled.w = clamp(sampled.w - (1.0 / intensity) * timeDelta, 0.0, 1.0);
 
     outColor = sampled;
+
+    if (bgr == 1) {
+        float temp = outColor.r;
+        outColor.r = outColor.b;
+        outColor.b = temp;
+    }
 }

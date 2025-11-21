@@ -14,6 +14,8 @@ uniform float contrast;
 uniform float gamma;
 uniform float brightness;
 
+uniform int bgr;
+
 void main() {
     vec4 sampled = texture(text, TexCoords);
 
@@ -35,4 +37,10 @@ void main() {
     }
 
     outColor.w = clamp(outColor.w, 0.0, 1.0);
+
+    if (bgr == 1) {
+        float temp = outColor.r;
+        outColor.r = outColor.b;
+        outColor.b = temp;
+    }
 }

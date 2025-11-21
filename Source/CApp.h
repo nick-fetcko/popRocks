@@ -391,4 +391,7 @@ private:
 #else
 		nullptr;
 #endif
+
+	// Is our window surface BGR?
+	bool bgr = false;
 };
