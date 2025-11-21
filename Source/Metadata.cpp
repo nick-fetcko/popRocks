@@ -35,7 +35,7 @@ void Metadata::OnLoad(
 			LogDebug("Found iTunes-style embedded album art");
 
 		return;
-	} else if (extension == ".ape") {
+	} else if (extension == ".ape" || extension == ".tta" /* TTA uses APE tags */) {
 		APE ape(path);
 
 		auto tags = ape.GetTags(false);
@@ -47,6 +47,13 @@ void Metadata::OnLoad(
 				art->second.size
 			);
 		} else albumArt->ClearEmbedded();
+
+		// TTA files can use ID3 tags, too
+		if (extension == ".tta" && tagLoader->AreThereEmptyTags()) {
+			MP3 tta(path);
+
+			tagLoader->LoadFromTags(tta.GetTags());
+		}
 		
 		return;
 	} else if (extension == ".wv") {

@@ -162,10 +162,17 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 				MP4 mp4(iter.path());
 
 				loader.LoadFromTags(mp4.GetTags());
-			} else if (extension == ".ape") {
+			} else if (extension == ".ape" || extension == ".tta" /* TTA files can use APE tags */) {
 				APE ape(iter.path());
 
 				loader.LoadFromTags(ape.GetTags());
+
+				// TTA files can use ID3 tags, too
+				if (extension == ".tta" && loader.AreThereEmptyTags()) {
+					MP3 tta(iter.path());
+
+					loader.LoadFromTags(tta.GetTags());
+				}
 			} else if (extension == ".wv") {
 				WV wv(iter.path());
 

@@ -294,6 +294,17 @@ else()
 endif()
 
 if (WIN32)
+	add_library(basstta SHARED IMPORTED)
+	set_target_properties(basstta PROPERTIES
+		INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basstta/include"
+		IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basstta/lib/bass_tta.dll"
+		IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basstta/lib/bass_tta.dll"
+		IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basstta/lib/bass_tta.lib"
+		IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basstta/lib/bass_tta.lib"
+		)
+endif()
+
+if (WIN32)
 	add_library(basswasapi SHARED IMPORTED)
 	set_target_properties(basswasapi PROPERTIES
 		INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswasapi/include"
@@ -363,7 +374,7 @@ else()
 endif()
 
 if (WIN32)
-	target_link_libraries(popRocks PRIVATE FFTW3::fftw3f basswasapi)
+	target_link_libraries(popRocks PRIVATE FFTW3::fftw3f basswasapi basstta)
 else()
 	if (USING_FLATPAK)
 		target_link_libraries(popRocks PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassalac/lib/libbassalac.so" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassaac/lib/libbass_aac.so")
@@ -388,6 +399,7 @@ add_custom_command(TARGET popRocks POST_BUILD
 if (WIN32)
 	add_custom_command(TARGET popRocks POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:basswasapi> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CONFIGURATION_TYPES}
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:basstta> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CONFIGURATION_TYPES}
 		)
 else()
 	add_custom_command(TARGET popRocks POST_BUILD

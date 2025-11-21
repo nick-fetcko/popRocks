@@ -68,7 +68,7 @@ public:
 	}
 
 private:
-	constexpr inline static std::array<std::string_view, 9> SupportedExtensions = { ".flac", ".mp3", ".m4a", ".mp4", ".ape", ".wv", ".ogg", ".aac", ".wav"};
+	constexpr inline static std::array<std::string_view, 10> SupportedExtensions = { ".flac", ".mp3", ".m4a", ".mp4", ".ape", ".wv", ".ogg", ".aac", ".tta", ".wav"};
 
 	static constexpr bool IsSupported(const std::string_view &lowercaseExtension) {
 		for (const auto &extension : SupportedExtensions)
