@@ -236,7 +236,7 @@ void AlbumArt::OnDestroy() {
 	cube.reset();
 }
 
-std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder) {
+std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder, std::optional<std::filesystem::path> fileName) {
 	preferred.clear();
 	found.clear();
 
@@ -253,39 +253,41 @@ std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder) {
 			auto front = filename.find("front");
 			auto folder = filename.find("folder");
 
-			if (cover != std::string::npos ||
-				front != std::string::npos ||
-				folder == 0) {
-				// Sort by digits in the filename (if there are any), ascending
-				//
-				// For example, if a folder has:
-				//		"Cover 1.jpg"
-				//		"Cover 2.jpg"
-				//		"Cover 3.jpg"
-				//
-				// We'll use "Cover 1.jpg"
-				auto [success, number] = Utils::ExtractDigitsFromString(filename);
-				if (number == std::numeric_limits<int>::max() && (folder == 0 || cover == 0 || front == 0))
-					--number;
+			if (!fileName || (fileName && fileName->parent_path() == entry.path().parent_path())) {
+				if (cover != std::string::npos ||
+					front != std::string::npos ||
+					folder == 0) {
+					// Sort by digits in the filename (if there are any), ascending
+					//
+					// For example, if a folder has:
+					//		"Cover 1.jpg"
+					//		"Cover 2.jpg"
+					//		"Cover 3.jpg"
+					//
+					// We'll use "Cover 1.jpg"
+					auto [success, number] = Utils::ExtractDigitsFromString(filename);
+					if (number == std::numeric_limits<int>::max() && (folder == 0 || cover == 0 || front == 0))
+						--number;
 
-				preferred.emplace(std::make_pair(number, entry.path()));
+					preferred.emplace(std::make_pair(number, entry.path()));
 
-				// Optionally break when we find a preferred file
-				//
-				// This can be used with recursive_directory_iterator
-				// to avoid scanning _every_ subfolder.
-				//
-				// My music folder has a number of unsorted tracks
-				// in the root, and I don't want it scannning through
-				// 1TB of data when trying to load album art for those
-				//
-				// In those cases, this will just pick the first (preferred)
-				// album art file found in any of the subfolders. It should
-				// really just pick _nothing_, but I'm not sure what a good
-				// litmus test for this specific case would look like.
-				if (breakOnFind)
-					return true;
-			} else if (found.find(entry.path()) == found.end()) found.emplace(entry.path());
+					// Optionally break when we find a preferred file
+					//
+					// This can be used with recursive_directory_iterator
+					// to avoid scanning _every_ subfolder.
+					//
+					// My music folder has a number of unsorted tracks
+					// in the root, and I don't want it scannning through
+					// 1TB of data when trying to load album art for those
+					//
+					// In those cases, this will just pick the first (preferred)
+					// album art file found in any of the subfolders. It should
+					// really just pick _nothing_, but I'm not sure what a good
+					// litmus test for this specific case would look like.
+					if (breakOnFind)
+						return true;
+				} else if (found.find(entry.path()) == found.end()) found.emplace(entry.path());
+			}
 		}
 
 		return false;
@@ -717,8 +719,16 @@ bool AlbumArt::Load(const std::filesystem::path &fileName, const std::filesystem
 	// Do we have cover art?
 	if (IsSupported(extension))
 		currentFile = fileName;
-	else if (!parentPath.empty())
-		currentFile = FindArt(parentPath);
+	else if (!parentPath.empty()) {
+		// If we're in a different path than the last file,
+		// reset the hashes
+		if (parentPath != lastParentPath) {
+			lastHash = 0;
+			lastEmbeddedHash = 0;
+			lastParentPath = parentPath;
+		}
+		currentFile = FindArt(parentPath, fileName);
+	}
 	else
 		currentFile = FindArt(fileName.parent_path());
 

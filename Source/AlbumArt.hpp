@@ -122,7 +122,7 @@ public:
 private:
 	constexpr inline static std::array<std::string_view, 3> SupportedExtensions = { ".jpg", ".png", ".webp" };
 
-	std::filesystem::path FindArt(const std::filesystem::path &folder);
+	std::filesystem::path FindArt(const std::filesystem::path &folder, std::optional<std::filesystem::path> fileName = std::nullopt);
 
 	// This frees the surface once it's done
 	void LoadFromSurface(SDL_Surface *surface, std::filesystem::path path = "", std::string extension = "", bool scaled = false);
@@ -216,4 +216,6 @@ private:
 	bool hidden = false;
 
 	std::unique_ptr<Cube> cube;
+
+	std::filesystem::path lastParentPath;
 };
