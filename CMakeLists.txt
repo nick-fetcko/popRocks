@@ -410,6 +410,14 @@ elseif(USING_FLATPAK)
 	add_custom_command(TARGET popRocks POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different "${CMAKE_CURRENT_SOURCE_DIR}/Data" "${CMAKE_INSTALL_PREFIX}/bin/Data"
 	)
+	add_custom_command(TARGET popRocks POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bass/lib/libbass.so" ${CMAKE_INSTALL_PREFIX}/bin/libbass.so
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassflac/lib/libbassflac.so" ${CMAKE_INSTALL_PREFIX}/bin/libbassflac.so
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassape/lib/libbassape.so" ${CMAKE_INSTALL_PREFIX}/bin/libbassape.so
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswv/lib/libbasswv.so" ${CMAKE_INSTALL_PREFIX}/bin/libbasswv.so
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassalac/lib/libbassalac.so" ${CMAKE_INSTALL_PREFIX}/bin/libbassalac.so
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassaac/lib/libbass_aac.so" ${CMAKE_INSTALL_PREFIX}/bin/libbass_aac.so
+	)
 else()
 	add_custom_command(TARGET popRocks POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different "${CMAKE_CURRENT_SOURCE_DIR}/Data" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CONFIGURATION_TYPES}/Data"

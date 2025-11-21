@@ -11,16 +11,24 @@
 
 #include "MathCPP/Duration.hpp"
 
+#include "Utils/Utils.hpp"
+
 #include "CApp.h"
 #include "FFTRenderer.hpp"
 
 using namespace MathsCPP;
+using namespace Fetcko;
 
 // See https://stackoverflow.com/questions/30412951/unresolved-external-symbol-imp-fprintf-and-imp-iob-func-sdl2
 #pragma comment(lib, "legacy_stdio_definitions.lib")
 extern "C" { FILE __iob_func[3] = { *stdin,*stdout,*stderr }; }
 
 int main(int argc, char *argv[]) {
+	
+#ifdef USING_FLATPAK
+	Utils::SetResourceFolder(std::filesystem::path(argv[0]).parent_path());
+#endif
+
 	SDL_Event event;
 	bool running = true;
 

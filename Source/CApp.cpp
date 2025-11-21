@@ -1472,6 +1472,17 @@ void CApp::OnInit() {
 		LogError("Could not load APE plugin! Error code ", BASS_ErrorGetCode());
 	if (!BASS_PluginLoad("basswv.dll", 0))
 		LogError("Could not load WavPack plugin! Error code ", BASS_ErrorGetCode());
+#elif defined(USING_FLATPAK)
+	if (!BASS_PluginLoad((Utils::GetResourceFolder().parent_path() / "libbassflac.so").u8string().c_str(), 0))
+		LogError("Could not load FLAC plugin! Error code ", BASS_ErrorGetCode());
+	if (!BASS_PluginLoad((Utils::GetResourceFolder().parent_path() / "libbassape.so").u8string().c_str(), 0))
+		LogError("Could not load APE plugin! Error code ", BASS_ErrorGetCode());
+	if (!BASS_PluginLoad((Utils::GetResourceFolder().parent_path() / "libbasswv.so").u8string().c_str(), 0))
+		LogError("Could not load WavPack plugin! Error code ", BASS_ErrorGetCode());
+	if (!BASS_PluginLoad((Utils::GetResourceFolder().parent_path() / "libbassalac.so").u8string().c_str(), 0))
+		LogError("Could not load ALAC plugin! Error code ", BASS_ErrorGetCode());
+	if (!BASS_PluginLoad((Utils::GetResourceFolder().parent_path() / "libbass_aac.so").u8string().c_str(), 0))
+		LogError("Could not load AAC plugin! Error code ", BASS_ErrorGetCode());
 #else
 	if (!BASS_PluginLoad("./libbassflac.so", 0))
 		LogError("Could not load FLAC plugin! Error code ", BASS_ErrorGetCode());
