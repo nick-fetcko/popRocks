@@ -21,10 +21,10 @@
 
 #include <bassape.h>
 #include <basswv.h>
+#include <bass_tta.h>
 
 #ifdef WIN32
 #include <basswasapi.h>
-#include <bass_tta.h>
 #else
 #include <bassalac.h>
 #include <bass_aac.h>
@@ -2456,17 +2456,20 @@ HSTREAM CApp::OpenWithFlags(const std::filesystem::path &path, const std::string
 				);
 			}
 		}
-#else
+#endif
 		else if (extension == ".tta") {
 			ret = BASS_TTA_StreamCreateFile(
 				FALSE,
+#ifdef WIN32
 				path.wstring().c_str(),
+#else
+				path.u8string().c_str(),
+#endif
 				0,
 				0,
 				flags
 			);
 		}
-#endif
 		else {
 			ret = BASS_StreamCreateFile(
 				FALSE,
