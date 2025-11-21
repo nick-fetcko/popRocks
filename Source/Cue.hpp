@@ -67,12 +67,36 @@ public:
 
 private:
 	template<typename C>
-	std::vector<std::vector<std::string>> ReadLines(std::basic_istream<C> &stream) {
+	std::basic_string<C> GetLine(std::basic_filebuf<C> &buf) {
+		std::basic_string<C> ret;
+
+		if (!buf.is_open()) return ret;
+
+		C c = buf.sbumpc();
+		while(c != static_cast<C>(EOF) && c != static_cast<C>('\r') && c != static_cast<C>('\n')) {
+			ret += c;
+
+			c = buf.sbumpc();
+		}
+
+		c = buf.sbumpc();
+		while(c != static_cast<C>(EOF) && (c == static_cast<C>('\r') || c == static_cast<C>('\n'))) {
+			c = buf.sbumpc();
+		}
+
+		// If we found a non-newline character,
+		// put it back
+		if (c != static_cast<C>(EOF))
+			buf.sputbackc(c);
+
+		return ret;
+	}
+
+	template<typename C>
+	std::vector<std::vector<std::string>> ReadLines(std::basic_filebuf<C> &stream) {
 		std::vector<std::vector<std::string>> lines;
-
-		std::basic_string<C> line;
-
-		while (std::getline(stream, line)) {
+		
+		for (auto line = GetLine(stream); !line.empty(); line = GetLine(stream)) {
 			// Files with Windows newlines cause \r to show
 			// up at the end of the line since getline()
 			// reads up to \n

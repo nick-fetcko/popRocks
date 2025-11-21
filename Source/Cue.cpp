@@ -20,20 +20,23 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 
 	auto bom = Fetcko::Utils::GetBom(inFile);
 	if (!bom || bom == Fetcko::Utils::BOM::UTF_8) {
-		lines = ReadLines(inFile);
+		std::filebuf fileBuf;
+		fileBuf.open(path, std::ios::in);
+		lines = ReadLines(fileBuf);
 	} else {
 		inFile.close();
 
-		std::basic_ifstream<char16_t> wInFile(path, std::ios::in | std::ios::binary);
+		std::basic_filebuf<char16_t> fileBuf;
+		fileBuf.open(path, std::ios::in | std::ios::binary);
 
-		wInFile.imbue(
+		fileBuf.pubimbue(
 			std::locale(
-				wInFile.getloc(),
+				fileBuf.getloc(),
 				new std::codecvt_utf16<char16_t, 0x10ffff, std::consume_header>
 			)
 		);
 
-		lines = ReadLines(wInFile);
+		lines = ReadLines(fileBuf);
 	}
 
 	bool inFileSection = false;

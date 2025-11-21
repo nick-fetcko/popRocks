@@ -289,7 +289,7 @@ std::string ID3V2::ToUTF8(const char *tag, uint32_t size, Encoding encoding) {
 		if (auto bom = Fetcko::Utils::GetBom(stream)) {
 			switch (*bom) {
 			case Fetcko::Utils::BOM::UTF_16_BE:
-				std::cout << "UTF-16 BE" << std::endl;
+				//std::cout << "UTF-16 BE" << std::endl;
 				encoding = Encoding::UTF_16_BE;
 				stream.imbue(
 					std::locale(
@@ -302,7 +302,7 @@ std::string ID3V2::ToUTF8(const char *tag, uint32_t size, Encoding encoding) {
 				size -= 2;
 				break;
 			case Fetcko::Utils::BOM::UTF_16_LE:
-				std::cout << "UTF-16 LE" << std::endl;
+				//std::cout << "UTF-16 LE" << std::endl;
 				stream.imbue(
 					std::locale(
 						stream.getloc(),
