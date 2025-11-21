@@ -58,6 +58,9 @@ public:
 	}
 
 	void OnColorChanged(const MathsCPP::Colour<float> &color, bool silent = false) override {
+		ImGui::GetStyle().Colors[ImGuiCol_Button] = { color.r, color.g, color.b, 0.75f };
+		ImGui::GetStyle().Colors[ImGuiCol_ButtonActive] = { color.r, color.g, color.b, color.a };
+
 		auto hsv = color.ToHsv();
 		hsv.v = 1.0f;
 		auto brightColor = Colour<float>::FromHsv(hsv);
@@ -65,6 +68,8 @@ public:
 		ImGui::GetStyle().Colors[ImGuiCol_SliderGrab] = { brightColor.r, brightColor.g, brightColor.b, brightColor.a };
 		ImGui::GetStyle().Colors[ImGuiCol_SliderGrabActive] = { brightColor.r, brightColor.g, brightColor.b, brightColor.a };
 		ImGui::GetStyle().Colors[ImGuiCol_FrameBgHovered] = { brightColor.r, brightColor.g, brightColor.b, brightColor.a - 0.25f };
+		ImGui::GetStyle().Colors[ImGuiCol_CheckMark] = { brightColor.r, brightColor.g, brightColor.b, brightColor.a };
+		ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered] = { brightColor.r, brightColor.g, brightColor.b, brightColor.a };
 
 		hsv.v = 0.5f;
 		auto darkColor = Colour<float>::FromHsv(hsv);
@@ -72,6 +77,7 @@ public:
 		ImGui::GetStyle().Colors[ImGuiCol_FrameBgActive] = { darkColor.r, darkColor.g, darkColor.b, darkColor.a - 0.25f };
 		ImGui::GetStyle().Colors[ImGuiCol_Header] = { darkColor.r, darkColor.g, darkColor.b, darkColor.a };
 		ImGui::GetStyle().Colors[ImGuiCol_FrameBg] = { darkColor.r, darkColor.g, darkColor.b, darkColor.a };
+		ImGui::GetStyle().Colors[ImGuiCol_TitleBgActive] = { darkColor.r, darkColor.g, darkColor.b, darkColor.a };
 
 		hsv = color.ToHsv();
 		if (hsv.v > 0.66f && darkenPulseOnBrightColors)
@@ -1213,6 +1219,8 @@ public:
 	}
 
 	const int &GetHeight() const { return height; }
+
+	const bool &IsPresetPopupVisible() const { return newPresetPopup; }
 
 	void SetOnOpen(std::function<void(const std::filesystem::path &)> f) { onOpen = f; }
 

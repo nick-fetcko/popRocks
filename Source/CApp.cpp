@@ -2233,7 +2233,7 @@ inline void CApp::SwapBuffers(const Delta &time) {
 	} else ImGui::EndFrame();
 
 	if (HDR::Enabled) {
-		context->Color(1.0f, 1.0f, 1.0f, 0.98f * controls.GetAlpha());
+		context->Color(1.0f, 1.0f, 1.0f, (menu.IsPresetPopupVisible() ? 1.0f : 0.98f) * controls.GetAlpha());
 
 		context->GetShaderProgram().Uniform1i("hdr"_hash, true);
 
@@ -2252,7 +2252,7 @@ inline void CApp::SwapBuffers(const Delta &time) {
 		context->With("blit"_hash, [this](Context::Shader &shader) {
 			shader.program.Uniform1f("yOffset"_hash, -windowHeight);
 		});
-	} else context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, 0.90f * controls.GetAlpha());
+	} else context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, (menu.IsPresetPopupVisible() ? 1.0f : 0.90f) * controls.GetAlpha());
 
 #if VULKAN
 	context->With("blit"_hash, [this](Context::Shader &shader) {
