@@ -52,7 +52,7 @@ public:
 	// Forward declare Frame to avoid circular dependency
 	class Frame;
 
-	class Art {
+	class Art : public LoggableClass {
 	public:
 		enum class Type : uint8_t {
 			Other				=	0x00,
@@ -79,7 +79,7 @@ public:
 		};
 
 		Art(Frame &parent);
-		~Art();
+		virtual ~Art();
 
 		Encoding textEncoding = Encoding::Latin;
 		std::string mimeType; // does NOT use textEncoding

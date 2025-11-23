@@ -72,6 +72,21 @@ ID3V2::Art::~Art() {
 bool ID3V2::Art::Read(const char **tag) {
 	auto *start = *tag;
 
+	uint32_t syncDataLength = 0;
+	bool unsync = false;
+	
+	// ID3v2.4 flags
+	if (parent.parent.header.majorVersion > 3) {
+		unsync = static_cast<bool>(parent.flags & 0x0200);
+
+		// We have a data length indicator
+		if (parent.flags & 0x0100) {
+			syncDataLength = *reinterpret_cast<const uint32_t *>(*tag);
+			Fix32Bit(&syncDataLength, unsync);
+			*tag += sizeof(uint32_t);
+		}
+	}
+
 	parent.ReadEncoding(tag, &textEncoding);
 
 	// MIME types were added in v3
@@ -107,8 +122,37 @@ bool ID3V2::Art::Read(const char **tag) {
 	auto offset = static_cast<uint32_t>(*tag - start);
 	dataLength = parent.size - offset;
 
-	data = new uint8_t[dataLength];
-	memcpy(data, *tag, dataLength);
+	if (syncDataLength)
+		syncDataLength -= offset - sizeof(uint32_t); // Need the 4 data length bytes
+
+	bool skipped = false;
+	if (unsync) {
+		data = new uint8_t[syncDataLength];
+
+		std::size_t j = 0;
+		for (std::size_t i = 0; i < dataLength && j < syncDataLength; ++i) {
+			if ((*tag)[i] == 0 && i > 0 && ((*tag)[i - 1] & 0xFF) == 0xFF && i < dataLength - 2) {
+				if (((*tag)[i + 1] & 0xe0) == 0xe0)
+					continue;
+				// All 0xFF00 sequences are followed by another 0
+				else if ((*tag)[i + 1] == 0) {
+					data[j++] = (*tag)[i];
+					++i;
+					continue;
+				}
+			}
+
+			data[j++] = (*tag)[i];
+		}
+
+		if (j != syncDataLength)
+			LogWarning("Real data length (", j, ") does not match expected data length (", syncDataLength, ")");
+
+		dataLength = syncDataLength;
+	} else {
+		data = new uint8_t[dataLength];
+		memcpy(data, *tag, dataLength);
+	}
 	
 	parent.size -= offset;
 	parent.parent.currentOffset += offset;
