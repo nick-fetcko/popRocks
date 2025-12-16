@@ -48,14 +48,11 @@ void Text::SetText(const std::string &text, bool force) {
 }
 
 void Text::OnDestroy() {
-	glDeleteTextures(1, &texture);
-	texture = 0;
+	cached.reset();
 }
 
 void Text::OnLoop(int x, int y) const {
 	if (!font || Empty()) return;
-
-	glBindTexture(GL_TEXTURE_2D, texture);
 
 	// Center rendered text on the line
 	y += (bounds.height - bounds.renderedHeight) / 2.0f;

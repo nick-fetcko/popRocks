@@ -162,7 +162,6 @@ private:
 		// max height
 		if (auto height = maxHeight + font->GetEm().height / 2 - pos.y; this->height > height) {
 			this->height = height;
-
 			const auto heightMinusOne = height - font->GetEm().height * 2;
 
 			vbo->Bind();
@@ -196,7 +195,6 @@ private:
 		vbo->BufferSubData(23, sizeof(float), &alpha);
 
 		auto fadeOut = alpha;
-
 		if (HDR::Enabled) {
 			fadeOut *= 0.5f;
 		} else {
@@ -268,14 +266,16 @@ private:
 					0.4f * alpha
 				);
 			} else {
-				context.Color(
-					0.6f * HDR::WhiteLevel,
-					0.6f * HDR::WhiteLevel,
-					0.6f * HDR::WhiteLevel,
-					std::max(
+				const auto faded = std::max(
 						0.0f,
-						alpha - (static_cast<float>(i - distance) / maxIndex)
-					)
+						alpha - (static_cast<float>(i - distance) / std::min(titles.size(), maxIndex))
+				);
+
+				context.Color(
+					0.6f * HDR::WhiteLevel * (HDR::Enabled ? faded : 1.0f),
+					0.6f * HDR::WhiteLevel * (HDR::Enabled ? faded : 1.0f),
+					0.6f * HDR::WhiteLevel * (HDR::Enabled ? faded : 1.0f),
+					faded
 				);
 			}
 
@@ -283,7 +283,7 @@ private:
 
 			// Reduce the height as we near the end of the playlist
 			if (i == titles.size() - 2 && pos.y < maxHeight) {
-				height = pos.y + font->GetEm().height / 2.0f;
+				height = pos.y + font->GetEm().height / 2.0f - context.GetSafeArea().y;
 
 				const auto heightMinusOne = height - font->GetEm().height * 2;
 

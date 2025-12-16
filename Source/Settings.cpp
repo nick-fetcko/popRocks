@@ -6,7 +6,17 @@
 #include <Shlobj.h>
 #endif
 
+#include "Preset.hpp"
+
+#ifndef __ANDROID__
 Settings Settings::settings = Settings::Load();
+#else
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+Settings Settings::settings;
+#endif
+
+std::string Settings::path;
 
 std::map<GLenum, std::string> Settings::BlendModes = {
 	{ GL_ZERO, "GL_ZERO" },
@@ -24,11 +34,32 @@ std::map<GLenum, std::string> Settings::BlendModes = {
 	{ GL_CONSTANT_ALPHA, "GL_CONSTANT_ALPHA"},
 	{ GL_ONE_MINUS_CONSTANT_ALPHA, "GL_ONE_MINUS_CONSTANT_ALPHA"},
 	{ GL_SRC_ALPHA_SATURATE, "GL_SRC_ALPHA_SATURATE"},
+#ifndef __ANDROID__
 	{ GL_SRC1_COLOR, "GL_SRC1_COLOR"},
 	{ GL_ONE_MINUS_SRC1_COLOR, "GL_ONE_MINUS_SRC1_COLOR"},
 	{ GL_SRC1_ALPHA, "GL_SRC1_ALPHA"},
 	{ GL_ONE_MINUS_SRC1_ALPHA, "GL_ONE_MINUS_SRC1_ALPHA"}
+#endif
 };
+
+std::map<std::string, GLenum> Settings::Colorspaces = {
+#ifdef __ANDROID__
+	{ "EGL_EXT_gl_colorspace_scrgb", EGL_GL_COLORSPACE_SCRGB_EXT},
+	{ "EGL_EXT_gl_colorspace_scrgb_linear", EGL_GL_COLORSPACE_SCRGB_LINEAR_EXT },
+	{ "EGL_EXT_gl_colorspace_display_p3_linear", EGL_GL_COLORSPACE_DISPLAY_P3_LINEAR_EXT },
+	{ "EGL_EXT_gl_colorspace_display_p3", EGL_GL_COLORSPACE_DISPLAY_P3_EXT },
+	{ "EGL_EXT_gl_colorspace_display_p3_passthrough", EGL_GL_COLORSPACE_DISPLAY_P3_PASSTHROUGH_EXT },
+	{ "EGL_EXT_gl_colorspace_bt2020_hlg", EGL_GL_COLORSPACE_BT2020_HLG_EXT },
+	{ "EGL_EXT_gl_colorspace_bt2020_linear", EGL_GL_COLORSPACE_BT2020_LINEAR_EXT },
+	{ "EGL_EXT_gl_colorspace_bt2020_pq", EGL_GL_COLORSPACE_BT2020_PQ_EXT }
+#endif
+};
+
+void Settings::SetPath(const std::string &path) {
+	Settings::path = path;
+	Settings::settings = Settings::Load();
+	Preset::Presets = Preset::Load();
+}
 
 std::filesystem::path Settings::GetPath(const std::string &fileName) {
 	std::filesystem::path ret;
@@ -40,6 +71,8 @@ std::filesystem::path Settings::GetPath(const std::string &fileName) {
 
 		CoTaskMemFree(folder);
 	}
+#elif defined(__ANDROID__)
+	ret = Settings::path;
 #elif defined(__linux__)
 	ret = std::filesystem::path(getenv("HOME")) / ".config";
 	if (!std::filesystem::exists(ret))
@@ -611,6 +644,20 @@ void Settings::SetUiBrightness(float uiBrightness) {
 	}
 }
 
+void Settings::SetHdr(bool hdr) {
+	if (this->hdr != hdr) {
+		this->hdr = hdr;
+		Save();
+	}
+}
+
+void Settings::SetColorspace(const std::string &colorspace) {
+	if (this->colorspace != colorspace) {
+		this->colorspace = colorspace;
+		Save();
+	}
+}
+
 void Settings::Save() {
 	if (auto path = GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
@@ -865,6 +912,11 @@ const Node &operator>>(const Node &node, Settings &settings) {
 		node["uiContrast"]->get(settings.uiContrast);
 	if (node.has("uiBrightness"))
 		node["uiBrightness"]->get(settings.uiBrightness);
+
+	if (node.has("hdr"))
+		node["hdr"]->get(settings.hdr);
+	if (node.has("colorspace"))
+		node["colorspace"]->get(settings.colorspace);
 		
 	return node;
 }
@@ -944,6 +996,8 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["uiGamma"]->set(settings.uiGamma);
 	node["uiContrast"]->set(settings.uiContrast);
 	node["uiBrightness"]->set(settings.uiBrightness);
+	node["hdr"]->set(settings.hdr);
+	node["colorspace"]->set(settings.colorspace);
 
 	return node;
 }

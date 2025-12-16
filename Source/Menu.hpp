@@ -5,11 +5,22 @@
 #include <imgui.h>
 #include <imgui_stdlib.h>
 #include <imgui_freetype.h>
+#include <imgui_internal.h>
+
+#include <bass.h>
+#ifdef WIN32
+#include <basswasapi.h>
+#endif
+
+#ifndef __ANDROID__
 #include <nfd.hpp>
+#endif
 
 #include "Utils/Utils.hpp"
 
+#include "Controls.hpp"
 #include "HDR.hpp"
+#include "LightPack.hpp"
 #include "Playlist.hpp"
 #include "Preset.hpp"
 
@@ -18,17 +29,20 @@ using namespace Fetcko;
 class Menu : public LoggableClass, public ColorChangeListener {
 public:
 	Menu() {
+#ifndef __ANDROID__
 		NFD_Init();
+#endif
 	}
 
 	~Menu() {
 		delete[] presetSelections;
 	}
 
-	void OnResize(int width, int height, float scale) {
+	void OnResize(int width, int height, float scale, float safeAreaPadding, bool isTouchscreen = false) {
 		this->width = this->windowWidth = width;
 		this->windowHeight = height;
 		this->scale = scale;
+		this->isTouchscreen = isTouchscreen;
 
 		if (!font) {
 			font = ImGui::GetIO().Fonts->AddFontFromFileTTF(
@@ -45,12 +59,16 @@ public:
 			ImGui::GetStyle() = *originalStyle;
 			ImGui::GetStyle().ScaleAllSizes(scale);
 
-#ifdef WIN32
 			ImGui::GetStyle().FontScaleMain = scale;
-#endif
 
 			lastScale = scale;
 		}
+
+		// Make scrollbars larger on touchscreens
+		if (isTouchscreen)
+			ImGui::GetStyle().ScrollbarSize = originalStyle->ScrollbarSize * scale * 2.5f;
+
+		this->safeAreaPadding = safeAreaPadding;
 
 		ImGui::GetStyle().Colors[ImGuiCol_PopupBg].w = 1.0f;
 		ImGui::GetStyle().Colors[ImGuiCol_FrameBg].w = 1.0f;
@@ -111,17 +129,19 @@ public:
 			ImGuiWindowFlags_MenuBar
 		);
 
-		ImGui::SetWindowPos({ 0.0f, 0.0f });
+		ImGui::SetWindowPos({ 0.0f, safeAreaPadding });
 		ImGui::SetWindowSize({ static_cast<float>(width), 0 });
 
 		ImGui::BeginMenuBar();
 
-		const auto maxHeight = windowHeight - height - Controls::SeekbarSize * 2;
+		const auto maxHeight = windowHeight - height - Controls::SeekbarSize * 2 - safeAreaPadding;
+		const auto maxWidth = windowWidth - ImGui::GetStyle().ScrollbarSize;
 
-		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(windowWidth, maxHeight));
+		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(maxWidth, maxHeight));
 		if (ImGui::BeginMenu("File")) {
 			open = true;
 
+#ifndef __ANDROID__
 			if (ImGui::MenuItem("Open File", "Ctrl-O", false, true)) {
 				nfdnchar_t *outPath;
 
@@ -154,14 +174,20 @@ public:
 					NFD_FreePathN(outPath);
 				}	
 			}
+#endif
 
 			if (ImGui::MenuItem("Open Folder", "Ctrl-Shift-O", false, true)) {
+#ifndef __ANDROID__
 				nfdnchar_t *outPath;
 				nfdresult_t result = NFD_PickFolderN(&outPath, nullptr);
 				if (result == NFD_OKAY) {
 					if (onOpen) onOpen(outPath);
 					NFD_FreePathN(outPath);
 				}
+#else
+				if (fileOpenFunc)
+					fileOpenFunc();
+#endif
 			}
 
 			ImGui::Separator();
@@ -178,7 +204,7 @@ public:
 		randomizePresets = Settings::settings.GetRandomizePresets();
 		randomizePresetsByBeats = Settings::settings.GetRandomizePresetsByBeats();
 
-		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(windowWidth, maxHeight));
+		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(maxWidth, maxHeight));
 		if (ImGui::BeginMenu("Visualizer")) {
 			open = true;
 
@@ -574,7 +600,7 @@ public:
 		}
 
 		presetIndex = Settings::settings.GetPresetIndex();
-		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(windowWidth, maxHeight));
+		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(maxWidth, maxHeight));
 		if (ImGui::BeginMenu("Presets")) {
 			open = true;
 
@@ -585,6 +611,7 @@ public:
 				presetSelections = new bool[presets.size()];
 				numPresets = presets.size();
 			}
+
 			selectedPresets = Settings::settings.GetSelectedPresets();
 			for (const auto &[i, preset] : Utils::Enumerate(presets)) {
 				presetSelections[i] = presetIndex && *presetIndex == i;
@@ -701,7 +728,7 @@ public:
 			}
 
 			ImGui::EndDisabled();
-			
+
 			ImGui::EndMenu();
 		}
 
@@ -785,8 +812,10 @@ public:
 			newPresetPopup = open;
 		}
 
-		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(windowWidth, maxHeight));
-		if (ImGui::BeginMenu("Interface")) {
+		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(maxWidth, maxHeight));
+		if (ImGui::BeginMenu(isTouchscreen ? "UI" : "Interface")) {
+			open = true;
+
 			autoFade = Settings::settings.GetAutoFade();
 			waitTime = Settings::settings.GetWaitTime().AsSeconds();
 			autoFadeSpeed = Settings::settings.GetAutoFadeSpeed();
@@ -845,7 +874,7 @@ public:
 			ImGui::EndMenu();
 		}
 
-		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(windowWidth, maxHeight));
+		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(maxWidth, maxHeight));
 		if (ImGui::BeginMenu("Playlist")) {
 			open = true;
 
@@ -857,8 +886,10 @@ public:
 			ImGui::EndMenu();
 		}
 
-		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(windowWidth, maxHeight));
-		if (ImGui::BeginMenu("Album Art")) {
+		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(maxWidth, maxHeight));
+		if (ImGui::BeginMenu(isTouchscreen ? "Art" : "Album Art")) {
+			open = true;
+
 			bool none = !albumArt.Loaded() || albumArt.IsHidden();
 			if (ImGui::MenuItem("None", nullptr, &none))
 				albumArt.SetHidden(true);
@@ -953,8 +984,8 @@ public:
 			ImGui::EndMenu();
 		}
 
-		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(windowWidth, maxHeight));
-		if (ImGui::BeginMenu("Color Selection")) {
+		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(maxWidth, maxHeight));
+		if (ImGui::BeginMenu(isTouchscreen ? "Colors" : "Color Selection")) {
 			open = true;
 
 			minPercentage = Settings::settings.GetColorSelection().minPercentage * 100;
@@ -1031,7 +1062,8 @@ public:
 			ImGui::EndMenu();
 		}
 
-		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(windowWidth, maxHeight));
+		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(maxWidth, maxHeight));
+#ifndef __ANDROID__
 		if (ImGui::BeginMenu("Device")) {
 			open = true;
 
@@ -1104,9 +1136,36 @@ public:
 
 			ImGui::EndMenu();
 		}
+#else
+		if (HDR::Capable) {
+			if (ImGui::BeginMenu("Display")) {
+				open = true;
+				
+				hdr = Settings::settings.GetHdr();
+				if (ImGui::MenuItem("HDR?", nullptr, &hdr)) {
+					if (onHdrChanged)
+						onHdrChanged(hdr);
+				}
 
-		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(windowWidth, maxHeight));
-		if (ImGui::BeginMenu("LightPack", lightPack.IsActive())) {
+				if (!hdr) ImGui::BeginDisabled();
+				ImGui::SeparatorText("Colorspace");
+				colorspace = Settings::settings.GetColorspace();
+				for (const auto &option: colorspaces) {
+					bool selected = option == colorspace;
+					if (ImGui::MenuItem(option.c_str(), nullptr, &selected)) {
+						if (onColorspaceChanged)
+							onColorspaceChanged(option);
+					}
+				}
+				if (!hdr) ImGui::EndDisabled();
+
+				ImGui::EndMenu();
+			}
+		}
+#endif
+
+		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(maxWidth, maxHeight));
+		if (!isTouchscreen && ImGui::BeginMenu("LightPack", lightPack.IsActive())) {
 			open = true;
 
 			if (ImGui::BeginMenu("LightPack Visualization Type", lightPack.IsActive())) {
@@ -1203,9 +1262,9 @@ public:
 			ImGui::EndMenu();
 		}
 
-		if (auto height = ImGui::GetFrameHeight(); height != this->height) {
+		if (auto height = ImGui::GetFrameHeight(); height + safeAreaPadding != context.GetYOffset()) {
 			this->height = height;
-			context.SetYOffset(height);
+			context.SetYOffset(safeAreaPadding + height);
 		}
 
 		ImGui::EndMenuBar();
@@ -1215,7 +1274,9 @@ public:
 	}
 
 	void OnDestroy() {
+#ifndef __ANDROID__
 		NFD_Quit();
+#endif
 	}
 
 	const int &GetHeight() const { return height; }
@@ -1324,6 +1385,14 @@ public:
 	void SetOnUiGammaChanged(std::function<void(float)> f) { onUiGammaChanged = f; }
 	void SetOnUiContrastChanged(std::function<void(float)> f) { onUiContrastChanged = f; }
 	void SetOnUiBrightnessChanged(std::function<void(float)> f) { onUiBrightnessChanged = f; }
+
+	void SetOnHdrChanged(std::function<void(bool)> f) { onHdrChanged = f; }
+
+	void SetFileOpenFunc(std::function<void()> f) { fileOpenFunc = f; }
+
+	void SetOnColorspaceChanged(std::function<void(std::string)> f) { onColorspaceChanged = f; }
+
+	void AddColorspace(std::string &&colorspace) { colorspaces.emplace_back(std::move(colorspace)); }
 
 private:
 	int windowWidth = 0, windowHeight = 0;
@@ -1511,6 +1580,8 @@ private:
 	std::function<void(float)> onUiGammaChanged;
 	std::function<void(float)> onUiContrastChanged;
 	std::function<void(float)> onUiBrightnessChanged;
+	std::function<void(bool)> onHdrChanged;
+	std::function<void(std::string)> onColorspaceChanged;
 
 	std::function<void()> onResetRotation;
 	std::function<void()> onClearBlurFbo;
@@ -1519,6 +1590,8 @@ private:
 
 	std::function<void()> onQuit;
 	std::function<void()> onResetWindow;
+
+	std::function<void()> fileOpenFunc;
 
 	float scale = 1.0f;
 	float lastScale = 1.0f;
@@ -1543,4 +1616,11 @@ private:
 	float uiGamma = Settings::settings.GetUiGamma();
 	float uiContrast = Settings::settings.GetUiContrast();
 	float uiBrightness = Settings::settings.GetUiBrightness();
+
+	float safeAreaPadding = 0.0f;
+	bool isTouchscreen = false;
+	bool hdr = Settings::settings.GetHdr();
+
+	std::vector<std::string> colorspaces;
+	std::string colorspace = Settings::settings.GetColorspace();
 };

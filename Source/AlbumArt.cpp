@@ -29,6 +29,8 @@ AlbumArt::~AlbumArt() {
 }
 
 void AlbumArt::OnInit(int windowWidth, int windowHeight, float scale) {
+	this->windowWidth = windowWidth;
+	this->windowHeight = windowHeight;
 	this->scale = scale;
 	radius *= scale;
 
@@ -69,6 +71,9 @@ void AlbumArt::OnInit(int windowWidth, int windowHeight, float scale) {
 }
 
 void AlbumArt::OnResize(int windowWidth, int windowHeight, float scale) {
+	this->windowWidth = windowWidth;
+	this->windowHeight = windowHeight;
+
 	if (this->scale != scale) {
 		// FIXME: will floating point precision errors accumulate here?
 		radius /= this->scale;
@@ -611,8 +616,8 @@ void AlbumArt::LoadFromSurface(SDL_Surface *surface, std::filesystem::path path,
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 	albumWidth = surface->w;
 	albumHeight = surface->h;
@@ -660,7 +665,13 @@ void AlbumArt::LoadFromSurface(SDL_Surface *surface, std::filesystem::path path,
 		}
 	}
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, bpp == 4 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, pixels);
+	GLint previousUnpackAlignment = 0;
+	glGetIntegerv(GL_UNPACK_ALIGNMENT, &previousUnpackAlignment);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // disable byte-alignment restriction
+
+	glTexImage2D(GL_TEXTURE_2D, 0, bpp == 4 ? GL_RGBA : GL_RGB, surface->w, surface->h, 0, bpp == 4 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, pixels);
+
+	glPixelStorei(GL_UNPACK_ALIGNMENT, previousUnpackAlignment);
 
 	if (!scaled) {
 		// lastSurface is the last surface
@@ -723,8 +734,11 @@ bool AlbumArt::Load(const std::filesystem::path &fileName, const std::filesystem
 		// If we're in a different path than the last file,
 		// reset the hashes
 		if (parentPath != lastParentPath) {
-			lastHash = 0;
-			lastEmbeddedHash = 0;
+			if (!lastParentPath.empty()) {
+				lastHash = 0;
+				lastEmbeddedHash = 0;
+				lastEmbeddedLength = 0;
+			}
 			lastParentPath = parentPath;
 		}
 		currentFile = FindArt(parentPath, fileName);
@@ -785,22 +799,33 @@ bool AlbumArt::LoadEmbedded() {
 }
 
 bool AlbumArt::Load(const std::string &mimeType, const void *data, std::size_t length, bool force) {
-	auto hash = hash_32_fnv1a_const(reinterpret_cast<const char *>(data), length);
-	if (!force && hash == lastEmbeddedHash) {
-		LogDebug("Embedded art has already been loaded for this album");
-		albumLoaded = true;
-		albumWidth = lastWidth;
-		albumHeight = lastHeight;
-		std::unique_lock lock(histogramMutex);
-		UpdateBin(true);
-		return true;
-	} else if (hash != lastEmbeddedHash) {
+	const auto load = [this, &mimeType, &data, &length](std::uint32_t hash) {
 		delete[] embeddedData;
 		embeddedData = new uint8_t[length];
 		memcpy(embeddedData, data, length);
 		embeddedDataLength = length;
 
 		lastEmbeddedHash = hash;
+		lastEmbeddedLength = length;
+	};
+
+	// Check if our lengths differ first
+	if (force || length != lastEmbeddedLength) {
+		load(hash_32_fnv1a_const(reinterpret_cast<const char *>(data), length));
+	} 
+	// Then check if our hashes differ
+	else if (auto hash = hash_32_fnv1a_const(reinterpret_cast<const char *>(data), length); hash != lastEmbeddedHash) {
+		load(hash);
+	} 
+	else {
+		LogDebug("Embedded art has already been loaded for this album");
+		albumLoaded = true;
+		albumWidth = lastWidth;
+		albumHeight = lastHeight;
+		std::unique_lock lock(histogramMutex);
+		UpdateBin(true);
+
+		return true;
 	}
 
 	auto file = SDL_IOFromMem(
@@ -1012,4 +1037,11 @@ void AlbumArt::Scale(bool force) {
 			LogDebug("Image resizing took " + std::to_string(Duration<Microseconds>(end - start).AsSeconds()) + " seconds");
 		}
 	});
+}
+
+bool AlbumArt::OnMouseClicked(const Vector2i &mousePos) {
+	if (mousePos.Distance({ windowWidth / 2.0f, windowHeight / 2.0f }) <= radius)
+		return true;
+
+	return false;
 }

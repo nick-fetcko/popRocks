@@ -68,8 +68,15 @@ public:
 				char *data = new char[dataSize];
 				inFile.read(data, dataSize);
 
+				constexpr auto strnstr = [](const char *left, const char *right, std::size_t size) {
+					for (std::size_t i = 0; i < size; ++i) {
+						if (left[i] != right[i]) return false;
+					}
+					return true;
+				};
+
 				// Are we XMP?
-				if (strstr(data, XMPNS.data())) {
+				if (strnstr(XMPNS.data(), data, XMPNS.size())) {
 					auto string = std::string(data + XMPNS.size() + 1, dataSize - (XMPNS.size() + 1));
 
 					Node xml;

@@ -8,6 +8,7 @@ uniform float timeDelta;
 uniform sampler2DMS texture;
 uniform vec2 screenSize;
 
+uniform int premultipliedAlpha;
 uniform int bgr;
 
 vec3 applyEffect(vec2 coords, vec2 screenSize);
@@ -28,6 +29,18 @@ void main() {
     vec4 sampled = vec4(sample1 + sample2 + sample3 + sample4) / 4.0f;
     
     sampled.w = clamp(sampled.w - (1.0 / intensity) * timeDelta, 0.0, 1.0);
+
+    if (premultipliedAlpha == 1) {
+        // Pre-multiply alpha
+        sampled.rgb *= sampled.w;
+
+        // Blend with background
+        sampled.rgb -= (1.0 - sampled.w);
+
+        // Now that we're blended,
+        // we don't need alpha.
+        sampled.w = 1.0f;
+    }
 
     outColor = sampled;
 

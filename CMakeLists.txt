@@ -82,6 +82,8 @@ set(_poprocks_cpp_headers
 	Source/MP4.hpp
 	Source/OGG.hpp
 	Source/OscilloscopeRenderer.hpp
+	Source/Pause.hpp
+	Source/Play.hpp
 	Source/Playlist.hpp
 	Source/Preset.hpp
 	Source/RecordAudioStream.h
@@ -91,6 +93,8 @@ set(_poprocks_cpp_headers
 	Source/Text.hpp
 	Source/Volume.hpp
 	Source/WV.hpp
+	Source/Platforms/Platform.hpp
+	Source/Platforms/Desktop.hpp
 	)
 set(_poprocks_cpp_sources
 	Source/AlbumArt.cpp
@@ -108,12 +112,25 @@ set(_poprocks_cpp_sources
 	Source/Mappings.cpp
 	Source/Metadata.cpp
 	Source/MP4.cpp
+	Source/RecordAudioStream.cpp
 	Source/Playlist.cpp
 	Source/Preset.cpp
 	Source/Settings.cpp
 	Source/Text.cpp
 	Source/Volume.cpp
+	Source/Platforms/Platform.cpp
+	Source/Platforms/Desktop.cpp
 	)
+
+if (WIN32)
+	list(APPEND _poprocks_cpp_headers Source/Platforms/Windows.hpp)
+	list(APPEND _poprocks_cpp_sources Source/Platforms/Windows.cpp)
+else()
+	list(APPEND _poprocks_cpp_headers Source/Platforms/Linux.hpp)
+	list(APPEND _poprocks_cpp_sources Source/Platforms/Linux.cpp)
+	list(APPEND _poprocks_cpp_headers Source/Platforms/Flatpak.hpp)
+	list(APPEND _poprocks_cpp_sources Source/Platforms/Flatpak.cpp)
+endif()
 
 # Beatroot source obtained from
 #   https://code.soundsoftware.ac.uk/projects/beatroot-vamp

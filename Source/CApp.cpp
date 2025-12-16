@@ -1,8 +1,5 @@
 #include "CApp.h"
 
-#ifdef WIN32
-#include <atlstr.h>
-#endif
 #include <filesystem>
 #include <map>
 #include <math.h>
@@ -10,25 +7,10 @@
 #include <sstream>
 #include <vector>
 #include <fstream>
-#ifdef WIN32
-#include <Windows.h>
-#include <shlobj.h>
-#endif
 
 #include <SDL3/SDL.h>
 #include <SDL3_image/SDL_image.h>
 #include <SDL3/SDL_vulkan.h>
-
-#include <bassape.h>
-#include <basswv.h>
-#include <bass_tta.h>
-
-#ifdef WIN32
-#include <basswasapi.h>
-#else
-#include <bassalac.h>
-#include <bass_aac.h>
-#endif
 
 #include <imgui.h>
 #include <backends/imgui_impl_sdl3.h>
@@ -45,108 +27,24 @@
 #include "ID3V2.hpp"
 #include "MP4.hpp"
 #include "OscilloscopeRenderer.hpp"
-#include "RecordAudioStream.h"
 
 using namespace MathsCPP;
 
 // =====================================================
-// ===================== Callbacks =====================
-// =====================================================
-#ifdef WIN32
-const std::map<DWORD, SDL_Keycode> KeyMap = {
-	{ VK_VOLUME_DOWN, SDLK_VOLUMEDOWN },
-	{ VK_VOLUME_UP, SDLK_VOLUMEUP },
-	{ VK_MEDIA_NEXT_TRACK, SDLK_MEDIA_NEXT_TRACK },
-	{ VK_MEDIA_PREV_TRACK, SDLK_MEDIA_PREVIOUS_TRACK },
-	{ VK_MEDIA_PLAY_PAUSE, SDLK_MEDIA_PLAY }
-};
-
-HHOOK keyboardHook = nullptr;
-LRESULT CALLBACK LowLevelKeyboardProc(
-	_In_ int    nCode,
-	_In_ WPARAM wParam,
-	_In_ LPARAM lParam
-) {
-	if (nCode < 0) return CallNextHookEx(keyboardHook, nCode, wParam, lParam);
-
-	auto hookStruct = reinterpret_cast<KBDLLHOOKSTRUCT *>(lParam);
-
-	// From https://learn.microsoft.com/en-us/windows/win32/winmsg/lowlevelkeyboardproc
-	// 
-	// If the hook procedure processed the message, it may return
-	// a nonzero value to prevent the system from passing the message
-	// to the rest of the hook chain or the target window procedure.
-	if (KeyMap.find(hookStruct->vkCode) != KeyMap.end()) {
-		if (wParam == WM_KEYDOWN) {
-			SDL_Event event;
-			event.type = SDL_EVENT_KEY_DOWN;
-			event.key.key = KeyMap.at(hookStruct->vkCode);
-			SDL_PushEvent(&event);
-		}
-		return 1;
-	} else return CallNextHookEx(keyboardHook, nCode, wParam, lParam);
-}
-
-// WASAPI input processing function
-DWORD CALLBACK InWasapiProc(void *buffer, DWORD length, void *user) {
-	//BASS_StreamPutData(CApp::App->GetStreamHandle(), buffer, length); // feed the data to the input stream
-	return 1; // continue recording
-}
-
-DWORD CALLBACK OutputWasapiProc(void *buffer, DWORD length, void *user) {
-	const auto app = reinterpret_cast<CApp *>(user);
-
-	std::unique_lock lock(app->GetStreamHandleMutex());
-
-	// Derived from https://forum.team-mediaportal.com/threads/music-gapless-playback.121377/post-1025539
-	DWORD c = 0;
-	if (BASS_ChannelIsActive(app->GetStreamHandle())) {
-		c = BASS_ChannelGetData(app->GetStreamHandle(), buffer, length);
-	} else if (auto next = app->GetNextStreamHandle(); next && BASS_ChannelIsActive(next)) {
-		// Immediately start adding new samples to the buffer
-		// for gapless playback
-		c = BASS_ChannelGetData(next, buffer, length);
-
-		if (!BASS_ChannelIsActive(next)) {
-			c |= BASS_STREAMPROC_END;
-
-			// Can't kill WASAPI from inside WASAPI,
-			// so we also have to do this on the next loop
-			app->StopExclusive();
-		} else {
-			// Update the UI on the next loop
-			app->AdvanceToNextTrack();
-		}
-
-	} else {
-		// Can't kill WASAPI from inside WASAPI,
-		// so we also have to do this on the next loop
-		app->StopExclusive();
-
-		return BASS_STREAMPROC_END;
-	}
-
-	lock.unlock();
-
-	if (app->GetControls().GetVolume().GetVolumeControl()) {
-		auto floatBuffer = reinterpret_cast<float *>(buffer);
-		const auto volume = app->GetControls().GetVolume().GetScaledVolume();
-		for (auto i = 0; i < (c & (~BASS_STREAMPROC_END)) / sizeof(float); ++i)
-			floatBuffer[i] *= volume;
-	}
-
-	return c;
-}
-#endif
-
-// =====================================================
 // ======================= CApp ========================
 // =====================================================
-CApp::CApp() : albumArt(context), controls(&albumArt), circleLine(12.0f), prng(time(nullptr))
+CApp::CApp() : albumArt(context), controls(&albumArt), circleLine(12.0f), prng(time(nullptr)), platform(PlatformFactory::Build(
 #ifdef WIN32
-	, dxgi(false)
+	"windows"
+#elif defined(__ANDROID__)
+	"android"
+#elif defined(USING_FLATPAK)
+	"flatpak"
+#else
+	"linux"
 #endif
-{
+	, this
+)) {
 	renderer = RendererFactory::Build(
 		Settings::settings.GetRenderer(),
 		&dynamicGain,
@@ -166,7 +64,7 @@ CApp::CApp() : albumArt(context), controls(&albumArt), circleLine(12.0f), prng(t
 void CApp::UpdateMaxBufferLength() {
 	auto length = std::max(fftLength, bufferLength) * channelInfo.chans;
 
-	if (length != maxLength) {
+	if (length != platform->GetMaxLength()) {
 		delete[] buffer;
 		buffer = new uint8_t[length * sizeof(float)];
 		memset(buffer, 0, length * sizeof(float));
@@ -176,7 +74,7 @@ void CApp::UpdateMaxBufferLength() {
 		renderer->SetBuffer(buffer, length);
 		resetGain = dynamicGain.reset;
 
-		maxLength = length;
+		platform->SetMaxLength(length);
 	}
 }
 
@@ -195,10 +93,8 @@ void CApp::SetBufferLength(std::size_t bufferLength) {
 
 	renderer->SetBufferLength(bufferLength, changed);
 
-#ifdef WIN32
-	if (listening && changed)
-		Listen(audioSink->loopback);
-#endif
+	if (platform->IsListening() && changed)
+		platform->Listen();
 }
 
 void CApp::SetFftLength(std::size_t length) {
@@ -270,55 +166,15 @@ float CApp::GetScale(SDL_Window *window, int *w, int *h) {
 	if (!h) h = &localH;
 
 	SDL_GetWindowSizeInPixels(window, w, h);
-
+	platform->SetSafeArea(window, *context, *w, *h);
+	safeAreaPadding = context->GetSafeArea().y;
 	scale = (virtualW == 0 ? 1.0f : static_cast<float>(*w) / virtualW);
 
-#ifdef WIN32
 	scale *= SDL_GetWindowDisplayScale(window);
-#endif
 
-	return scale;
-}
+	originalScale = scale;
 
-template <bool Output>
-int CApp::GetDeviceIndex(const std::string &device) {
-	int index = device.empty() ? -1 : 1;
-	bool found = false;
-
-	if constexpr (Output) {
-		BASS_DEVICEINFO info;
-		
-		for (; index != -1 && BASS_GetDeviceInfo(index, &info); ++index) {
-			if (strlen(info.driver) && strncmp(info.driver, device.c_str(), std::min(strlen(info.driver), device.size())) == 0) {
-				found = true;
-				break;
-			}
-		}
-	} else {
-#ifdef WIN32
-		BASS_WASAPI_DEVICEINFO info;
-
-		for (; index != -1 && BASS_WASAPI_GetDeviceInfo(index, &info); ++index) {
-			if (strncmp(info.id, device.c_str(), std::min(strlen(info.id), device.size())) == 0) {
-				found = true;
-				break;
-			}
-		}
-#endif
-	}
-
-	// Reset to default device if we can't find
-	// the selected device anymore
-	if (!found) {
-		index = -1;
-
-		if constexpr (Output)
-			Settings::settings.SetOutputDevice("");
-		else
-			Settings::settings.SetInputDevice("");
-	}
-
-	return index;
+	return platform->GetScale(scale);
 }
 
 inline void CApp::CacheBlurUniforms(Context::Shader &shader) {
@@ -336,6 +192,8 @@ inline void CApp::CacheBlurUniforms(Context::Shader &shader) {
 	shader.program.CacheUniformLocation("effectVerticalSpread");
 	shader.program.CacheUniformLocation("effectRotation");
 	shader.program.CacheUniformLocation("effectEnabled");
+	shader.program.CacheUniformLocation("bgr");
+	shader.program.CacheUniformLocation("premultipliedAlpha");
 }
 
 inline void CApp::SetEffect(const std::string &effect) {
@@ -374,7 +232,7 @@ inline void CApp::SetEffect(const std::string &effect) {
 	blurShader->program.Uniform1f("effectHorizontalSpread"_hash, Settings::settings.GetEffectHorizontalSpread());
 	blurShader->program.Uniform1f("effectVerticalSpread"_hash, Settings::settings.GetEffectVerticalSpread());
 	blurShader->program.Uniform1f("effectRotation"_hash, Settings::settings.GetEffectRotation());
-	blurShader->program.Uniform1f("effectEnabled"_hash, (playing || listening) ? 1.0f : 0.0f);
+	blurShader->program.Uniform1f("effectEnabled"_hash, (playing || platform->IsListening()) ? 1.0f : 0.0f);
 
 	context->Use("texture"_hash);
 }
@@ -398,7 +256,7 @@ void CApp::LoadRenderer(const std::string &rendererName) {
 		windowWidth,
 		windowHeight,
 		buffer,
-		maxLength,
+		platform->GetMaxLength(),
 		bufferLength
 	);
 
@@ -415,135 +273,23 @@ void CApp::SetVisualizerScale(float scale) {
 inline void CApp::SetHdr(bool enabled) {
 	int width = 0, height = 0;
 
-	// TODO: HDR in Linux
-#ifdef WIN32
-	HWND hwnd = NULL;
-#endif
-
 	if (HDR::Enabled != enabled) {
-#ifdef WIN32
-		hwnd = (HWND)SDL_GetPointerProperty(SDL_GetWindowProperties(sdlWindow), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
-#endif
 		SDL_GetWindowSize(sdlWindow, &width, &height);
 
 		if (blur) {
-			blurFbo = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension, enabled ? GL_RGBA16F : GL_RGBA);
-			lastFrame = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension, enabled ? GL_RGBA16F : GL_RGBA);
+			blurFbo = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension, platform->GetFboInternalFormat(enabled));
+			lastFrame = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension, platform->GetFboInternalFormat(enabled));
 		}
 
-		uiFbo = std::make_unique<MultisampledFramebufferObject>(windowWidth, windowHeight, enabled ? GL_RGBA16F : GL_RGBA);
+		uiFbo = std::make_unique<MultisampledFramebufferObject>(windowWidth, windowHeight, platform->GetFboInternalFormat(enabled), platform->IsUiInverted());
 
-		updateUi = true;
+		updateUi += 1;
 	}
 
-	if (HDR::Enabled && !enabled) {
-#if VULKAN
-		vulkan.SetFormat(VK_FORMAT_R8G8B8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR, GL_RGBA8);
-		vulkan.OnResize(width, height);
-
-		if (context)
-			context->SetIdentity(glm::ortho(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height)));
-#else
-		dxgi.OnDestroy();
-
-		if (blurFbo)
-			blurFbo->SetDefaultFramebuffer(0);
-		if (lastFrame)
-			lastFrame->SetDefaultFramebuffer(0);
-		if (uiFbo)
-			uiFbo->SetDefaultFramebuffer(0);
-
-		if (auto font = controls.GetFont())
-			font->SetDefaultFramebuffer(0);
-		if (auto outlineFont = controls.GetOutlineFont())
-			outlineFont->SetDefaultFramebuffer(0);
-
-		if (context) {
-			context->SetIdentity(glm::ortho(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f));
-			context->Apply();
-		}
-#endif
-
-#if !VULKAN
-		ImGui_ImplOpenGL3_Shutdown();
-		ImGui_ImplSDL3_Shutdown();
-
-		// FIXME: It appears that calling swapChain->Present(1, 0)
-		//        prevents us from restoring the window's original
-		//        OpenGL context.
-		//
-		//        Destroying the window is only a workaround until
-		//        a better solution is found.
-		SDL_DestroyWindow(sdlWindow);
-
-		SDL_PropertiesID props = SDL_CreateProperties();
-
-		SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "popRocks");
-		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, windowWidth);
-		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, windowHeight);
-		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, Settings::settings.GetWindowX());
-		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, Settings::settings.GetWindowY());
-		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_OPENGL_BOOLEAN, true);
-		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
-		sdlWindow = SDL_CreateWindowWithProperties(
-			props
-		);
-
-		SDL_GL_MakeCurrent(sdlWindow, openGlContext);
-
-		// Setup Platform/Renderer backends
-		ImGui_ImplSDL3_InitForOpenGL(sdlWindow, openGlContext);
-		ImGui_ImplOpenGL3_Init();
-#endif
-		//SDL_GL_SetSwapInterval(0);
-	} else if (!HDR::Enabled && enabled) {
-#ifdef WIN32
-		HWND hwnd = (HWND)SDL_GetPointerProperty(SDL_GetWindowProperties(sdlWindow), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
-		int width = 0, height = 0;
-		SDL_GetWindowSize(sdlWindow, &width, &height);
-#endif
-		if (blur) {
-			blurFbo = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension, enabled ? GL_RGBA16F : GL_RGBA);
-			lastFrame = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension, enabled ? GL_RGBA16F : GL_RGBA);
-		}
-
-		uiFbo = std::make_unique<MultisampledFramebufferObject>(windowWidth, windowHeight, enabled ? GL_RGBA16F : GL_RGBA);
-
-#if VULKAN
-		vulkan.SetFormat(
-			VK_FORMAT_R16G16B16A16_SFLOAT,
-			VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT,
-			GL_RGBA16F
-		);
-		vulkan.OnResize(width, height);
-#else
-#ifdef WIN32
-		dxgi.OnCreate(hwnd, width, height);
-		dxgi.OnResize(width, height);
-#endif
-#endif
-
-		if (context) {
-#if VULKAN
-			context->SetIdentity(glm::ortho(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height)));
-#else
-			context->SetIdentity(glm::ortho(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f));
-#endif
-			context->Apply();
-		}
-
-		if (blurFbo)
-			blurFbo->SetDefaultFramebuffer(interop->GetFramebuffer());
-		if (lastFrame)
-			lastFrame->SetDefaultFramebuffer(interop->GetFramebuffer());
-		if (uiFbo)
-			uiFbo->SetDefaultFramebuffer(interop->GetFramebuffer());
-
-		if (auto font = controls.GetFont())
-			font->SetDefaultFramebuffer(interop->GetFramebuffer());
-		if (auto outlineFont = controls.GetOutlineFont())
-			outlineFont->SetDefaultFramebuffer(interop->GetFramebuffer());
-	}
+	if (HDR::Enabled && !enabled)
+		platform->SetHdr(enabled, nullptr, width, height);
+	else if (!HDR::Enabled && enabled)
+		platform->SetHdr(enabled, nullptr, width, height);
 }
 
 void CApp::LoadShaders() {
@@ -575,9 +321,9 @@ void CApp::LoadShaders() {
 	context->AddShader(
 		Utils::GetResource("vertex-blur.glsl"),
 		std::vector<std::filesystem::path>{
-		Utils::GetResource("fragment-blur.glsl"),
+			Utils::GetResource("fragment-blur.glsl"),
 			Utils::GetResource(std::string("Effects/fragment-") + Settings::settings.GetEffect() + ".glsl")
-	},
+		},
 		"blur"_hash
 	);
 	context->AddShader(
@@ -606,10 +352,9 @@ void CApp::LoadShaders() {
 			shader.program.Uniform1f("effectHorizontalSpread"_hash, Settings::settings.GetEffectHorizontalSpread());
 			shader.program.Uniform1f("effectVerticalSpread"_hash, Settings::settings.GetEffectVerticalSpread());
 			shader.program.Uniform1f("effectRotation"_hash, Settings::settings.GetEffectRotation());
-			shader.program.Uniform1f("effectEnabled"_hash, (playing || listening) ? 1.0f : 0.0f);
-
-			shader.program.CacheUniformLocation("bgr");
+			shader.program.Uniform1f("effectEnabled"_hash, (playing || platform->IsListening()) ? 1.0f : 0.0f);
 			shader.program.Uniform1i("bgr"_hash, 0);
+			shader.program.Uniform1i("premultipliedAlpha"_hash, platform->IsAlphaPremultiplied());
 		}
 
 		if (hash == "rotate"_hash) {
@@ -617,8 +362,8 @@ void CApp::LoadShaders() {
 			shader.program.CacheUniformLocation("radius");
 			shader.program.CacheUniformLocation("multiplier");
 			shader.program.Uniform1f("multiplier"_hash, HDR::WhiteLevel * HDR::Headroom);
-			shader.program.CacheUniformLocation("normalize");
-			shader.program.Uniform1i("normalize"_hash, 0);
+			shader.program.CacheUniformLocation("normalized");
+			shader.program.Uniform1i("normalized"_hash, 0);
 
 			shader.program.CacheUniformLocation("bgr");
 			shader.program.Uniform1i("bgr"_hash, 0);
@@ -666,79 +411,59 @@ void CApp::LoadShaders() {
 }
 
 void CApp::UpdateHdrProperties() {
-#ifdef WIN32
-	// SDL does NOT update white level or headroom
-	// when the window moves between monitors with 
-	// different HDR properties on Windows
-	int adapterIndex = 0;
-	int outputIndex = 0;
+	platform->UpdateHdrProperties();
 
-	if (!SDL_GetDXGIOutputInfo(SDL_GetDisplayForWindow(sdlWindow),
-		&adapterIndex, &outputIndex)) {
-		LogError(
-			"SDL_DXGIGetOutputInfo() failed: ",
-			SDL_GetError()
-		);
+	if (context) {
+		context->With("blur"_hash, [this](Context::Shader &shader) {
+			shader.program.Uniform1i("premultipliedAlpha"_hash, platform->IsAlphaPremultiplied());
+		});
+		context->With("rotate"_hash, [](Context::Shader &shader) {
+			shader.program.Uniform1f("multiplier"_hash, HDR::Enabled ? HDR::WhiteLevel * HDR::Headroom : 1.0f);
+		});
+		context->With("texture"_hash, [](Context::Shader &shader) {
+			shader.program.Uniform1f("multiplier"_hash, HDR::Enabled ? HDR::WhiteLevel * HDR::Headroom : 1.0f);
+		});
 	}
-	if (auto properties = dxgi.GetHdrProperties(outputIndex)) {
-		auto &[enabled, whitePoint, headroom] = *properties;
-		
-#else
-		auto displayId = SDL_GetDisplayForWindow(sdlWindow);
-		SDL_PropertiesID displayProps = SDL_GetDisplayProperties(
-			displayId
-		);
-		SDL_PropertiesID windowProps = SDL_GetWindowProperties(sdlWindow);
-		bool enabled = SDL_GetBooleanProperty(displayProps, SDL_PROP_DISPLAY_HDR_ENABLED_BOOLEAN, false);
-		float whitePoint = SDL_GetFloatProperty(windowProps, SDL_PROP_WINDOW_SDR_WHITE_LEVEL_FLOAT, 1.0f);
-		float headroom = SDL_GetFloatProperty(windowProps, SDL_PROP_WINDOW_HDR_HEADROOM_FLOAT, 1.0f);
 
-		enabled |= (headroom > 1.01);
-#endif
-		LogDebug("HDR properties changed: ");
-		LogDebug("\tEnabled: ", enabled ? "Yes" : "No");
-		LogDebug("\tWhitePoint: ", whitePoint);
-		LogDebug("\tHeadroom: ", headroom);
-
-		SetHdr(enabled);
-
-		HDR::Enabled = enabled;
-		HDR::WhiteLevel = whitePoint;
-		HDR::Headroom = headroom;
-
-		if (context) {
-			context->With("rotate"_hash, [this, &whitePoint, &headroom](Context::Shader &shader) {
-				shader.program.Uniform1f("multiplier"_hash, HDR::Enabled ? HDR::WhiteLevel * HDR::Headroom : 1.0f);
-			});
-			context->With("texture"_hash, [this, &whitePoint, &headroom](Context::Shader &shader) {
-				shader.program.Uniform1f("multiplier"_hash, HDR::Enabled ? HDR::WhiteLevel * HDR::Headroom : 1.0f);
-			});
-		}
-
-		if (HDR::Enabled) {
-			if (!Settings::settings.GetHdrWhitePoint())
-				Settings::settings.SetHdrWhitePoint(HDR::WhiteLevel);
-			else
-				HDR::SetWhiteLevel(*Settings::settings.GetHdrWhitePoint());
-		}
-
-		// Prefer adaptive sync over regular vsync
-		if (!HDR::Enabled && !SDL_GL_SetSwapInterval(-1))
-			SDL_GL_SetSwapInterval(1);
+	if (HDR::Enabled) {
+		if (!Settings::settings.GetHdrWhitePoint())
+			Settings::settings.SetHdrWhitePoint(HDR::WhiteLevel);
 		else
-			SDL_GL_SetSwapInterval(0);
-
-		// Update our visualizer color
-		// to reflect any changes to white point
-		// and headroom
-		if (!albumArt.Loaded() || overrideColor)
-			OnColorChanged(visColor, true);
-#ifdef WIN32
+			HDR::SetWhiteLevel(*Settings::settings.GetHdrWhitePoint());
 	}
-#endif
+
+	// Prefer adaptive sync over regular vsync
+	if (!HDR::Enabled && !SDL_GL_SetSwapInterval(-1))
+		SDL_GL_SetSwapInterval(1);
+	else
+		SDL_GL_SetSwapInterval(0);
+
+	// Update our visualizer color
+	// to reflect any changes to white point
+	// and headroom
+	if (!albumArt.Loaded() || overrideColor)
+		OnColorChanged(visColor, true);
 }
 
 void CApp::OnInit() {
+	Logger::SetAppName("popRocks");
+
+#ifdef __linux__
+	std::ifstream boardVendor("/sys/devices/virtual/dmi/id/board_vendor");
+	std::string vendor;
+
+	std::ifstream boardName("/sys/devices/virtual/dmi/id/board_name");
+	std::string name;
+
+	if (boardVendor && boardName) {
+		boardVendor >> vendor;
+		boardName >> name;
+
+		if (vendor == "Valve" && (name == "Jupiter" /* Steam Deck LCD*/ || name == "Galileo" /* Steam Deck OLED */))
+			steamDeck = true;
+	}
+#endif
+
 	// https://tgui.eu/tutorials/latest-stable/dpi-scaling/
 	//SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
 
@@ -762,8 +487,7 @@ void CApp::OnInit() {
 	LogDebug(stream.str());
 	*/
 
-	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
-	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
+	platform->SetGlAttributes();
 
 	//SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
@@ -771,17 +495,15 @@ void CApp::OnInit() {
 	// For some reason we need to explicitly
 	// request an 8-bit alpha channel on certain
 	// OpenGL implementations (namely VBoxSVGA's)
-	/*
-	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 16);
-	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 16);
-	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 16);
-	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 16);
-	SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE, 64); // For RGBA16F
-	SDL_GL_SetAttribute(SDL_GL_FLOATBUFFERS, 1);
-	*/
+	//SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+	//SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+	//SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
+	//SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE, 64); // For RGBA16F
+	//SDL_GL_SetAttribute(SDL_GL_FLOATBUFFERS, 1);
+	//SDL_GL_SetAttribute(SDL_GL_FRAMEBUFFER_SRGB_CAPABLE, 1);
+
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
 	windowWidth = Settings::settings.GetWindowWidth();
 	windowHeight = Settings::settings.GetWindowHeight();
@@ -793,11 +515,8 @@ void CApp::OnInit() {
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, windowHeight);
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, Settings::settings.GetWindowX());
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, Settings::settings.GetWindowY());
-#if VULKAN
-	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_VULKAN_BOOLEAN, true);
-#else
-	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_OPENGL_BOOLEAN, true);
-#endif
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_VULKAN_BOOLEAN, platform->GetVulkanProperty());
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_OPENGL_BOOLEAN, platform->GetOpenGlProperty());
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HIGH_PIXEL_DENSITY_BOOLEAN, true);
 
@@ -805,52 +524,18 @@ void CApp::OnInit() {
 		props
 	);
 
-#if VULKAN
-	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_VULKAN_BOOLEAN, false);
-	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_OPENGL_BOOLEAN, true);
-	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HIDDEN_BOOLEAN, true);
+	platform->OpenOpenGlWindow(props);
 
-	openGlWindow = SDL_CreateWindowWithProperties(
-		props
-	);
-#endif
-
-#ifdef WIN32
-	int adapterIndex = 0;
-	int outputIndex = 0;
-
-	if (!SDL_GetDXGIOutputInfo(
-		SDL_GetDisplayForWindow(
-#if VULKAN
-			openGlWindow
-#else
-			sdlWindow
-#endif
-		),
-		&adapterIndex, &outputIndex)) {
-		LogError(
-			"SDL_DXGIGetOutputInfo() failed: ",
-			SDL_GetError()
-		);
-	}
-#endif
-	if ((openGlContext = SDL_GL_CreateContext(
-#if VULKAN
-		openGlWindow
-#else
-		sdlWindow
-#endif
-	))) {
-		LogDebug("gladLoadGL() returned ", gladLoadGL());
+	if (platform->CreateOpenGlContext()) {
+		LogDebug("gladLoadGL() returned ", platform->LoadGlad());
 
 		context = std::make_unique<Context>();
 
 		LoadShaders();
 
 		Interop::InitArgs args;
-#if WIN32
-		args.adapterIndex = adapterIndex;
-#endif
+
+		args.adapterIndex = platform->GetAdapterIndex();
 		args.width = windowWidth;
 		args.height = windowHeight;
 		args.surfaceCallback = [&](void *instance) {
@@ -862,34 +547,7 @@ void CApp::OnInit() {
 			return reinterpret_cast<void*>(surface);
 		};
 
-#ifdef WIN32
-		dxgi.OnInit(args);
-#endif
-
-#if VULKAN
-		vulkan.OnInit(args);
-
-		const auto format = vulkan.GetSwapchainImageFormat();
-		if ((format > 29 && format < 37) || (format > 43 && format < 51)) {
-			context->With("texture"_hash, [this] (Context::Shader &shader) {
-				shader.program.Uniform1i("bgr"_hash, 1);
-			});
-			context->With("rotate"_hash, [this] (Context::Shader &shader) {
-				shader.program.Uniform1i("bgr"_hash, 1);
-			});
-			context->With("blur"_hash, [this] (Context::Shader &shader) {
-				shader.program.Uniform1i("bgr"_hash, 1);
-			});
-			context->With("basic"_hash, [this] (Context::Shader &shader) {
-				shader.program.Uniform1i("bgr"_hash, 1);
-			});
-			context->With("blit"_hash, [this] (Context::Shader &shader) {
-				shader.program.Uniform1i("bgr"_hash, 1);
-			});
-
-			bgr = true;
-		}
-#endif
+		platform->OnInit(args, *context);
 
 		UpdateHdrProperties();
 
@@ -947,6 +605,9 @@ void CApp::OnInit() {
 			Settings::settings.SetPulseBackground(pulseBackground);
 
 			this->pulseBackground = pulseBackground;
+			context->With("blur"_hash, [this](Context::Shader &shader) {
+				shader.program.Uniform1i("premultipliedAlpha"_hash, platform->IsAlphaPremultiplied());
+			});
 
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
@@ -1040,7 +701,7 @@ void CApp::OnInit() {
 				for (auto &detector : beatDetectors)
 					detector.Cancel();
 
-				auto stream = OpenWithFlags(loadedFile, loadedFileExtension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+				auto stream = platform->OpenWithFlags(loadedFile, loadedFileExtension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
 
 				// Disassociate the stream from a device,
 				// so it doesn't get freed on BASS_Free()
@@ -1100,6 +761,8 @@ void CApp::OnInit() {
 			albumArt.SetRadius(radius);
 			albumArt.Scale(true);
 			controls.GetVolume().SetRadius(radius);
+			controls.GetPause().OnResize(radius);
+			controls.GetPlay().OnResize(radius);
 		});
 		menu.SetOnLineWidthChanged([this](float lineWidth) {
 			if (auto lineRenderer = dynamic_cast<LineRenderer *>(renderer))
@@ -1128,58 +791,50 @@ void CApp::OnInit() {
 		});
 		menu.SetOnListeningChanged([this](bool listening) {
 			if (listening)
-				Listen();
+				platform->Listen();
 			else
-				StopListening();
+				platform->StopListening();
 
 			Settings::settings.SetListening(listening);
 		});
 		menu.SetOnLoopbackChanged([this](bool loopback) {
 			if (loopback)
-				Listen(true);
+				platform->Listen(true);
 			else
-				StopListening();
+				platform->StopListening();
 
 			Settings::settings.SetLoopback(loopback);
 		});
 		menu.SetOnOutputDeviceChanged([this](const std::string &outputDevice) {
 			Settings::settings.SetOutputDevice(outputDevice);
 
-			if (listening && Settings::settings.GetLoopback())
-				Listen(true);
+			if (platform->IsListening() && Settings::settings.GetLoopback())
+				platform->Listen(true);
 			else {
 				auto pos = streamHandle ? BASS_ChannelBytes2Seconds(
 					streamHandle,
 					BASS_ChannelGetPosition(streamHandle, BASS_POS_BYTE)
 				) : 0.0;
 
-#ifdef WIN32
-				if (controls.GetExclusiveIndicator().IsExclusive() && Open(loadedFile, loadedFileExtension, true, streamHandle, true)) {
-					SeekTo(pos);
-					BASS_WASAPI_Start();
-					playing = true;
-				} else {
-#endif
+				if (!platform->LoadExclusive(pos)) {
 					// Free the old device
 					BASS_Free();
 
 					// Initialize the new device
-					BASS_Init(GetDeviceIndex<true>(outputDevice), freq, 0, 0, nullptr);
+					BASS_Init(platform->GetDeviceIndex<true>(outputDevice), freq, 0, 0, nullptr);
 
 					Open(loadedFile, loadedFileExtension, false, streamHandle, true);
 
 					SeekTo(pos);
 					TogglePlaying();
-#ifdef WIN32
 				}
-#endif
 			}
 		});
 		menu.SetOnInputDeviceChanged([this](const std::string &inputDevice) {
 			Settings::settings.SetInputDevice(inputDevice);
 
-			if (listening && !Settings::settings.GetLoopback())
-				Listen();
+			if (platform->IsListening() && !Settings::settings.GetLoopback())
+				platform->Listen();
 		});
 		menu.SetOnEffectChanged([this](const std::string &effect) {
 			SetEffect(effect);
@@ -1373,6 +1028,7 @@ void CApp::OnInit() {
 		});
 		menu.SetOnAutoFadeSpeedChanged([this](float autoFadeSpeed) {
 			Settings::settings.SetAutoFadeSpeed(autoFadeSpeed);
+			controls.SetAutoFadeSpeed(autoFadeSpeed);
 		});
 		menu.SetOnExclusiveChanged([this](bool exclusive) {
 			ToggleExclusive();
@@ -1444,11 +1100,7 @@ void CApp::OnInit() {
 			);
 
 			albumArt.Load(
-#ifdef WIN32
-				loadedFile.wstring(),
-#else
-				loadedFile.u8string(),
-#endif
+				platform->GetNativePath(loadedFile),
 				originalPath
 			);
 
@@ -1481,9 +1133,11 @@ void CApp::OnInit() {
 			this->uiBrightness = uiBrightness;
 		});
 
+		platform->AddMenuCallbacks(&menu);
+
 		menu.OnColorChanged(visColor);
 #endif
-	} else LogError("Could not create OpenGL context: ", SDL_GetError());
+	} else LogError("Could not create OpenGL context: ", platform->GetOpenGlContextError());
 
 	LogDebug("OpenGL Version: ", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
 
@@ -1504,37 +1158,9 @@ void CApp::OnInit() {
 	// This updates the scale variable for us
 	GetScale(sdlWindow, &windowWidth, &windowHeight);
 
-#ifdef WIN32
-	if (!BASS_PluginLoad("bassflac.dll", 0))
-		LogError("Could not load FLAC plugin! Error code ", BASS_ErrorGetCode());
-	if (!BASS_PluginLoad("bassape.dll", 0))
-		LogError("Could not load APE plugin! Error code ", BASS_ErrorGetCode());
-	if (!BASS_PluginLoad("basswv.dll", 0))
-		LogError("Could not load WavPack plugin! Error code ", BASS_ErrorGetCode());
-#elif defined(USING_FLATPAK)
-	if (!BASS_PluginLoad((Utils::GetResourceFolder().parent_path() / "libbassflac.so").u8string().c_str(), 0))
-		LogError("Could not load FLAC plugin! Error code ", BASS_ErrorGetCode());
-	if (!BASS_PluginLoad((Utils::GetResourceFolder().parent_path() / "libbassape.so").u8string().c_str(), 0))
-		LogError("Could not load APE plugin! Error code ", BASS_ErrorGetCode());
-	if (!BASS_PluginLoad((Utils::GetResourceFolder().parent_path() / "libbasswv.so").u8string().c_str(), 0))
-		LogError("Could not load WavPack plugin! Error code ", BASS_ErrorGetCode());
-	if (!BASS_PluginLoad((Utils::GetResourceFolder().parent_path() / "libbassalac.so").u8string().c_str(), 0))
-		LogError("Could not load ALAC plugin! Error code ", BASS_ErrorGetCode());
-	if (!BASS_PluginLoad((Utils::GetResourceFolder().parent_path() / "libbass_aac.so").u8string().c_str(), 0))
-		LogError("Could not load AAC plugin! Error code ", BASS_ErrorGetCode());
-#else
-	if (!BASS_PluginLoad("./libbassflac.so", 0))
-		LogError("Could not load FLAC plugin! Error code ", BASS_ErrorGetCode());
-	if (!BASS_PluginLoad("./libbassape.so", 0))
-		LogError("Could not load APE plugin! Error code ", BASS_ErrorGetCode());
-	if (!BASS_PluginLoad("./libbasswv.so", 0))
-		LogError("Could not load WavPack plugin! Error code ", BASS_ErrorGetCode());
-	if (!BASS_PluginLoad("./libbassalac.so", 0))
-		LogError("Could not load ALAC plugin! Error code ", BASS_ErrorGetCode());
-	if (!BASS_PluginLoad("./libbass_aac.so", 0))
-		LogError("Could not load AAC plugin! Error code ", BASS_ErrorGetCode());
-#endif
-	if (BASS_Init(GetDeviceIndex<true>(Settings::settings.GetOutputDevice()), freq, 0, 0, nullptr) != TRUE)
+	platform->LoadBassPlugins();
+
+	if (BASS_Init(platform->GetDeviceIndex<true>(Settings::settings.GetOutputDevice()), freq, 0, 0, nullptr) != TRUE)
 		LogError("Could not initialize audio device!");
 
 	lightPack.OnInit();
@@ -1544,11 +1170,7 @@ void CApp::OnInit() {
 #endif
 	renderer->OnInit(windowWidth, windowHeight);
 	albumArt.AddColorChangeListener(this);
-	controls.OnInit(windowWidth, windowHeight, *context, scale
-#ifdef WIN32
-		, HDR::Enabled ? dxgi.GetFramebuffer() : 0
-#endif
-	);
+	controls.OnInit(windowWidth, windowHeight, *context, scale, platform->GetDefaultFramebuffer());
 
 	controls.SetFadeCallback([this](bool in) {
 		if (in) SDL_ShowCursor();
@@ -1560,89 +1182,14 @@ void CApp::OnInit() {
 	OnResize(windowWidth, windowHeight, scale);
 
 	if (Settings::settings.GetListening())
-		Listen();
+		platform->Listen();
 	else if (Settings::settings.GetLoopback())
-		Listen(true);
+		platform->Listen(true);
 }
 
  CApp::~CApp() {
 	 delete renderer;
 	 delete[] buffer;
-#ifdef WIN32
-	 delete audioSink;
-#endif
-
-	 if(in) fftwf_free(in);
-	 if(out) fftwf_free(out);
-	 if (plan) fftwf_destroy_plan(plan);
-}
-
- inline void CApp::StopListening() {
-	 if (listening) {
-#ifdef WIN32
-		audioSink->done = true;
-#endif
-		if (listenThread.joinable())
-			listenThread.join();
-
-		fftwf_free(in);
-		fftwf_free(out);
-		fftwf_destroy_plan(plan);
-#ifdef WIN32
-		delete audioSink;
-#endif
-
-		listening = false;
-	 } 
-}
-
-void CApp::Listen(bool loopback) {
-	StopListening();
-	//audioSink = new MyAudioSink();
-	//CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)RecordAudioStream, audioSink, 0, NULL);
-
-	SetGain(1.0f);
-
-	in = reinterpret_cast<float*>(fftwf_malloc(sizeof(float) * maxLength * 2));
-    out = reinterpret_cast<fftwf_complex*>(fftwf_malloc(sizeof(fftwf_complex) * maxLength * 2));
-	plan = fftwf_plan_dft_r2c_1d(static_cast<int>(maxLength * 2), in, out, FFTW_MEASURE);
-
-	//streamHandle = BASS_StreamCreate(48000, 2, BASS_SAMPLE_FLOAT, STREAMPROC_PUSH, NULL);
-	//listening = true;
-	//WASAPIPROC *proc = CApp::App.InWasapiProc;
-	//bool success = BASS_WASAPI_Init(-2, 48000, 2, BASS_WASAPI_EVENT, 1024, 0, InWasapiProc, NULL);
-	//std::cout << success << std::endl;
-	//BASS_ChannelSetAttribute(streamHandle, BASS_ATTRIB_MUSIC_VOL_GLOBAL, 0);
-	//BASS_ChannelSetAttribute(streamHandle, BASS_ATTRIB_VOL, 0);
-	//BASS_ChannelPlay(streamHandle, false);
-
-#ifdef WIN32
-	audioSink = new MyAudioSink(maxLength * 4 /* we're assuming stereo, for now */);
-	audioSink->loopback = loopback;
-
-	if (loopback) {
-		BASS_DEVICEINFO info;
-		if (BASS_GetDeviceInfo(
-				loopback ? 
-					GetDeviceIndex<true>(Settings::settings.GetOutputDevice()) :
-					GetDeviceIndex<false>(Settings::settings.GetInputDevice()),
-				&info
-			)
-		) {
-			audioSink->deviceName = Utils::ToUTF16(info.driver);
-		}
-	} else {
-		BASS_WASAPI_DEVICEINFO info;
-		if (BASS_WASAPI_GetDeviceInfo(GetDeviceIndex<false>(Settings::settings.GetInputDevice()), &info))
-			audioSink->deviceName = Utils::ToUTF16(info.id);
-	}
-	//audioSink->streamHandle = streamHandle;
-	//BASS_WASAPI_Start();
-
-	listenThread = std::thread(RecordAudioStream, audioSink);
-#endif
-
-	listening = true;
 }
 
 HSTREAM CApp::GetStreamHandle() const {
@@ -1670,39 +1217,18 @@ void CApp::OnResize(int width, int height, float scale) {
 #endif
 	);
 
-#if !VULKAN
-#ifdef WIN32
-	if (HDR::Enabled) {
-		dxgi.OnResize(width, height);
-		context->SetIdentity(glm::ortho(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height)));
-	} else {
-#endif
-		context->SetIdentity(glm::ortho(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f));
-		context->Apply();
-#ifdef WIN32
-	}
-#endif
-#else
-	vulkan.OnResize(width, height);
-
-	context->SetIdentity(glm::ortho(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height)));
-	context->Apply();
-#endif
+	platform->OnResize(windowWidth, windowHeight);
 
 	glViewport(0, 0, windowWidth, windowHeight);
 
+	albumArt.OnResize(windowWidth, windowHeight, scale);
 	controls.OnResize(windowWidth, windowHeight, *context, scale,
-#if VULKAN
-		vulkan.GetFramebuffer()
-#elif defined(WIN32)
-		HDR::Enabled ? dxgi.GetFramebuffer() : 0
-#else
-		0
-#endif
+		platform->GetDefaultFramebuffer()
 	);
 
 	if (blur) {
 		maxDimension = std::sqrt(std::pow(windowWidth, 2) + std::pow(windowHeight, 2));
+		//maxDimension = windowHeight;
 		hStep = static_cast<float>(maxDimension) / bufferLength;
 
 		blurOffset = {
@@ -1710,20 +1236,11 @@ void CApp::OnResize(int width, int height, float scale) {
 			windowHeight - maxDimension
 		};
 
-		blurFbo = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension, HDR::Enabled ? GL_RGBA16F : GL_RGBA);
-		lastFrame = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension, HDR::Enabled ? GL_RGBA16F : GL_RGBA);
+		blurFbo = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension, platform->GetFboInternalFormat(HDR::Enabled), platform->IsUiInverted());
+		lastFrame = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension, platform->GetFboInternalFormat(HDR::Enabled), platform->IsUiInverted());
 
-#if VULKAN
-		blurFbo->SetDefaultFramebuffer(vulkan.GetFramebuffer());
-		lastFrame->SetDefaultFramebuffer(vulkan.GetFramebuffer());
-#else
-#ifdef WIN32
-		if (HDR::Enabled) {
-			blurFbo->SetDefaultFramebuffer(dxgi.GetFramebuffer());
-			lastFrame->SetDefaultFramebuffer(dxgi.GetFramebuffer());
-		}
-#endif
-#endif
+		blurFbo->SetDefaultFramebuffer(platform->GetDefaultFramebuffer());
+		lastFrame->SetDefaultFramebuffer(platform->GetDefaultFramebuffer());
 
 		context->With("blur"_hash, [this](Context::Shader &shader) {
 			shader.program.Uniform1f("intensity"_hash, blurIntensity);
@@ -1749,22 +1266,25 @@ void CApp::OnResize(int width, int height, float scale) {
 	renderer->OnResize(windowWidth, windowHeight, maxDimension);
 
 #if GUI
-	uiFbo = std::make_unique<MultisampledFramebufferObject>(windowWidth, windowHeight, HDR::Enabled ? GL_RGBA16F : GL_RGBA);
+	uiFbo = std::make_unique<MultisampledFramebufferObject>(windowWidth, windowHeight, platform->GetFboInternalFormat(HDR::Enabled), platform->IsUiInverted());
 
-#if VULKAN
-	uiFbo->SetDefaultFramebuffer(vulkan.GetFramebuffer());
-#elif defined (WIN32)
-	if (HDR::Enabled)
-		uiFbo->SetDefaultFramebuffer(dxgi.GetFramebuffer());
-#endif
+	uiFbo->SetDefaultFramebuffer(platform->GetDefaultFramebuffer());
 
-	menu.OnResize(width, height, scale);
+	// We want the menu to be a bit easier to touch
+	// on the Steam Deck, so we enlarge it
+	menu.OnResize(
+		width,
+		height,
+		steamDeck ? 1.33f * originalScale : originalScale
+		, safeAreaPadding,
+		steamDeck || platform->IsTouchScreen()
+	);
 
 	// Needs 3 frames:
 	// 1 to layout the menu
 	// 1 to measure the menu
 	// 1 extra to ensure we lose focus
-	updateUi = 3;
+	updateUi += 3;
 #endif
 }
 
@@ -1781,7 +1301,7 @@ void CApp::SetColor(float alpha) const {
 	context->Color(color.r, color.g, color.b, alpha);
 }
 
-inline void CApp::AdvanceToNextTrack() {
+void CApp::AdvanceToNextTrack() {
 	advanceOnNextLoop = true;
 }
 
@@ -1821,33 +1341,26 @@ void CApp::LoadRandomPreset() {
 void CApp::OnLoop(const Delta &time) {
 	Logger::ProcessCommands();
 
-#if VULKAN
-	if (!vulkan.OnLoop()) {
+	if (auto looped = platform->OnLoop(); looped && !(*looped)) {
 		if (blurFbo)
-			blurFbo->SetDefaultFramebuffer(interop->GetFramebuffer());
+			blurFbo->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
 		if (lastFrame)
-			lastFrame->SetDefaultFramebuffer(interop->GetFramebuffer());
+			lastFrame->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
 		if (uiFbo)
-			uiFbo->SetDefaultFramebuffer(interop->GetFramebuffer());
+			uiFbo->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
 
 		if (auto font = controls.GetFont())
-			font->SetDefaultFramebuffer(interop->GetFramebuffer());
+			font->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
 		if (auto outlineFont = controls.GetOutlineFont())
-			outlineFont->SetDefaultFramebuffer(interop->GetFramebuffer());
-	}
-#else
-	#ifdef WIN32
-		if (HDR::Enabled)
-			dxgi.OnLoop();
-	#endif
-#endif
-		
+			outlineFont->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
+	} else if (!looped) return;
+
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 	
 	context->Use("texture"_hash);
 
-	if (!fileLoaded && !listening) {
+	if (!fileLoaded && !platform->IsListening()) {
 		SwapBuffers(time);
 		return;
 	}
@@ -1862,88 +1375,14 @@ void CApp::OnLoop(const Delta &time) {
 
 	if(fileLoaded) {
 		if (renderer->IsFloatingPoint()) {
-#ifdef WIN32
-			if (controls.GetExclusiveIndicator().IsExclusive()) {
-				BASS_WASAPI_GetData(buffer, fftFlag);
-
-				// Scale back up to 100% volume
-				const auto inverseVolume = controls.GetVolume().GetInverseVolume();
-				for (auto i = 0; i < bufferLength; ++i)
-					floatBuffer[i] *= inverseVolume;
-
-			} else 
-#endif
+			if (!platform->ScaleExclusive(renderer, buffer, floatBuffer, shortBuffer))
 				BASS_ChannelGetData(streamHandle, buffer, fftFlag);
 		} else {
-#ifdef WIN32
-			if (controls.GetExclusiveIndicator().IsExclusive()) {
-				BASS_WASAPI_GetData(buffer, static_cast<DWORD>(bufferLength * sizeof(float) * channelInfo.chans));
-
-				// Scale back up to 100% volume
-				const auto inverseVolume = controls.GetVolume().GetInverseVolume();
-				for (auto i = 0; i < bufferLength * channelInfo.chans; ++i)
-					shortBuffer[i] = static_cast<short>(floatBuffer[i] * inverseVolume * std::numeric_limits<short>::max());
-			}
-			else 
-#endif
+			if (!platform->ScaleExclusive(renderer, buffer, floatBuffer, shortBuffer))
 				BASS_ChannelGetData(streamHandle, buffer, static_cast<DWORD>(bufferLength * sizeof(short) * channelInfo.chans));
 		}
 	} else {
-#ifdef WIN32
-		std::unique_lock lock(audioSink->mutex);
-		if (audioSink->dataChanged) {
-			if (renderer->IsFloatingPoint()) {
-				//std::cout << audioSink->buffer[0] << std::endl;
-				int j = audioSink->currentBufferPos - maxLength * 2;
-				if (j < 0)
-					j = maxLength * 4 + j;
-
-				for (int i = 0; i < maxLength * 2; ++i) {
-					// Average the channels together
-					in[i] = (audioSink->buffer[j] + audioSink->buffer[j + 1]) / 2.0f;
-					j += 2;
-					if (j >= maxLength * 4)
-						j = 0;
-				}
-
-				fftwf_execute(plan);
-
-				maxHeardSample = std::numeric_limits<float>::lowest();
-
-				for (int i = 1; i <= maxLength; ++i) {
-					// Get the magnitude
-					floatBuffer[i - 1] = static_cast<float>(
-						std::sqrt(
-							std::pow(out[i][0], 2) +
-							std::pow(out[i][1], 2)
-						)
-					);
-
-					if (floatBuffer[i - 1] > maxHeardSample)
-						maxHeardSample = floatBuffer[i - 1];
-				}
-
-				// Normalize
-				for (int i = 0; i < maxLength; ++i)
-					floatBuffer[i] /= maxHeardSample;
-					
-			} else {
-				int j = audioSink->currentBufferPos - bufferLength * 2;
-				if (j < 0)
-					j = maxLength * 4 + j;
-
-				for (int i = 0; i < bufferLength; i++) {
-					shortBuffer[i * 2] = audioSink->buffer[j] * std::numeric_limits<short>::max();
-					shortBuffer[i * 2 + 1] = audioSink->buffer[j + 1] * std::numeric_limits<short>::max();
-					j += 2;
-					if (j >= maxLength * 4)
-						j = 0;
-				}
-			}
-
-			audioSink->dataChanged = false;
-		}
-#endif
+		platform->LoadHeardSamples(renderer, floatBuffer, shortBuffer, bufferLength);
 	}
 
 	//rect.x = 0;
@@ -1973,7 +1412,7 @@ void CApp::OnLoop(const Delta &time) {
 		}
 	}
 
-	if (playing || listening) {
+	if (playing || platform->IsListening()) {
 		auto hsv = color.ToHsv();
 		auto brightHsv = this->brightColor.ToHsv();
 		brightHsv.v = std::max(0.0f, brightHsv.v - strobeIntensity * lerp);
@@ -1986,7 +1425,7 @@ void CApp::OnLoop(const Delta &time) {
 			!darkenPulseOnBrightColors || hsv.v < 0.66 * (HDR::Enabled ? HDR::WhiteLevel * HDR::Headroom : 1.0f) ? color : darkColor,
 			((strobe && playing) ? Colour<float>::FromHsv(brightHsv) : ((!darkenPulseOnBrightColors || hsv.v < 0.66 * (HDR::Enabled ? HDR::WhiteLevel * HDR::Headroom : 1.0f)) ? this->brightColor : color)),
 			frameCount,
-			maxHeardSample,
+			platform->GetMaxHeardSample(),
 			resetGain
 		);
 	}
@@ -2009,7 +1448,7 @@ void CApp::OnLoop(const Delta &time) {
 	if (resetGain) resetGain = false;
 
 	//++frameCount;
-	if (rotating && (playing || listening)) {
+	if (rotating && (playing || platform->IsListening())) {
 		auto changeInSeconds = static_cast<float>(time.change.AsSeconds());
 		frameCount += changeInSeconds * rotationSpeed;
 		while (frameCount >= 360.0f)
@@ -2028,7 +1467,7 @@ void CApp::OnLoop(const Delta &time) {
 		glViewport(0, 0, maxDimension, maxDimension);
 
 		if (pulseBackground)
-			glClearColor(bgr ? color.b : color.r, color.g, bgr ? color.r : color.b, 1.0f);
+			glClearColor(platform->IsBgr() ? color.b : color.r, color.g, platform->IsBgr() ? color.r : color.b, 1.0f);
 		else
 			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -2039,28 +1478,29 @@ void CApp::OnLoop(const Delta &time) {
 		context->Use("blur"_hash);
 		context->GetShaderProgram().Uniform1f(
 			"timeDelta"_hash,
-			(playing || listening) ?
+			(playing || platform->IsListening()) ?
 				(
 					// We currently treat anything >= 3
 					// as "never fades out"
 					blurIntensity >= 3.0f ?
 					0.0f :
-					time.change.AsSeconds()
+					static_cast<float>(time.change.AsSeconds())
 				) 
 				: 0.0f
 		);
 
 		context->GetShaderProgram().Uniform1f(
 			"effectTimeDelta"_hash,
-			(playing || listening) ?
+			(playing || platform->IsListening()) ?
 				// Effects were written with a framerate
 				// of 240 in mind, so scale accordingly
-				time.change.AsSeconds() / (1.0 / 240.0) :
+				static_cast<float>(time.change.AsSeconds() / (1.0 / 240.0)) :
 				0.0f
 		);
+
 		context->GetShaderProgram().Uniform1f("randomX"_hash, prng() / static_cast<float>(prng.max()));
 		context->GetShaderProgram().Uniform1f("randomY"_hash, prng() / static_cast<float>(prng.max()));
-		context->GetShaderProgram().Uniform1f("effectEnabled"_hash, (playing || listening) ? 1.0f : 0.0f);
+		context->GetShaderProgram().Uniform1f("effectEnabled"_hash, (playing || platform->IsListening()) ? 1.0f : 0.0f);
 
 		lastFrame->DrawMultisampled(0, 0, *context);
 
@@ -2070,7 +1510,7 @@ void CApp::OnLoop(const Delta &time) {
 			shader.program.Uniform2f("screenSize"_hash, maxDimension, maxDimension);
 
 			if ((Settings::IsColorBlend(sourceFactor) || Settings::IsColorBlend(destFactor)) && HDR::Enabled)
-				shader.program.Uniform1i("normalize"_hash, 1);
+				shader.program.Uniform1i("normalized"_hash, 1);
 		});
 
 		renderer->Draw(time, frameCount, color, blurOffset, *context);
@@ -2090,7 +1530,7 @@ void CApp::OnLoop(const Delta &time) {
 
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-		blurFbo->Blit(*context);
+		platform->BlitBlurFbo();
 
 		context->Color(1.0f, 1.0f, 1.0f, blurOpacity - (strobe ? lerp * (strobeIntensity) : 0.0));
 		context->SetIdentity(std::move(identity));
@@ -2105,7 +1545,7 @@ void CApp::OnLoop(const Delta &time) {
 
 		context->With("rotate"_hash, [this](Context::Shader &shader) {
 			shader.program.Uniform2f("screenSize"_hash, windowWidth, windowHeight);
-			shader.program.Uniform1i("normalize"_hash, 0);
+			shader.program.Uniform1i("normalized"_hash, 0);
 		});
 	}
 
@@ -2199,7 +1639,7 @@ void CApp::OnLoop(const Delta &time) {
 		stopWasapiOnNextLoop = false;
 	}
 
-	beatDetectTime = elapsed - (controls.GetExclusiveIndicator().IsExclusive() ? exclusiveBufferSize : 0);
+	beatDetectTime = elapsed - (controls.GetExclusiveIndicator().IsExclusive() ? platform->GetExclusiveBufferSize() : 0);
 	if (beatDetect->OnLoop(beatDetectTime)) {
 		albumArt.NextBin(true);
 
@@ -2244,7 +1684,7 @@ inline void CApp::SwapBuffers(const Delta &time) {
 	if (menu.OnLoop(lightPack, albumArt, *context))
 		controls.Fade(true);
 
-	if (menu.HasColorChanged())
+	if (menu.HasColorChanged() && updateUi == 0)
 		updateUi = 1;
 
 	// Keep the UI in an FBO and only update it as needed
@@ -2253,6 +1693,7 @@ inline void CApp::SwapBuffers(const Delta &time) {
 	// 
 	// The high overhead involved in caching the OpenGL context (+5% CPU usage on a 9950X)
 	// as part of ImGui_ImplOpenGL3_RenderDrawData() conflicts with my goal of ~1% CPU usage
+	//LogDebug("updateUi = ", static_cast<int>(updateUi));
 	if (updateUi && (uiAccum += time.change.AsSeconds()) >= 0.01667 /* Render UI at 60FPS maximum */) {
 		uiFbo->Bind();
 		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -2297,7 +1738,7 @@ inline void CApp::SwapBuffers(const Delta &time) {
 	context->With("blit"_hash, [this](Context::Shader &shader) {
 		shader.program.Uniform1f("yOffset"_hash, -windowHeight);
 
-		if (bgr) shader.program.Uniform1i("bgr"_hash, 0);
+		if (platform->IsBgr()) shader.program.Uniform1i("bgr"_hash, 0);
 	});
 #endif
 
@@ -2320,31 +1761,26 @@ inline void CApp::SwapBuffers(const Delta &time) {
 	context->With("blit"_hash, [this](Context::Shader &shader) {
 		shader.program.Uniform1f("yOffset"_hash, 0.0f);
 		
-		if (bgr) shader.program.Uniform1i("bgr"_hash, 1);
+		if (platform->IsBgr()) shader.program.Uniform1i("bgr"_hash, 1);
 	});
 
 	// Wait for the new FBO to be generated before
 	// swapping to it
-	if (!vulkan.SwapBuffers()) {
+	if (!platform->GetInterop()->SwapBuffers()) {
 		if (blurFbo)
-			blurFbo->SetDefaultFramebuffer(interop->GetFramebuffer());
+			blurFbo->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
 		if (lastFrame)
-			lastFrame->SetDefaultFramebuffer(interop->GetFramebuffer());
+			lastFrame->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
 		if (uiFbo)
-			uiFbo->SetDefaultFramebuffer(interop->GetFramebuffer());
+			uiFbo->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
 
 		if (auto font = controls.GetFont())
-			font->SetDefaultFramebuffer(interop->GetFramebuffer());
+			font->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
 		if (auto outlineFont = controls.GetOutlineFont())
-			outlineFont->SetDefaultFramebuffer(interop->GetFramebuffer());
+			outlineFont->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
 	}
 #else
-#ifdef WIN32
-	if (HDR::Enabled)
-		dxgi.SwapBuffers();
-	else
-#endif
-		SDL_GL_SwapWindow(sdlWindow);
+	platform->SwapBuffers();
 #endif
 
 	frameStart = std::chrono::steady_clock::now() - std::chrono::duration_cast<std::chrono::microseconds>(over);
@@ -2362,32 +1798,10 @@ void CApp::SyncToNearestBeat() {
 void CApp::OnDestroy() {
 	shuttingDown = true;
 
-#ifdef WIN32
-	if (keyboardHook) {
-		UnhookWindowsHookEx(keyboardHook);
-		keyboardHook = nullptr;
-	}
-#if !VULKAN
-	if (HDR::Enabled)
-		dxgi.OnDestroy();
-#endif
-#endif
-
-#if VULKAN
-	vulkan.OnDestroy();
-#endif
+	platform->OnDestroy();
 
 	for (auto &detector : beatDetectors)
 		detector.Cancel();
-
-	if (listening) {
-#ifdef WIN32
-		audioSink->done = true;
-#endif
-		if (listenThread.joinable())
-			listenThread.join();
-		listening = false;
-	}
 
 	lightPack.OnDestroy();
 	albumArt.OnDestroy();
@@ -2414,13 +1828,10 @@ void CApp::OnDestroy() {
 	ImGui::DestroyContext();
 #endif
 
-#ifdef WIN32
-	BASS_WASAPI_Free();
-#endif
 	BASS_Free();
-//	IMG_Quit();
 	SDL_GL_DestroyContext(openGlContext);
 	SDL_DestroyWindow(sdlWindow);
+
 
 	if (openGlWindow)
 		SDL_DestroyWindow(openGlWindow);
@@ -2428,170 +1839,14 @@ void CApp::OnDestroy() {
 	Logger::OnDestroy();
 }
 
-HSTREAM CApp::OpenWithFlags(const std::filesystem::path &path, const std::string &extension, DWORD flags) {
-	auto ret = BASS_StreamCreateFile(
-		FALSE,
-#ifdef WIN32
-		path.wstring().c_str(),
-#else
-		path.u8string().c_str(),
-#endif
-		0,
-		0,
-		flags
-	);
-	if (!ret) {
-		// In case our plugins didn't properly load
-		if (extension == ".flac") {
-			ret = BASS_FLAC_StreamCreateFile(
-				FALSE,
-#ifdef WIN32
-				path.wstring().c_str(),
-#else
-				path.u8string().c_str(),
-#endif
-				0,
-				0,
-				flags
-			);
-		} else if (extension == ".ape") {
-			ret = BASS_APE_StreamCreateFile(
-				FALSE,
-#ifdef WIN32
-				path.wstring().c_str(),
-#else
-				path.u8string().c_str(),
-#endif
-				0,
-				0,
-				flags
-			);
-		} else if (extension == ".wv") {
-			ret = BASS_WV_StreamCreateFile(
-				FALSE,
-#ifdef WIN32
-				path.wstring().c_str(),
-#else
-				path.u8string().c_str(),
-#endif
-				0,
-				0,
-				flags
-			);
-		}
-#ifndef WIN32
-		else if (extension == ".m4a" || extension == ".mp4") {
-			ret = BASS_ALAC_StreamCreateFile(
-				FALSE,
-				path.u8string().c_str(),
-				0,
-				0,
-				flags
-			);
-			if (!ret) {
-				ret = BASS_AAC_StreamCreateFile(
-					FALSE,
-					path.u8string().c_str(),
-					0,
-					0,
-					flags
-				);
-			}
-		}
-#endif
-		else if (extension == ".tta") {
-			ret = BASS_TTA_StreamCreateFile(
-				FALSE,
-#ifdef WIN32
-				path.wstring().c_str(),
-#else
-				path.u8string().c_str(),
-#endif
-				0,
-				0,
-				flags
-			);
-		}
-		else {
-			ret = BASS_StreamCreateFile(
-				FALSE,
-#ifdef WIN32
-				path.wstring().c_str(),
-#else
-				path.u8string().c_str(),
-#endif
-				0,
-				0,
-				flags
-			);
-		}
-	}
-
-	return ret;
-}
-
 bool CApp::Open(const std::filesystem::path &path, const std::string &extension, bool exclusive, HSTREAM &target, bool force) {
-	if (exclusive) {
-#ifdef WIN32
-		if (wasapiInfo.freq != channelInfo.freq || force) {
-			if (wasapiInfo.freq != 0) StopExclusive(TRUE);
-
-			auto outputDevice = GetDeviceIndex<true>(Settings::settings.GetOutputDevice());
-
-			// BASS and BASS_WASAPI use different device indices
-			if (outputDevice != -1) {
-				BASS_DEVICEINFO info;
-				BASS_GetDeviceInfo(outputDevice, &info);
-
-				BASS_WASAPI_DEVICEINFO wasapiInfo;
-				for (int i = 0; BASS_WASAPI_GetDeviceInfo(i, &wasapiInfo); ++i) {
-					if ((wasapiInfo.flags & BASS_DEVICE_ENABLED) &&
-						!(wasapiInfo.flags & BASS_DEVICE_INPUT) &&
-						(strncmp(wasapiInfo.id, info.driver, std::min(strlen(wasapiInfo.id), strlen(info.driver))) == 0)) {
-						outputDevice = i;
-						break;
-					}
-				}
-			}
-
-			if (BASS_WASAPI_Init(outputDevice, channelInfo.freq, channelInfo.chans, BASS_WASAPI_BUFFER | BASS_WASAPI_EXCLUSIVE, exclusiveBufferSize, 0, OutputWasapiProc, reinterpret_cast<void *>(this)) == TRUE) {
-				// Only swap out the handle _after_ we've stopped
-				// as StopExclusive(TRUE) frees the handle
-				target = OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
-
-				BASS_WASAPI_GetInfo(&wasapiInfo);
-				if (wasapiInfo.freq == channelInfo.freq) {
-					keyboardHook = SetWindowsHookExA(WH_KEYBOARD_LL, LowLevelKeyboardProc, NULL, 0);
-					LogDebug("Channel and device frequencies (", wasapiInfo.freq, ") match!");
-
-					return exclusive;
-				} else {
-					LogError("Could not initialize exclusive mode! Error code ", BASS_ErrorGetCode());
-					exclusive = false;
-				}
-			} else {
-				LogError("Could not initialize exclusive mode! Error code ", BASS_ErrorGetCode());
-				exclusive = false;
-			}
-		} 
-		else {
-			target = OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
-			return exclusive;
-		}
-#else
-		exclusive = false;
-#endif
-	}
+	if (exclusive)
+		exclusive = platform->OpenExclusive(path, extension, exclusive, target, force, channelInfo, reinterpret_cast<void*>(this));
 
 	if (!exclusive) {
-#ifdef WIN32
-		if (BASS_WASAPI_GetDevice() != -1)
-			BASS_WASAPI_Free();
-#endif
-
 		controls.GetExclusiveIndicator().SetExclusive(false);
 		BASS_StreamFree(streamHandle);
-		target = OpenWithFlags(path, extension, BASS_STREAM_PRESCAN);
+		target = platform->OpenWithFlags(path, extension, BASS_STREAM_PRESCAN);
 	}
 
 	// Reset beat counter on each song
@@ -2614,37 +1869,12 @@ void CApp::StopExclusive() {
 }
 
 void CApp::StopExclusive(BOOL reset) {
-#ifdef WIN32
-	BASS_WASAPI_Stop(reset);
+	platform->StopExclusive(reset == TRUE);
 
-	if (keyboardHook) {
-		UnhookWindowsHookEx(keyboardHook);
-		keyboardHook = nullptr;
-	}
-#endif
-
-	if (reset == TRUE) {
-#ifdef WIN32
-		if (BASS_WASAPI_GetDevice() != -1)
-			BASS_WASAPI_Free();
-#endif
+	if (reset == TRUE)
 		BASS_StreamFree(streamHandle);
-#ifdef WIN32
-		wasapiInfo = { 0 };
-#endif
-	}
 
 	playing = false;
-}
-
-void CApp::Unmute() {
-#ifdef WIN32
-	// Unmute system volume if it's muted
-	if (BASS_WASAPI_GetMute(1) == TRUE) {
-		if (BASS_WASAPI_SetMute(1, FALSE) == FALSE)
-			LogWarning("Could not unmute system volume!");
-	}
-#endif
 }
 
 void CApp::LoadBeats(
@@ -2705,7 +1935,7 @@ void CApp::LoadBeats(
 	if (const auto &next = controls.GetPlaylist().GetNext()) {
 		auto nextExtension = next->path.extension().u8string();
 		std::transform(nextExtension.begin(), nextExtension.end(), nextExtension.begin(), tolower);
-		auto nextHandle = OpenWithFlags(next->path, nextExtension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+		auto nextHandle = platform->OpenWithFlags(next->path, nextExtension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
 
 		BASS_CHANNELINFO nextChannelInfo;
 		BASS_ChannelGetInfo(nextHandle, &nextChannelInfo);
@@ -2754,6 +1984,8 @@ inline void CApp::ClearBlurFbo() {
 }
 
 void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
+	std::ifstream inFile(path);
+
 	auto extension = path.extension().u8string();
 	std::transform(extension.begin(), extension.end(), extension.begin(), tolower);
 
@@ -2769,7 +2001,7 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 		for (auto &detector : beatDetectors)
 			detector.Cancel();
 
-		auto stream = OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+		auto stream = platform->OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
 
 		// Disassociate the stream from a device,
 		// so it doesn't get freed on BASS_Free()
@@ -2805,7 +2037,7 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 					path,
 					extension,
 					[this](const std::filesystem::path &path, const std::string &extension, DWORD flags) {
-						return OpenWithFlags(path, extension, flags);
+						return platform->OpenWithFlags(path, extension, flags);
 					}
 				)
 			) {
@@ -2852,7 +2084,7 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 	}
 
 	// We want this as a local variable, as it's handed off to BeatDetect
-	auto streamHandle = OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+	auto streamHandle = platform->OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
 
 	// Disassociate the stream from a device,
 	// so it doesn't get freed on BASS_Free()
@@ -2906,11 +2138,7 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 		// in case it's higher resolution
 		// than the embedded
 		albumArt.Load(
-#ifdef WIN32
-			path.wstring(),
-#else
-			path.u8string(),
-#endif
+			platform->GetNativePath(path),
 			originalPath
 		);
 
@@ -2923,26 +2151,14 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 		// else
 		controls.LoadFromCue();
 
-#ifdef WIN32
-		if (controls.GetExclusiveIndicator().IsExclusive()) {
-			// Only unmute if this is the first / only song
-			if (!fromPlaylist)
-				Unmute();
-
-			// If we're loading our first file
-			// or we didn't auto-advance, explicitly
-			// start playback. Auto-advancing never
-			// _stops_ playback.
-			if (!fileLoaded || !advanceOnNextLoop)
-				BASS_WASAPI_Start();
-		} else {
-#endif
-			BASS_ChannelPlay(this->streamHandle, false);
-#ifdef WIN32
+		if (!platform->StartPlayingExclusive(fromPlaylist, fileLoaded, advanceOnNextLoop)) {
+			if (platform->PlayAfterLoad())
+				BASS_ChannelPlay(this->streamHandle, false);
 		}
-#endif
 
-		playing = true;
+		if (platform->PlayAfterLoad())
+			playing = true;
+		else playing = false;
 
 		fileLoaded = true;
 		loadedFile = path;
@@ -3013,17 +2229,8 @@ void CApp::SetBlur(bool blur) {
 		blurFbo = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension, HDR::Enabled ? GL_RGBA16F : GL_RGBA);
 		lastFrame = std::make_unique<MultisampledFramebufferObject>(maxDimension, maxDimension, HDR::Enabled ? GL_RGBA16F : GL_RGBA);
 
-#ifdef WIN32
-		if (HDR::Enabled) {
-			blurFbo->SetDefaultFramebuffer(dxgi.GetFramebuffer());
-			lastFrame->SetDefaultFramebuffer(dxgi.GetFramebuffer());
-		}
-#endif
-
-#if VULKAN
-		blurFbo->SetDefaultFramebuffer(vulkan.GetFramebuffer());
-		lastFrame->SetDefaultFramebuffer(vulkan.GetFramebuffer());
-#endif
+		blurFbo->SetDefaultFramebuffer(platform->GetDefaultFramebuffer());
+		lastFrame->SetDefaultFramebuffer(platform->GetDefaultFramebuffer());
 
 		context->With("blur"_hash, [this](Context::Shader &shader) {
 			shader.program.Uniform1f("intensity"_hash, blurIntensity);
@@ -3128,17 +2335,7 @@ void CApp::TogglePlaying() {
 			pos == -1 || BASS_ChannelBytes2Seconds(streamHandle, pos) >= controls.GetCurrentFileLength())
 			SeekTo(0.0);
 
-#ifdef WIN32
-		if (controls.GetExclusiveIndicator().IsExclusive()) {
-			if (BASS_WASAPI_IsStarted()) {
-				BASS_WASAPI_Stop(FALSE);
-				playing = false;
-			} else {
-				BASS_WASAPI_Start();
-				playing = true;
-			}
-		} else {
-#endif
+		if (!platform->StopPlayingExclusive()) {
 			if (BASS_ChannelIsActive(streamHandle) != BASS_ACTIVE_PLAYING) {
 				BASS_ChannelPlay(streamHandle, FALSE);
 				playing = true;
@@ -3146,43 +2343,12 @@ void CApp::TogglePlaying() {
 				BASS_ChannelPause(streamHandle);
 				playing = false;
 			}
-#ifdef WIN32
 		}
-#endif
 	}
 }
 
 void CApp::ToggleFullscreen() {
-	// It appears Windows captures Alt-Enter when using DXGI
-#if defined(WIN32) && !VULKAN
-	return;
-#endif
-
-#if defined(WIN32) && !VULKAN
-	BOOL fullscreen = FALSE;
-	if (HDR::Enabled)
-		dxgi.GetSwapChain()->GetFullscreenState(&fullscreen, NULL);
-#endif
-
-	if (SDL_GetWindowFlags(sdlWindow) & SDL_WINDOW_FULLSCREEN
-#if defined(WIN32) && !VULKAN
-		|| fullscreen
-#endif
-		) {
-#if defined(WIN32) && !VULKAN
-		if (HDR::Enabled)
-			dxgi.GetSwapChain()->SetFullscreenState(FALSE, NULL);
-		else
-#endif
-			SDL_SetWindowFullscreen(sdlWindow, 0);
-	} else {
-#if defined(WIN32) && !VULKAN
-		if (HDR::Enabled)
-			dxgi.GetSwapChain()->SetFullscreenState(TRUE, NULL);
-		else
-#endif
-			SDL_SetWindowFullscreen(sdlWindow, SDL_WINDOW_FULLSCREEN);
-	}
+	platform->ToggleFullscreen();
 }
 
 void CApp::NextTrack() {
@@ -3212,7 +2378,9 @@ void CApp::PreviousTrack() {
 }
 
 inline bool CApp::SeekToMousePos(const Vector2i &mousePos, bool ignoreY) {
-	if (ignoreY || mousePos.y >= windowHeight - Controls::SeekbarSize * scale) {
+	if (ignoreY ||
+			(mousePos.y >= (context->GetSafeArea().h + context->GetSafeArea().y) - Controls::SeekbarSize * scale &&
+			 mousePos.y <= (context->GetSafeArea().h + context->GetSafeArea().y))) {
 		double time = (static_cast<double>(mousePos.x) / windowWidth) * controls.GetCurrentSongLength();
 
 		if (auto &cue = controls.GetPlaylist().GetCue())
@@ -3226,7 +2394,7 @@ inline bool CApp::SeekToMousePos(const Vector2i &mousePos, bool ignoreY) {
 	return false;
 }
 
-inline void CApp::ToggleExclusive() {
+void CApp::ToggleExclusive() {
 	// Store our elapsed time before freeing
 	// the handle
 	auto elapsed = BASS_ChannelBytes2Seconds(
@@ -3259,21 +2427,12 @@ inline void CApp::ToggleExclusive() {
 		BASS_POS_BYTE
 	);
 
-#ifdef WIN32
-	if (controls.GetExclusiveIndicator().IsExclusive()) {
-		Unmute();
-		BASS_WASAPI_Start();
-
-		playing = true;
-	} else {
-#endif
+	if (!platform->StartExclusive()) {
 		BASS_Start();
 		BASS_ChannelPlay(streamHandle, false);
 
 		playing = true;
-#ifdef WIN32
 	}
-#endif
 }
 
 void CApp::OnMouseClicked(const Vector2i &mousePos) {
@@ -3292,8 +2451,10 @@ void CApp::OnMouseClicked(const Vector2i &mousePos) {
 		LoadFile(file->path, true);
 
 		SeekTo(file->startTime);
-	} else if (auto toggled = controls.GetExclusiveIndicator().OnMouseClicked(mousePos)) {
-		ToggleExclusive();
+	} else if (!platform->OnMouseClicked(mousePos) && albumArt.OnMouseClicked(mousePos)) {
+		TogglePlaying();
+		if (!playing) controls.GetPause().Fade(true);
+		else controls.GetPlay().Fade(true);
 	}
 }
 
@@ -3336,6 +2497,9 @@ void CApp::LoadPreset(const Preset &preset) {
 	SetFadeTime(preset.GetFadeTime());
 	renderer->SetPulse(preset.GetPulse());
 	pulseBackground = preset.GetPulseBackground();
+	context->With("blur"_hash, [this](Context::Shader &shader) {
+		shader.program.Uniform1i("premultipliedAlpha"_hash, platform->IsAlphaPremultiplied());
+	});
 	Settings::settings.SetPulseBackground(pulseBackground);
 	renderer->SetPulseTime(preset.GetPulseTime());
 
@@ -3392,24 +2556,15 @@ void CApp::LoadPreset(const Preset &preset) {
 
 	SetEffect(preset.GetEffect());
 
-	updateUi = 1;
+	updateUi += 1;
 }
 
 void CApp::SaveBlurFBO() {
 	auto time = ::time(nullptr);
 	auto tm = *std::localtime(&time);
 	std::stringstream filename;
-	
 
-#ifdef WIN32
-	WCHAR picturesPath[MAX_PATH];
-	if (SHGetFolderPath(NULL, CSIDL_MYPICTURES, NULL, SHGFP_TYPE_CURRENT, picturesPath) == S_OK) {
-		filename << Utils::ToUTF8(std::wstring(picturesPath)) << "/popRocks";
-		if (!std::filesystem::exists(filename.str()))
-			std::filesystem::create_directory(filename.str());
-		filename << "/";
-	}
-#endif
+	platform->GetPicturesPath(filename);
 
 	filename << "popRocks-" << std::put_time(&tm, "%Y%m%d%H%M%S") << ".png";
 
@@ -3441,9 +2596,6 @@ void CApp::OnColorChanged(const MathsCPP::Colour<float> &color, bool silent) {
 			Settings::settings.GetAlbumArtBrightness(),
 			HDR::WhiteLevel * HDR::Headroom
 		);
-
-		// Reset alpha
-		darkColor.a = 1.0f;
 	}
 
 	// Simple, linear function

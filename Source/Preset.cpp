@@ -6,7 +6,11 @@
 #include "Settings.hpp"
 #include "Utils.hpp"
 
+#ifndef __ANDROID__
 std::vector<Preset> Preset::Presets = Preset::Load();
+#else
+std::vector<Preset> Preset::Presets;
+#endif
 
 std::vector<Preset> Preset::Load() {
 	std::vector<Preset> ret;

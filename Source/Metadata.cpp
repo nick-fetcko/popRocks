@@ -134,9 +134,9 @@ void Metadata::OnLoad(
 		if (extension == ".flac") {
 			auto art = reinterpret_cast<const TAG_FLAC_PICTURE *>(BASS_ChannelGetTags(streamHandle, BASS_TAG_FLAC_PICTURE));
 			if (art) {
-				albumArt->Load(
-					art->mime,
-					const_cast<void *>(art->data),
+				albumArt->LoadEmbedded(
+					std::string(art->mime, art->mime + strlen(art->mime)),
+					reinterpret_cast<const void *>(art->data),
 					art->length
 				);
 			}

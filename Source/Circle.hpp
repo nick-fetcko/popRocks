@@ -17,7 +17,7 @@ enum class Circles : uint8_t {
 };
 
 template<Circles T>
-class Circle {
+class Circle : public LoggableClass {
 public:
 	void OnInit(float radius) {
 		constexpr uint8_t Stride = static_cast<uint8_t>(T);

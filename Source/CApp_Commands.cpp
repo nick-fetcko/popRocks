@@ -53,7 +53,7 @@ void CApp::AddCommands() {
 					windowWidth,
 					windowHeight,
 					buffer,
-					maxLength,
+					platform->GetMaxLength(),
 					bufferLength
 				);
 
@@ -71,7 +71,7 @@ void CApp::AddCommands() {
 						windowWidth,
 						windowHeight,
 						buffer,
-						maxLength,
+						platform->GetMaxLength(),
 						bufferLength
 					);
 
@@ -101,7 +101,7 @@ void CApp::AddCommands() {
 					windowWidth,
 					windowHeight,
 					buffer,
-					maxLength,
+					platform->GetMaxLength(),
 					bufferLength
 				);
 
@@ -225,13 +225,13 @@ void CApp::AddCommands() {
 		},
 		{
 			"listen", [&](const std::vector<std::string> &args) {
-				Listen();
+				platform->Listen();
 				LogDebug("Now listening to primary recording device");
 			}
 		},
 		{
 			"loopback", [&](const std::vector<std::string> &args) {
-				Listen(true);
+				platform->Listen(true);
 				LogDebug("Now listening to primary output device");
 			}
 		},
@@ -355,9 +355,9 @@ void CApp::AddCommands() {
 				if (args.size() > 1) {
 					try {
 						if (IsDefault(args[1]))
-							SetGain(20.0f);
+							platform->SetGain(20.0f);
 						else
-							SetGain(
+							platform->SetGain(
 								std::stof(args[1])
 							);
 					} catch (std::exception &e) {
@@ -461,6 +461,8 @@ void CApp::AddCommands() {
 						albumArt.SetRadius(radius);
 						albumArt.Scale(true);
 						controls.GetVolume().SetRadius(radius);
+						controls.GetPause().OnResize(radius);
+						controls.GetPlay().OnResize(radius);
 					} catch (std::exception &e) {
 						LogError("Could not set radius: ", e.what());
 					}
@@ -478,7 +480,7 @@ void CApp::AddCommands() {
 					for (auto &detector : beatDetectors)
 						detector.Cancel();
 
-					auto stream = OpenWithFlags(loadedFile, loadedFileExtension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+					auto stream = platform->OpenWithFlags(loadedFile, loadedFileExtension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
 
 					// Disassociate the stream from a device,
 					// so it doesn't get freed on BASS_Free()

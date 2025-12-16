@@ -219,7 +219,7 @@ bool ID3V2::Frame::Read(const char **tag, bool textOnly) {
 			ReadEncoding(tag);
 
 			textData = ToUTF8(*tag, size, encoding);
-		} else if (!textOnly && id == "APIC" || id == "PIC") {
+		} else if (!textOnly && (id == "APIC" || id == "PIC")) {
 			artData = new Art(*this);
 			if (!artData->Read(tag)) {
 				delete artData;
@@ -299,6 +299,84 @@ void ID3V2::Fix32Bit(uint32_t *num, bool unsynch) {
 }
 
 std::string ID3V2::ToUTF8(const char *tag, uint32_t size, Encoding encoding) {
+	std::stringstream stream(std::string(tag, tag + size));
+
+	if (encoding == Encoding::UTF_16) {
+		if (auto bom = Fetcko::Utils::GetBom(stream)) {
+			switch (*bom) {
+			case Fetcko::Utils::BOM::UTF_16_BE:
+				encoding = Encoding::UTF_16_BE;
+				stream.imbue(
+					std::locale(
+						stream.getloc(),
+						new std::codecvt_utf16<char16_t, 0x10ffff>
+					)
+				);
+
+				// UTF-16 BOMs are two bytes wide
+				size -= 2;
+				break;
+			case Fetcko::Utils::BOM::UTF_16_LE:
+				stream.imbue(
+					std::locale(
+						stream.getloc(),
+						new std::codecvt_utf16<char16_t, 0x10ffff, std::little_endian>
+					)
+				);
+
+				// UTF-16 BOMs are two bytes wide
+				size -= 2;
+				break;
+			case Fetcko::Utils::BOM::UTF_8:
+				// UTF-8 BOM is three bytes wide
+				size -= 3;
+				[[fallthrough]];
+			default:
+				encoding = Encoding::UTF_8;
+				break;
+			}
+		}
+	}
+
+	if (encoding == Encoding::Latin || encoding == Encoding::UTF_8) {
+		auto *chars = new char[size * sizeof(char) + 1];
+
+		stream.read(chars, size);
+
+		// The spec _says_ these should already
+		// be null-terminated, but I've found
+		// multiple examples of no terminator
+		chars[size * sizeof(char)] = '\0';
+
+		// I've encountered a single malformed file
+		// (MisterWives' "Reflection") that wrongly
+		// encodes the TALB tag. It claims to be Latin1,
+		// but is UTF-16. Furthermore: its BOM isn't 
+		// 0xFFFE, but rather 0xFF00FE.
+		if (chars[0] == '\0') {
+			delete[] chars;
+			return "";
+		}
+
+		auto ret = std::string(chars, chars + size * sizeof(char));
+		delete[] chars;
+
+		return ret;
+	} else {
+		char16_t *wideChars = new char16_t[std::lround(size / 2.0f) + 1];
+		stream.read(reinterpret_cast<char*>(wideChars), size);
+
+		// The spec _says_ these should already
+		// be null-terminated, but I've found
+		// multiple examples of no terminator
+		wideChars[std::lround(size / 2.0f)] = L'\0';
+
+		auto ret = Utils::ToUTF8(wideChars);
+		delete[] wideChars;
+		return ret;
+	}
+
+	/*
 	// Size needs to be rounded to the nearest _even_ number,
 	// since we divide by 2 later on.
 	// 
@@ -313,6 +391,7 @@ std::string ID3V2::ToUTF8(const char *tag, uint32_t size, Encoding encoding) {
 	}
 
 	//std::wistringstream stream(
+#ifndef __ANDROID__
 	std::basic_istringstream<char16_t> stream(
 		std::basic_string<char16_t>(
 			reinterpret_cast<const char16_t *>(tag),
@@ -328,8 +407,12 @@ std::string ID3V2::ToUTF8(const char *tag, uint32_t size, Encoding encoding) {
 			new std::codecvt_utf8<char16_t>
 		)
 	);
+#else
+	std::stringstream stream;
+#endif
 
 	if (encoding == Encoding::UTF_16) {
+#ifndef __ANDROID__
 		if (auto bom = Fetcko::Utils::GetBom(stream)) {
 			switch (*bom) {
 			case Fetcko::Utils::BOM::UTF_16_BE:
@@ -366,13 +449,19 @@ std::string ID3V2::ToUTF8(const char *tag, uint32_t size, Encoding encoding) {
 				break;
 			}
 		}
+#endif
 	}
 
 	size /= sizeof(char16_t);
 
 	if (encoding == Encoding::Latin || encoding == Encoding::UTF_8) {
 		auto *chars = new char[size * sizeof(char16_t) + (rounded ? 0 : 1)];
+
+#ifndef __ANDROID__
 		stream.read(reinterpret_cast<char16_t*>(chars), size);
+#else
+		stream.read(chars, size);
+#endif
 
 		// The spec _says_ these should already
 		// be null-terminated, but I've found
@@ -394,6 +483,7 @@ std::string ID3V2::ToUTF8(const char *tag, uint32_t size, Encoding encoding) {
 
 		return ret;
 	} else {
+#ifndef __ANDROID__
 		char16_t *wideChars = new char16_t[size + 1];
 		stream.read(wideChars, size);
 
@@ -404,7 +494,10 @@ std::string ID3V2::ToUTF8(const char *tag, uint32_t size, Encoding encoding) {
 
 		auto ret = Utils::ToUTF8(wideChars);
 		delete[] wideChars;
-
+#else
+		std::string ret;
+#endif
 		return ret;
 	}
+	*/
 }

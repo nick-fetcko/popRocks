@@ -11,7 +11,7 @@ Controls::Controls(AlbumArt *const albumArt) :
 
 }
 
-inline void Controls::OpenFont(Context *context, GLuint defaultFramebuffer) {
+void Controls::OpenFont(Context *context, GLuint defaultFramebuffer) {
 	if (font && outlineFont) {
 		font->SetFontSize(static_cast<int>(18 * scale));
 		font->SetDefaultFramebuffer(defaultFramebuffer);
@@ -90,6 +90,11 @@ void Controls::OnInit(int windowWidth, int windowHeight, Context &context, float
 
 	playlist.OnInit(windowWidth, windowHeight, font, outlineFont, &context, scale);
 	albumArt->AddColorChangeListener(&volume);
+	albumArt->AddColorChangeListener(&pause);
+	albumArt->AddColorChangeListener(&play);
+
+	pause.OnInit(albumArt->GetRadius());
+	play.OnInit(albumArt->GetRadius());
 }
 
 void Controls::OnResize(int windowWidth, int windowHeight, Context &context, float scale, GLuint defaultFramebuffer) {
@@ -104,6 +109,8 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 		//       first.
 		albumArt->OnResize(windowWidth, windowHeight, scale);
 		volume.SetRadius(albumArt->GetRadius());
+		pause.OnResize(albumArt->GetRadius());
+		play.OnResize(albumArt->GetRadius());
 	}
 
 	playlist.OnResize(windowWidth, windowHeight, scale);
@@ -189,6 +196,56 @@ void Controls::LoadFromID3v1(const TAG_ID3 *id3) {
 double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &context, const Colour<float> &color) {
 	AutoFader::OnLoop(time);
 
+	if (context.GetSafeArea().y > 0 && alpha > 0.0f) {
+		context.Use("basic"_hash);
+
+		context.LoadIdentity();
+		context.Translate(0, 0, 0);
+		context.Apply();
+
+		if (!letterboxVao) {
+			letterboxVao = std::make_unique<VertexArray>();
+			letterboxVbo = std::make_unique<ArrayBuffer>();
+			letterboxEab = std::make_unique<ElementBuffer>();
+		}
+
+		std::vector<float> letterbox = {
+			0.0f, 0.0f,
+			0.0f, static_cast<float>(context.GetSafeArea().y),
+			static_cast<float>(windowWidth), static_cast<float>(context.GetSafeArea().y),
+			static_cast<float>(windowWidth), 0.0f
+		};
+
+		letterboxVao->Bind();
+
+		letterboxVbo->Bind();
+		letterboxVao->AddAttribute(VertexArray::Attribute(0, 2, 2 * sizeof(float)));
+		letterboxVbo->BufferData(letterbox);
+		letterboxVbo->Unbind();
+
+		letterboxEab->Bind();
+
+		letterboxEab->BufferData<std::size(Buffers::SquareBuffer)>(Buffers::SquareBuffer);
+		context.Color(0.0f, 0.0f, 0.0f, alpha);
+		letterboxEab->DrawElements(GL_TRIANGLES);
+
+		letterbox = {
+			0.0f, static_cast<float>(context.GetSafeArea().h + context.GetSafeArea().y),
+			0.0f, static_cast<float>(windowHeight),
+			static_cast<float>(windowWidth), static_cast<float>(windowHeight),
+			static_cast<float>(windowWidth), static_cast<float>(context.GetSafeArea().h + context.GetSafeArea().y)
+		};
+
+		letterboxVbo->Bind();
+		letterboxVbo->BufferData(letterbox);
+		letterboxVbo->Unbind();
+
+		letterboxEab->DrawElements(GL_TRIANGLES);
+
+		letterboxEab->Unbind();
+		letterboxVao->Unbind();
+	}
+
 	if (streamHandle) {
 		auto &cue = playlist.GetCue();
 
@@ -237,7 +294,7 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 		}
 
 		context.Use("basic"_hash);
-		context.Translate(0, windowHeight - SeekbarSize * scale, 0.0f);
+		context.Translate(0, (context.GetSafeArea().h + context.GetSafeArea().y) - SeekbarSize * scale, 0.0f);
 		context.Apply();
 
 		context.Color(color.r, color.g, color.b, alpha);
@@ -299,7 +356,7 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 						),
 						windowWidth - elapsedText.GetSize().x - margin
 					),
-					windowHeight - yOffset - elapsedText.GetSize().y - outlineFont->GetOutlineRadius()
+					(context.GetSafeArea().h + context.GetSafeArea().y) - yOffset - elapsedText.GetSize().y - outlineFont->GetOutlineRadius()
 				);
 				context.Color(1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, alpha);
 			}
@@ -308,7 +365,7 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 			for (const auto *text : { &remainingOutline, &remainingText }) {
 				text->OnLoop(
 					windowWidth - remainingText.GetSize().x - margin,
-					windowHeight - yOffset / 2 - remainingText.GetSize().y / 2 + outlineFont->GetOutlineRadius()
+					(context.GetSafeArea().h + context.GetSafeArea().y) - yOffset / 2 - remainingText.GetSize().y / 2 + outlineFont->GetOutlineRadius()
 				);
 				context.Color(1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, alpha);
 			}
@@ -329,7 +386,7 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 				xOffset +=
 					albumArt->DrawSquare(
 						margin,
-						windowHeight - yOffset - albumHeight,
+						(context.GetSafeArea().h + context.GetSafeArea().y) - yOffset - albumHeight,
 						albumHeight,
 						alpha,
 						context
@@ -348,50 +405,54 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 				context.Color(0.0f, 0.0f, 0.0f, alpha);
 				albumOutline.OnLoop(
 					margin + xOffset,
-					windowHeight - (yOffset + albumText.GetBounds().height)
+					(context.GetSafeArea().h + context.GetSafeArea().y) - (yOffset + albumText.GetBounds().height)
 				);
 				context.Color(1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, alpha);
 				albumText.OnLoop(
 					margin + xOffset,
-					windowHeight - (yOffset += albumText.GetBounds().height)
+					(context.GetSafeArea().h + context.GetSafeArea().y) - (yOffset += albumText.GetBounds().height)
 				);
 			}
 			if (!artistText.Empty()) {
 				context.Color(0.0f, 0.0f, 0.0f, alpha);
 				artistOutline.OnLoop(
 					margin + xOffset,
-					windowHeight - (yOffset + artistText.GetBounds().height)
+					(context.GetSafeArea().h + context.GetSafeArea().y) - (yOffset + artistText.GetBounds().height)
 				);
 				context.Color(1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, alpha);
 				artistText.OnLoop(
 					margin + xOffset,
-					windowHeight - (yOffset += artistText.GetBounds().height)
+					(context.GetSafeArea().h + context.GetSafeArea().y) - (yOffset += artistText.GetBounds().height)
 				);
 			}
 			if (!titleText.Empty()) {
 				context.Color(0.0f, 0.0f, 0.0f, alpha);
 				titleOutline.OnLoop(
 					margin + xOffset,
-					windowHeight - (yOffset + titleText.GetBounds().height)
+					(context.GetSafeArea().h + context.GetSafeArea().y) - (yOffset + titleText.GetBounds().height)
 				);
 				context.Color(1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, alpha);
 				titleText.OnLoop(
 					margin + xOffset,
-					windowHeight - (yOffset += titleText.GetBounds().height)
+					(context.GetSafeArea().h + context.GetSafeArea().y) - (yOffset += titleText.GetBounds().height)
 				);
 			}
 
 			fpsCounter.Draw(alpha);
 
-			auto aboveMetadata = windowHeight - yOffset - albumHeight / 2 - exclusiveIndicator.GetHeight() / 2 - context.GetYOffset();
+			auto aboveMetadata = (context.GetSafeArea().h + context.GetSafeArea().y) - yOffset - albumHeight / 2 - exclusiveIndicator.GetHeight() / 2;
 
-			playlist.OnLoop(fpsCounter.GetSize(), aboveMetadata - albumHeight / 8.0f, alpha, context);
+			playlist.OnLoop(fpsCounter.GetSize(), aboveMetadata - albumHeight / 8.0f + (context.GetYOffset() - context.GetSafeArea().y), alpha, context);
 
+#ifdef WIN32
 			// Only render our volume if we're in exclusive mode
 			if (exclusiveIndicator.IsExclusive())
 				volume.OnLoop(windowWidth / 2, windowHeight / 2, time, context);
 
 			exclusiveIndicator.OnLoop(margin, aboveMetadata, alpha, context);
+#endif
+			pause.OnLoop(windowWidth / 2.0f, windowHeight / 2.0f, time, context);
+			play.OnLoop(windowWidth / 2.0f, windowHeight / 2.0f, time, context);
 		}
 
 		return currentPos;
@@ -441,7 +502,14 @@ void Controls::OnDestroy() {
 	sepVbo.reset();
 	sepEab.reset();
 
+	letterboxVao.reset();
+	letterboxVbo.reset();
+	letterboxEab.reset();
+
 	playlist.OnDestroy();
+
+	pause.OnDestroy();
+	play.OnDestroy();
 
 	elapsedText.OnDestroy();
 	elapsedOutline.OnDestroy();
@@ -460,7 +528,9 @@ void Controls::OnDestroy() {
 	font->OnDestroy();
 	outlineFont->OnDestroy();
 	delete font;
+	font = nullptr;
 	delete outlineFont;
+	outlineFont = nullptr;
 }
 
 std::string Controls::FormatSeconds(int seconds) const {

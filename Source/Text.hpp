@@ -39,7 +39,6 @@ private:
 	Context *context = nullptr;
 	OpenGLFont *font = nullptr;
 
-	GLuint texture = 0;
 	OpenGLFont::Bounds bounds;
 	std::unique_ptr<FramebufferObject> cached;
 

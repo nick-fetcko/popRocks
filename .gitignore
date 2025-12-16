@@ -11,8 +11,14 @@
 *.aps
 .DS_Store
 desktop.ini
+cues.txt
 
 Build/
 Icon/
 repo/
 builddir/
+Videos/
+Android/.gradle/
+Android/build/
+Android/local.properties
+.gradle/

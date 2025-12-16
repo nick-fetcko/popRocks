@@ -3,7 +3,6 @@
 #include <codecvt>
 
 #include <SDL3/SDL.h>
-//#include <SDL_mixer.h>
 #include <bass.h>
 #include <bassflac.h>
 
@@ -16,35 +15,54 @@
 #include "CApp.h"
 #include "FFTRenderer.hpp"
 
+#ifdef __ANDROID__
+#include "Platforms/Android.hpp"
+#endif
+
 using namespace MathsCPP;
 using namespace Fetcko;
 
+#ifndef __ANDROID__
 // See https://stackoverflow.com/questions/30412951/unresolved-external-symbol-imp-fprintf-and-imp-iob-func-sdl2
 #pragma comment(lib, "legacy_stdio_definitions.lib")
 extern "C" { FILE __iob_func[3] = { *stdin,*stdout,*stderr }; }
+#endif
 
-int main(int argc, char *argv[]) {
-	
+#ifndef __ANDROID__
+int main(int argc, char *argv[]) 
+#else
+int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
+#endif
+{
 #ifdef USING_FLATPAK
-	Utils::SetResourceFolder(std::filesystem::path(argv[0]).parent_path());
+	Utils::SetResourceFolder("/app/bin");
 #endif
 
 	SDL_Event event;
 	bool running = true;
 
 	CApp app;
-
-	app.OnInit();
+#ifdef __ANDROID__
+	*pApp = &app;
+	pAppSet();
+#endif
 
 	LoggableClass loggableClass;
 	Logger logger;
 	logger.SetObject(&loggableClass);
+	//logger.LogDebug(argv[0]);
 
+	app.OnInit();
+
+#ifndef __ANDROID__
 	if(argc > 1) {
 		logger.LogDebug("File prepared: ", argv[1]);
 		auto ascii = std::string(argv[1]);
 		app.LoadFile(std::wstring(ascii.begin(), ascii.end()));
 	}
+#else
+	dynamic_cast<Android*>(app.GetPlatform().get())->LoadFileNextLoop(Settings::settings.GetPath("../../current"), false);
+#endif
 
 	Delta time;
 	Vector2i mousePos{ 0, 0 };
@@ -54,7 +72,8 @@ int main(int argc, char *argv[]) {
 	auto &io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
 #endif
-	
+
+	int w = 0, h = 0;
 	while(running) {
 		while(SDL_PollEvent(&event)) {
 #if GUI
@@ -70,7 +89,6 @@ int main(int argc, char *argv[]) {
 				case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
 				case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: {
 					auto window = SDL_GetWindowFromID(event.window.windowID);
-					int w = 0, h = 0;
 					auto scale = app.GetScale(window, &w, &h);
 
 					app.OnResize(w, h, scale);
@@ -134,6 +152,13 @@ int main(int argc, char *argv[]) {
 						app.SyncToNearestBeat();
 					else if (event.key.key == SDLK_R)
 						app.LoadPreset(Preset::Random());
+#ifdef __ANDROID__
+					else if (event.key.key == SDLK_AC_BACK) {
+						if (mousePos.x < w / 2.0f)
+							app.PreviousTrack();
+						else app.NextTrack();
+					}
+#endif
 					break;
 				case SDL_EVENT_MOUSE_MOTION:
 					mousePos.x = static_cast<int32_t>(event.motion.x);
@@ -185,6 +210,11 @@ int main(int argc, char *argv[]) {
 
 		app.OnLoop(time.Update());
 	}
+
+#ifdef __ANDROID__
+	*pApp = nullptr;
+	pAppSet();
+#endif
 
 	app.OnDestroy();
 

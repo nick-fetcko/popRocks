@@ -13,6 +13,8 @@ using namespace MathsCPP;
 using namespace serial;
 
 class Preset {
+friend class Settings;
+
 public:
 	Preset() = default;
 

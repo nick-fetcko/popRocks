@@ -28,7 +28,7 @@
 using namespace MathsCPP;
 using namespace Fetcko;
 
-class AlbumArt : public Circle<Circles::Textured>, public LoggableClass {
+class AlbumArt : public Circle<Circles::Textured> {
 public:
 	static constexpr bool IsSupported(const std::string_view &lowercaseExtension) {
 		for (const auto &extension : SupportedExtensions)
@@ -72,6 +72,9 @@ public:
 	bool Load(const std::filesystem::path &fileName, const std::filesystem::path &parentPath = "", bool force = false);
 
 	bool Load(const std::string &mimeType, const void *data, std::size_t length, bool force = false);
+	bool LoadEmbedded(const std::string &mimeType, const void *data, std::size_t length, bool force = false) {
+		return Load(mimeType, data, length, force);
+	}
 
 	void Reset(const Colour<float> &color);
 
@@ -118,6 +121,8 @@ public:
 	void SetHidden(bool hidden) { this->hidden = hidden; }
 
 	const std::unique_ptr<Cube> &GetCube() { return cube; }
+
+	bool OnMouseClicked(const Vector2i &mousepos);
 
 private:
 	constexpr inline static std::array<std::string_view, 3> SupportedExtensions = { ".jpg", ".png", ".webp" };
@@ -181,6 +186,7 @@ private:
 
 	std::uint32_t lastHash = 0;
 	std::uint32_t lastEmbeddedHash = 0;
+	std::size_t lastEmbeddedLength = 0;
 	int lastWidth = 0, lastHeight = 0;
 
 	SDL_Surface *lastSurface = nullptr;
@@ -218,4 +224,7 @@ private:
 	std::unique_ptr<Cube> cube;
 
 	std::filesystem::path lastParentPath;
+
+	int windowWidth = 0;
+	int windowHeight = 0;
 };

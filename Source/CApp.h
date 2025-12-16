@@ -1,10 +1,5 @@
 #pragma once
 
-#ifdef WIN32
-#include <Windows.h>
-#include <shlobj.h>
-#endif
-
 #include <iostream>
 #include <array>
 #include <map>
@@ -17,24 +12,23 @@
 #include <bass.h>
 #include <bassflac.h>
 #ifdef WIN32
-#include <basswasapi.h>
 #endif
 #include <glad/glad.h>
 #include <SDL3_net/SDL_net.h>
 
 #ifdef WIN32
-#include <Mmdeviceapi.h>
 #endif
 #include <SDL3/SDL.h>
 
-#include "fftw3.h"
+#ifndef __ANDROID__
+
+#else
+#include <EGL/egl.h>
+#endif
 
 #include "MathCPP/Duration.hpp"
 
 #include "OpenGL/Context.hpp"
-#ifdef WIN32
-#include "OpenGL/Interops/DXGI.hpp"
-#endif
 #include "OpenGL/Interops/Vulkan.hpp"
 #include "OpenGL/Polyline.hpp"
 
@@ -57,15 +51,32 @@
 #include "Text.hpp"
 #include "Volume.hpp"
 
+#ifdef __ANDROID__
+#define GUI 1
+#define VULKAN 0
+#else
 #define GUI 1
 #define VULKAN 1
+#endif
+
+// Platform-specific code
+// 
+// This has to be _after_ the VULKAN
+// declaration.
+#if defined(WIN32)
+#include "Platforms/Windows.hpp"
+#elif defined (__ANDROID__)
+#include "Platforms/Android.hpp"
+#elif defined (USING_FLATPAK)
+#include "Platforms/Flatpak.hpp"
+#else
+#include "Platforms/Linux.hpp"
+#endif
 
 using namespace MathsCPP;
 using namespace Fetcko;
 
 class MyAudioSink;
-
-DWORD CALLBACK InWasapiProc(void*, DWORD, void*);
 
 class CApp : public ColorChangeListener, public LoggableClass {
 public:
@@ -86,14 +97,14 @@ public:
 
 	void SetColor(int r, int g, int b);
 
-	void Listen(bool loopback = false);
-	inline void StopListening();
-
 	HSTREAM GetStreamHandle() const;
 	HSTREAM GetNextStreamHandle() const;
 
+	const std::size_t GetBufferLength() const { return bufferLength; }
 	void SetBufferLength(std::size_t bufferLength);
 	void SetFftLength(std::size_t fftLength);
+
+	const uint32_t GetFftFlag() const { return fftFlag; }
 
 	void SetRotating(bool rotating);
 	void SetRotationSpeed(float speed);
@@ -102,8 +113,6 @@ public:
 	void SetDecayTime(Duration<Microseconds> time);
 	void SetFadeTime(Duration<Microseconds> time);
 
-	void SetGain(float gain) { this->gain = gain; }
-
 	void SetStrobe(bool strobe);
 	bool GetStrobe() const { return strobe; }
 
@@ -111,6 +120,7 @@ public:
 
 	void OnColorChanged(const MathsCPP::Colour<float> &color, bool silent = false) override;
 
+	const bool GetBlur() const { return blur; }
 	void SetBlur(bool blur);
 	void ToggleBlur();
 	void SetBlurIntensity(float intensity);
@@ -122,6 +132,7 @@ public:
 	Controls &GetControls() { return controls; }
 	void FadeControls(bool in);
 	void TogglePlaying();
+	void SetPlaying(bool playing) { this->playing = playing; }
 
 	void ToggleFullscreen();
 
@@ -143,7 +154,7 @@ public:
 
 	void StopExclusive();
 
-	void UpdateUi() { updateUi = 1; }
+	void UpdateUi() { if (updateUi == 0) updateUi = 1; }
 
 	void SyncToNearestBeat();
 
@@ -152,6 +163,42 @@ public:
 	void SaveBlurFBO();
 
 	void UpdateHdrProperties();
+
+	Menu &GetMenu() { return menu; }
+
+	std::unique_ptr<MultisampledFramebufferObject> &GetBlurFbo() { return blurFbo; }
+	void SetBlurFbo(std::unique_ptr<MultisampledFramebufferObject> &&blurFbo) { this->blurFbo = std::move(blurFbo); }
+	std::unique_ptr<MultisampledFramebufferObject> &GetLastFrame() { return lastFrame; }
+	void SetLastFrame(std::unique_ptr<MultisampledFramebufferObject> &&lastFrame) { this->lastFrame = std::move(lastFrame); }
+	std::unique_ptr<MultisampledFramebufferObject> &GetUiFbo() { return uiFbo; }
+	void SetUiFbo(std::unique_ptr<MultisampledFramebufferObject> &&uiFbo) { this->uiFbo = std::move(uiFbo); }
+
+	SDL_GLContext GetOpenGlContext() { return openGlContext; }
+	void SetOpenGlContext(SDL_GLContext openGlContext) { this->openGlContext = openGlContext; }
+	std::unique_ptr<Context> &GetContext() { return context; }
+
+	SDL_Window *GetSdlWindow() { return sdlWindow; }
+	void SetSdlWindow(SDL_Window *sdlWindow) { this->sdlWindow = sdlWindow; }
+
+	SDL_Window *GetOpenGlWindow() { return openGlWindow; }
+	void SetOpenGlWindow(SDL_Window *openGlWindow) { this->openGlWindow = openGlWindow; }
+
+	const int GetMaxDimension() const { return maxDimension; }
+
+	const bool GetPulseBackground() const { return pulseBackground; }
+
+	void SeekTo(double seconds);
+
+	const std::filesystem::path &GetLoadedFile() const { return loadedFile; }
+	const std::string &GetLoadedFileExtension() const { return loadedFileExtension; }
+
+	HSTREAM &GetStreamHandle() { return streamHandle; }
+
+	const BASS_CHANNELINFO &GetChannelInfo() const { return channelInfo; }
+
+	void ToggleExclusive();
+
+	std::unique_ptr<Platform> &GetPlatform() { return platform; }
 
 private:
 	void AddCommands();
@@ -163,24 +210,15 @@ private:
 	// is larger out of bufferLength and fftLength
 	void UpdateMaxBufferLength();
 
-	void SeekTo(double seconds);
-
 	inline void SwapBuffers(const Delta &time);
 
-	HSTREAM OpenWithFlags(const std::filesystem::path &path, const std::string &extension, DWORD flags);
-	
 	void Stop(BOOL reset = TRUE);
 	void StopExclusive(BOOL reset);
-	
-	inline void Unmute();
 
 	void LoadBeats(HSTREAM streamHandle, std::filesystem::path path, bool pingPong = true);
 	void ResetBeatDetection();
 
 	inline bool SeekToMousePos(const Vector2i &mousePos, bool ignoreY = false);
-
-	template<bool Output>
-	int GetDeviceIndex(const std::string &device);
 
 	inline void CacheBlurUniforms(Context::Shader &shader);
 
@@ -188,8 +226,6 @@ private:
 
 	inline void LoadRandomPreset();
 	inline void UpdateBeatCounter();
-
-	inline void ToggleExclusive();
 
 	inline void LoadRenderer(const std::string &rendererName);
 
@@ -233,19 +269,6 @@ private:
 
 	std::wstring savedFile;
 
-#ifdef WIN32
-	IMMDevice *audioDevice = nullptr;
-	MyAudioSink *audioSink = nullptr;
-#endif
-
-	float *in = nullptr;
-	fftwf_complex *out = nullptr;
-	fftwf_plan plan = nullptr;
-
-	bool listening = false;
-	float maxHeardSample = 0.0f;
-	std::thread listenThread;
-
 	float frameCount = 0.0f;
 	bool rotating = Settings::settings.GetRotating();
 
@@ -253,8 +276,6 @@ private:
 	uint32_t fftFlag = BASS_DATA_FFT8192;
 
 	AlbumArt albumArt;
-
-	float gain = 20.0f;
 
 	// In degrees per second
 	float rotationSpeed = Settings::settings.GetRotationSpeed();
@@ -285,7 +306,6 @@ private:
 
 	bool overrideColor = false;
 
-	std::size_t maxLength = 0;
 	bool attached = true;
 
 	Renderer *renderer = nullptr;
@@ -300,17 +320,12 @@ private:
 
 	Polyline circleLine;
 
-	float exclusiveBufferSize = 0.25f; // in seconds
-
 	std::optional<std::size_t> presetIndex = Settings::settings.GetPresetIndex();
 
 	std::atomic<bool> advanceOnNextLoop = false;
 	std::atomic<bool> stopWasapiOnNextLoop = false;
 
-#ifdef WIN32
-	BASS_WASAPI_INFO wasapiInfo{ 0 };
-#endif
-
+	float originalScale = 1.0f;
 	float scale = 1.0f;
 
 	std::unique_ptr<Context> context;
@@ -375,23 +390,12 @@ private:
 	float uiContrast = Settings::settings.GetUiContrast();
 	float uiBrightness = Settings::settings.GetUiBrightness();
 
-#ifdef WIN32
-	DXGI dxgi;
-#endif
-
-	Vulkan vulkan;
-
 	SDL_GLContext openGlContext;
 
-	Interop *interop =
-#if VULKAN
-		&vulkan;
-#elif defined (WIN32)
-		&dxgi;
-#else
-		nullptr;
-#endif
+	// Is this running on a Steam Deck?
+	bool steamDeck = false;
 
-	// Is our window surface BGR?
-	bool bgr = false;
+	float safeAreaPadding = 0.0f;
+
+	std::unique_ptr<Platform> platform;
 };

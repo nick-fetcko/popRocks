@@ -22,6 +22,8 @@
 #include "Context.hpp"
 #include "ExclusiveIndicator.hpp"
 #include "FPSCounter.hpp"
+#include "Pause.hpp"
+#include "Play.hpp"
 #include "Playlist.hpp"
 #include "TagLoader.hpp"
 #include "Text.hpp"
@@ -69,6 +71,9 @@ public:
 	OpenGLFont *GetFont() { return font; }
 	OpenGLFont *GetOutlineFont() { return outlineFont; }
 
+	Pause &GetPause() { return pause; }
+	Play &GetPlay() { return play; }
+
 private:
 	inline void OpenFont(Context *context, GLuint defaultFramebuffer);
 	std::string FormatSeconds(int seconds) const;
@@ -107,6 +112,9 @@ private:
 
 	float scale = 1.0f;
 
+	Pause pause;
+	Play play;
+
 	std::unique_ptr<VertexArray> vao;
 	std::unique_ptr<ArrayBuffer> vbo;
 	std::unique_ptr<ElementBuffer> eab;
@@ -114,4 +122,8 @@ private:
 	std::unique_ptr<VertexArray> sepVao;
 	std::unique_ptr<ArrayBuffer> sepVbo;
 	std::unique_ptr<ElementBuffer> sepEab;
+
+	std::unique_ptr<VertexArray> letterboxVao;
+	std::unique_ptr<ArrayBuffer> letterboxVbo;
+	std::unique_ptr<ElementBuffer> letterboxEab;
 };

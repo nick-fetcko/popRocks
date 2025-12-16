@@ -110,7 +110,9 @@ void Volume::OnDestroy() {
 	text.OnDestroy();
 
 	delete font;
+	font = nullptr;
 	delete outlineFont;
+	font = nullptr;
 }
 
 void Volume::OnColorChanged(const Colour<float> &color, bool silent) {

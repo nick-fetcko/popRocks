@@ -21,6 +21,7 @@ using namespace serial;
 class Settings {
 public:
 	static std::map<GLenum, std::string> BlendModes;
+	static std::map<std::string, GLenum> Colorspaces;
 
 	struct ColorSelection {
 		double minPercentage = 0.02;
@@ -49,11 +50,23 @@ public:
 			blend == GL_DST_COLOR ||
 			blend == GL_ONE_MINUS_DST_COLOR ||
 			blend == GL_CONSTANT_COLOR ||
-			blend == GL_ONE_MINUS_CONSTANT_COLOR ||
+			blend == GL_ONE_MINUS_CONSTANT_COLOR
+#ifndef __ANDROID__
+			||
 			blend == GL_SRC1_COLOR ||
-			blend == GL_ONE_MINUS_SRC1_COLOR;
+			blend == GL_ONE_MINUS_SRC1_COLOR
+#endif
+			;
 	}
 
+	static std::optional<GLenum> GetEnumForColorspace(const std::string &string) {
+		if (auto iter = Colorspaces.find(string); iter != Colorspaces.end())
+			return iter->second;
+
+		return std::nullopt;
+	}
+
+	static void SetPath(const std::string &path);
 	static std::filesystem::path GetPath(const std::string &fileName = "Settings.json");
 
 	const float &GetVolume() const { return volume; }
@@ -278,12 +291,19 @@ public:
 	const float &GetUiBrightness() const { return uiBrightness; }
 	void SetUiBrightness(float uiBrightness);
 
+	const bool &GetHdr() const { return hdr; }
+	void SetHdr(bool hdr);
+
+	const std::string &GetColorspace() const { return colorspace; }
+	void SetColorspace(const std::string &colorspace);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
 	friend const Node &operator>>(const Node &node, ColorSelection &colorSelection);
 	friend Node &operator<<(Node &node, const ColorSelection &colorSelection);
 private:
+	static std::string path;
 	static Settings Load();
 
 	void Save();
@@ -399,6 +419,10 @@ private:
 	float albumArtGamma = 0.5f;
 	float albumArtContrast = 1.25f;
 	float albumArtBrightness = 1.50f;
+#elif defined (__ANDROID__)
+	float albumArtGamma = 1.0f;
+	float albumArtContrast = 1.0f;
+	float albumArtBrightness = 0.0f;
 #elif defined (__linux__)
 	float albumArtGamma = 0.5f;
 	float albumArtContrast = 2.0f;
@@ -413,9 +437,16 @@ private:
 	float uiGamma = 0.33f;
 	float uiContrast = 1.1f;
 	float uiBrightness = 1.0f;
+#elif defined (__ANDROID__)
+	float uiGamma = 1.0f;
+	float uiContrast = 1.0f;
+	float uiBrightness = 0.0f;
 #elif defined(__linux__)
 	float uiGamma = 0.33f;
 	float uiContrast = 1.62f;
 	float uiBrightness = 1.0f;
 #endif
+
+	bool hdr = true;
+	std::string colorspace = "EGL_EXT_gl_colorspace_bt2020_pq";
 };

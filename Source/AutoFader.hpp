@@ -15,21 +15,19 @@ public:
 	void OnLoop(const Delta &time) {
 		if (targetAlpha) {
 			if (alpha < *targetAlpha) {
-				alpha += static_cast<float>(time.change.AsSeconds() * Settings::settings.GetAutoFadeSpeed());
+				alpha += static_cast<float>(time.change.AsSeconds() * autoFadeSpeed);
 				if (alpha >= *targetAlpha) {
 					alpha = *targetAlpha;
 					targetAlpha = std::nullopt;
 				}
 			} else if (alpha > *targetAlpha) {
-				alpha -= static_cast<float>(time.change.AsSeconds() * Settings::settings.GetAutoFadeSpeed());
+				alpha -= static_cast<float>(time.change.AsSeconds() * autoFadeSpeed);
 				if (alpha <= *targetAlpha) {
 					alpha = *targetAlpha;
 					targetAlpha = std::nullopt;
 				}
-			}
-		}
-
-		if (auto now = std::chrono::system_clock::now(); (now - lastEventTime) > waitTime) {
+			} else targetAlpha = std::nullopt;
+		} else if (auto now = std::chrono::system_clock::now(); (now - lastEventTime) > waitTime) {
 			if constexpr (UserControlled) {
 				if (Settings::settings.GetAutoFade())
 					Fade(false);
@@ -42,10 +40,11 @@ public:
 	}
 
 	void Fade(bool in) {
+		if (in) lastEventTime = std::chrono::system_clock::now();
+
 		if (!lastFade || *lastFade != in) {
 			if (in) {
 				targetAlpha = 1.0f;
-				lastEventTime = std::chrono::system_clock::now();
 			} else {
 				targetAlpha = 0.0f;
 			}
@@ -65,6 +64,8 @@ public:
 		this->fadeCallback = std::move(callback); 
 	}
 
+	void SetAutoFadeSpeed(float autoFadeSpeed) { this->autoFadeSpeed = autoFadeSpeed; }
+
 	const float &GetAlpha() const { return alpha; }
 
 protected:
@@ -78,4 +79,6 @@ protected:
 	std::function<void(bool)> fadeCallback;
 
 	std::optional<bool> lastFade = std::nullopt;
+
+	float autoFadeSpeed = Settings::settings.GetAutoFadeSpeed();
 };

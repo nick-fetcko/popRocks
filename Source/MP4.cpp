@@ -178,7 +178,7 @@ std::map<std::string, std::string> MP4::GetTags(bool textOnly) {
 	int64_t size = atom->size;
 	auto pos = file.tellg();
 	
-	while (file.tellg() < pos + size) {
+	while (file.tellg() < pos + static_cast<std::streampos>(size)) {
 		atom->Read();
 		if (!atom->IsValid()) {
 			file.seekg(-(atom->GetBytes() * 2), std::ios::cur);
