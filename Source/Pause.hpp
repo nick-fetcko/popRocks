@@ -1,30 +1,16 @@
 #pragma once
 
-#include "OpenGL/Buffer.hpp"
-#include "OpenGL/Context.hpp"
-#include "OpenGL/VertexArray.hpp"
-
-#include "AutoFader.hpp"
-#include "ColorChangeListener.hpp"
+#include "Symbol.hpp"
 
 using namespace Fetcko;
 
-class Pause : public AutoFader<false>, public ColorChangeListener {
+class Pause : public Symbol {
 public:
-	Pause() {
-		autoFadeSpeed = 5.0f;
-		waitTime = 0s;
+	void OnInit(float radius) override {
+		Symbol::OnInit(radius);
 
-		alpha = 0.0f;
-	}
-
-	void OnInit(float radius) {
-		vao = std::make_unique<VertexArray>();
-		vbo = std::make_unique<ArrayBuffer>();
 		eab = std::make_unique<ElementBuffer>();
 
-		vao->Bind();
-		vbo->Bind();
 		vao->AddAttribute(VertexArray::Attribute(0, 2, 2 * sizeof(float)));
 		OnResize(radius);
 
@@ -33,8 +19,14 @@ public:
 		eab->Unbind();
 	}
 
-	void OnResize(float radius) {
-		this->radius = radius;
+	void OnDestroy() override {
+		Symbol::OnDestroy();
+
+		eab.reset();
+	}
+
+	void OnResize(float radius) override {
+		Symbol::OnResize(radius);
 
 		std::vector<float> squareBuffer = {
 			static_cast<GLfloat>(-radius / 8), static_cast<GLfloat>(-radius / 2),
@@ -43,8 +35,6 @@ public:
 			static_cast<GLfloat>(radius / 8) , static_cast<GLfloat>(-radius / 2),
 		};
 
-		vao->Bind();
-		vbo->Bind();
 		vbo->BufferData(squareBuffer);
 		vbo->Unbind();
 		vao->Unbind();
@@ -107,33 +97,6 @@ public:
 		context.LoadIdentity();
 	}
 
-	void OnDestroy() {
-		vao.reset();
-		vbo.reset();
-		eab.reset();
-	}
-
-	void OnColorChanged(const Colour<float> &color, bool silent) {
-		auto hsv = color.ToHsv();
-		hsv.v = 1.0f;
-		this->color = Colour<float>::FromHsv(hsv.h, hsv.s, hsv.v);
-
-		if (HDR::Enabled) {
-			this->color.Tone(
-				Settings::settings.GetAlbumArtGamma(),
-				Settings::settings.GetAlbumArtContrast(),
-				Settings::settings.GetAlbumArtBrightness(),
-				HDR::WhiteLevel * HDR::Headroom
-			);
-		}
-	}
-
 private:
-	float radius = 1.0f;
-
-	Colour<float> color = Colour<float>::White;
-
-	std::unique_ptr<VertexArray> vao;
-	std::unique_ptr<ArrayBuffer> vbo;
 	std::unique_ptr<ElementBuffer> eab;
 };

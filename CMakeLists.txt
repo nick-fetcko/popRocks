@@ -61,6 +61,7 @@ set(_poprocks_cpp_headers
 	Source/ColorChangeListener.hpp
 	Source/Controls.hpp
 	Source/Cue.hpp
+	Source/DoubleClick.hpp
 	Source/DynamicGain.hpp
 	Source/ExclusiveIndicator.hpp
 	Source/FFTLineRenderer.hpp
@@ -80,15 +81,18 @@ set(_poprocks_cpp_headers
 	Source/MetadataReader.hpp
 	Source/MP3.hpp
 	Source/MP4.hpp
+	Source/Next.hpp
 	Source/OGG.hpp
 	Source/OscilloscopeRenderer.hpp
 	Source/Pause.hpp
 	Source/Play.hpp
 	Source/Playlist.hpp
 	Source/Preset.hpp
+	Source/Previous.hpp
 	Source/RecordAudioStream.h
 	Source/Renderer.hpp
 	Source/Settings.hpp
+	Source/Symbol.hpp
 	Source/TagLoader.hpp
 	Source/Text.hpp
 	Source/Volume.hpp

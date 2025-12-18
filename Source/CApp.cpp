@@ -2455,6 +2455,14 @@ void CApp::OnMouseClicked(const Vector2i &mousePos) {
 		TogglePlaying();
 		if (!playing) controls.GetPause().Fade(true);
 		else controls.GetPlay().Fade(true);
+	} else {
+		if (mousePos.x > windowWidth / 2 && doubleClick.OnClick({ windowWidth / 2, 0 })) {
+			NextTrack();
+			controls.GetNext().Fade(true);
+		} else if (mousePos.x < windowWidth / 2 && doubleClick.OnClick({ 0, 0 })) {
+			PreviousTrack();
+			controls.GetPrevious().Fade(true);
+		}
 	}
 }
 

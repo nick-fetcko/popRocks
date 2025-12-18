@@ -5,7 +5,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.storage.StorageManager
 import android.provider.DocumentsContract
-import android.util.Log
+import android.window.OnBackInvokedDispatcher
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import org.fetcko.poprocks.databinding.ActivityMainBinding
@@ -29,6 +29,13 @@ class MainActivity : org.libsdl.app.SDLActivity () {
 		setHdr(resources.configuration.isScreenHdr)
 		setLibraryPath(applicationInfo.nativeLibraryDir)
 		setFileOpenListener(this)
+
+		onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT, {
+			val i = Intent()
+			i.setAction(Intent.ACTION_MAIN)
+			i.addCategory(Intent.CATEGORY_HOME)
+			this.startActivity(i)
+		});
 
 		binding = ActivityMainBinding.inflate(layoutInflater)
 	}

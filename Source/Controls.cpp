@@ -89,12 +89,17 @@ void Controls::OnInit(int windowWidth, int windowHeight, Context &context, float
 	OpenFont(&context, defaultFramebuffer);
 
 	playlist.OnInit(windowWidth, windowHeight, font, outlineFont, &context, scale);
+
 	albumArt->AddColorChangeListener(&volume);
 	albumArt->AddColorChangeListener(&pause);
 	albumArt->AddColorChangeListener(&play);
+	albumArt->AddColorChangeListener(&next);
+	albumArt->AddColorChangeListener(&previous);
 
 	pause.OnInit(albumArt->GetRadius());
 	play.OnInit(albumArt->GetRadius());
+	next.OnInit(albumArt->GetRadius());
+	previous.OnInit(albumArt->GetRadius());
 }
 
 void Controls::OnResize(int windowWidth, int windowHeight, Context &context, float scale, GLuint defaultFramebuffer) {
@@ -111,6 +116,8 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 		volume.SetRadius(albumArt->GetRadius());
 		pause.OnResize(albumArt->GetRadius());
 		play.OnResize(albumArt->GetRadius());
+		next.OnResize(albumArt->GetRadius());
+		previous.OnResize(albumArt->GetRadius());
 	}
 
 	playlist.OnResize(windowWidth, windowHeight, scale);
@@ -453,6 +460,8 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 #endif
 			pause.OnLoop(windowWidth / 2.0f, windowHeight / 2.0f, time, context);
 			play.OnLoop(windowWidth / 2.0f, windowHeight / 2.0f, time, context);
+			next.OnLoop(windowWidth - albumArt->GetRadius(), windowHeight / 2.0f, time, context);
+			previous.OnLoop(albumArt->GetRadius(), windowHeight / 2.0f, time, context);
 		}
 
 		return currentPos;
@@ -510,6 +519,8 @@ void Controls::OnDestroy() {
 
 	pause.OnDestroy();
 	play.OnDestroy();
+	next.OnDestroy();
+	previous.OnDestroy();
 
 	elapsedText.OnDestroy();
 	elapsedOutline.OnDestroy();

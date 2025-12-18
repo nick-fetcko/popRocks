@@ -37,6 +37,7 @@ set(_poprocks_cpp_headers
 		${MAIN_DIR}/Source/ColorChangeListener.hpp
 		${MAIN_DIR}/Source/Controls.hpp
 		${MAIN_DIR}/Source/Cue.hpp
+		${MAIN_DIR}/Source/DoubleClick.hpp
 		${MAIN_DIR}/Source/DynamicGain.hpp
 		${MAIN_DIR}/Source/ExclusiveIndicator.hpp
 		${MAIN_DIR}/Source/FFTLineRenderer.hpp
@@ -57,15 +58,18 @@ set(_poprocks_cpp_headers
 		${MAIN_DIR}/Source/MetadataReader.hpp
 		${MAIN_DIR}/Source/MP3.hpp
 		${MAIN_DIR}/Source/MP4.hpp
+		${MAIN_DIR}/Source/Next.hpp
 		${MAIN_DIR}/Source/OGG.hpp
 		${MAIN_DIR}/Source/OscilloscopeRenderer.hpp
 		${MAIN_DIR}/Source/Pause.hpp
 		${MAIN_DIR}/Source/Play.hpp
 		${MAIN_DIR}/Source/Playlist.hpp
 		${MAIN_DIR}/Source/Preset.hpp
+		${MAIN_DIR}/Source/Previous.hpp
 		${MAIN_DIR}/Source/RecordAudioStream.h
 		${MAIN_DIR}/Source/Renderer.hpp
 		${MAIN_DIR}/Source/Settings.hpp
+		${MAIN_DIR}/Source/Symbol.hpp
 		${MAIN_DIR}/Source/TagLoader.hpp
 		${MAIN_DIR}/Source/Text.hpp
 		${MAIN_DIR}/Source/Volume.hpp

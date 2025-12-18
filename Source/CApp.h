@@ -39,6 +39,7 @@
 #include "Circle.hpp"
 #include "ColorChangeListener.hpp"
 #include "Controls.hpp"
+#include "DoubleClick.hpp"
 #include "DynamicGain.hpp"
 #include "FPSCounter.hpp"
 #include "LightPack.hpp"
@@ -398,4 +399,6 @@ private:
 	float safeAreaPadding = 0.0f;
 
 	std::unique_ptr<Platform> platform;
+
+	DoubleClick doubleClick;
 };

@@ -22,9 +22,11 @@
 #include "Context.hpp"
 #include "ExclusiveIndicator.hpp"
 #include "FPSCounter.hpp"
+#include "Next.hpp"
 #include "Pause.hpp"
 #include "Play.hpp"
 #include "Playlist.hpp"
+#include "Previous.hpp"
 #include "TagLoader.hpp"
 #include "Text.hpp"
 #include "Volume.hpp"
@@ -73,6 +75,8 @@ public:
 
 	Pause &GetPause() { return pause; }
 	Play &GetPlay() { return play; }
+	Next &GetNext() { return next; }
+	Previous &GetPrevious() { return previous; }
 
 private:
 	inline void OpenFont(Context *context, GLuint defaultFramebuffer);
@@ -114,6 +118,8 @@ private:
 
 	Pause pause;
 	Play play;
+	Next next;
+	Previous previous;
 
 	std::unique_ptr<VertexArray> vao;
 	std::unique_ptr<ArrayBuffer> vbo;

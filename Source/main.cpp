@@ -152,13 +152,6 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 						app.SyncToNearestBeat();
 					else if (event.key.key == SDLK_R)
 						app.LoadPreset(Preset::Random());
-#ifdef __ANDROID__
-					else if (event.key.key == SDLK_AC_BACK) {
-						if (mousePos.x < w / 2.0f)
-							app.PreviousTrack();
-						else app.NextTrack();
-					}
-#endif
 					break;
 				case SDL_EVENT_MOUSE_MOTION:
 					mousePos.x = static_cast<int32_t>(event.motion.x);
