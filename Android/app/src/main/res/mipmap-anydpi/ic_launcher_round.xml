@@ -9,6 +9,6 @@
     </foreground>
     <monochrome>
         <inset android:drawable="@drawable/ic_icon_monochrome"
-            android:inset="25%"/>
+            android:inset="17%"/>
     </monochrome>
 </adaptive-icon>
