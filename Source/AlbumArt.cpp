@@ -406,6 +406,8 @@ void AlbumArt::ProcessColors(Histogram *destination, SDL_Surface *surface, const
 		double minSaturation = Settings::settings.GetColorSelection().minSaturation;
 		double minValue = Settings::settings.GetColorSelection().minValue;
 
+		double diff = 0;
+		float max = std::numeric_limits<float>::lowest();
 		while (histogram.empty()) {
 			for (auto x = 0; x < surface->w && processingColors; x += hstep) {
 				for (auto y = 0; y < surface->h && processingColors; y += vstep) {
@@ -414,6 +416,15 @@ void AlbumArt::ProcessColors(Histogram *destination, SDL_Surface *surface, const
 					color.r = pixels[index] / 255.0f;
 					color.g = pixels[index + 1] / 255.0f;
 					color.b = pixels[index + 2] / 255.0f;
+
+					// https://stackoverflow.com/a/37007946
+					const float rg = std::abs(color.r - color.g);
+					const float rb = std::abs(color.r - color.b);
+					const float gb = std::abs(color.g - color.b);
+					diff += rg + rb + gb;
+
+					if (rg + rb + gb > max)
+						max = rg + rb + gb;
 
 					auto hsv = color.ToHsv();
 
@@ -454,6 +465,33 @@ void AlbumArt::ProcessColors(Histogram *destination, SDL_Surface *surface, const
 		}
 
 		destination->clear();
+
+		auto variance = diff / (radius * 4.0f) / 3.0f;
+		LogDebug("Variance = ", variance, " max = ", max);
+
+		// Color:
+		//		RHCP's "The Getaway" = 24.133
+		// 
+		// Black & White:
+		//		Rise Against's "Nowhere Generation" = 2.32594
+		//		Ariana Grande's "Dangerous Woman" = 0.476588
+		if (variance < Settings::settings.GetColorSelection().maxAverageColorVariance && 
+			max < Settings::settings.GetColorSelection().maxPerPixelColorVariance) {
+			LogDebug("Album art is likely black and white!");
+			blackAndWhite = true;
+
+			// Hard-code pure white and shades of gray
+			destination->emplace(Bin(1, 0.0f, 0.0f, 1.0f));
+			destination->emplace(Bin(2, 0.0f, 0.0f, 0.75f));
+			destination->emplace(Bin(3, 0.0f, 0.0f, 0.50f));
+			destination->emplace(Bin(4, 0.0f, 0.0f, 0.25f));
+			destination->emplace(Bin(5, 0.0f, 0.0f, 0.05f));
+
+			return;
+		} else {
+			LogDebug("Album art is likely color!");
+			blackAndWhite = false;
+		}
 
 		std::size_t maxCount = std::numeric_limits<std::size_t>::min();
 		for (const auto &[hue, bin] : histogram) {

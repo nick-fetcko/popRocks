@@ -1037,9 +1037,32 @@ public:
 				}
 			}
 
+			ImGui::SeparatorText("Black & white detection");
+
+			maxAverageColorVariance = Settings::settings.GetColorSelection().maxAverageColorVariance;
+			if (ImGui::SliderFloat("Maximum (average) color variation", &maxAverageColorVariance, 0.5, 4.0f, "%.2f")) {
+				if (onColorSelectionChanged) {
+					auto newColorSelection = Settings::settings.GetColorSelection();
+					newColorSelection.maxAverageColorVariance = maxAverageColorVariance;
+					onColorSelectionChanged(newColorSelection);
+				}
+			}
+
+			maxPerPixelColorVariance = Settings::settings.GetColorSelection().maxPerPixelColorVariance;
+			if (ImGui::SliderFloat("Maximum (per-pixel) color variation", &maxPerPixelColorVariance, 0.25f, 3.0f, "%.2f")) {
+				if (onColorSelectionChanged) {
+					auto newColorSelection = Settings::settings.GetColorSelection();
+					newColorSelection.maxPerPixelColorVariance = maxPerPixelColorVariance;
+					onColorSelectionChanged(newColorSelection);
+				}
+			}
+
 			ImGui::Separator();
 
-			ImGui::Text("Currently selected colors:");
+			if (albumArt.IsBlackAndWhite())
+				ImGui::Text("Black and white:");
+			else
+				ImGui::Text("Currently selected colors:");
 
 			{
 				auto lock = albumArt.Lock();
@@ -1481,6 +1504,8 @@ private:
 	float minimumDistance = Settings::settings.GetColorSelection().minRgbSeparation;
 	float minimumSaturation = Settings::settings.GetColorSelection().minSaturation;
 	float minimumValue = Settings::settings.GetColorSelection().minValue;
+	float maxAverageColorVariance = Settings::settings.GetColorSelection().maxAverageColorVariance;
+	float maxPerPixelColorVariance = Settings::settings.GetColorSelection().maxPerPixelColorVariance;
 
 	bool limitFramerate = Settings::settings.GetLimitFramerate();
 	int frameLimit = Settings::settings.GetFrameLimit();

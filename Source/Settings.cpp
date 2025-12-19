@@ -688,6 +688,11 @@ const Node &operator>>(const Node &node, Settings::ColorSelection &colorSelectio
 	if (node.has("minValue"))
 		node["minValue"]->get(colorSelection.minValue);
 
+	if (node.has("maxAverageColorVariance"))
+		node["maxAverageColorVariance"]->get(colorSelection.maxAverageColorVariance);
+	if (node.has("maxPerPixelColorVariance"))
+		node["maxPerPixelColorVariance"]->get(colorSelection.maxPerPixelColorVariance);
+
 	return node;
 }
 
@@ -698,6 +703,8 @@ Node &operator<<(Node &node, const Settings::ColorSelection &colorSelection) {
 	node["minRgbSeparation"]->set(colorSelection.minRgbSeparation);
 	node["minSaturation"]->set(colorSelection.minSaturation);
 	node["minValue"]->set(colorSelection.minValue);
+	node["maxAverageColorVariance"]->set(colorSelection.maxAverageColorVariance);
+	node["maxPerPixelColorVariance"]->set(colorSelection.maxPerPixelColorVariance);
 
 	return node;
 }

@@ -124,6 +124,8 @@ public:
 
 	bool OnMouseClicked(const Vector2i &mousepos);
 
+	const bool IsBlackAndWhite() const { return blackAndWhite; }
+
 private:
 	constexpr inline static std::array<std::string_view, 3> SupportedExtensions = { ".jpg", ".png", ".webp" };
 
@@ -227,4 +229,6 @@ private:
 
 	int windowWidth = 0;
 	int windowHeight = 0;
+
+	bool blackAndWhite = false;
 };

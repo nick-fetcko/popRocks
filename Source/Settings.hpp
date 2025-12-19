@@ -30,6 +30,8 @@ public:
 		double minHueSeparation = 25.0;
 		double minValueSeparation = 0.1;
 		double minRgbSeparation = 0.70;
+		double maxAverageColorVariance = 2.34;
+		double maxPerPixelColorVariance = 1.0;
 
 		bool operator !=(const ColorSelection &right) {
 			return right.minPercentage != minPercentage ||
@@ -37,7 +39,9 @@ public:
 				right.minValue != minValue ||
 				right.minHueSeparation != minHueSeparation ||
 				right.minValueSeparation != minValueSeparation ||
-				right.minRgbSeparation != minRgbSeparation;
+				right.minRgbSeparation != minRgbSeparation ||
+				right.maxAverageColorVariance != maxAverageColorVariance ||
+				right.maxPerPixelColorVariance != maxPerPixelColorVariance;
 		}
 	};
 
