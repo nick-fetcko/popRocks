@@ -251,7 +251,7 @@ std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder, std
 		auto extension = entry.path().extension().u8string();
 		std::transform(extension.begin(), extension.end(), extension.begin(), tolower);
 		if (IsSupported(extension)) {
-			auto filename = entry.path().filename().u8string();
+			auto filename = entry.path().stem().u8string();
 			std::transform(filename.begin(), filename.end(), filename.begin(), tolower);
 
 			auto cover = filename.find("cover");
@@ -271,8 +271,22 @@ std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder, std
 					//
 					// We'll use "Cover 1.jpg"
 					auto [success, number] = Utils::ExtractDigitsFromString(filename);
-					if (number == std::numeric_limits<int>::max() && (folder == 0 || cover == 0 || front == 0))
-						--number;
+					if (number == std::numeric_limits<int>::max()) {
+						// If we match the preferred name _exactly_
+						// (but don't have a number) we'll set it
+						// to the highest priority... treating it
+						// like there's a 0 in its name.
+						//
+						// e.g. "cover.jpg" is chosen over "cover1.jpg"
+						if (filename == "cover" || filename == "front" || filename == "folder")
+							number = 0;
+
+						// If we _start with_ the preferred name
+						// (but have no number) we're only _raising_
+						// its priority.
+						else if (folder == 0 || cover == 0 || front == 0)
+							--number;
+					}
 
 					preferred.emplace(std::make_pair(number, entry.path()));
 
