@@ -306,7 +306,7 @@ std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder, std
 					if (breakOnFind)
 						return true;
 				} else if (found.find(entry.path()) == found.end()) found.emplace(entry.path());
-			}
+			} else if (found.find(entry.path()) == found.end()) found.emplace(entry.path());
 		}
 
 		return false;
