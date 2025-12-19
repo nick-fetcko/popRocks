@@ -80,7 +80,13 @@ public:
 					auto string = std::string(data + XMPNS.size() + 1, dataSize - (XMPNS.size() + 1));
 
 					Node xml;
-					xml.parseString<Xml>(string);
+					try {
+						xml.parseString<Xml>(string);
+					}
+					catch (std::exception &e) {
+						LogWarning("Could not parse XMPNS: ", e.what());
+						return "";
+					}
 
 					Node *view = &xml;
 
