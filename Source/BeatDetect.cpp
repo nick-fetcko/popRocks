@@ -107,6 +107,7 @@ inline void BeatDetect::_OnLoad(
 	std::optional<AgentParameters> parameters
 ) {
 	std::filesystem::path cachePath;
+	bool collision = false;
 	if (detectBpm) {
 		std::unique_lock lock(mutex);
 
@@ -126,22 +127,57 @@ inline void BeatDetect::_OnLoad(
 			if (std::filesystem::exists(cachePath)) {
 				std::ifstream inFile(cachePath, std::ios::in | std::ios::binary);
 				eventList.clear();
-				while (inFile) {
-					Event event;
-					inFile.read(reinterpret_cast<char *>(&event), sizeof(Event));
-					eventList.emplace_back(std::move(event));
+
+				double nan = 0.0;
+				inFile.read(reinterpret_cast<char *>(&nan), sizeof(double));
+
+				if (std::isnan(nan)) {
+					std::string::size_type size = 0;
+					inFile.read(reinterpret_cast<char *>(&size), sizeof(std::string::size_type));
+
+					char *filenameBytes = new char[size];
+					inFile.read(filenameBytes, size);
+
+					std::string filename(filenameBytes, filenameBytes + size);
+
+					delete[] filenameBytes;
+
+					if (auto current = path.filename().u8string(); current != filename) {
+						LogWarning(
+							"Collision detected in cache! Hash matches filename of \"",
+							filename,
+							"\" while current filename is \"",
+							current,
+							"\""
+						);
+
+						collision = true;
+					}
+
+				} else {
+					inFile.seekg(-sizeof(double), std::ios::cur);
 				}
-				eventListIter = eventList.begin();
-				state = State::Loaded;
-				canceled = true;
 
-				auto end = std::chrono::system_clock::now();
+				// If we have a collision, we want
+				// to ignore what's in the cache.
+				if (!collision) {
+					while (inFile) {
+						Event event;
+						inFile.read(reinterpret_cast<char *>(&event), sizeof(Event));
+						eventList.emplace_back(std::move(event));
+					}
+					eventListIter = eventList.begin();
+					state = State::Loaded;
+					canceled = true;
 
-				LogDebug("Loading BeatRoot cache took ", Duration<Microseconds>(end - start).AsSeconds(), " seconds");
+					auto end = std::chrono::system_clock::now();
 
-				onLoaded();
+					LogDebug("Loading BeatRoot cache took ", Duration<Microseconds>(end - start).AsSeconds(), " seconds");
 
-				return;
+					onLoaded();
+
+					return;
+				}
 			}
 		}
 
@@ -332,11 +368,26 @@ inline void BeatDetect::_OnLoad(
 	BASS_StreamFree(streamHandle);
 
 	// Only call the callback if we're
-	// actually detecting and weren't
-	// canceled
-	if (detectBpm && !canceled) {
+	// actually detecting, weren't
+	// canceled, and aren't colliding
+	// with an already-existing file
+	if (detectBpm && !canceled && !collision) {
 		if (!cachePath.empty()) {
 			std::ofstream outFile(cachePath, std::ios::out | std::ios::binary);
+
+			// Use NaN to signal we have additional data
+			constexpr double nan = std::numeric_limits<double>::quiet_NaN();
+			outFile.write(reinterpret_cast<const char *>(&nan), sizeof(double));
+
+			const auto filename = path.filename().u8string();
+			const auto size = filename.size();
+
+			// Leave length of filename
+			outFile.write(reinterpret_cast<const char *>(&size), sizeof(std::string::size_type));
+
+			// Leave filename
+			outFile.write(reinterpret_cast<const char *>(filename.c_str()), size);
+
 			for (const auto &event : eventList)
 				outFile.write(reinterpret_cast<const char *>(&event), sizeof(Event));
 		}
