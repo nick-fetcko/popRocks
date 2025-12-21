@@ -162,7 +162,10 @@ private:
 		// max height
 		if (auto height = maxHeight + font->GetEm().height / 2 - pos.y; this->height > height) {
 			this->height = height;
-			const auto heightMinusOne = height - font->GetEm().height * 2;
+
+			const auto heightMinusOne = height - font->GetEm().height;
+
+			fadeOut = (HDR::Enabled ? 0.25f : (1.0f - heightMinusOne / height));
 
 			vbo->Bind();
 
@@ -194,22 +197,16 @@ private:
 		vbo->BufferSubData(5, sizeof(float), &alpha);
 		vbo->BufferSubData(23, sizeof(float), &alpha);
 
-		auto fadeOut = alpha;
-		if (HDR::Enabled) {
-			fadeOut *= 0.5f;
-		} else {
-			fadeOut = 0.0f;
-		}
-
-		const auto zero = 0.0f;
+		constexpr auto zero = 0.0f;
+		const auto fadedOut = std::min(fadeOut, alpha);
 		
 		// Bottom of top half
-		vbo->BufferSubData(11, sizeof(float), &fadeOut);
-		vbo->BufferSubData(17, sizeof(float), &fadeOut);
+		vbo->BufferSubData(11, sizeof(float), &fadedOut);
+		vbo->BufferSubData(17, sizeof(float), &fadedOut);
 
 		// Top of bottom half
-		vbo->BufferSubData(29, sizeof(float), &fadeOut);
-		vbo->BufferSubData(47, sizeof(float), &fadeOut);
+		vbo->BufferSubData(29, sizeof(float), &fadedOut);
+		vbo->BufferSubData(47, sizeof(float), &fadedOut);
 
 		// Bottom of bottom half
 		vbo->BufferSubData(35, sizeof(float), &zero);
@@ -283,9 +280,11 @@ private:
 
 			// Reduce the height as we near the end of the playlist
 			if (i == titles.size() - 2 && pos.y < maxHeight) {
-				height = pos.y + font->GetEm().height / 2.0f - context.GetSafeArea().y;
+				height = pos.y - context.GetSafeArea().y;
 
-				const auto heightMinusOne = height - font->GetEm().height * 2;
+				const auto heightMinusOne = height - font->GetEm().height;
+
+				fadeOut = (HDR::Enabled ? 0.25f : (1.0f - heightMinusOne / height));
 
 				vbo->Bind();
 
@@ -337,4 +336,5 @@ private:
 	bool currentSongVisible = Settings::settings.GetCurrentSongVisible();
 
 	float maxHeight = 0.0f;
+	float fadeOut = 0.0f;
 };
