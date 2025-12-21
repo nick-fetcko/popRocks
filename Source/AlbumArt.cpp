@@ -801,7 +801,7 @@ bool AlbumArt::Load(const std::filesystem::path &fileName, const std::filesystem
 	if (!currentFile.empty()) {
 		auto contents = Fetcko::Utils::GetStringFromFile(currentFile);
 		auto hash = hash_32_fnv1a_const(contents.c_str(), contents.size());
-		if (hash == lastHash) {
+		if (hash == lastHash && !force) {
 			LogDebug("External art has already been loaded for this album");
 			albumLoaded = true;
 			albumWidth = lastWidth;
@@ -852,10 +852,11 @@ bool AlbumArt::LoadEmbedded() {
 
 bool AlbumArt::Load(const std::string &mimeType, const void *data, std::size_t length, bool force) {
 	const auto load = [this, &mimeType, &data, &length](std::uint32_t hash) {
-		delete[] embeddedData;
+		auto temp = embeddedData;
 		embeddedData = new uint8_t[length];
 		memcpy(embeddedData, data, length);
 		embeddedDataLength = length;
+		delete[] temp;
 
 		lastEmbeddedHash = hash;
 		lastEmbeddedLength = length;
@@ -881,14 +882,16 @@ bool AlbumArt::Load(const std::string &mimeType, const void *data, std::size_t l
 	}
 
 	auto file = SDL_IOFromMem(
-		const_cast<void*>(data),
-		static_cast<int>(length)
+		reinterpret_cast<void*>(embeddedData),
+		static_cast<int>(embeddedDataLength)
 	);
-	embeddedDataMimeType = mimeType.substr(mimeType.find('/') + 1);
+
+	if (auto found = mimeType.find('/'); found != std::string::npos)
+		embeddedDataMimeType = mimeType.substr(found + 1);
 
 	auto surface = IMG_LoadTyped_IO(file, 1, embeddedDataMimeType.c_str());
 	if (!surface) {
-		LogError("Could not load embedded album art!");
+		LogError("Could not load embedded album art! ", SDL_GetError());
 		return false;
 	} else if (surface->w < albumWidth && surface->h < albumHeight) {
 		LogWarning("Embedded album art is smaller than what's already loaded");
