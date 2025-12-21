@@ -122,8 +122,8 @@ void Desktop::SetHdr(bool enabled, void *hwnd, int width, int height) {
 	}
 }
 
-void Desktop::UpdateHdrProperties(int displayId) {
-	if (auto properties = GetHdrProperties(displayId)) {
+void Desktop::UpdateHdrProperties(int displayId, bool force) {
+	if (auto properties = GetHdrProperties(displayId, force)) {
 		auto &[enabled, whitePoint, headroom] = *properties;
 
 		LogDebug("HDR properties changed: ");

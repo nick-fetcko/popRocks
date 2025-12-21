@@ -39,7 +39,7 @@ public:
 
 protected:
 	// Helper for UpdateHdrProperties()
-	void UpdateHdrProperties(int displayId);
+	void UpdateHdrProperties(int displayId, bool force = false);
 
 	float *in = nullptr;
 	fftwf_complex *out = nullptr;

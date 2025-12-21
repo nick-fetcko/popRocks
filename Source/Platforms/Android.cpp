@@ -126,11 +126,11 @@ void Android::StopExclusive(bool reset) {}
 // -----------------------------------------------------
 // ---------------------- HDR --------------------------
 // -----------------------------------------------------
-std::optional<std::tuple<bool, float, float>> Android::GetHdrProperties(int display) {
+std::optional<std::tuple<bool, float, float>> Android::GetHdrProperties(int display, bool force) {
 	return std::make_tuple(true, 1.0f, 1.0f);
 }
 void Android::SetHdr(bool enabled, void *hwnd, int width, int height) {}
-void Android::UpdateHdrProperties() {}
+void Android::UpdateHdrProperties(bool force) {}
 
 // -----------------------------------------------------
 // ------------------ File Opening ---------------------

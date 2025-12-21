@@ -49,9 +49,9 @@ public:
 	void StopExclusive(bool reset) override;
 	
 	// HDR
-	std::optional<std::tuple<bool, float, float>> GetHdrProperties(int display) override;
+	std::optional<std::tuple<bool, float, float>> GetHdrProperties(int display, bool force = false) override;
 	void SetHdr(bool enabled, void *hwnd, int width, int height) override;
-	void UpdateHdrProperties() override;
+	void UpdateHdrProperties(bool force = false) override;
 
 	// File opening
 	HSTREAM OpenWithFlags(const std::filesystem::path &path, const std::string &extension, DWORD flags) override;

@@ -124,7 +124,7 @@ void Linux::StopExclusive(bool reset) {
 // -----------------------------------------------------
 // ---------------------- HDR --------------------------
 // -----------------------------------------------------
-std::optional<std::tuple<bool, float, float>> Linux::GetHdrProperties(int display) {
+std::optional<std::tuple<bool, float, float>> Linux::GetHdrProperties(int display, bool force) {
 	SDL_PropertiesID displayProps = SDL_GetDisplayProperties(
 		display
 	);
@@ -139,10 +139,10 @@ std::optional<std::tuple<bool, float, float>> Linux::GetHdrProperties(int displa
 	return std::make_tuple(enabled, whitePoint, headroom);
 }
 
-void Linux::UpdateHdrProperties() {
+void Linux::UpdateHdrProperties(bool force) {
 	auto displayId = SDL_GetDisplayForWindow(app->GetSdlWindow());
 
-	Desktop::UpdateHdrProperties(displayId);
+	Desktop::UpdateHdrProperties(displayId, force);
 }
 
 // -----------------------------------------------------

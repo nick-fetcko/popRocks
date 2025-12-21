@@ -163,7 +163,7 @@ public:
 
 	void SaveBlurFBO();
 
-	void UpdateHdrProperties();
+	void UpdateHdrProperties(bool force = false);
 
 	Menu &GetMenu() { return menu; }
 

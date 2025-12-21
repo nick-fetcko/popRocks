@@ -323,8 +323,8 @@ void Windows::StopExclusive(bool reset) {
 // -----------------------------------------------------
 // ---------------------- HDR --------------------------
 // -----------------------------------------------------
-std::optional<std::tuple<bool, float, float>> Windows::GetHdrProperties(int display) {
-	return dxgi.GetHdrProperties(display);
+std::optional<std::tuple<bool, float, float>> Windows::GetHdrProperties(int display, bool force) {
+	return dxgi.GetHdrProperties(display, force);
 }
 
 void Windows::SetHdr(bool enabled, void *hwnd, int width, int height) {
@@ -408,7 +408,7 @@ void Windows::SetHdr(bool enabled, void *hwnd, int width, int height) {
 	}
 }
 
-void Windows::UpdateHdrProperties() {
+void Windows::UpdateHdrProperties(bool force) {
 	// SDL does NOT update white level or headroom
 	// when the window moves between monitors with 
 	// different HDR properties on Windows
@@ -422,7 +422,7 @@ void Windows::UpdateHdrProperties() {
 			SDL_GetError()
 		);
 	}
-	Desktop::UpdateHdrProperties(outputIndex);
+	Desktop::UpdateHdrProperties(outputIndex, force);
 }
 
 // -----------------------------------------------------

@@ -410,8 +410,8 @@ void CApp::LoadShaders() {
 	}
 }
 
-void CApp::UpdateHdrProperties() {
-	platform->UpdateHdrProperties();
+void CApp::UpdateHdrProperties(bool force) {
+	platform->UpdateHdrProperties(force);
 
 	if (context) {
 		context->With("blur"_hash, [this](Context::Shader &shader) {
