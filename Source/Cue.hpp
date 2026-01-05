@@ -144,6 +144,8 @@ private:
 		return lines;
 	}
 
+	inline std::string Parse(const std::string &string);
+
 	std::filesystem::path filePath;
 
 	std::string title;

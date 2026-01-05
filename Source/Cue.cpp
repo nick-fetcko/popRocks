@@ -5,6 +5,17 @@
 
 #include "Playlist.hpp"
 
+inline std::string Cue::Parse(const std::string &string) {
+	// As these are single lines, lower threshold to a single match
+	const auto encoding = Utils::GuessEncoding(string, 1);
+
+	if (encoding == Utils::Encoding::ShiftJis)
+		return ShiftJIS::ToUtf8(string);
+	else if (encoding == Utils::Encoding::Windows1252)
+		return Utils::ToUTF8(Windows1252::ToUtf16(string));
+	else return string;
+}
+
 std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &path, bool append) {
 	if (!append) {
 		tracks.clear();
@@ -94,14 +105,15 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 				} else if (encoding == Utils::Encoding::Ascii) // Should be treated as UTF-8, but just in case
 					originalFilePath = filePath = path.parent_path() / line[1];
 			}
-			track.filePath = filePath;
-
+			
 			// Some .cue files still point to the original .wav
 			// and not the compressed version.
 			const auto &supportedExtensions = Playlist::GetSupportedExtensions();
 			auto iter = supportedExtensions.begin();
 			while (!std::filesystem::exists(filePath) && iter != supportedExtensions.end())
 				filePath.replace_extension(*(iter++));
+
+			track.filePath = filePath;
 
 			// If we still can't find the audio file,
 			// assume the .cue is old / malformed / unneeded
@@ -125,9 +137,9 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 					track.disc = discIndex;
 					track.index = static_cast<uint8_t>(std::stoi(line[1]));
 				} else if (line[0] == "TITLE") {
-					track.title = line[1];
+					track.title = Parse(line[1]);
 				} else if (line[0] == "PERFORMER") {
-					track.performer = line[1];
+					track.performer = Parse(line[1]);
 				} else if (line[0] == "INDEX") {
 					// a representation of time in the form "m:s:f". 
 					// 
@@ -150,9 +162,9 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 				track.index = static_cast<uint8_t>(std::stoi(line[1]));
 			}
 		} else if (line[0] == "TITLE") {
-			title = line[1];
+			title = Parse(line[1]);
 		} else if (line[0] == "PERFORMER") {
-			performer = line[1];
+			performer = Parse(line[1]);
 		}
 	}
 
