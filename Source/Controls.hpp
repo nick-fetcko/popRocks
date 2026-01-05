@@ -46,6 +46,7 @@ public:
 	QWORD OnLoad(HSTREAM streamHandle);
 	void LoadFromCue();
 	void LoadFromTags(const std::map<std::string, std::string> &tags) override;
+	void ClearTags() override;
 	void LoadFromID3v1(const TAG_ID3 *id3) override;
 
 	double OnLoop(const Delta &time, HSTREAM streamHandle, Context &context, const Colour<float> &color);

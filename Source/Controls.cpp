@@ -141,6 +141,7 @@ QWORD Controls::OnLoad(HSTREAM streamHandle) {
 
 void Controls::SetTitle(const std::string &title) {
 	titleText.SetText(title);
+	titleOutline.SetText(title);
 }
 
 void Controls::LoadFromCue() {
@@ -151,6 +152,17 @@ void Controls::LoadFromCue() {
 			{ "title", cue->GetCurrentTrack()->title }
 		});
 	}
+}
+
+void Controls::ClearTags() {
+	titleText.SetText("");
+	titleOutline.SetText("");
+
+	artistText.SetText("");
+	artistOutline.SetText("");
+
+	albumText.SetText("");
+	albumOutline.SetText("");
 }
 
 void Controls::LoadFromTags(const std::map<std::string, std::string> &tags) {

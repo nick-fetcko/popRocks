@@ -76,6 +76,10 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 
 	class Loader : public TagLoader, public LoggableClass {
 	public:
+		void ClearTags() override {
+			// Not needed here
+		}
+
 		void LoadFromTags(const std::map<std::string, std::string> &tags) override {
 			if (auto title = tags.find("title"); title != tags.end())
 				SetTitle(title->second);

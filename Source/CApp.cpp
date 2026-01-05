@@ -2128,6 +2128,11 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 			nextStreamHandle = 0;
 		}
 
+		// Reset our tags before
+		// trying to load new ones
+		if (!fromPlaylist)
+			controls.ClearTags();
+
 		metadata.OnLoad(
 			path,
 			extension,

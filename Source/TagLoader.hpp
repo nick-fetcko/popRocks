@@ -17,5 +17,7 @@ public:
 
 	virtual void SetTitle(const std::string &title) = 0;
 
+	virtual void ClearTags() = 0;
+
 protected:
 };
