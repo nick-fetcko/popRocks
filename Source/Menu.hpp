@@ -28,7 +28,7 @@ using namespace Fetcko;
 
 class Menu : public LoggableClass, public ColorChangeListener {
 public:
-	Menu() {
+	Menu(const std::string fontRoot = "KurintoSans") : FontRoot(fontRoot) {
 #ifndef __ANDROID__
 		NFD_Init();
 #endif
@@ -45,10 +45,24 @@ public:
 		this->isTouchscreen = isTouchscreen;
 
 		if (!font) {
-			font = ImGui::GetIO().Fonts->AddFontFromFileTTF(
-				Utils::GetResource("KurintoSans-Rg.ttf").u8string().c_str(),
-				20
-			);
+			ImFontConfig fontConfig;
+
+			// Find all fonts that start with FontRoot
+			for (const auto &iter : std::filesystem::directory_iterator(Utils::GetResourceFolder())) {
+				const auto stem = iter.path().stem().u8string();
+
+				if (stem.find(FontRoot) == 0 &&
+					iter.path().extension().u8string() == ".ttf") {
+					if (stem.find("JP") != std::string::npos)
+						ImGui::GetIO().Fonts->AddFontFromFileTTF(iter.path().u8string().c_str(), 0.0f, &fontConfig, ImGui::GetIO().Fonts->GetGlyphRangesJapanese());
+					else if (stem.find("KR"))
+						ImGui::GetIO().Fonts->AddFontFromFileTTF(iter.path().u8string().c_str(), 0.0f, &fontConfig, ImGui::GetIO().Fonts->GetGlyphRangesKorean());
+					else if (stem.find(FontRoot + "-Rg") == 0)
+						font = ImGui::GetIO().Fonts->AddFontFromFileTTF(iter.path().u8string().c_str(), 0.0f, &fontConfig);
+
+					fontConfig.MergeMode = true;
+				}
+			}
 		}
 
 		if (!originalStyle)
@@ -1418,6 +1432,8 @@ public:
 	void AddColorspace(std::string &&colorspace) { colorspaces.emplace_back(std::move(colorspace)); }
 
 private:
+	const std::string FontRoot;
+
 	int windowWidth = 0, windowHeight = 0;
 	int width = 0, height = 0;
 
