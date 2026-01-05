@@ -76,7 +76,7 @@ public:
 		return Load(mimeType, data, length, force);
 	}
 
-	void Reset(const Colour<float> &color);
+	void Reset(const Colour<float> &color, bool fromPlaylist = false);
 
 	void NextBin(bool silent = false);
 	void PreviousBin();

@@ -2017,7 +2017,7 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 		return;
 	}
 
-	albumArt.Reset(visColor);
+	albumArt.Reset(visColor, fromPlaylist);
 
 	overrideColor = false;
 

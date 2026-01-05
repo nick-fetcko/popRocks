@@ -906,8 +906,9 @@ bool AlbumArt::Load(const std::string &mimeType, const void *data, std::size_t l
 	return true;
 }
 
-void AlbumArt::Reset(const Colour<float> &color) {
+void AlbumArt::Reset(const Colour<float> &color, bool fromPlaylist) {
 	albumLoaded = false;
+
 	/*
 	glDeleteTextures(1, &album);
 	album = 0;
@@ -919,6 +920,19 @@ void AlbumArt::Reset(const Colour<float> &color) {
 	albumHeight = 0;
 	averageColor = color;
 	hidden = false;
+
+	// Clear colors / album art if
+	// we're switching albums
+	if (!fromPlaylist) {
+		std::unique_lock lock(histogramMutex);
+		histogram.clear();
+		selectedColors.clear();
+		lastEmbeddedHash = 0;
+		lastHash = 0;
+
+		for (const auto &listener : colorChangeListeners)
+			listener->OnColorChanged(averageColor, true);
+	}
 }
 
 void AlbumArt::NextBin(bool silent) {
