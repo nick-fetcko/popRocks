@@ -1396,7 +1396,7 @@ void CApp::OnLoop(const Delta &time) {
 	auto color = GetColor();
 
 	currentFadeTime += playing ? time.change.AsSeconds() : 0.0f;
-	auto lerp = std::min(1.0f, currentFadeTime / fadeTime);
+	auto lerp = playing ? std::min(1.0f, currentFadeTime / fadeTime) : 0.0f;
 
 	if (playing && ((renderer->GetPulse() && !renderer->GetPulses()) || strobe)) {
 		auto hsv = color.ToHsv();
@@ -1526,7 +1526,9 @@ void CApp::OnLoop(const Delta &time) {
 		context->Color(1.0f, 1.0f, 1.0f, 1.0f);
 
 		glClear(GL_COLOR_BUFFER_BIT);
-		blurFbo->Draw(0, 0, *context, lastFrame.get());
+
+		if (playing)
+			blurFbo->Draw(0, 0, *context, lastFrame.get());
 
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
