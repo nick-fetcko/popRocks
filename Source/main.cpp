@@ -28,6 +28,28 @@ using namespace Fetcko;
 extern "C" { FILE __iob_func[3] = { *stdin,*stdout,*stderr }; }
 #endif
 
+Delta timer;
+
+// See https://stackoverflow.com/a/27195881
+// 
+// This allows the window to continue rendering
+// while being dragged in Windows
+// 
+// SDL_EVENT_WINDOW_EXPOSED seems to be a more
+// consistent event to hook into in SDL3 than
+// SDL_EVENT_WINDOW_MOVED
+// 
+// SDL_EVENT_WINDOW_MOVED stops firing as soon
+// as you stop moving the mouse, NOT when you
+// let go of the window
+bool EventFilter(void *pThis, SDL_Event *event) {
+	if (event->type == SDL_EVENT_WINDOW_EXPOSED) {
+		auto *app = reinterpret_cast<CApp *>(pThis);
+		app->OnLoop(timer.Update());
+	}
+	return true;
+}
+
 #ifndef __ANDROID__
 int main(int argc, char *argv[]) 
 #else
@@ -54,6 +76,10 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 
 	app.OnInit();
 
+#ifdef WIN32
+	SDL_SetEventFilter(EventFilter, &app);
+#endif
+
 #ifndef __ANDROID__
 	if(argc > 1) {
 		logger.LogDebug("File prepared: ", argv[1]);
@@ -64,7 +90,6 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 	dynamic_cast<Android*>(app.GetPlatform().get())->LoadFileNextLoop(Settings::settings.GetPath("../../current"), false);
 #endif
 
-	Delta time;
 	Vector2i mousePos{ 0, 0 };
 	bool mouseButtonDown = false;
 
@@ -201,7 +226,7 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 			app.FadeControls(true);
 		}
 
-		app.OnLoop(time.Update());
+		app.OnLoop(timer.Update());
 	}
 
 #ifdef __ANDROID__
