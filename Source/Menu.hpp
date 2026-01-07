@@ -295,6 +295,14 @@ public:
 					onPulseChanged(pulse);
 			}
 
+			if (HDR::Enabled && pulse) {
+				pulseMaxBrightness = Settings::settings.GetPulseMaxBrightness();
+				if (ImGui::MenuItem("\tPulse at max HDR brightness?", nullptr, &pulseMaxBrightness)) {
+					if (onPulseMaxBrightnessChanged)
+						onPulseMaxBrightnessChanged(pulseMaxBrightness);
+				}
+			}
+
 			pulseBackground = Settings::settings.GetPulseBackground();
 			if (ImGui::MenuItem("Pulse background", nullptr, &pulseBackground)) {
 				if (onPulseBackgroundChanged)
@@ -1431,6 +1439,8 @@ public:
 
 	void AddColorspace(std::string &&colorspace) { colorspaces.emplace_back(std::move(colorspace)); }
 
+	void SetOnPulseMaxBrightnessChanged(std::function<void(bool)> f) { onPulseMaxBrightnessChanged = f; }
+
 private:
 	const std::string FontRoot;
 
@@ -1623,6 +1633,7 @@ private:
 	std::function<void(float)> onUiBrightnessChanged;
 	std::function<void(bool)> onHdrChanged;
 	std::function<void(std::string)> onColorspaceChanged;
+	std::function<void(bool)> onPulseMaxBrightnessChanged;
 
 	std::function<void()> onResetRotation;
 	std::function<void()> onClearBlurFbo;
@@ -1664,4 +1675,6 @@ private:
 
 	std::vector<std::string> colorspaces;
 	std::string colorspace = Settings::settings.GetColorspace();
+
+	bool pulseMaxBrightness = Settings::settings.GetPulseMaxBrightness();
 };

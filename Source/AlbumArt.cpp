@@ -1023,7 +1023,7 @@ void AlbumArt::UpdateBin(bool silent) {
 			Settings::settings.GetAlbumArtGamma(),
 			Settings::settings.GetAlbumArtContrast(),
 			Settings::settings.GetAlbumArtBrightness(),
-			HDR::WhiteLevel * HDR::Headroom
+			(HDR::Enabled && Settings::settings.GetPulseMaxBrightness() ? (HDR::WhiteLevel * HDR::Headroom) : 1.0f)
 		);
 	}
 }

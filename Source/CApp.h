@@ -401,4 +401,6 @@ private:
 	std::unique_ptr<Platform> platform;
 
 	DoubleClick doubleClick;
+
+	bool pulseMaxBrightness = HDR::Enabled && Settings::settings.GetPulseMaxBrightness();
 };

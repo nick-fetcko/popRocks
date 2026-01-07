@@ -413,6 +413,8 @@ void CApp::LoadShaders() {
 void CApp::UpdateHdrProperties(bool force) {
 	platform->UpdateHdrProperties(force);
 
+	pulseMaxBrightness = HDR::Enabled && Settings::settings.GetPulseMaxBrightness();
+
 	if (context) {
 		context->With("blur"_hash, [this](Context::Shader &shader) {
 			shader.program.Uniform1i("premultipliedAlpha"_hash, platform->IsAlphaPremultiplied());
@@ -1132,6 +1134,11 @@ void CApp::OnInit() {
 
 			this->uiBrightness = uiBrightness;
 		});
+		menu.SetOnPulseMaxBrightnessChanged([this](bool pulseMaxBrigtness) {
+			Settings::settings.SetPulseMaxBrightness(pulseMaxBrigtness);
+
+			this->pulseMaxBrightness = HDR::Enabled && pulseMaxBrigtness;
+		});
 
 		platform->AddMenuCallbacks(&menu);
 
@@ -1403,7 +1410,7 @@ void CApp::OnLoop(const Delta &time) {
 
 		if (!darkenPulseOnBrightColors || hsv.v < 0.66 * (HDR::Enabled ? HDR::WhiteLevel * HDR::Headroom : 1.0f)) {
 			auto brightHsv = brightColor.ToHsv();
-			brightHsv.v = brightHsv.v + ((strobe ? hsv.v - strobeIntensity : hsv.v) - brightHsv.v) * lerp;
+			brightHsv.v = brightHsv.v + ((strobe ? hsv.v - (strobeIntensity * (pulseMaxBrightness ? 1.0f : HDR::WhiteLevel)) : hsv.v) - brightHsv.v) * lerp;
 			color = Colour<float>::FromHsv(brightHsv);
 		} else {
 			auto darkHsv = darkColor.ToHsv();
@@ -2598,7 +2605,7 @@ void CApp::OnColorChanged(const MathsCPP::Colour<float> &color, bool silent) {
 			Settings::settings.GetAlbumArtGamma(),
 			Settings::settings.GetAlbumArtContrast(),
 			Settings::settings.GetAlbumArtBrightness(),
-			HDR::WhiteLevel * HDR::Headroom
+			HDR::WhiteLevel * (pulseMaxBrightness ? HDR::Headroom : 1.0f)
 		);
 	}
 
@@ -2609,7 +2616,7 @@ void CApp::OnColorChanged(const MathsCPP::Colour<float> &color, bool silent) {
 			Settings::settings.GetAlbumArtGamma(),
 			Settings::settings.GetAlbumArtContrast(),
 			Settings::settings.GetAlbumArtBrightness(),
-			HDR::WhiteLevel * HDR::Headroom
+			(pulseMaxBrightness ? HDR::WhiteLevel * HDR::Headroom : 1.0f)
 		);
 	}
 

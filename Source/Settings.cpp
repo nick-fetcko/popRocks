@@ -658,6 +658,13 @@ void Settings::SetColorspace(const std::string &colorspace) {
 	}
 }
 
+void Settings::SetPulseMaxBrightness(bool pulseMaxBrightness) {
+	if (this->pulseMaxBrightness != pulseMaxBrightness) {
+		this->pulseMaxBrightness = pulseMaxBrightness;
+		Save();
+	}
+}
+
 void Settings::Save() {
 	if (auto path = GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
@@ -924,6 +931,9 @@ const Node &operator>>(const Node &node, Settings &settings) {
 		node["hdr"]->get(settings.hdr);
 	if (node.has("colorspace"))
 		node["colorspace"]->get(settings.colorspace);
+
+	if (node.has("pulseMaxBrightness"))
+		node["pulseMaxBrightness"]->get(settings.pulseMaxBrightness);
 		
 	return node;
 }
@@ -1005,6 +1015,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["uiBrightness"]->set(settings.uiBrightness);
 	node["hdr"]->set(settings.hdr);
 	node["colorspace"]->set(settings.colorspace);
+	node["pulseMaxBrightness"]->set(settings.pulseMaxBrightness);
 
 	return node;
 }

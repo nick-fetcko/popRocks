@@ -301,6 +301,9 @@ public:
 	const std::string &GetColorspace() const { return colorspace; }
 	void SetColorspace(const std::string &colorspace);
 
+	const bool GetPulseMaxBrightness() const { return pulseMaxBrightness; }
+	void SetPulseMaxBrightness(bool pulseMaxBrightness);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -453,4 +456,6 @@ private:
 
 	bool hdr = true;
 	std::string colorspace = "EGL_EXT_gl_colorspace_bt2020_pq";
+
+	bool pulseMaxBrightness = true;
 };
