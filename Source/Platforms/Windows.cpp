@@ -328,7 +328,7 @@ std::optional<std::tuple<bool, float, float>> Windows::GetHdrProperties(int disp
 }
 
 void Windows::SetHdr(bool enabled, void *hwnd, int width, int height) {
-	if (!enabled) {
+	if (!enabled && HDR::Enabled) {
 #if VULKAN
 		Desktop::SetHdr(enabled, hwnd, width, height);
 #else
@@ -380,7 +380,7 @@ void Windows::SetHdr(bool enabled, void *hwnd, int width, int height) {
 		ImGui_ImplSDL3_InitForOpenGL(app->GetSdlWindow(), app->GetOpenGlContext());
 		ImGui_ImplOpenGL3_Init();
 #endif
-	} else {
+	} else if (enabled && !HDR::Enabled) {
 		HWND hwnd = (HWND)SDL_GetPointerProperty(SDL_GetWindowProperties(app->GetSdlWindow()), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
 		int width = 0, height = 0;
 		SDL_GetWindowSize(app->GetSdlWindow(), &width, &height);

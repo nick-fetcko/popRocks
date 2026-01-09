@@ -434,17 +434,27 @@ void CApp::UpdateHdrProperties(bool force) {
 			HDR::SetWhiteLevel(*Settings::settings.GetHdrWhitePoint());
 	}
 
-	// Prefer adaptive sync over regular vsync
-	if (!HDR::Enabled && !SDL_GL_SetSwapInterval(-1))
-		SDL_GL_SetSwapInterval(1);
-	else
-		SDL_GL_SetSwapInterval(0);
+	UpdateVsync();
 
 	// Update our visualizer color
 	// to reflect any changes to white point
 	// and headroom
 	if (!albumArt.Loaded() || overrideColor)
 		OnColorChanged(visColor, true);
+}
+
+void CApp::UpdateVsync() {
+	if (auto interop = platform->GetInterop())
+		interop->SetVsync(Settings::settings.GetVsync());
+
+	// Prefer adaptive sync over regular vsync
+	if (Settings::settings.GetVsync() && !SDL_GL_SetSwapInterval(-1))
+		SDL_GL_SetSwapInterval(1);
+
+	// If HDR is enabled, we're
+	// using an interop
+	if (!Settings::settings.GetVsync() || HDR::Enabled)
+		SDL_GL_SetSwapInterval(0);
 }
 
 void CApp::OnInit() {
@@ -1138,6 +1148,11 @@ void CApp::OnInit() {
 			Settings::settings.SetPulseMaxBrightness(pulseMaxBrigtness);
 
 			this->pulseMaxBrightness = HDR::Enabled && pulseMaxBrigtness;
+		});
+		menu.SetOnVsyncChanged([this](bool vsync) {
+			Settings::settings.SetVsync(vsync);
+			
+			UpdateVsync();
 		});
 
 		platform->AddMenuCallbacks(&menu);

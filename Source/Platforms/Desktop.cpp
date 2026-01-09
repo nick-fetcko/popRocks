@@ -84,12 +84,12 @@ bool Desktop::LoadGlad() {
 // ---------------------- HDR --------------------------
 // -----------------------------------------------------
 void Desktop::SetHdr(bool enabled, void *hwnd, int width, int height) {
-	if (!enabled) {
+	if (!enabled && HDR::Enabled) {
 		GetInterop()->SetHdr(enabled, nullptr, width, height);
 
 		if (auto &context = app->GetContext())
 			context->SetIdentity(glm::ortho(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height)));
-	} else {
+	} else if (enabled && !HDR::Enabled) {
 		if (app->GetBlur()) {
 			app->SetBlurFbo(std::make_unique<MultisampledFramebufferObject>(app->GetMaxDimension(), app->GetMaxDimension(), enabled ? GL_RGBA16F : GL_RGBA));
 			app->SetLastFrame(std::make_unique<MultisampledFramebufferObject>(app->GetMaxDimension(), app->GetMaxDimension(), enabled ? GL_RGBA16F : GL_RGBA));

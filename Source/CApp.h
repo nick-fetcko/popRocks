@@ -165,6 +165,8 @@ public:
 
 	void UpdateHdrProperties(bool force = false);
 
+	void UpdateVsync();
+
 	Menu &GetMenu() { return menu; }
 
 	std::unique_ptr<MultisampledFramebufferObject> &GetBlurFbo() { return blurFbo; }

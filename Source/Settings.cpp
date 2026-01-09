@@ -665,6 +665,13 @@ void Settings::SetPulseMaxBrightness(bool pulseMaxBrightness) {
 	}
 }
 
+void Settings::SetVsync(bool vsync) {
+	if (this->vsync != vsync) {
+		this->vsync = vsync;
+		Save();
+	}
+}
+
 void Settings::Save() {
 	if (auto path = GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
@@ -934,6 +941,9 @@ const Node &operator>>(const Node &node, Settings &settings) {
 
 	if (node.has("pulseMaxBrightness"))
 		node["pulseMaxBrightness"]->get(settings.pulseMaxBrightness);
+
+	if (node.has("vsync"))
+		node["vsync"]->get(settings.vsync);
 		
 	return node;
 }
@@ -1016,6 +1026,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["hdr"]->set(settings.hdr);
 	node["colorspace"]->set(settings.colorspace);
 	node["pulseMaxBrightness"]->set(settings.pulseMaxBrightness);
+	node["vsync"]->set(settings.vsync);
 
 	return node;
 }

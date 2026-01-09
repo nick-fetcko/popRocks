@@ -1181,11 +1181,19 @@ public:
 
 			ImGui::EndMenu();
 		}
-#else
-		if (HDR::Capable) {
-			if (ImGui::BeginMenu("Display")) {
-				open = true;
+#endif
+		
+		if (ImGui::BeginMenu("Display")) {
+			open = true;
+
+			vsync = Settings::settings.GetVsync();
+			if (ImGui::MenuItem("Vertical sync?", nullptr, &vsync)) {
+				if (onVsyncChanged)
+					onVsyncChanged(vsync);
+			}
 				
+#ifdef __ANDROID__
+			if (HDR::Capable) {
 				hdr = Settings::settings.GetHdr();
 				if (ImGui::MenuItem("HDR?", nullptr, &hdr)) {
 					if (onHdrChanged)
@@ -1195,7 +1203,7 @@ public:
 				if (!hdr) ImGui::BeginDisabled();
 				ImGui::SeparatorText("Colorspace");
 				colorspace = Settings::settings.GetColorspace();
-				for (const auto &option: colorspaces) {
+				for (const auto &option : colorspaces) {
 					bool selected = option == colorspace;
 					if (ImGui::MenuItem(option.c_str(), nullptr, &selected)) {
 						if (onColorspaceChanged)
@@ -1203,11 +1211,11 @@ public:
 					}
 				}
 				if (!hdr) ImGui::EndDisabled();
-
-				ImGui::EndMenu();
 			}
-		}
 #endif
+
+			ImGui::EndMenu();
+		}
 
 		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(maxWidth, maxHeight));
 		if (!isTouchscreen && ImGui::BeginMenu("LightPack", lightPack.IsActive())) {
@@ -1441,6 +1449,8 @@ public:
 
 	void SetOnPulseMaxBrightnessChanged(std::function<void(bool)> f) { onPulseMaxBrightnessChanged = f; }
 
+	void SetOnVsyncChanged(std::function<void(bool)> f) { onVsyncChanged = f; }
+
 private:
 	const std::string FontRoot;
 
@@ -1634,6 +1644,7 @@ private:
 	std::function<void(bool)> onHdrChanged;
 	std::function<void(std::string)> onColorspaceChanged;
 	std::function<void(bool)> onPulseMaxBrightnessChanged;
+	std::function<void(bool)> onVsyncChanged;
 
 	std::function<void()> onResetRotation;
 	std::function<void()> onClearBlurFbo;
@@ -1677,4 +1688,5 @@ private:
 	std::string colorspace = Settings::settings.GetColorspace();
 
 	bool pulseMaxBrightness = Settings::settings.GetPulseMaxBrightness();
+	bool vsync = Settings::settings.GetVsync();
 };
