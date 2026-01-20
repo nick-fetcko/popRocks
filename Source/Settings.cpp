@@ -64,7 +64,9 @@ void Settings::SetPath(const std::string &path) {
 Settings Settings::Load() {
 	// Make sure we actually have a folder
 	// to load settings from.
+#ifndef __ANDROID__
 	Filesystem::SetAppName("popRocks");
+#endif
 
 	Settings ret;
 

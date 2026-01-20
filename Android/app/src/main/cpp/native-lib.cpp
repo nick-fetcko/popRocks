@@ -55,6 +55,12 @@ SDLMAIN_DECLSPEC int SDLCALL SDL_main(int argc, char *argv[]) {
 extern "C"
 JNIEXPORT void JNICALL
 Java_org_fetcko_poprocks_MainActivity_setPath(JNIEnv *env, jobject thiz, jstring path) {
+	// On Windows / Linux, this is set during the
+	// initialization of Settings' statics. Android,
+	// however, needs to wait for a valid sandbox
+	// path before initializing Settings.
+	Filesystem::SetAppName("popRocks");
+
 	jboolean isCopy = JNI_TRUE;
 	auto cStr = env->GetStringUTFChars(path, &isCopy);
 
