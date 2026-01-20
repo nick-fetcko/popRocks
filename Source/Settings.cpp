@@ -6,6 +6,8 @@
 #include <Shlobj.h>
 #endif
 
+#include "Utils/Filesystem.hpp"
+
 #include "Preset.hpp"
 
 #ifndef __ANDROID__
@@ -15,8 +17,6 @@ Settings Settings::settings = Settings::Load();
 #include <EGL/eglext.h>
 Settings Settings::settings;
 #endif
-
-std::string Settings::path;
 
 std::map<GLenum, std::string> Settings::BlendModes = {
 	{ GL_ZERO, "GL_ZERO" },
@@ -56,50 +56,21 @@ std::map<std::string, GLenum> Settings::Colorspaces = {
 };
 
 void Settings::SetPath(const std::string &path) {
-	Settings::path = path;
+	Filesystem::SetPath(path);
+
 	Settings::settings = Settings::Load();
-	Preset::Presets = Preset::Load();
-}
-
-std::filesystem::path Settings::GetPath(const std::string &fileName) {
-	std::filesystem::path ret;
-
-#ifdef _WIN32
-	PWSTR folder;
-	if (SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, NULL, &folder) == S_OK) {
-		ret = std::filesystem::path(folder);
-
-		CoTaskMemFree(folder);
-	}
-#elif defined(__ANDROID__)
-	ret = Settings::path;
-#elif defined(__linux__)
-	ret = std::filesystem::path(getenv("HOME")) / ".config";
-	if (!std::filesystem::exists(ret))
-		std::filesystem::create_directory(ret);
-#endif
-
-	if (!ret.empty()) {
-		ret /= "Fetcko";
-		if (!std::filesystem::exists(ret))
-			std::filesystem::create_directory(ret);
-
-		ret /= "popRocks";
-		if (!std::filesystem::exists(ret))
-			std::filesystem::create_directory(ret);
-
-		ret /= fileName;
-	}
-
-	return ret;
 }
 
 Settings Settings::Load() {
+	// Make sure we actually have a folder
+	// to load settings from.
+	Filesystem::SetAppName("popRocks");
+
 	Settings ret;
 
 	LoggableClass errorLog(typeid(Settings).name());
 
-	if (auto path = GetPath(); !path.empty()) {
+	if (auto path = Filesystem::GetPath(); !path.empty()) {
 		std::ifstream inFile(path, std::ios::in);
 
 		if (inFile) {
@@ -120,6 +91,8 @@ Settings Settings::Load() {
 			}
 		} else errorLog.LogWarning("Settings file does not yet exist!");
 	}
+
+	Preset::Presets = Preset::Load();
 
 	return ret;
 }
@@ -673,7 +646,7 @@ void Settings::SetVsync(bool vsync) {
 }
 
 void Settings::Save() {
-	if (auto path = GetPath(); !path.empty()) {
+	if (auto path = Filesystem::GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
 
 		Node json;

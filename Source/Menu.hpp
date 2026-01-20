@@ -16,6 +16,7 @@
 #include <nfd.hpp>
 #endif
 
+#include "Utils/Filesystem.hpp"
 #include "Utils/Utils.hpp"
 
 #include "Controls.hpp"
@@ -374,13 +375,13 @@ public:
 
 			if (ImGui::MenuItem("Clear detection cache")) {
 				std::error_code ec;
-				if (std::filesystem::remove_all(Settings::GetPath("cache"), ec) == static_cast<std::uintmax_t>(-1))
+				if (std::filesystem::remove_all(Filesystem::GetPath("cache"), ec) == static_cast<std::uintmax_t>(-1))
 					LogError("Could not clear detection cache! ", ec.message());
 			}
 
 			// Only update our cache info every second
-			if (auto now = std::chrono::system_clock::now(); Duration<Microseconds>(now - lastFrame).AsSeconds() > 1.0 && std::filesystem::exists(Settings::GetPath("cache"))) {
-				auto dirIter = std::filesystem::directory_iterator(Settings::GetPath("cache"));
+			if (auto now = std::chrono::system_clock::now(); Duration<Microseconds>(now - lastFrame).AsSeconds() > 1.0 && std::filesystem::exists(Filesystem::GetPath("cache"))) {
+				auto dirIter = std::filesystem::directory_iterator(Filesystem::GetPath("cache"));
 				std::size_t bytes = 0;
 
 				cacheFileCount = std::count_if(

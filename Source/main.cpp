@@ -87,7 +87,7 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 		app.LoadFile(std::wstring(ascii.begin(), ascii.end()));
 	}
 #else
-	dynamic_cast<Android*>(app.GetPlatform().get())->LoadFileNextLoop(Settings::settings.GetPath("../../current"), false);
+	dynamic_cast<Android*>(app.GetPlatform().get())->LoadFileNextLoop(Filesystem::GetPath("../../current"), false);
 #endif
 
 	Vector2i mousePos{ 0, 0 };

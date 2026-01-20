@@ -1,5 +1,6 @@
 #include "BeatDetect.hpp"
 
+#include "Utils/Filesystem.hpp"
 #include "Utils/Hash.hpp"
 #include "Utils/Utils.hpp"
 
@@ -120,10 +121,10 @@ inline void BeatDetect::_OnLoad(
 			std::stringstream stream;
 			stream << std::setw(sizeof(hash) * 2) << std::setfill('0') << std::uppercase << std::hex << hash;
 			if (index) stream << std::dec << "-" << static_cast<int>(*index);
-			if (auto cacheFolder = Settings::GetPath("cache/"); !std::filesystem::exists(cacheFolder))
+			if (auto cacheFolder = Filesystem::GetPath("cache/"); !std::filesystem::exists(cacheFolder))
 				std::filesystem::create_directory(cacheFolder);
 
-			cachePath = Settings::GetPath("cache/" + stream.str());
+			cachePath = Filesystem::GetPath("cache/" + stream.str());
 			if (std::filesystem::exists(cachePath)) {
 				std::ifstream inFile(cachePath, std::ios::in | std::ios::binary);
 				eventList.clear();

@@ -71,7 +71,6 @@ public:
 	}
 
 	static void SetPath(const std::string &path);
-	static std::filesystem::path GetPath(const std::string &fileName = "Settings.json");
 
 	const float &GetVolume() const { return volume; }
 	void SetVolume(float volume);
@@ -313,7 +312,6 @@ public:
 	friend const Node &operator>>(const Node &node, ColorSelection &colorSelection);
 	friend Node &operator<<(Node &node, const ColorSelection &colorSelection);
 private:
-	static std::string path;
 	static Settings Load();
 
 	void Save();

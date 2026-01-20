@@ -458,8 +458,6 @@ void CApp::UpdateVsync() {
 }
 
 void CApp::OnInit() {
-	Logger::SetAppName("popRocks");
-
 #ifdef __linux__
 	std::ifstream boardVendor("/sys/devices/virtual/dmi/id/board_vendor");
 	std::string vendor;

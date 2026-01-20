@@ -3,21 +3,19 @@
 #include <fstream>
 #include <random>
 
+#include "Utils/Filesystem.hpp"
+
 #include "Settings.hpp"
 #include "Utils.hpp"
 
-#ifndef __ANDROID__
-std::vector<Preset> Preset::Presets = Preset::Load();
-#else
 std::vector<Preset> Preset::Presets;
-#endif
 
 std::vector<Preset> Preset::Load() {
 	std::vector<Preset> ret;
 
 	std::ifstream inFile;
-	if (std::filesystem::exists(Settings::GetPath("Presets.json")))
-		inFile.open(Settings::GetPath("Presets.json"));
+	if (std::filesystem::exists(Filesystem::GetPath("Presets.json")))
+		inFile.open(Filesystem::GetPath("Presets.json"));
 	else
 		inFile.open(Utils::GetResource("Presets.json"));
 
@@ -98,7 +96,7 @@ Preset Preset::Random() {
 }
 
 void Preset::Save() {
-	std::ofstream outFile(Settings::GetPath("Presets.json"));
+	std::ofstream outFile(Filesystem::GetPath("Presets.json"));
 
 	std::map<std::size_t, const Preset *> mapped;
 	for (const auto &[i, existing] : Utils::Enumerate(Presets)) {
