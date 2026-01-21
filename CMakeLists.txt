@@ -407,6 +407,12 @@ endif()
 
 if (WIN32)
 	target_link_libraries(popRocks PRIVATE FFTW3::fftw3f basswasapi)
+
+	# For some reason multicore compilation
+	# is still not the default for MSVC
+	if (MSVC)
+		target_compile_options(popRocks PRIVATE "/MP")
+	endif()
 else()
 	if (USING_FLATPAK)
 		target_link_libraries(popRocks PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassalac/lib/libbassalac.so" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassaac/lib/libbass_aac.so")
