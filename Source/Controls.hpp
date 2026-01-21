@@ -67,6 +67,7 @@ public:
 	double GetCurrentPosition() const { return currentPos; }
 
 	FPSCounter &GetFpsCounter() { return fpsCounter; }
+	const Playlist &GetPlaylist() const { return playlist; }
 	Playlist &GetPlaylist() { return playlist; }
 	Volume &GetVolume() { return volume; }
 	ExclusiveIndicator &GetExclusiveIndicator() { return exclusiveIndicator; }

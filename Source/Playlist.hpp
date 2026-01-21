@@ -42,6 +42,8 @@ public:
 	void Clear();
 
 	std::optional<Track> Current();
+	const std::optional<std::size_t> GetCurrentIndex() const;
+	std::optional<Track> TrackAtIndex(std::size_t index);
 	std::optional<Track> Previous();
 	std::optional<Track> Next();
 
@@ -51,6 +53,11 @@ public:
 
 	std::optional<Track> OnMouseClicked(const Vector2i &mousePos);
 
+	void SetVisible(bool visible) {
+		this->visible = visible;
+		Settings::settings.SetPlaylistOnScreen(visible);
+	}
+
 	void SetCurrentSongVisible(bool currentSongVisible) { 
 		this->currentSongVisible = currentSongVisible;
 		Settings::settings.SetCurrentSongVisible(currentSongVisible);
@@ -58,6 +65,8 @@ public:
 
 	const std::unique_ptr<Cue> &GetCue() const;
 	const std::filesystem::path &GetPath() const;
+
+	const std::vector<Text> &GetTitles() const { return titles; }
 
 	static constexpr bool IsCue(const std::string_view &lowercaseExtension) {
 		return lowercaseExtension == ".cue";
@@ -333,6 +342,7 @@ private:
 
 	float height = 0.0f;
 
+	bool visible = Settings::settings.GetPlaylistOnScreen();
 	bool currentSongVisible = Settings::settings.GetCurrentSongVisible();
 
 	float maxHeight = 0.0f;

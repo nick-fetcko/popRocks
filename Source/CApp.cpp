@@ -789,6 +789,9 @@ void CApp::OnInit() {
 		menu.SetOnPresetChanged([this](std::optional<std::size_t> preset) {
 			LoadPreset(preset);
 		});
+		menu.SetOnPlaylistOnScreenChanged([this](bool playlistOnScreen) {
+			controls.GetPlaylist().SetVisible(playlistOnScreen);
+		});
 		menu.SetOnCurrentSongVisibleChanged([this](bool currentSongVisible) {
 			controls.GetPlaylist().SetCurrentSongVisible(currentSongVisible);
 		});
@@ -1151,6 +1154,21 @@ void CApp::OnInit() {
 			Settings::settings.SetVsync(vsync);
 			
 			UpdateVsync();
+		});
+		menu.SetOnPlaylistItemChanged([this](std::size_t index) {
+			if (auto track = controls.GetPlaylist().TrackAtIndex(index)) {
+				const auto next = controls.GetPlaylist().GetNext();
+
+				// If we didn't select the _next_ song in the playlist,
+				// we need to reset beat detection.
+				if (!next || track->path != next->path || next->title != track->title)
+					ResetBeatDetection();
+
+				LoadFile(track->path, true);
+
+				if (track->startTime > DBL_EPSILON)
+					SeekTo(track->startTime);
+			}
 		});
 
 		platform->AddMenuCallbacks(&menu);
@@ -1703,7 +1721,7 @@ inline void CApp::SwapBuffers(const Delta &time) {
 
 	// Keep the controls on screen if a menu is open
 	context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, 1.0f);
-	if (menu.OnLoop(lightPack, albumArt, *context))
+	if (menu.OnLoop(lightPack, controls, albumArt, *context))
 		controls.Fade(true);
 
 	if (menu.HasColorChanged() && updateUi == 0)

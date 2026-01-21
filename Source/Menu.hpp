@@ -127,7 +127,7 @@ public:
 		return ret;
 	}
 
-	bool OnLoop(const LightPack &lightPack, AlbumArt &albumArt, Context &context) {
+	bool OnLoop(const LightPack &lightPack, const Controls &controls, AlbumArt &albumArt, Context &context) {
 		bool open = false;
 
 		//ImGui::ShowStyleEditor();
@@ -901,11 +901,30 @@ public:
 		if (ImGui::BeginMenu("Playlist")) {
 			open = true;
 
-			currentSongVisible = Settings::settings.GetCurrentSongVisible();
-			if (ImGui::MenuItem("Current track always visible?", nullptr, &currentSongVisible)) {
+			playlistOnScreen = Settings::settings.GetPlaylistOnScreen();
+			if (ImGui::MenuItem("On screen?", nullptr, &playlistOnScreen)) {
+				if (onPlaylistOnScreenChanged)
+					onPlaylistOnScreenChanged(playlistOnScreen);
+			}
+
+			currentSongVisible = Settings::settings.GetCurrentSongVisible() && playlistOnScreen;
+			if (ImGui::MenuItem("\tCurrent track always visible?", nullptr, &currentSongVisible, playlistOnScreen)) {
 				if (onCurrentSongVisibleChanged)
 					onCurrentSongVisibleChanged(currentSongVisible);
 			}
+
+			if (const auto &titles = controls.GetPlaylist().GetTitles(); !titles.empty()) {
+				ImGui::Separator();
+
+				for (const auto &[i, title] : Utils::Enumerate(titles)) {
+					bool selected = (i == controls.GetPlaylist().GetCurrentIndex());
+					if (ImGui::MenuItem(title.GetText().c_str(), nullptr, &selected)) {
+						if (onPlaylistItemChanged)
+							onPlaylistItemChanged(i);
+					}
+				}
+			}
+
 			ImGui::EndMenu();
 		}
 
@@ -1373,6 +1392,7 @@ public:
 
 	void SetOnPresetChanged(std::function<void(std::optional<std::size_t>)> f) { onPresetChanged = f; }
 
+	void SetOnPlaylistOnScreenChanged(std::function<void(bool)> f) { onPlaylistOnScreenChanged = f; }
 	void SetOnCurrentSongVisibleChanged(std::function<void(bool)> f) { onCurrentSongVisibleChanged = f; }
 
 	void SetOnColorSelectionChanged(std::function<void(const Settings::ColorSelection &)> f) { onColorSelectionChanged = f; }
@@ -1452,6 +1472,8 @@ public:
 
 	void SetOnVsyncChanged(std::function<void(bool)> f) { onVsyncChanged = f; }
 
+	void SetOnPlaylistItemChanged(std::function<void(std::size_t)> f) { onPlaylistItemChanged = f; }
+
 private:
 	const std::string FontRoot;
 
@@ -1520,6 +1542,7 @@ private:
 	int presetX = 0;
 	std::string currentPresetName;
 
+	bool playlistOnScreen = Settings::settings.GetPlaylistOnScreen();
 	bool currentSongVisible = Settings::settings.GetCurrentSongVisible();
 
 	int fftSize = Settings::settings.GetFftSize();
@@ -1601,6 +1624,7 @@ private:
 	std::function<void(int)> onSmoothChanged;
 	std::function<void(float)> onGammaChanged;
 	std::function<void(std::optional<std::size_t>)> onPresetChanged;
+	std::function<void(bool)> onPlaylistOnScreenChanged;
 	std::function<void(bool)> onCurrentSongVisibleChanged;
 	std::function<void(const Settings::ColorSelection &)> onColorSelectionChanged;
 	std::function<void(int)> onFftSizeChanged;
@@ -1646,6 +1670,7 @@ private:
 	std::function<void(std::string)> onColorspaceChanged;
 	std::function<void(bool)> onPulseMaxBrightnessChanged;
 	std::function<void(bool)> onVsyncChanged;
+	std::function<void(std::size_t)> onPlaylistItemChanged;
 
 	std::function<void()> onResetRotation;
 	std::function<void()> onClearBlurFbo;

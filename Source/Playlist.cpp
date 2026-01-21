@@ -386,6 +386,29 @@ std::optional<Playlist::Track> Playlist::Current() {
 	return std::nullopt;
 }
 
+const std::optional<std::size_t> Playlist::GetCurrentIndex() const {
+	if (cue) 
+		return std::distance(cue->GetTracks().begin(), cue->GetCurrentTrack());
+	else if (currentFile != files.end()) 
+		return std::distance(files.begin(), static_cast<std::vector<std::filesystem::path>::const_iterator>(currentFile));
+
+	return std::nullopt;
+}
+
+std::optional<Playlist::Track> Playlist::TrackAtIndex(std::size_t index) {
+	if (cue) {
+		const auto track = cue->TrackAtIndex(index);
+
+		return Track{ track.filePath, track.title, track.startTime };
+	} else if (currentFile != files.end()) {
+		currentFile = files.begin() + index;
+
+		return Track{ *currentFile };
+	}
+
+	return std::nullopt;
+}
+
 std::optional<Playlist::Track> Playlist::Previous() {
 	if (files.empty()) {
 		if (cue) {
@@ -438,6 +461,8 @@ const std::optional<Playlist::Track> Playlist::GetNext() const {
 }
 
 void Playlist::OnLoop(Vector2i pos, float maxHeight, float alpha, Context &context) {
+	if (!visible) return;
+
 	// We want to store its _origin_
 	this->pos = pos;
 
@@ -448,7 +473,7 @@ void Playlist::OnLoop(Vector2i pos, float maxHeight, float alpha, Context &conte
 }
 
 std::optional<Playlist::Track> Playlist::OnMouseClicked(const Vector2i &mousePos) {
-	if (!titles.empty() && mousePos.y >= pos.y && mousePos.y <= maxHeight) {
+	if (visible && !titles.empty() && mousePos.y >= pos.y && mousePos.y <= maxHeight) {
 		const auto offset = 
 			cue ?
 				std::distance(cue->GetTracks().begin(), cue->GetCurrentTrack()) :

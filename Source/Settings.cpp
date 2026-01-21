@@ -330,6 +330,13 @@ void Settings::SetCurrentSongVisible(bool currentSongVisible) {
 	}
 }
 
+void Settings::SetPlaylistOnScreen(bool playlistOnScreen) {
+	if (playlistOnScreen != this->playlistOnScreen) {
+		this->playlistOnScreen = playlistOnScreen;
+		Save();
+	}
+}
+
 void Settings::SetFftSize(int fftSize) {
 	if (fftSize != this->fftSize) {
 		this->fftSize = fftSize;
@@ -796,6 +803,8 @@ const Node &operator>>(const Node &node, Settings &settings) {
 	if (node.has("blurOpacity"))
 		node["blurOpacity"]->get(settings.blurOpacity);
 
+	if (node.has("playlistOnScreen"))
+		node["playlistOnScreen"]->get(settings.playlistOnScreen);
 	if (node.has("currentSongVisible"))
 		node["currentSongVisible"]->get(settings.currentSongVisible);
 
@@ -956,6 +965,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["lightPackVisualizationType"]->set(settings.lightPackVisualizationType);
 	node["lightPackMapping"]->set(settings.lightPackMapping);
 	node["lightPackFocusArea"]->set(settings.lightPackFocusArea);
+	node["playlistOnScreen"]->set(settings.playlistOnScreen);
 	node["currentSongVisible"]->set(settings.currentSongVisible);
 	node["fftSize"]->set(settings.fftSize);
 	node["listening"]->set(settings.listening);

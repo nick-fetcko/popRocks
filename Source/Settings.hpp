@@ -174,6 +174,9 @@ public:
 	const bool &GetCurrentSongVisible() const { return currentSongVisible; }
 	void SetCurrentSongVisible(bool currentSongVisible);
 
+	const bool &GetPlaylistOnScreen() const { return playlistOnScreen; }
+	void SetPlaylistOnScreen(bool playlistOnScreen);
+
 	const int &GetFftSize() const { return fftSize; }
 	void SetFftSize(int fftSize);
 
@@ -362,6 +365,7 @@ private:
 	std::string lightPackMapping = "default";
 	std::string lightPackFocusArea = "bassandmid";
 
+	bool playlistOnScreen = true;
 	bool currentSongVisible = false;
 
 	int fftSize = 8192;
