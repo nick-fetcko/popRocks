@@ -907,6 +907,12 @@ public:
 					onPlaylistOnScreenChanged(playlistOnScreen);
 			}
 
+			playlistFade = Settings::settings.GetPlaylistFade() && playlistOnScreen;
+			if (ImGui::MenuItem("\tGradual fade?", nullptr, &playlistFade, playlistOnScreen)) {
+				if (onPlaylistFadeChanged)
+					onPlaylistFadeChanged(playlistFade);
+			}
+
 			currentSongVisible = Settings::settings.GetCurrentSongVisible() && playlistOnScreen;
 			if (ImGui::MenuItem("\tCurrent track always visible?", nullptr, &currentSongVisible, playlistOnScreen)) {
 				if (onCurrentSongVisibleChanged)
@@ -1393,6 +1399,7 @@ public:
 	void SetOnPresetChanged(std::function<void(std::optional<std::size_t>)> f) { onPresetChanged = f; }
 
 	void SetOnPlaylistOnScreenChanged(std::function<void(bool)> f) { onPlaylistOnScreenChanged = f; }
+	void SetOnPlaylistFadeChanged(std::function<void(bool)> f) { onPlaylistFadeChanged = f; }
 	void SetOnCurrentSongVisibleChanged(std::function<void(bool)> f) { onCurrentSongVisibleChanged = f; }
 
 	void SetOnColorSelectionChanged(std::function<void(const Settings::ColorSelection &)> f) { onColorSelectionChanged = f; }
@@ -1543,6 +1550,7 @@ private:
 	std::string currentPresetName;
 
 	bool playlistOnScreen = Settings::settings.GetPlaylistOnScreen();
+	bool playlistFade = Settings::settings.GetPlaylistFade();
 	bool currentSongVisible = Settings::settings.GetCurrentSongVisible();
 
 	int fftSize = Settings::settings.GetFftSize();
@@ -1625,6 +1633,7 @@ private:
 	std::function<void(float)> onGammaChanged;
 	std::function<void(std::optional<std::size_t>)> onPresetChanged;
 	std::function<void(bool)> onPlaylistOnScreenChanged;
+	std::function<void(bool)> onPlaylistFadeChanged;
 	std::function<void(bool)> onCurrentSongVisibleChanged;
 	std::function<void(const Settings::ColorSelection &)> onColorSelectionChanged;
 	std::function<void(int)> onFftSizeChanged;

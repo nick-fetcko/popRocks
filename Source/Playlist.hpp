@@ -58,6 +58,11 @@ public:
 		Settings::settings.SetPlaylistOnScreen(visible);
 	}
 
+	void SetFade(bool fade) {
+		this->fade = fade;
+		Settings::settings.SetPlaylistFade(fade);
+	}
+
 	void SetCurrentSongVisible(bool currentSongVisible) { 
 		this->currentSongVisible = currentSongVisible;
 		Settings::settings.SetCurrentSongVisible(currentSongVisible);
@@ -77,6 +82,7 @@ public:
 	}
 
 private:
+	constexpr inline static float NoFadeAlpha = 0.75f;
 	constexpr inline static std::array<std::string_view, 10> SupportedExtensions = { ".flac", ".mp3", ".m4a", ".mp4", ".ape", ".wv", ".ogg", ".aac", ".tta", ".wav"};
 
 	static constexpr bool IsSupported(const std::string_view &lowercaseExtension) {
@@ -167,12 +173,19 @@ private:
 		float alpha,
 		Context &context
 	) {
+		const auto distance = static_cast<int32_t>(
+			current - tracks.begin()
+		);
+
+		const auto trackHeight = ((tracks.size() - distance) * font->GetEm().height);
+
 		// Limit our background rectangle to our
-		// max height
-		if (auto height = maxHeight + font->GetEm().height / 2 - pos.y; this->height > height) {
+		// max height, rounding down to the nearest
+		// line height
+		if (auto height = static_cast<int>((maxHeight - pos.y) / font->GetEm().height) * font->GetEm().height; this->height > height || trackHeight > lastTrackHeight) {
 			this->height = height;
 
-			const auto heightMinusOne = height - font->GetEm().height;
+			const auto heightMinusOne = static_cast<float>(height - font->GetEm().height);
 
 			fadeOut = (HDR::Enabled ? 0.25f : (1.0f - heightMinusOne / height));
 
@@ -187,11 +200,13 @@ private:
 			vbo->BufferSubData(43, sizeof(float), &heightMinusOne);
 
 			// Bottom of bottom half
-			vbo->BufferSubData(31, sizeof(float), &height);
-			vbo->BufferSubData(37, sizeof(float), &height);
+			vbo->BufferSubData(31, sizeof(float), &this->height);
+			vbo->BufferSubData(37, sizeof(float), &this->height);
 
 			vbo->Unbind();
 		}
+
+		lastTrackHeight = trackHeight;
 
 		if (this->maxHeight != maxHeight)
 			this->maxHeight = maxHeight;
@@ -202,12 +217,12 @@ private:
 
 		vbo->Bind();
 
-		// Top of top half
-		vbo->BufferSubData(5, sizeof(float), &alpha);
-		vbo->BufferSubData(23, sizeof(float), &alpha);
+		const auto zero = (fade ? 0.0f : (NoFadeAlpha * alpha));
+		const auto fadedOut = std::min(fade ? fadeOut : NoFadeAlpha, alpha);
 
-		constexpr auto zero = 0.0f;
-		const auto fadedOut = std::min(fadeOut, alpha);
+		// Top of top half
+		vbo->BufferSubData(5, sizeof(float), fade ? &alpha : &zero);
+		vbo->BufferSubData(23, sizeof(float), fade ? &alpha : &zero);
 		
 		// Bottom of top half
 		vbo->BufferSubData(11, sizeof(float), &fadedOut);
@@ -242,9 +257,6 @@ private:
 				(maxHeight - pos.y) / titles.begin()->GetBounds().height
 		);
 
-		auto distance = static_cast<int32_t>(
-			std::distance(tracks.begin(), current)
-		);
 		pos.y -= titles.begin()->GetBounds().height * distance;
 
 		auto iter = tracks.begin();
@@ -269,13 +281,13 @@ private:
 					0.6f * HDR::WhiteLevel,
 					0.6f * HDR::WhiteLevel,
 					0.6f * HDR::WhiteLevel,
-					0.4f * alpha
+					(fade ? 0.4f : NoFadeAlpha) * alpha
 				);
 			} else {
-				const auto faded = std::max(
+				const auto faded = fade ? std::max(
 						0.0f,
 						alpha - (static_cast<float>(i - distance) / std::min(titles.size(), maxIndex))
-				);
+				) : std::min(((static_cast<int64_t>(i) - distance) > 0 ? 1.0f : 0.0f), alpha) ;
 
 				context.Color(
 					0.6f * HDR::WhiteLevel * (HDR::Enabled ? faded : 1.0f),
@@ -288,8 +300,14 @@ private:
 			title.OnLoop(pos.x, pos.y);
 
 			// Reduce the height as we near the end of the playlist
-			if (i == titles.size() - 2 && pos.y < maxHeight) {
-				height = pos.y - context.GetSafeArea().y;
+			if (i == titles.size() - 2 && pos.y < maxHeight - this->pos.y) {
+				height = trackHeight + 
+					// Line for previous track
+					((current != tracks.begin()) ? font->GetEm().height: 0.0f);
+
+				// Add extra line so we can fade out more gradually
+				if (fade && height < maxHeight - this->pos.y)
+					height += font->GetEm().height;
 
 				const auto heightMinusOne = height - font->GetEm().height;
 
@@ -343,8 +361,11 @@ private:
 	float height = 0.0f;
 
 	bool visible = Settings::settings.GetPlaylistOnScreen();
+	bool fade = Settings::settings.GetPlaylistFade();
 	bool currentSongVisible = Settings::settings.GetCurrentSongVisible();
 
 	float maxHeight = 0.0f;
 	float fadeOut = 0.0f;
+
+	int lastTrackHeight = 0;
 };

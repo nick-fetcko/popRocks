@@ -461,7 +461,12 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 
 			auto aboveMetadata = (context.GetSafeArea().h + context.GetSafeArea().y) - yOffset - albumHeight / 2 - exclusiveIndicator.GetHeight() / 2;
 
-			playlist.OnLoop(fpsCounter.GetSize(), aboveMetadata - albumHeight / 8.0f + (context.GetYOffset() - context.GetSafeArea().y), alpha, context);
+			playlist.OnLoop(
+				fpsCounter.GetSize(),
+				aboveMetadata - albumHeight / 8.0f + (context.GetYOffset() - context.GetSafeArea().y) - exclusiveIndicator.GetHeight() / 2,
+				alpha,
+				context
+			);
 
 #ifdef WIN32
 			// Only render our volume if we're in exclusive mode

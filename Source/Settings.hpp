@@ -174,6 +174,9 @@ public:
 	const bool &GetCurrentSongVisible() const { return currentSongVisible; }
 	void SetCurrentSongVisible(bool currentSongVisible);
 
+	const bool &GetPlaylistFade() const { return playlistFade; }
+	void SetPlaylistFade(bool playlistFade);
+
 	const bool &GetPlaylistOnScreen() const { return playlistOnScreen; }
 	void SetPlaylistOnScreen(bool playlistOnScreen);
 
@@ -367,6 +370,7 @@ private:
 
 	bool playlistOnScreen = true;
 	bool currentSongVisible = false;
+	bool playlistFade = true;
 
 	int fftSize = 8192;
 

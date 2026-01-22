@@ -792,6 +792,9 @@ void CApp::OnInit() {
 		menu.SetOnPlaylistOnScreenChanged([this](bool playlistOnScreen) {
 			controls.GetPlaylist().SetVisible(playlistOnScreen);
 		});
+		menu.SetOnPlaylistFadeChanged([this](bool playlistFade) {
+			controls.GetPlaylist().SetFade(playlistFade);
+		});
 		menu.SetOnCurrentSongVisibleChanged([this](bool currentSongVisible) {
 			controls.GetPlaylist().SetCurrentSongVisible(currentSongVisible);
 		});

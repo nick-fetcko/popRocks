@@ -330,6 +330,13 @@ void Settings::SetCurrentSongVisible(bool currentSongVisible) {
 	}
 }
 
+void Settings::SetPlaylistFade(bool playlistFade) {
+	if (playlistFade != this->playlistFade) {
+		this->playlistFade = playlistFade;
+		Save();
+	}
+}
+
 void Settings::SetPlaylistOnScreen(bool playlistOnScreen) {
 	if (playlistOnScreen != this->playlistOnScreen) {
 		this->playlistOnScreen = playlistOnScreen;
@@ -805,6 +812,8 @@ const Node &operator>>(const Node &node, Settings &settings) {
 
 	if (node.has("playlistOnScreen"))
 		node["playlistOnScreen"]->get(settings.playlistOnScreen);
+	if (node.has("playlistFade"))
+		node["playlistFade"]->get(settings.playlistFade);
 	if (node.has("currentSongVisible"))
 		node["currentSongVisible"]->get(settings.currentSongVisible);
 
@@ -966,6 +975,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["lightPackMapping"]->set(settings.lightPackMapping);
 	node["lightPackFocusArea"]->set(settings.lightPackFocusArea);
 	node["playlistOnScreen"]->set(settings.playlistOnScreen);
+	node["playlistFade"]->set(settings.playlistFade);
 	node["currentSongVisible"]->set(settings.currentSongVisible);
 	node["fftSize"]->set(settings.fftSize);
 	node["listening"]->set(settings.listening);
