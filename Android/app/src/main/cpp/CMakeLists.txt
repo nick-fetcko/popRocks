@@ -58,6 +58,7 @@ set(_poprocks_cpp_headers
 		${MAIN_DIR}/Source/MetadataReader.hpp
 		${MAIN_DIR}/Source/MP3.hpp
 		${MAIN_DIR}/Source/MP4.hpp
+		${MAIN_DIR}/Source/MT19937.hpp
 		${MAIN_DIR}/Source/Next.hpp
 		${MAIN_DIR}/Source/OGG.hpp
 		${MAIN_DIR}/Source/OscilloscopeRenderer.hpp
@@ -68,6 +69,8 @@ set(_poprocks_cpp_headers
 		${MAIN_DIR}/Source/Previous.hpp
 		${MAIN_DIR}/Source/RecordAudioStream.h
 		${MAIN_DIR}/Source/Renderer.hpp
+		${MAIN_DIR}/Source/PRNG.hpp
+		${MAIN_DIR}/Source/SampleRNG.hpp
 		${MAIN_DIR}/Source/Settings.hpp
 		${MAIN_DIR}/Source/Symbol.hpp
 		${MAIN_DIR}/Source/TagLoader.hpp
@@ -93,8 +96,10 @@ set(_poprocks_cpp_sources
 		${MAIN_DIR}/Source/Mappings.cpp
 		${MAIN_DIR}/Source/Metadata.cpp
 		${MAIN_DIR}/Source/MP4.cpp
+		${MAIN_DIR}/Source/MT19937.cpp
 		${MAIN_DIR}/Source/Playlist.cpp
 		${MAIN_DIR}/Source/Preset.cpp
+		${MAIN_DIR}/Source/SampleRNG.cpp
 		${MAIN_DIR}/Source/Settings.cpp
 		${MAIN_DIR}/Source/Text.cpp
 		${MAIN_DIR}/Source/Volume.cpp

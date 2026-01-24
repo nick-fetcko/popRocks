@@ -81,6 +81,7 @@ set(_poprocks_cpp_headers
 	Source/MetadataReader.hpp
 	Source/MP3.hpp
 	Source/MP4.hpp
+	Source/MT19937.hpp
 	Source/Next.hpp
 	Source/OGG.hpp
 	Source/OscilloscopeRenderer.hpp
@@ -89,11 +90,14 @@ set(_poprocks_cpp_headers
 	Source/Playlist.hpp
 	Source/Preset.hpp
 	Source/Previous.hpp
+	Source/PRNG.hpp
 	Source/RecordAudioStream.h
 	Source/Renderer.hpp
+	Source/SampleRNG.hpp
 	Source/Settings.hpp
 	Source/Symbol.hpp
 	Source/TagLoader.hpp
+	Source/TestRNG.hpp
 	Source/Text.hpp
 	Source/Volume.hpp
 	Source/WV.hpp
@@ -116,10 +120,13 @@ set(_poprocks_cpp_sources
 	Source/Mappings.cpp
 	Source/Metadata.cpp
 	Source/MP4.cpp
+	Source/MT19937.cpp
 	Source/RecordAudioStream.cpp
 	Source/Playlist.cpp
 	Source/Preset.cpp
+	Source/SampleRNG.cpp
 	Source/Settings.cpp
+	Source/TestRNG.cpp
 	Source/Text.cpp
 	Source/Volume.cpp
 	Source/Platforms/Platform.cpp

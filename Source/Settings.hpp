@@ -312,6 +312,9 @@ public:
 	const bool &GetVsync() const { return vsync; }
 	void SetVsync(bool vsync);
 
+	const std::string &GetRngSource() const { return rngSource; }
+	void SetRngSource(const std::string &rngSource);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -469,4 +472,6 @@ private:
 	bool pulseMaxBrightness = true;
 
 	bool vsync = true;
+
+	std::string rngSource = "MT19937";
 };

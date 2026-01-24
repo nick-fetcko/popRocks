@@ -33,7 +33,16 @@ using namespace MathsCPP;
 // =====================================================
 // ======================= CApp ========================
 // =====================================================
-CApp::CApp() : albumArt(context), controls(&albumArt), circleLine(12.0f), prng(time(nullptr)), platform(PlatformFactory::Build(
+CApp::CApp() : 
+	albumArt(context), 
+	controls(&albumArt), 
+	circleLine(12.0f), 
+	prng(
+		PRNGFactory<unsigned int>::Build(
+			Settings::settings.GetRngSource(), &streamHandle
+		)
+	),
+	platform(PlatformFactory::Build(
 #ifdef WIN32
 	"windows"
 #elif defined(__ANDROID__)
@@ -1173,6 +1182,11 @@ void CApp::OnInit() {
 					SeekTo(track->startTime);
 			}
 		});
+		menu.SetOnRngSourceChanged([this](const std::string &rngSource) {
+			Settings::settings.SetRngSource(rngSource);
+
+			prng = PRNGFactory<unsigned int>::Build(rngSource, &streamHandle);
+		});
 
 		platform->AddMenuCallbacks(&menu);
 
@@ -1367,7 +1381,7 @@ void CApp::LoadRandomPreset() {
 			std::set<std::size_t>::iterator preset;
 			do {
 				preset = selectedPresets.begin();
-				std::advance(preset, (prng() % selectedPresets.size()));
+				std::advance(preset, (prng->Next() % selectedPresets.size()));
 			} while (shuffledPresets.empty() && presetIndex && *preset == *presetIndex);
 
 			shuffledPresets.emplace_back(*preset);
@@ -1539,8 +1553,10 @@ void CApp::OnLoop(const Delta &time) {
 				0.0f
 		);
 
-		context->GetShaderProgram().Uniform1f("randomX"_hash, prng() / static_cast<float>(prng.max()));
-		context->GetShaderProgram().Uniform1f("randomY"_hash, prng() / static_cast<float>(prng.max()));
+		const auto nextTwo = prng->NextTwo();
+
+		context->GetShaderProgram().Uniform1f("randomX"_hash, nextTwo.first / static_cast<float>(prng->Max()));
+		context->GetShaderProgram().Uniform1f("randomY"_hash, nextTwo.second / static_cast<float>(prng->Max()));
 		context->GetShaderProgram().Uniform1f("effectEnabled"_hash, (playing || platform->IsListening()) ? 1.0f : 0.0f);
 
 		lastFrame->DrawMultisampled(0, 0, *context);

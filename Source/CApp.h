@@ -6,7 +6,6 @@
 #include <vector>
 #include <optional>
 #include <thread>
-#include <random>
 
 #include <string>
 #include <bass.h>
@@ -46,9 +45,12 @@
 #include "Mappings.h"
 #include "Menu.hpp"
 #include "Metadata.hpp"
+#include "MT19937.hpp"
 #include "Playlist.hpp"
 #include "Preset.hpp"
 #include "Renderer.hpp"
+#include "SampleRNG.hpp"
+#include "TestRNG.hpp"
 #include "Text.hpp"
 #include "Volume.hpp"
 
@@ -352,7 +354,7 @@ private:
 	int maxDimension = 0;
 	float blurOpacity = Settings::settings.GetBlurOpacity();
 
-	std::mt19937 prng;
+	std::unique_ptr<PRNG<unsigned int>> prng;
 
 	std::chrono::steady_clock::time_point frameStart;
 	double frameLimit = Settings::settings.GetLimitFramerate() ? Settings::settings.GetFrameLimit() : -1;

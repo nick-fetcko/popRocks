@@ -661,6 +661,13 @@ void Settings::SetVsync(bool vsync) {
 	}
 }
 
+void Settings::SetRngSource(const std::string &rngSource) {
+	if (this->rngSource != rngSource) {
+		this->rngSource = rngSource;
+		Save();
+	}
+}
+
 void Settings::Save() {
 	if (auto path = Filesystem::GetPath(); !path.empty()) {
 		std::ofstream outFile(path, std::ios::out);
@@ -937,6 +944,9 @@ const Node &operator>>(const Node &node, Settings &settings) {
 
 	if (node.has("vsync"))
 		node["vsync"]->get(settings.vsync);
+
+	if (node.has("rngSource"))
+		node["rngSource"]->get(settings.rngSource);
 		
 	return node;
 }
@@ -1022,6 +1032,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["colorspace"]->set(settings.colorspace);
 	node["pulseMaxBrightness"]->set(settings.pulseMaxBrightness);
 	node["vsync"]->set(settings.vsync);
+	node["rngSource"]->set(settings.rngSource);
 
 	return node;
 }

@@ -24,6 +24,7 @@
 #include "LightPack.hpp"
 #include "Playlist.hpp"
 #include "Preset.hpp"
+#include "PRNG.hpp"
 
 using namespace Fetcko;
 
@@ -553,6 +554,21 @@ public:
 				if (ImGui::SliderFloat("Rotation", &effectRotation, -5.0f, 5.0f, "%.2f")) {
 					if (onEffectRotationChanged)
 						onEffectRotationChanged(effectRotation);
+				}
+
+				ImGui::EndMenu();
+			}
+
+			if (ImGui::BeginMenu("PRNG Source")) {
+				rngSource = Settings::settings.GetRngSource();
+
+				for (const auto &key : PRNGFactory<unsigned int>::GetKeys()) {
+					bool selected = (key == rngSource);
+
+					if (ImGui::MenuItem(key.c_str(), nullptr, &selected)) {
+						if (onRngSourceChanged)
+							onRngSourceChanged(key);
+					}
 				}
 
 				ImGui::EndMenu();
@@ -1481,6 +1497,8 @@ public:
 
 	void SetOnPlaylistItemChanged(std::function<void(std::size_t)> f) { onPlaylistItemChanged = f; }
 
+	void SetOnRngSourceChanged(std::function<void(const std::string &)> f) { onRngSourceChanged = f; }
+
 private:
 	const std::string FontRoot;
 
@@ -1680,6 +1698,7 @@ private:
 	std::function<void(bool)> onPulseMaxBrightnessChanged;
 	std::function<void(bool)> onVsyncChanged;
 	std::function<void(std::size_t)> onPlaylistItemChanged;
+	std::function<void(const std::string &)> onRngSourceChanged;
 
 	std::function<void()> onResetRotation;
 	std::function<void()> onClearBlurFbo;
@@ -1724,4 +1743,6 @@ private:
 
 	bool pulseMaxBrightness = Settings::settings.GetPulseMaxBrightness();
 	bool vsync = Settings::settings.GetVsync();
+
+	std::string rngSource = Settings::settings.GetRngSource();
 };
