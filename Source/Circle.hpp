@@ -16,6 +16,7 @@ enum class Circles : uint8_t {
 	Textured = 4
 };
 
+// FIXME: Make number of triangles configurable
 template<Circles T>
 class Circle : public LoggableClass {
 public:
@@ -73,12 +74,12 @@ public:
 		vbo.reset();
 	}
 
-	virtual void SetRadius(float radius) {
+	void SetRadius(float radius) {
 		this->radius = radius;
 		UpdateVertexCoords();
 	}
 
-	void OnLoop(float x, float y, Context &context) {
+	void OnLoop(float x, float y, Context &context) const {
 		context.Translate(
 			x,
 			y,

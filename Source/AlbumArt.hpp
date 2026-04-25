@@ -4,6 +4,7 @@
 #include <array>
 #include <map>
 #include <mutex>
+#include <functional>
 #include <set>
 #include <string>
 #include <thread>
@@ -19,15 +20,20 @@
 #include "OpenGL/VertexArray.hpp"
 #include "OpenGL/Buffer.hpp"
 #include "OpenGL/Texture.hpp"
+#include "OpenGL/Polyline.hpp"
 
 #include "Utils/Logger.hpp"
 
 #include "Circle.hpp"
 #include "ColorChangeListener.hpp"
+#include "Settings.hpp"
+#include "Text.hpp"
 
 using namespace MathsCPP;
 using namespace Fetcko;
 
+class Platform;
+class Controls;
 class AlbumArt : public Circle<Circles::Textured> {
 public:
 	static constexpr bool IsSupported(const std::string_view &lowercaseExtension) {
@@ -40,12 +46,23 @@ public:
 
 	enum class ColorMethod { Average, Dominant };
 
-	AlbumArt(std::unique_ptr<Context> &context);
+	class BlackChangedListener {
+	public:
+		virtual ~BlackChangedListener() {
+
+		}
+
+		virtual void OnBlackChanged(const float &black) = 0;
+	};
+
+	constexpr static inline float BaseRadius = 200.0f;
+
+	AlbumArt(Controls *const controls, std::unique_ptr<Context> &context, std::unique_ptr<Platform> &platform);
 	virtual ~AlbumArt();
 
 	void OnInit(int windowWidth, int windowHeight, float scale = 1.0f);
 	void OnResize(int windowWidth, int windowHeight, float scale = 1.0f);
-	void OnLoop(GLfloat x, GLfloat y, float frameCount, Context &context);
+	void OnLoop(const Delta &time, GLfloat x, GLfloat y, float frameCount, float alpha, Context &context, bool playing);
 	void OnDestroy() override;
 
 	// fileName is the path to the _song_
@@ -76,6 +93,8 @@ public:
 		return Load(mimeType, data, length, force);
 	}
 
+	void UpdateParentPath(const std::filesystem::path &parentPath);
+
 	void Reset(const Colour<float> &color, bool fromPlaylist = false);
 
 	void NextBin(bool silent = false);
@@ -89,13 +108,17 @@ public:
 	void AddColorChangeListener(ColorChangeListener *listener);
 	void RemoveColorChangeListener(ColorChangeListener *listener);
 
+	void AddBlackChangedListener(BlackChangedListener *listener);
+	void RemoveBlackChangedListener(BlackChangedListener *listener);
+
 	int DrawSquare(int x, int y, int height, GLfloat alpha, Context &context);
 
 	const float &GetAspectRatio() const { return aspectRatio; }
 
 	void Scale(bool force = false);
 
-	void SetRadius(float radius) override;
+	const float GetRadius(bool miniPlayer) const;
+	void SetRadius(float radius, bool miniPlayer);
 
 	void ReprocessColors();
 
@@ -104,7 +127,7 @@ public:
 	std::unique_lock<std::mutex> Lock() { return std::move(std::unique_lock(histogramMutex)); }
 
 	const std::multimap<int, std::filesystem::path> &GetPreferred() const { return preferred; }
-	const std::set<std::filesystem::path> &GetFound() const { return found; }
+	const std::vector<std::filesystem::path> &GetFound() const { return found; }
 
 	const std::filesystem::path &GetCurrentFile() const { return currentFile; }
 
@@ -122,9 +145,27 @@ public:
 
 	const std::unique_ptr<Cube> &GetCube() { return cube; }
 
-	bool OnMouseClicked(const Vector2i &mousepos);
+	bool OnMouseDown(const Vector2i &mousePos);
+	void OnMouseUp(const Vector2i &mousePos);
+	bool OnMouseClicked(const Vector2i &mousePos);
+	bool OnMouseMoved(const Vector2i &mousePos);
+	bool OnMouseDragged(const Vector2i &mousePos);
+	void OnMouseLeave();
 
 	const bool IsBlackAndWhite() const { return blackAndWhite; }
+
+	void CalculateChroma();
+	const float &GetChromaColor() const { return chromaColor; }
+	const float &GetBlackColor() const { return blackColor; }
+	void ResetChroma();
+
+	const Colourf &GetTintedBlackColor() const { return tintedBlackColor; }
+
+	const bool HasChromaChanged() { auto ret = chromaChanged.load(); chromaChanged = false; return ret; }
+
+	const bool IsResizing() const { return activeOutline != Outline::None; }
+
+	void DrawPlaceholder(GLfloat x, GLfloat y, float alpha, Context &context) const;
 
 private:
 	constexpr inline static std::array<std::string_view, 3> SupportedExtensions = { ".jpg", ".png", ".webp" };
@@ -140,6 +181,21 @@ private:
 	void PrintBin();
 
 	inline uint8_t *GetPixels(SDL_Surface *surface);
+
+	inline void UpdateOutline();
+
+	inline void UpdateCursor(const Vector2i &mousePos);
+
+	enum class Outline {
+		None,
+		Art,
+		Visualizer
+	};
+	Outline IsCursorOnOutline(const Vector2i &mousePos);
+
+	inline void UpdateFontSize();
+
+	void CalculateChroma(SDL_Surface *surface, const uint8_t *pixels);
 
 	GLuint album = 0;
 	int albumWidth = 0, albumHeight = 0;
@@ -180,7 +236,7 @@ private:
 
 	std::vector<Colour<float>> selectedColors;
 
-	void ProcessColors(Histogram *destination, SDL_Surface *surface, const uint8_t *pixels);
+	void ProcessColors(Histogram *destination, SDL_Surface *surface, const uint8_t *pixels, bool initial = false);
 
 	std::vector<Histogram::reverse_iterator> previousBins;
 
@@ -205,6 +261,7 @@ private:
 	std::unique_ptr<ElementBuffer> squareEab;
 
 	std::unique_ptr<Context> &context;
+	std::unique_ptr<Platform> &platform;
 
 	std::thread scaleThread;
 	bool scaling = false;
@@ -214,7 +271,7 @@ private:
 
 	std::filesystem::path searchFolder;
 	std::multimap<int, std::filesystem::path> preferred;
-	std::set<std::filesystem::path> found;
+	std::vector<std::filesystem::path> found;
 	std::filesystem::path currentFile;
 
 	uint8_t *embeddedData = nullptr;
@@ -231,4 +288,38 @@ private:
 	int windowHeight = 0;
 
 	bool blackAndWhite = false;
+
+	Circle<Circles::Plain> placeholder;
+	Text dragAndDropPrompt;
+
+	float chromaColor = 0.0f;
+	std::atomic<bool> chromaChanged = false;
+
+	float blackColor = 0.01f;
+	Colourf tintedBlackColor = { blackColor, blackColor, blackColor };
+
+	SDL_Cursor *resizeCursor = nullptr;
+
+	Fetcko::Polyline outline;
+	Fetcko::Polyline visualizerOutline;
+	float outlineAlpha = 0.0f;
+	float targetOutlineAlpha = 0.0f;
+
+	std::set<BlackChangedListener*> blackChangedListeners;
+
+	Outline activeOutline = Outline::None;
+
+	OpenGLFont *font = nullptr;
+	OpenGLFont *boldFont = nullptr;
+	OpenGLFont *outlineFont = nullptr;
+	OpenGLFont *boldOutlineFont = nullptr;
+
+	float radius = Settings::settings.GetRadius();
+	float miniPlayerRadius = Settings::settings.GetMiniPlayerRadius();
+
+	std::optional<std::chrono::system_clock::time_point> hoverTimer = std::nullopt;
+	bool hovered = false;
+	Vector2i mousePos = { 0, 0 };
+
+	Controls * const controls = nullptr;
 };

@@ -1,7 +1,12 @@
 #include "Volume.hpp"
 
+#include "AlbumArt.hpp"
 #include "Hash.hpp"
 #include "HDR.hpp"
+
+Volume::Volume() {
+	radius = AlbumArt::BaseRadius;
+}
 
 void Volume::OnInit(const std::string &fontRoot, Context *context) {
 	ring.SetWidth(radius / 10);
@@ -14,15 +19,17 @@ void Volume::OnInit(const std::string &fontRoot, Context *context) {
 	text.OnInit(font, context);
 	outlineText.OnInit(outlineFont, context);
 	outlineText.SetColor(Colour<float>::Black);
-	UpdateVolume();
+	UpdateVolume(false);
 }
 
-void Volume::OnLoop(int x, int y, const Delta &time, Context &context) {
+void Volume::OnLoop(int x, int y, const Delta &time, const AlbumArt *const albumArt, bool miniPlayer, Context &context) {
 	AutoFader::OnLoop(time);
 
 	//glTranslatef(x, y, 0);
 
-	context.Color(0.0f, 0.0f, 0.0f, alpha);
+	const auto OutlineColor = miniPlayer ? albumArt->GetBlackColor() : 0.0f;
+
+	context.Color(OutlineColor, OutlineColor, OutlineColor, alpha);
 	outlineText.OnLoop(x - text.GetSize().x / 2, y - text.GetSize().y / 2);
 	context.Color(color.r, color.g, color.b, alpha);
 	text.OnLoop(x - text.GetSize().x / 2, y - text.GetSize().y / 2);
@@ -45,7 +52,7 @@ void Volume::OnLoop(int x, int y, const Delta &time, Context &context) {
 	*/
 	context.Use("basic"_hash);
 
-	context.Color(0.0f, 0.0f, 0.0f, alpha);
+	context.Color(OutlineColor, OutlineColor, OutlineColor, alpha);
 	context.Translate(
 		static_cast<GLfloat>(x),
 		static_cast<GLfloat>(y),
@@ -73,7 +80,7 @@ void Volume::SetRadius(float radius) {
 	outlineFont->SetOutlineRadius(static_cast<int>(std::max(1.0f, radius / 25.0f)));
 	ring.SetWidth(radius / 10);
 	outlineRing.SetWidth(radius / 10 + (radius / 25) * 2);
-	UpdateVolume(true);
+	UpdateVolume(false, true);
 }
 
 void Volume::ToggleVolumeControl() { volumeControl = !volumeControl; }
@@ -81,16 +88,16 @@ const bool Volume::GetVolumeControl() const { return volumeControl; }
 
 void Volume::VolumeUp() {
 	Settings::settings.SetVolume(std::clamp(GetVolume() + 0.02f + FLT_EPSILON, 0.0f, 1.0f));
-	UpdateVolume();
+	UpdateVolume(true);
 }
 void Volume::VolumeDown() {
 	Settings::settings.SetVolume(std::clamp(GetVolume() - 0.02f - FLT_EPSILON, 0.0f, 1.0f));
-	UpdateVolume();
+	UpdateVolume(true);
 }
 
 void Volume::SetVolume(int volume) {
 	Settings::settings.SetVolume(volume / 100.0f);
-	UpdateVolume();
+	UpdateVolume(true);
 }
 const float &Volume::GetVolume() const { return Settings::settings.GetVolume(); }
 
@@ -130,7 +137,7 @@ void Volume::OnColorChanged(const Colour<float> &color, bool silent) {
 	}
 }
 
-inline void Volume::UpdateVolume(bool force) {
+inline void Volume::UpdateVolume(bool fade, bool force) {
 	const auto string = std::to_string(static_cast<int>(GetVolume() * 100));
 
 	scaledVolume = ((std::exp(GetVolume()) - 1.0f) / (std::exp(1.0f) - 1.0f));
@@ -180,7 +187,5 @@ inline void Volume::UpdateVolume(bool force) {
 	delete[] points;
 	delete[] outlinePoints;
 
-	// Update setting here
-
-	Fade(true);
+	if (fade) Fade(true);
 }

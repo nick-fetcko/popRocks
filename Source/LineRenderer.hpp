@@ -47,12 +47,12 @@ public:
 	}
 
 protected:
-	inline std::pair<float, float> CenterPoints() {
+	inline std::pair<float, float> CenterPoints(bool miniPlayer) {
 		std::pair<float, float> ret{ std::numeric_limits<float>::max(), std::numeric_limits<float>::lowest() };
 
 		// Center / scale points within our album art circle
 		for (auto i = 0; i < bufferLength; ++i) {
-			points[i].y = (((points[i].y - minPoint) / (maxPoint - minPoint)) * (albumArt->GetRadius() * 2) + albumArt->GetRadius() * -1) * scale;
+			points[i].y = (((points[i].y - minPoint) / (maxPoint - minPoint)) * (albumArt->GetRadius(miniPlayer) * 2) + albumArt->GetRadius(miniPlayer) * -1) * scale;
 
 			if (points[i].y < ret.first)
 				ret.first = points[i].y;
@@ -66,7 +66,7 @@ protected:
 	}
 
 	Vector2f *points = nullptr;
-	Polyline line = Polyline(Settings::settings.GetWidth());
+	Fetcko::Polyline line = Fetcko::Polyline(Settings::settings.GetWidth());
 
 	float minPoint = std::numeric_limits<float>::max();
 	float maxPoint = std::numeric_limits<float>::lowest();

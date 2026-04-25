@@ -76,6 +76,12 @@ public:
 	// Fullscreen
 	virtual void ToggleFullscreen() = 0;
 
+	// Miniplayer
+	virtual void SetMiniPlayer(bool miniPlayer, uint8_t chromaKey = 0) = 0;
+
+	// Window management
+	virtual std::optional<Vector2i> SetWindowPos(int x, int y, int width, int height) = 0;
+
 	// =====================================================
 	// ===================== Virtuals ======================
 	// =====================================================

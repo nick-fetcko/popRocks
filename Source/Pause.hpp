@@ -6,6 +6,10 @@ using namespace Fetcko;
 
 class Pause : public Symbol {
 public:
+	Pause(AlbumArt *const albumArt) : Symbol(albumArt) {
+
+	}
+
 	void OnInit(float radius) override {
 		Symbol::OnInit(radius);
 
@@ -40,16 +44,22 @@ public:
 		vao->Unbind();
 	}
 
-	void OnLoop(float x, float y, const Delta &time, Context &context) {
+	void OnLoop(float x, float y, const Delta &time, Context &context, const float *alpha = nullptr) override {
+		Symbol::OnLoop(x, y, time, context, alpha);
+
+		const auto OutlineColor = alpha ? albumArt->GetBlackColor() : 0.0f;
+		const auto HorizontalScale = alpha ? 2.25f : 1.5f;
+		const auto VerticalScale = alpha ? 1.2f : 1.1f;
+
 		context.Use("basic"_hash);
 
 		AutoFader::OnLoop(time);
 
 		context.Translate(x - radius / 3.0f, y, 0);
-		context.Scale(1.5f, 1.1f, 1.0f);
+		context.Scale(HorizontalScale, VerticalScale, 1.0f);
 		context.Apply();
 
-		context.Color(0.0f, 0.0f, 0.0f, alpha);
+		context.Color(OutlineColor, OutlineColor, OutlineColor, alpha ? *alpha : this->alpha);
 
 		// Left outline
 		vao->Bind();
@@ -58,8 +68,8 @@ public:
 		eab->Unbind();
 		vao->Unbind();
 
-		context.Color(color.r, color.g, color.b, alpha);
-		context.Scale(1.0f / 1.5f, 1.0f / 1.1f, 1.0f);
+		context.Color(GetColor().r, GetColor().g, GetColor().b, alpha ? *alpha : this->alpha);
+		context.Scale(1.0f / HorizontalScale, 1.0f / VerticalScale, 1.0f);
 		context.Apply();
 
 		// Left rectangle
@@ -70,10 +80,10 @@ public:
 		vao->Unbind();
 
 		context.Translate(radius / 3.0f * 2.0f, 0, 0);
-		context.Scale(1.5f, 1.1f, 1.0f);
+		context.Scale(HorizontalScale, VerticalScale, 1.0f);
 		context.Apply();
 
-		context.Color(0.0f, 0.0f, 0.0f, alpha);
+		context.Color(OutlineColor, OutlineColor, OutlineColor, alpha ? *alpha : this->alpha);
 
 		// Right outline
 		vao->Bind();
@@ -82,8 +92,8 @@ public:
 		eab->Unbind();
 		vao->Unbind();
 
-		context.Color(color.r, color.g, color.b, alpha);
-		context.Scale(1.0f / 1.5f, 1.0f / 1.1f, 1.0f);
+		context.Color(GetColor().r, GetColor().g, GetColor().b, alpha ? *alpha : this->alpha);
+		context.Scale(1.0f / HorizontalScale, 1.0f / VerticalScale, 1.0f);
 		context.Apply();
 
 		// Right rectangle

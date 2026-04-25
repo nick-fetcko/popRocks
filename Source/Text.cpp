@@ -2,12 +2,30 @@
 
 #include "Buffer.hpp"
 
-void Text::OnInit(OpenGLFont *font, Context *context) {
+#ifdef _DEBUG
+Text::~Text() {
+	if (!destroyed)
+		LogWarning("Text deallocated without destruction!");
+}
+#endif
+
+void Text::SetFont(OpenGLFont *font) {
+	if (this->font)
+		this->font->RemoveSizeChangedListener(this);
+
 	this->font = font;
-	this->context = context;
+
+	if (font)
+		font->AddSizeChangedListener(this);
 
 	// Refresh our text, if there is any
 	SetText(text, true);
+}
+
+void Text::OnInit(OpenGLFont *font, Context *context) {
+	this->context = context;
+
+	SetFont(font);
 }
 
 Vector2i Text::MeasureText(const std::string &text) const {
@@ -20,8 +38,8 @@ Vector2i Text::MeasureText(const std::string &text) const {
 	return ret;
 }
 
-void Text::SetText(const std::string &text, bool force) {
-	if ((this->text == text && !force) || !font || !font->HasFaces()) return;
+bool Text::SetText(const std::string &text, bool force) {
+	if ((this->text == text && !force) || !font || !font->HasFaces()) return false;
 
 	this->text = text;
 
@@ -31,7 +49,7 @@ void Text::SetText(const std::string &text, bool force) {
 	// Don't try to load an empty string
 	//
 	// We'll likely get a null surface anyway
-	if (Empty()) return;
+	if (Empty()) return true;
 
 	std::tie(cached, bounds) = font->CacheText(
 		text,
@@ -41,14 +59,22 @@ void Text::SetText(const std::string &text, bool force) {
 
 	if (!cached) {
 		this->text.clear();
-		return;
+		return true;
 	}
 
 	size = { bounds.width, bounds.renderedHeight };
+
+	return true;
 }
 
 void Text::OnDestroy() {
 	cached.reset();
+
+	font->RemoveSizeChangedListener(this);
+
+#ifdef _DEBUG
+	destroyed = true;
+#endif
 }
 
 void Text::OnLoop(int x, int y) const {
@@ -68,4 +94,13 @@ void Text::OnLoop(int x, int y) const {
 	font->RenderCached(cached, context->GetProjection(), *context);
 
 	context->LoadIdentity();
+}
+
+void Text::OnSizeChanged(FT_UInt size) {
+	// Force a cache refresh
+	SetText(text, true);
+}
+
+void Text::SetAltText(const std::string &altText) {
+	this->altText = altText;
 }

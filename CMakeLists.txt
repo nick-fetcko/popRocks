@@ -57,7 +57,9 @@ set(_poprocks_cpp_headers
 	Source/BeatDetect.hpp
 	Source/Bicubic.hpp
 	Source/CApp.h
+	Source/Checkbox.hpp
 	Source/Circle.hpp
+	Source/Close.hpp
 	Source/ColorChangeListener.hpp
 	Source/Controls.hpp
 	Source/Cue.hpp
@@ -79,6 +81,7 @@ set(_poprocks_cpp_headers
 	Source/Menu.hpp
 	Source/Metadata.hpp
 	Source/MetadataReader.hpp
+	Source/MiniPlayerList.hpp
 	Source/MP3.hpp
 	Source/MP4.hpp
 	Source/MT19937.hpp
@@ -89,11 +92,13 @@ set(_poprocks_cpp_headers
 	Source/Play.hpp
 	Source/Playlist.hpp
 	Source/Preset.hpp
+	Source/PresetList.hpp
 	Source/Previous.hpp
 	Source/PRNG.hpp
 	Source/RecordAudioStream.h
 	Source/Renderer.hpp
 	Source/SampleRNG.hpp
+	Source/ScrollingText.hpp
 	Source/Settings.hpp
 	Source/Symbol.hpp
 	Source/TagLoader.hpp
@@ -119,12 +124,14 @@ set(_poprocks_cpp_sources
 	Source/LightPack.cpp
 	Source/Mappings.cpp
 	Source/Metadata.cpp
+	Source/MiniPlayerList.cpp
 	Source/MP4.cpp
 	Source/MT19937.cpp
 	Source/RecordAudioStream.cpp
 	Source/Playlist.cpp
 	Source/Preset.cpp
 	Source/SampleRNG.cpp
+	Source/ScrollingText.cpp
 	Source/Settings.cpp
 	Source/TestRNG.cpp
 	Source/Text.cpp
@@ -224,6 +231,13 @@ add_executable(popRocks
 	)
 
 if (WIN32)
+	# Use Windows subsystem instead of Console
+	if (${CMAKE_CONFIGURATION_TYPES} STREQUAL "Release")
+		set_target_properties(popRocks PROPERTIES 
+			WIN32_EXECUTABLE TRUE
+			LINK_FLAGS "/ENTRY:mainCRTStartup"
+			)
+	endif()
 	target_sources(popRocks 
 		PRIVATE 		
 		${APP_ICON_RESOURCE_WINDOWS}
@@ -243,9 +257,6 @@ target_compile_features(popRocks PUBLIC cxx_std_17)
 
 # Prevent windows.h from defining min and max macros
 target_compile_definitions(popRocks PUBLIC WIN32_LEAN_AND_MEAN NOMINMAX)
-
-# We don't need GDI or bitmaps, either
-target_compile_definitions(popRocks PUBLIC NOGDI NOBITMAP)
 
 find_package(OpenGL REQUIRED)
 

@@ -186,6 +186,8 @@ void LightPack::_OnInit() {
 			if (CanConnect())
 				tcpsock = NET_CreateClient(ip, 3636);
 
+			SDL_free(ip);
+
 			if (status = NET_WaitUntilConnected(tcpsock, -1); status != NET_SUCCESS) {
 				NET_DestroyStreamSocket(tcpsock);
 				tcpsock = nullptr;

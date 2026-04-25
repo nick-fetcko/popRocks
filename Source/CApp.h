@@ -36,6 +36,7 @@
 #include "AlbumArt.hpp"
 #include "BeatDetect.hpp"
 #include "Circle.hpp"
+#include "Close.hpp"
 #include "ColorChangeListener.hpp"
 #include "Controls.hpp"
 #include "DoubleClick.hpp"
@@ -81,7 +82,7 @@ using namespace Fetcko;
 
 class MyAudioSink;
 
-class CApp : public ColorChangeListener, public LoggableClass {
+class CApp : public ColorChangeListener, public AlbumArt::BlackChangedListener, public LoggableClass {
 public:
 	CApp();
 	~CApp();
@@ -90,9 +91,9 @@ public:
 	const float &GetScale() const { return scale; }
 
 	void OnInit();
-	void OnResize(int width, int height, float scale = 1.0f);
+	void OnResize(int width, int height, float scale = 1.0f, bool force = false);
 	void OnLoop(const Delta &time); 
-	void OnDestroy();
+	void OnDestroy(bool includingLog = true);
 
 	void LoadFile(std::filesystem::path path, bool fromPlaylist = false);
 	void PrepareFile(std::wstring fileName);
@@ -144,9 +145,12 @@ public:
 	void NextTrack();
 	void PreviousTrack();
 
-	void OnMouseClicked(const Vector2i &mousePos);
+	bool OnMouseClicked(const Vector2i &mousePos);
 	bool OnMouseDown(const Vector2i &mousePos);
-	void OnMouseDragged(const Vector2i &mousePos);
+	void OnMouseUp(const Vector2i &mousePos);
+	void OnMouseMoved(const Vector2i &mousePos);
+	bool OnMouseDragged(const Vector2i &mousePos);
+	void OnMouseLeave();
 
 	void LoadPreset(std::optional<std::size_t> index);
 	void LoadPreset(const Preset &preset);
@@ -205,6 +209,19 @@ public:
 
 	std::unique_ptr<Platform> &GetPlatform() { return platform; }
 
+	const bool &GetMiniPlayer() const { return miniPlayer; }
+	void SetMiniPlayer(bool miniPlayer, bool inLoop = false);
+
+	const bool IsFileLoaded() const { return fileLoaded || platform->IsListening(); }
+
+	const float &GetBackgroundAlpha() const { return backgroundAlpha; }
+
+	void UpdateDisplayBoundingBox();
+
+	void ResetWindow();
+
+	void OnBlackChanged(const float &black) override;
+
 private:
 	void AddCommands();
 
@@ -241,6 +258,17 @@ private:
 	inline void LoadShaders();
 
 	inline void SetHdr(bool enabled);
+
+	inline SDL_PropertiesID CreateSdlWindow();
+
+	Interop::InitArgs GetInteropArgs();
+
+	inline void SetRadius(float radius);
+
+	inline void UpdateMiniPlayer();
+
+	inline void DrawCloseButton(const Delta &time);
+	inline bool IsOnCloseButton(const Vector2i &mousePos);
 
 	int windowWidth = 1920;
 	int windowHeight = 1080;
@@ -289,6 +317,7 @@ private:
 	float strobeIntensity = Settings::settings.GetStrobeIntensity();
 
 	std::atomic<bool> shuttingDown = false;
+	bool destroyed = false;
 
 	bool blur = Settings::settings.GetBlur();
 
@@ -323,7 +352,7 @@ private:
 
 	Metadata metadata;
 
-	Polyline circleLine;
+	Fetcko::Polyline circleLine;
 
 	std::optional<std::size_t> presetIndex = Settings::settings.GetPresetIndex();
 
@@ -407,4 +436,23 @@ private:
 	DoubleClick doubleClick;
 
 	bool pulseMaxBrightness = HDR::Enabled && Settings::settings.GetPulseMaxBrightness();
+
+	bool miniPlayer = Settings::settings.GetMiniPlayer();
+	std::optional<Vector2i> lastMousePos = std::nullopt;
+
+	float backgroundAlpha = Settings::settings.GetMiniPlayer() && !VULKAN ? 0.0f : 1.0f;
+
+	int windowX = 0, windowY = 0;
+
+	float miniPlayerVisualizerRatio = Settings::settings.GetMiniPlayerVisualizerRatio();
+
+	Close close;
+
+	std::optional<float> scaleDelta = std::nullopt;
+
+	Rectanglei displayBoundingBox = { 0, 0, 0, 0 };
+
+	double mouseCaptureAccum = 0.0;
+
+	bool updateRenderer = false;
 };

@@ -10,18 +10,20 @@
 #include "Utils/Logger.hpp"
 #include "Utils/Utils.hpp"
 
+#include "AlbumArt.hpp"
 #include "Buffer.hpp"
 #include "Cue.hpp"
 #include "Hash.hpp"
 #include "HDR.hpp"
 #include "Metadata.hpp"
+#include "MiniPlayerList.hpp"
 #include "Settings.hpp"
 #include "TagLoader.hpp"
-#include "Text.hpp"
+#include "ScrollingText.hpp"
 
 using namespace Fetcko;
 
-class Playlist : public LoggableClass {
+class Playlist : public MiniPlayerList, public LoggableClass {
 public:
 	struct Track {
 		std::filesystem::path path;
@@ -29,15 +31,29 @@ public:
 		double startTime = 0.0;
 	};
 
+	Playlist(AlbumArt *const albumArt) : MiniPlayerList(Direction::Down, albumArt), albumArt(albumArt) {
+		albumArt->AddBlackChangedListener(this);
+
+		const auto &black = albumArt->GetBlackColor();
+
+		outline.SetColor({ black, black, black });
+	}
+
+	virtual ~Playlist() {
+		albumArt->RemoveBlackChangedListener(this);
+	}
+
 	std::optional<Track> OnLoad(
 		const std::filesystem::path &path,
 		const std::string_view &extension,
 		std::function<HSTREAM(const std::filesystem::path &, const std::string &, DWORD)> openWithFlags
 	);
 
-	void OnInit(int windowWidth, int windowHeight, OpenGLFont *font, OpenGLFont *outlineFont, Context *context, float scale = 1.0f);
-	void OnResize(int windowWidth, int windowHeight, float scale = 1.0f);
+	void OnInit(int windowWidth, int windowHeight, OpenGLFont *font, OpenGLFont *boldFont, OpenGLFont *outlineFont, OpenGLFont *boldOutlineFont, Context *context, float scale = 1.0f);
+	void OnResize(int windowWidth, int windowHeight, float scale = 1.0f, bool miniPlayer = false, float maxWidth = 0.0f);
 	void OnDestroy();
+
+	void AddFile(const std::filesystem::path &path);
 
 	void Clear();
 
@@ -49,9 +65,10 @@ public:
 
 	const std::optional<Track> GetNext() const;
 
-	void OnLoop(Vector2i pos, float maxHeight, float alpha, Context &context);
+	void OnLoop(const Delta &time, Vector2i pos, float maxHeight, float alpha, Context &context, bool miniPlayer = false, bool hidden = false);
 
 	std::optional<Track> OnMouseClicked(const Vector2i &mousePos);
+	bool OnMouseMoved(const Vector2i &mousePos);
 
 	void SetVisible(bool visible) {
 		this->visible = visible;
@@ -63,15 +80,23 @@ public:
 		Settings::settings.SetPlaylistFade(fade);
 	}
 
-	void SetCurrentSongVisible(bool currentSongVisible) { 
+	void SetCurrentSongVisible(bool currentSongVisible) {
 		this->currentSongVisible = currentSongVisible;
 		Settings::settings.SetCurrentSongVisible(currentSongVisible);
 	}
 
+	void OnBlackChanged(const float &black) override;
+
 	const std::unique_ptr<Cue> &GetCue() const;
 	const std::filesystem::path &GetPath() const;
 
-	const std::vector<Text> &GetTitles() const { return titles; }
+	const std::vector<ScrollingText> &GetTitles() const { return items; }
+
+	const bool IsHovered() const { return hovered; }
+
+	const float &GetMiniPlayerAlpha() const { return MiniPlayerList::alpha; }
+
+	const ScrollingText &GetOutline() const { return outline; }
 
 	static constexpr bool IsCue(const std::string_view &lowercaseExtension) {
 		return lowercaseExtension == ".cue";
@@ -129,7 +154,7 @@ private:
 		}
 
 		auto digits = Fetcko::Utils::GetNumberOfDigits(maxTracksPerDisc);
-		for (const auto &title : titles) {
+		for (const auto &[i, title] : Utils::Enumerate(titles)) {
 			std::stringstream stream;
 
 			// If we have multiple discs,
@@ -150,15 +175,16 @@ private:
 				<< " - " 
 				<< title;
 
-			Text text;
-			text.OnInit(font, context);
-			text.SetText(stream.str());
+			const auto &bounds = AddItem(stream.str(), i, title.title);
 
-			size.y += text.GetBounds().height;
-			if (text.GetSize().x > size.x)
-				size.x = text.GetSize().x;
+			size.y += bounds.height;
+			if (bounds.width > size.x)
+				size.x = bounds.width;
+		}
 
-			this->titles.emplace_back(std::move(text));
+		if (miniPlayer) {
+			scrollOffset = 0;
+			OnRadiusChanged();
 		}
 
 		UpdateSize();
@@ -166,13 +192,52 @@ private:
 
 	template<typename T>
 	void OnLoop(
+		const Delta &time,
 		const std::vector<T> &tracks,
 		const typename std::vector<T>::const_iterator &current,
 		Vector2i pos, // need a local pos var because we modify it
 		float maxHeight,
 		float alpha,
-		Context &context
+		Context &context,
+		bool miniPlayer = false,
+		bool hidden = false
 	) {
+		// Mini-player playlist has no backing rectangle
+		if (miniPlayer) {
+			this->pos = pos;
+
+			const auto currentIndex = std::distance(tracks.begin(), current);
+			const auto &title = items.at(currentIndex);
+
+			currentTitle.SetText(title.GetAltText());
+
+			const auto &bounds = currentTitle.GetBounds();
+
+			if (currentSongVisible) {
+				outline.SetText(title.GetAltText());
+				context.Use("scrolling"_hash);
+				context.Color(1.0f, 1.0f, 1.0f, std::max(hidden ? 0.0f : 0.5f, alpha));
+				outline.OnLoop(pos.x - bounds.width / 2, pos.y - bounds.height / 2, time);
+				context.Color(
+					HDR::WhiteLevel,
+					HDR::WhiteLevel,
+					HDR::WhiteLevel,
+					std::max(hidden ? 0.0f : 0.5f, alpha)
+				);
+			} else {
+				context.Use("scrolling"_hash);
+				context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
+			}
+
+			currentTitle.OnLoop(pos.x - bounds.width / 2, pos.y - bounds.height / 2, time);
+
+			MiniPlayerList::PreLoop();
+			MiniPlayerList::OnLoop(time, pos, currentIndex, std::min(GetAlpha(), alpha));
+			MiniPlayerList::PostLoop(time);
+
+			return;
+		}
+
 		const auto distance = static_cast<int32_t>(
 			current - tracks.begin()
 		);
@@ -252,15 +317,15 @@ private:
 			pos.y += font->GetEm().height;
 
 		std::size_t maxIndex = static_cast<std::size_t>(
-			titles.empty() ?
+			items.empty() ?
 				0 :
-				(maxHeight - pos.y) / titles.begin()->GetBounds().height
+				(maxHeight - pos.y) / items.begin()->GetBounds().height
 		);
 
-		pos.y -= titles.begin()->GetBounds().height * distance;
+		pos.y -= items.begin()->GetBounds().height * distance;
 
 		auto iter = tracks.begin();
-		for (const auto &[i, title] : Fetcko::Utils::Enumerate(titles)) {
+		for (const auto &[i, title] : Fetcko::Utils::Enumerate(items)) {
 			if (pos.y + title.GetBounds().height > maxHeight)
 				return;
 
@@ -268,7 +333,7 @@ private:
 				if (currentSongVisible) {
 					outline.SetText(title.GetText());
 					context.Color(0.0f, 0.0f, 0.0f, std::max(0.5f, alpha));
-					outline.OnLoop(pos.x, pos.y);
+					outline.OnLoop(pos.x, pos.y, time);
 					context.Color(
 						HDR::WhiteLevel,
 						HDR::WhiteLevel,
@@ -286,7 +351,7 @@ private:
 			} else {
 				const auto faded = fade ? std::max(
 						0.0f,
-						alpha - (static_cast<float>(i - distance) / std::min(titles.size(), maxIndex))
+						alpha - (static_cast<float>(i - distance) / std::min(items.size(), maxIndex))
 				) : std::min(((static_cast<int64_t>(i) - distance) > 0 ? 1.0f : 0.0f), alpha) ;
 
 				context.Color(
@@ -297,10 +362,10 @@ private:
 				);
 			}
 
-			title.OnLoop(pos.x, pos.y);
+			title.OnLoop(pos.x, pos.y, time);
 
 			// Reduce the height as we near the end of the playlist
-			if (i == titles.size() - 2 && pos.y < maxHeight - this->pos.y) {
+			if (i == items.size() - 2 && pos.y < maxHeight - this->pos.y) {
 				height = trackHeight + 
 					// Line for previous track
 					((current != tracks.begin()) ? font->GetEm().height: 0.0f);
@@ -342,17 +407,20 @@ private:
 
 	int windowWidth = 0, windowHeight = 0;
 	OpenGLFont *font = nullptr;
+	OpenGLFont *boldFont = nullptr;
 	OpenGLFont *outlineFont = nullptr;
+	OpenGLFont *boldOutlineFont = nullptr;
 	Context *context = nullptr;
-	std::vector<Text> titles;
-	Text outline;
+	ScrollingText currentTitle;
+	ScrollingText outline;
 
-	Vector2i pos{ 0, 0 };
 	Vector2i size{ 0, 0 };
 
 	std::unique_ptr<Cue> cue;
 
 	float scale = 1.0f;
+	bool miniPlayer = Settings::settings.GetMiniPlayer();
+	float maxWidth = 0.0f;
 
 	std::unique_ptr<VertexArray> vao;
 	std::unique_ptr<ArrayBuffer> vbo;
@@ -368,4 +436,6 @@ private:
 	float fadeOut = 0.0f;
 
 	int lastTrackHeight = 0;
+
+	AlbumArt *const albumArt = nullptr;
 };

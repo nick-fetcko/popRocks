@@ -1,6 +1,7 @@
 #include "AlbumArt.hpp"
 
 #include <float.h> // For DBL_EPSILON
+#include <bitset>
 #include <map>
 #include <algorithm>
 #include <thread>
@@ -11,36 +12,72 @@
 
 #include "Bicubic.hpp"
 #include "Buffer.hpp"
+#include "CApp.h"
+#include "Controls.hpp"
 #include "Gaussian.hpp"
 #include "Hash.hpp"
 #include "HDR.hpp"
 #include "JPEG.hpp"
-#include "Settings.hpp"
 #include "Utils.hpp"
+
+#include "Platforms/Platform.hpp"
 
 using namespace MathsCPP;
 
-AlbumArt::AlbumArt(std::unique_ptr<Context> &context) : context(context) {
-	radius = Settings::settings.GetRadius();
+AlbumArt::AlbumArt(Controls * const controls, std::unique_ptr<Context> &context, std::unique_ptr<Platform> &platform) : controls(controls), context(context), platform(platform), outline(10), visualizerOutline(5) {
+	Circle::radius = GetRadius(Settings::settings.GetMiniPlayer());
 }
 
 AlbumArt::~AlbumArt() {
 	delete[] embeddedData;
 }
 
+inline void AlbumArt::UpdateOutline() {
+	std::vector<Vector2f> points(361);
+
+	for (auto i = 0; i < 361; ++i) {
+		auto degInRad = i * Maths::DEG2RAD<float>;
+
+		points[i].x = -sin(degInRad) * Circle::radius;
+		points[i].y = cos(degInRad) * Circle::radius;
+	}
+
+	outline.SetPoints<Polyline::Join::Miter>(points.data(), 361);
+
+	const auto &ratio = Settings::settings.GetMiniPlayerVisualizerRatio();
+
+	for (auto i = 0; i < 361; ++i) {
+		auto degInRad = i * Maths::DEG2RAD<float>;
+
+		points[i].x = -sin(degInRad) * (Circle::radius * ratio / 2.0f - visualizerOutline.GetWidth());
+		points[i].y = cos(degInRad) * (Circle::radius * ratio / 2.0f - visualizerOutline.GetWidth());
+	}
+
+	visualizerOutline.SetPoints<Polyline::Join::Miter>(points.data(), 361);
+}
+
 void AlbumArt::OnInit(int windowWidth, int windowHeight, float scale) {
 	this->windowWidth = windowWidth;
 	this->windowHeight = windowHeight;
 	this->scale = scale;
-	radius *= scale;
+	this->font = controls->GetFont();
+	this->boldFont = controls->GetBoldFont();
+	this->outlineFont = controls->GetOutlineFont();
+	this->boldOutlineFont = controls->GetBoldOutlineFont();
+
+	Circle::radius *= scale;
 
 	if (context) {
 		context->With("rotate"_hash, [this](Context::Shader &shader) {
-			shader.program.Uniform1f("radius"_hash, radius);
+			shader.program.Uniform1f("radius"_hash, Circle::radius);
 		});
 	}
 
-	Circle::OnInit(radius);
+	Circle::OnInit(Circle::radius);
+	placeholder.OnInit(Circle::radius);
+
+	dragAndDropPrompt.OnInit(font, context.get());
+	dragAndDropPrompt.SetText("Drag-and-drop music here");
 
 	squareVao = std::make_unique<VertexArray>();
 	squareVbo = std::make_unique<ArrayBuffer>();
@@ -68,6 +105,9 @@ void AlbumArt::OnInit(int windowWidth, int windowHeight, float scale) {
 	cube = std::make_unique<Cube>(Utils::GetResource(
 		std::filesystem::path("LUTs") / Settings::settings.GetLut()
 	));
+
+	UpdateOutline();
+	UpdateFontSize();
 }
 
 void AlbumArt::OnResize(int windowWidth, int windowHeight, float scale) {
@@ -76,21 +116,40 @@ void AlbumArt::OnResize(int windowWidth, int windowHeight, float scale) {
 
 	if (this->scale != scale) {
 		// FIXME: will floating point precision errors accumulate here?
-		radius /= this->scale;
+		Circle::radius /= this->scale;
 		this->scale = scale;
-		radius *= scale;
+		Circle::radius *= scale;
 
-		LogDebug("Scale changed! New radius is ", radius);
+		placeholder.SetRadius(Circle::radius);
+
+		LogDebug("Scale changed! New radius is ", Circle::radius);
 
 		UpdateVertexCoords();
+		UpdateFontSize();
+		UpdateOutline();
 
 		Scale(true);
 	}
 }
 
-void AlbumArt::SetRadius(float radius) {
+const float AlbumArt::GetRadius(bool miniPlayer) const {
+	return (miniPlayer ? miniPlayerRadius : radius) * scale;
+}
+
+void AlbumArt::SetRadius(float radius, bool miniPlayer) {
 	Circle::SetRadius(radius);
-	Settings::settings.SetRadius(radius);
+
+	if (miniPlayer) {
+		miniPlayerRadius = radius / scale;
+		Settings::settings.SetMiniPlayerRadius(radius / scale, true);
+	} else {
+		this->radius = radius;
+		Settings::settings.SetRadius(radius);
+	}
+
+	placeholder.SetRadius(radius);
+
+	UpdateOutline();
 }
 
 void AlbumArt::UpdateVertexCoords() {
@@ -98,16 +157,28 @@ void AlbumArt::UpdateVertexCoords() {
 
 	if (context) {
 		context->With("rotate"_hash, [this](Context::Shader &shader) {
-			shader.program.Uniform1f("radius"_hash, radius);
+			shader.program.Uniform1f("radius"_hash, Circle::radius);
 		});
 	}
 }
 
-void AlbumArt::OnLoop(GLfloat x, GLfloat y, float frameCount, Context &context) {
+void AlbumArt::DrawPlaceholder(GLfloat x, GLfloat y, float alpha, Context &context) const {
+	context.Use("basic"_hash);
+	context.Color(tintedBlackColor.r, tintedBlackColor.g, tintedBlackColor.b, (!albumLoaded ? 1.0f : (alpha * 0.667f)));
+
+	placeholder.OnLoop(x, y, context);
+
+	context.Use("texture"_hash);
+}
+
+void AlbumArt::OnLoop(const Delta &time, GLfloat x, GLfloat y, float frameCount, float alpha, Context &context, bool playing) {
+	cube->OnLoop();
+
 	// try_lock so we don't miss a frame or two
 	if (scalingMutex.try_lock()) {
 		if (surfaceToLoad) {
 			LoadFromSurface(surfaceToLoad, "", "", true);
+			SDL_DestroySurface(surfaceToLoad);
 			surfaceToLoad = nullptr;
 
 			// We only want to keep lastSurface
@@ -157,6 +228,46 @@ void AlbumArt::OnLoop(GLfloat x, GLfloat y, float frameCount, Context &context) 
 		context.GetShaderProgram().Uniform1i("hdr"_hash, 0);
 
 		context.LoadIdentity();
+	}
+
+	if (Settings::settings.GetMiniPlayer() || !albumLoaded) {
+		DrawPlaceholder(x, y, alpha, context);
+
+		if (!albumLoaded && !playing) {
+			dragAndDropPrompt.OnLoop(
+				x - dragAndDropPrompt.GetBounds().width / 2,
+				y - dragAndDropPrompt.GetBounds().height / 2
+			);
+		}
+
+		if (hoverTimer && (std::chrono::system_clock::now() - *hoverTimer) >= Settings::settings.GetHoverTime()) {
+			hovered = true;
+			targetOutlineAlpha = 1.0f;
+			hoverTimer = std::nullopt;
+		}
+
+		if (outlineAlpha > 0.0f) {
+			context.Use("basic"_hash);
+			context.Color(1.0f, 1.0f, 1.0f, outlineAlpha);
+			context.Translate(x, y, 0);
+			context.Apply();
+			outline.Draw<false>(context);
+			visualizerOutline.Draw<true>(context);
+		}
+
+		if (outlineAlpha != targetOutlineAlpha) {
+			if (outlineAlpha < targetOutlineAlpha) {
+				outlineAlpha += 5.0f * time.change.AsSeconds();
+				if (outlineAlpha > targetOutlineAlpha) {
+					outlineAlpha = targetOutlineAlpha;
+					UpdateCursor(mousePos);
+				}
+			} else {
+				outlineAlpha -= 5.0f * time.change.AsSeconds();
+				if (outlineAlpha < targetOutlineAlpha)
+					outlineAlpha = targetOutlineAlpha;
+			}
+		}
 	}
 }
 
@@ -239,6 +350,8 @@ void AlbumArt::OnDestroy() {
 	squareEab.reset();
 
 	cube.reset();
+
+	placeholder.OnDestroy();
 }
 
 std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder, std::optional<std::filesystem::path> fileName) {
@@ -305,8 +418,14 @@ std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder, std
 					// litmus test for this specific case would look like.
 					if (breakOnFind)
 						return true;
-				} else if (found.find(entry.path()) == found.end()) found.emplace(entry.path());
-			} else if (found.find(entry.path()) == found.end()) found.emplace(entry.path());
+				} else found.emplace_back(entry.path());
+			} else if (cover != std::string::npos ||
+				front != std::string::npos ||
+				folder == 0) {
+				// Place ones that at least match
+				// the preferred _names_ at the front
+				found.emplace(found.begin(), entry.path());
+			} else found.emplace_back(entry.path());
 		}
 
 		return false;
@@ -321,6 +440,23 @@ std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder, std
 		// We don't need to re-check files in the current folder
 		if (iter.path().parent_path() == folder) continue;
 		if (find(iter, true)) break;
+	}
+
+	if (!preferred.empty())
+		return preferred.begin()->second;
+	else {
+		// Remove duplicates from found
+		for (auto iter = found.begin(); iter != found.end();) {
+			bool duplicate = false;
+			for (auto compare = found.begin(); compare != found.end(); ++compare) {
+				if (*iter == *compare && iter != compare) {
+					iter = found.erase(iter);
+					duplicate = true;
+					break;
+				}
+			}
+			if (!duplicate) ++iter;
+		}
 	}
 
 	return preferred.empty() ? found.empty() ? "" : *found.begin() : preferred.begin()->second;
@@ -366,7 +502,84 @@ void AlbumArt::ReprocessColors() {
 	}
 }
 
-void AlbumArt::ProcessColors(Histogram *destination, SDL_Surface *surface, const uint8_t *pixels) {
+void AlbumArt::CalculateChroma() {
+	if (lastSurface)
+		CalculateChroma(lastSurface, reinterpret_cast<const uint8_t*>(lastSurface->pixels));
+}
+
+void AlbumArt::CalculateChroma(SDL_Surface *surface, const uint8_t *pixels) {
+	std::bitset<256> grays = { 0 };
+
+	// We want to analyze _every_ pixel for the chroma key
+	for (auto x = 0; x < surface->w && processingColors; ++x) {
+		for (auto y = 0; y < surface->h && processingColors; ++y) {
+			const auto index = (y * surface->w + x) * SDL_BYTESPERPIXEL(surface->format);
+
+			if (pixels[index] == pixels[index + 1] && pixels[index + 1] == pixels[index + 2])
+				grays[pixels[index]] = 1;
+		}
+	}
+
+	std::optional<uint8_t> chromaColor = std::nullopt;
+
+	// Try to find an unoccupied shade of gray
+	for (uint16_t i = 0; i < 256; ++i) {
+		if (grays[i] == 0 && !chromaColor)
+			chromaColor = static_cast<uint8_t>(i);
+
+		if (chromaColor)
+			break;
+	}
+
+	// If EVERY shade of gray is used in the album art,
+	// find the _least_-used one
+	if (!chromaColor) {
+		std::vector<std::size_t> grays(256);
+		memset(grays.data(), 0, grays.size() * sizeof(std::size_t));
+
+		for (auto x = 0; x < surface->w && processingColors; ++x) {
+			for (auto y = 0; y < surface->h && processingColors; ++y) {
+				const auto index = (y * surface->w + x) * SDL_BYTESPERPIXEL(surface->format);
+
+				if (pixels[index] == pixels[index + 1] && pixels[index + 1] == pixels[index + 2])
+					++grays[pixels[index]];
+			}
+		}
+
+		auto min = std::numeric_limits<std::size_t>::max();
+		for (uint8_t i = 0; i < 255; ++i) {
+			if (grays[i] < min) {
+				chromaColor = i;
+				min = grays[i];
+			}
+		}
+	}
+
+	this->chromaColor = *chromaColor / 255.0f;
+
+	blackColor = *chromaColor == 0 ? 1.0f / 255.0f : *chromaColor < 10 ? (*chromaColor + 2) / 255.0f : 0.0f;
+
+	chromaChanged = true;
+
+	for (auto *listener : blackChangedListeners)
+		listener->OnBlackChanged(this->blackColor);
+
+	LogDebug("Chroma key: ", static_cast<int>(*chromaColor), " black: ", static_cast<int>(blackColor * 255.0f));
+}
+
+void AlbumArt::ResetChroma() {
+	this->chromaColor = 0.0f;
+	this->blackColor = 0.0f;
+
+	chromaChanged = true;
+
+	for (auto *listener : blackChangedListeners)
+		listener->OnBlackChanged(this->blackColor);
+
+	LogDebug("Chroma key and black color reset!");
+}
+
+void AlbumArt::ProcessColors(Histogram *destination, SDL_Surface *surface, const uint8_t *pixels, bool initial) {
 	if (colorMethod == ColorMethod::Average) {
 		// Go through every pixel to find an "average" color
 		uint64_t averageR = 0;
@@ -414,8 +627,8 @@ void AlbumArt::ProcessColors(Histogram *destination, SDL_Surface *surface, const
 		//
 		// Until proven otherwise, color selection is
 		// wrapped in "if (!scaled)"
-		auto hstep = std::max(1, static_cast<int>(surface->w / (radius * 2)));
-		auto vstep = std::max(1, static_cast<int>(surface->h / (radius * 2)));
+		const auto hstep = std::max(1, static_cast<int>(surface->w / (Circle::radius * 2)));
+		const auto vstep = std::max(1, static_cast<int>(surface->h / (Circle::radius * 2)));
 
 		double minSaturation = Settings::settings.GetColorSelection().minSaturation;
 		double minValue = Settings::settings.GetColorSelection().minValue;
@@ -425,7 +638,7 @@ void AlbumArt::ProcessColors(Histogram *destination, SDL_Surface *surface, const
 		while (histogram.empty()) {
 			for (auto x = 0; x < surface->w && processingColors; x += hstep) {
 				for (auto y = 0; y < surface->h && processingColors; y += vstep) {
-					auto index = (y * surface->w + x) * SDL_BYTESPERPIXEL(surface->format);
+					const auto index = (y * surface->w + x) * SDL_BYTESPERPIXEL(surface->format);
 
 					color.r = pixels[index] / 255.0f;
 					color.g = pixels[index + 1] / 255.0f;
@@ -478,9 +691,16 @@ void AlbumArt::ProcessColors(Histogram *destination, SDL_Surface *surface, const
 				break;
 		}
 
+		// Only calculate chroma key on original album load
+		if (Settings::settings.GetMiniPlayer() && initial) {
+			CalculateChroma(surface, pixels);
+		} else if (!Settings::settings.GetMiniPlayer()) {
+			ResetChroma();
+		}
+
 		destination->clear();
 
-		auto variance = diff / (radius * 4.0f) / 3.0f;
+		auto variance = diff / (Circle::radius * 4.0f) / 3.0f;
 		LogDebug("Variance = ", variance, " max = ", max);
 
 		// Color:
@@ -499,7 +719,6 @@ void AlbumArt::ProcessColors(Histogram *destination, SDL_Surface *surface, const
 			destination->emplace(Bin(2, 0.0f, 0.0f, 0.75f));
 			destination->emplace(Bin(3, 0.0f, 0.0f, 0.50f));
 			destination->emplace(Bin(4, 0.0f, 0.0f, 0.25f));
-			destination->emplace(Bin(5, 0.0f, 0.0f, 0.05f));
 
 			return;
 		} else {
@@ -748,7 +967,7 @@ void AlbumArt::LoadFromSurface(SDL_Surface *surface, std::filesystem::path path,
 
 		processingColors = true;
 
-		ProcessColors(&histogram, surface, pixels);
+		ProcessColors(&histogram, surface, pixels, true);
 		ResetBin();
 	}
 
@@ -775,6 +994,17 @@ void AlbumArt::LoadFromSurface(SDL_Surface *surface, std::filesystem::path path,
 	albumLoaded = true;
 }
 
+void AlbumArt::UpdateParentPath(const std::filesystem::path &parentPath) {
+	if (parentPath != lastParentPath) {
+		if (!lastParentPath.empty()) {
+			lastHash = 0;
+			lastEmbeddedHash = 0;
+			lastEmbeddedLength = 0;
+		}
+		lastParentPath = parentPath;
+	}
+}
+
 bool AlbumArt::Load(const std::filesystem::path &fileName, const std::filesystem::path &parentPath, bool force) {
 	auto extension = fileName.extension().u8string();
 	std::transform(extension.begin(), extension.end(), extension.begin(), tolower);
@@ -785,14 +1015,6 @@ bool AlbumArt::Load(const std::filesystem::path &fileName, const std::filesystem
 	else if (!parentPath.empty()) {
 		// If we're in a different path than the last file,
 		// reset the hashes
-		if (parentPath != lastParentPath) {
-			if (!lastParentPath.empty()) {
-				lastHash = 0;
-				lastEmbeddedHash = 0;
-				lastEmbeddedLength = 0;
-			}
-			lastParentPath = parentPath;
-		}
 		currentFile = FindArt(parentPath, fileName);
 	}
 	else
@@ -861,6 +1083,7 @@ bool AlbumArt::Load(const std::string &mimeType, const void *data, std::size_t l
 		lastEmbeddedHash = hash;
 		lastEmbeddedLength = length;
 	};
+
 
 	// Check if our lengths differ first
 	if (force || length != lastEmbeddedLength) {
@@ -1015,6 +1238,14 @@ void AlbumArt::UpdateBin(bool silent) {
 		binIter->v
 	);
 
+	// Add 20% of the selected color to the
+	// "black" color
+	tintedBlackColor = {
+		(averageColor.r / 5.0f),
+		(averageColor.g / 5.0f),
+		(averageColor.b / 5.0f)
+	};
+
 	for (const auto &listener : colorChangeListeners)
 		listener->OnColorChanged(averageColor, silent);
 
@@ -1040,6 +1271,13 @@ void AlbumArt::RemoveColorChangeListener(ColorChangeListener *listener) {
 	colorChangeListeners.erase(listener);
 }
 
+void AlbumArt::AddBlackChangedListener(BlackChangedListener *listener) {
+	blackChangedListeners.emplace(listener);
+}
+void AlbumArt::RemoveBlackChangedListener(BlackChangedListener *listener) {
+	blackChangedListeners.erase(listener);
+}
+
 const std::vector<Colour<float>> &AlbumArt::GetSelectedColors() const {
 	return selectedColors;
 }
@@ -1059,6 +1297,12 @@ void AlbumArt::Scale(bool force) {
 
 	{
 		std::unique_lock lock(scalingMutex);
+
+		if (surfaceToLoad) {
+			SDL_DestroySurface(surfaceToLoad);
+			surfaceToLoad = nullptr;
+		}
+
 		scaling = true;
 	}
 
@@ -1081,7 +1325,7 @@ void AlbumArt::Scale(bool force) {
 
 		auto w = lastSurface->w / 2;
 		SDL_Surface *next = nullptr;
-		while (w > radius * 2 && scaling) {
+		while (w > Circle::radius * 2 && scaling) {
 			auto blurred = gaussian.Blur(resized, &scaling);
 
 			resized = bicubic.ResizeImage(blurred, static_cast<float>(w) / blurred->w, &scaling);
@@ -1089,7 +1333,7 @@ void AlbumArt::Scale(bool force) {
 			w /= 2;
 		}
 
-		resized = bicubic.ResizeImage(resized, (radius * 2) / resized->w, &scaling);
+		resized = bicubic.ResizeImage(resized, (Circle::radius * 2) / resized->w, &scaling);
 
 		// [16Jul2025] We now want to keep the un-scaled surface
 		//             around as it might need rescaling when the
@@ -1108,9 +1352,155 @@ void AlbumArt::Scale(bool force) {
 	});
 }
 
+AlbumArt::Outline AlbumArt::IsCursorOnOutline(const Vector2i &mousePos) {
+	const auto distance = mousePos.Distance({ windowWidth / 2.0f, windowHeight / 2.0f });
+	const auto &ratio = Settings::settings.GetMiniPlayerVisualizerRatio();
+
+	if (distance >= Circle::radius - outline.GetWidth() &&
+		distance <= Circle::radius + outline.GetWidth()) {
+		return Outline::Art;
+	} else if (distance >= Circle::radius * ratio / 2.0f - visualizerOutline.GetWidth() * 5 &&
+		distance <= Circle::radius * ratio / 2.0f + visualizerOutline.GetWidth() * 2) {
+		return Outline::Visualizer;
+	}
+
+	return Outline::None;
+}
+
+bool AlbumArt::OnMouseDown(const Vector2i &mousePos) {
+	activeOutline = IsCursorOnOutline(mousePos);
+
+	const auto ret = activeOutline != Outline::None;
+
+	SDL_CaptureMouse(ret);
+
+	return ret;
+}
+
+void AlbumArt::OnMouseUp(const Vector2i &mousePos) {
+	LogInfo("Mouse up...");
+
+	if (activeOutline != Outline::None)
+		Scale(true);
+
+	activeOutline = Outline::None;
+
+	SDL_CaptureMouse(false);
+}
+
+inline void AlbumArt::UpdateFontSize() {
+	controls->UpdateFontSize(miniPlayerRadius);
+}
+
+bool AlbumArt::OnMouseDragged(const Vector2i &mousePos) {
+	constexpr auto Min = 100;
+	constexpr auto Max = 500;
+
+	bool ret = false;
+
+	if (activeOutline != Outline::None) {
+		// Update cursor
+		OnMouseMoved(mousePos);
+
+		auto distance = mousePos.Distance({ windowWidth / 2.0f, windowHeight / 2.0f }) / scale;
+
+		if (activeOutline == Outline::Art) {
+			if (distance < Min)
+				distance = Min;
+			else if (distance > Max)
+				distance = Max;
+
+			if (miniPlayerRadius != distance) {
+				ret = true;
+
+				// We call SetRadius() from CApp, so just update the var
+				miniPlayerRadius = distance;
+
+				UpdateFontSize();
+			}
+		} else if (const auto clamped = std::clamp(distance / miniPlayerRadius * 2.0, 2.2, 15.0);
+			clamped != Settings::settings.GetMiniPlayerVisualizerRatio()) {
+			ret = true;
+
+			Settings::settings.SetMiniPlayerVisualizerRatio(
+				clamped,
+				true
+			);
+		}
+	}
+
+	return ret;
+}
+
 bool AlbumArt::OnMouseClicked(const Vector2i &mousePos) {
-	if (mousePos.Distance({ windowWidth / 2.0f, windowHeight / 2.0f }) <= radius)
+	if (mousePos.Distance({ windowWidth / 2.0f, windowHeight / 2.0f }) <= Circle::radius) {
+		LogInfo("Click captured!");
 		return true;
+	}
 
 	return false;
+}
+
+inline void AlbumArt::UpdateCursor(const Vector2i &mousePos) {
+	const auto angle = atan2(windowWidth / 2.0f - mousePos.x, windowHeight / 2.0f - mousePos.y) / Maths::DEG2RAD<float>;
+
+	SDL_SystemCursor cursor = SDL_SYSTEM_CURSOR_CROSSHAIR;
+
+	if (abs(angle) >= 0.0f && abs(angle) <= 22.5f)
+		cursor = SDL_SYSTEM_CURSOR_N_RESIZE;
+	else if (angle >= 22.5f && angle < 67.5f)
+		cursor = SDL_SYSTEM_CURSOR_NW_RESIZE;
+	else if (angle >= 67.5f && angle < 112.5f)
+		cursor = SDL_SYSTEM_CURSOR_W_RESIZE;
+	else if (angle >= 112.5f && angle < 157.5f)
+		cursor = SDL_SYSTEM_CURSOR_SW_RESIZE;
+	else if (abs(angle) > 157.5f)
+		cursor = SDL_SYSTEM_CURSOR_S_RESIZE;
+	else if (angle <= -22.5f && angle > -67.5f)
+		cursor = SDL_SYSTEM_CURSOR_NE_RESIZE;
+	else if (angle <= -67.5f && angle > -112.5f)
+		cursor = SDL_SYSTEM_CURSOR_E_RESIZE;
+	else if (angle <= -112.5f && angle > -157.5f)
+		cursor = SDL_SYSTEM_CURSOR_SE_RESIZE;
+
+	if (resizeCursor)
+		SDL_DestroyCursor(resizeCursor);
+
+	resizeCursor = SDL_CreateSystemCursor(cursor);
+
+	SDL_SetCursor(resizeCursor);
+}
+
+bool AlbumArt::OnMouseMoved(const Vector2i &mousePos) {
+	const auto target = IsCursorOnOutline(mousePos);
+
+	this->mousePos = mousePos;
+
+	if (target == Outline::None) {
+		OnMouseLeave();
+
+		SDL_SetCursor(SDL_GetDefaultCursor());
+	} else if (!hoverTimer) {
+		hoverTimer = std::chrono::system_clock::now();
+
+	} else if (hovered) {
+		UpdateCursor(mousePos);
+
+		return true;
+	}
+
+	return false;
+}
+
+void AlbumArt::OnMouseLeave() {
+	if (activeOutline == Outline::None) {
+		if (resizeCursor) {
+			SDL_DestroyCursor(resizeCursor);
+			resizeCursor = nullptr;
+		}
+		hovered = false;
+		hoverTimer = std::nullopt;
+
+		targetOutlineAlpha = 0.0f;
+	}
 }

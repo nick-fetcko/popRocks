@@ -14,15 +14,16 @@
 using namespace MathsCPP;
 using namespace Fetcko;
 
+class AlbumArt;
 class Volume : public ColorChangeListener, public AutoFader<false> {
 public:
-	Volume() = default;
+	Volume();
 
 	virtual ~Volume() = default;
 
 	void OnInit(const std::string &fontRoot, Context *context);
 
-	void OnLoop(int x, int y, const Delta &time, Context &context);
+	void OnLoop(int x, int y, const Delta &time, const AlbumArt *const albumArt, bool miniPlayer, Context &context);
 
 	void SetRadius(float radius);
 
@@ -44,7 +45,7 @@ public:
 	void OnColorChanged(const Colour<float> &color, bool silent = false) override;
 
 private:
-	inline void UpdateVolume(bool force = false);
+	inline void UpdateVolume(bool fade = true, bool force = false);
 
 	float radius = 200.0f;
 
@@ -56,8 +57,8 @@ private:
 	Text outlineText;
 
 	//float rect[8] = { 0 };
-	Polyline outlineRing;
-	Polyline ring;
+	Fetcko::Polyline outlineRing;
+	Fetcko::Polyline ring;
 
 	Colour<float> color = Colour<float>::White;
 

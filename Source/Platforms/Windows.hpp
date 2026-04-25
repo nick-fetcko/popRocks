@@ -64,6 +64,12 @@ public:
 	// Fullscreen
 	void ToggleFullscreen() override;
 
+	// Miniplayer
+	virtual void SetMiniPlayer(bool miniPlayer, uint8_t chromaKey = 0) override;
+
+	// Window management
+	std::optional<Vector2i> SetWindowPos(int x, int y, int width, int height) override;
+
 	// =====================================================
 	// ===================== Virtuals ======================
 	// =====================================================
@@ -96,6 +102,11 @@ protected:
 private:
 	static bool Register();
 	static bool registered;
+
+	// =====================================================
+	// ================= Private Functions =================
+	// =====================================================
+	void UpdateKeyboardHookMode();
 
 	DXGI dxgi;
 

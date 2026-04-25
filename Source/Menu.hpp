@@ -54,10 +54,10 @@ public:
 				const auto stem = iter.path().stem().u8string();
 
 				if (stem.find(FontRoot) == 0 &&
-					iter.path().extension().u8string() == ".ttf") {
+					iter.path().filename().u8string().find("-Rg.ttf") != std::string::npos) {
 					if (stem.find("JP") != std::string::npos)
 						ImGui::GetIO().Fonts->AddFontFromFileTTF(iter.path().u8string().c_str(), 0.0f, &fontConfig, ImGui::GetIO().Fonts->GetGlyphRangesJapanese());
-					else if (stem.find("KR"))
+					else if (stem.find("KR") != std::string::npos)
 						ImGui::GetIO().Fonts->AddFontFromFileTTF(iter.path().u8string().c_str(), 0.0f, &fontConfig, ImGui::GetIO().Fonts->GetGlyphRangesKorean());
 					else if (stem.find(FontRoot + "-Rg") == 0)
 						font = ImGui::GetIO().Fonts->AddFontFromFileTTF(iter.path().u8string().c_str(), 0.0f, &fontConfig);
@@ -630,7 +630,7 @@ public:
 
 			ImGui::Separator();
 
-			if (ImGui::MenuItem("Reset window")) {
+			if (ImGui::MenuItem("Reset window", "R")) {
 				if (onResetWindow)
 					onResetWindow();
 			}
@@ -807,6 +807,7 @@ public:
 					Preset preset(
 						currentPresetName,
 						Settings::settings.GetBufferLength(),
+						Settings::settings.GetFftSize(),
 						Settings::settings.GetDecayTime(),
 						Settings::settings.GetFadeTime(),
 						Settings::settings.GetPulse(),
@@ -854,6 +855,14 @@ public:
 		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(maxWidth, maxHeight));
 		if (ImGui::BeginMenu(isTouchscreen ? "UI" : "Interface")) {
 			open = true;
+
+			miniPlayer = Settings::settings.GetMiniPlayer();
+			if (ImGui::MenuItem("Mini player?", nullptr, &miniPlayer)) {
+				if (onMiniPlayerChanged)
+					onMiniPlayerChanged(miniPlayer);
+			}
+
+			ImGui::Separator();
 
 			autoFade = Settings::settings.GetAutoFade();
 			waitTime = Settings::settings.GetWaitTime().AsSeconds();
@@ -1499,6 +1508,8 @@ public:
 
 	void SetOnRngSourceChanged(std::function<void(const std::string &)> f) { onRngSourceChanged = f; }
 
+	void SetOnMiniPlayerChanged(std::function<void(bool)> f) { onMiniPlayerChanged = f; }
+
 private:
 	const std::string FontRoot;
 
@@ -1699,6 +1710,7 @@ private:
 	std::function<void(bool)> onVsyncChanged;
 	std::function<void(std::size_t)> onPlaylistItemChanged;
 	std::function<void(const std::string &)> onRngSourceChanged;
+	std::function<void(bool)> onMiniPlayerChanged;
 
 	std::function<void()> onResetRotation;
 	std::function<void()> onClearBlurFbo;
@@ -1745,4 +1757,6 @@ private:
 	bool vsync = Settings::settings.GetVsync();
 
 	std::string rngSource = Settings::settings.GetRngSource();
+
+	bool miniPlayer = Settings::settings.GetMiniPlayer();
 };

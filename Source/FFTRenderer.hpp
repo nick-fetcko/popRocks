@@ -44,7 +44,8 @@ public:
 		const Colour<float> &brightColor,
 		float frameCount,
 		float maxHeardSample = 0.0f,
-		bool resetGain = false
+		bool resetGain = false,
+		bool miniPlayer = false
 	) override;
 
 	void Draw(

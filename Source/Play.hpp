@@ -6,6 +6,10 @@ using namespace Fetcko;
 
 class Play : public Symbol {
 public:
+	Play(AlbumArt *const albumArt) : Symbol(albumArt) {
+
+	}
+
 	void OnInit(float radius) override {
 		Symbol::OnInit(radius);
 
@@ -28,24 +32,30 @@ public:
 		vao->Unbind();
 	}
 
-	void OnLoop(float x, float y, const Delta &time, Context &context) {
+	void OnLoop(float x, float y, const Delta &time, Context &context, const float *alpha = nullptr) override {
+		Symbol::OnLoop(x, y, time, context, alpha);
+
+		const auto OutlineColor = alpha ? albumArt->GetBlackColor() : 0.0f;
+		const auto HorizontalScale = alpha ? 1.25f : 1.15f;
+		const auto VerticalScale = alpha ? 1.45f : 1.2f;
+
 		context.Use("basic"_hash);
 
 		AutoFader::OnLoop(time);
 
 		context.Translate(x, y, 0);
-		context.Scale(1.15f, 1.2f, 1.0f);
+		context.Scale(HorizontalScale, VerticalScale, 1.0f);
 		context.Apply();
 
-		context.Color(0.0f, 0.0f, 0.0f, alpha);
+		context.Color(OutlineColor, OutlineColor, OutlineColor, alpha ? *alpha : this->alpha);
 
 		// Outline
 		vao->Bind();
 		vbo->DrawArrays(GL_TRIANGLES, 0, 3);
 		vao->Unbind();
 
-		context.Color(color.r, color.g, color.b, alpha);
-		context.Scale(1.0f / 1.15f, 1.0f / 1.2f, 1.0f);
+		context.Color(GetColor().r, GetColor().g, GetColor().b, alpha ? *alpha : this->alpha);
+		context.Scale(1.0f / HorizontalScale, 1.0f / VerticalScale, 1.0f);
 		context.Apply();
 
 		// Triangle

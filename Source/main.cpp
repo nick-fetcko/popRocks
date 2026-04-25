@@ -43,10 +43,10 @@ Delta timer;
 // as you stop moving the mouse, NOT when you
 // let go of the window
 bool EventFilter(void *pThis, SDL_Event *event) {
-	if (event->type == SDL_EVENT_WINDOW_EXPOSED) {
-		auto *app = reinterpret_cast<CApp *>(pThis);
+	auto *app = reinterpret_cast<CApp *>(pThis);
+	if ((event->type == SDL_EVENT_WINDOW_EXPOSED && !Settings::settings.GetMiniPlayer()))
 		app->OnLoop(timer.Update());
-	}
+
 	return true;
 }
 
@@ -92,6 +92,9 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 
 	Vector2i mousePos{ 0, 0 };
 	bool mouseButtonDown = false;
+	bool mouseDragged = false;
+
+	uint16_t skipEvents = 0;
 
 #if GUI
 	auto &io = ImGui::GetIO();
@@ -119,9 +122,15 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 					app.OnResize(w, h, scale);
 					break;
 				} case SDL_EVENT_WINDOW_MOVED:
-					Settings::settings.SetWindowX(event.window.data1);
-					Settings::settings.SetWindowY(event.window.data2);
-					logger.LogDebug("Window moved to (", event.window.data1, ", ", event.window.data2, ")");
+					if (mouseButtonDown) break;
+
+					if (!app.GetMiniPlayer()) {
+						Settings::settings.SetWindowX(event.window.data1);
+						Settings::settings.SetWindowY(event.window.data2);
+
+						logger.LogDebug("Window moved to (", event.window.data1, ", ", event.window.data2, ")");
+					}
+
 					app.UpdateHdrProperties();
 					app.UpdateVsync();
 					break;
@@ -164,7 +173,7 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 						app.GetAlbumArt().ResetBin();
 					} else if (event.key.key == SDLK_P)
 						app.SaveBlurFBO();
-					else if (event.key.key == SDLK_SPACE || event.key.key == SDLK_MEDIA_PLAY)
+					else if (event.key.key == SDLK_SPACE || event.key.key == SDLK_MEDIA_PLAY || event.key.key == SDLK_MEDIA_PLAY_PAUSE)
 						app.TogglePlaying();
 					else if (event.key.key == SDLK_RETURN && event.key.mod & SDL_KMOD_ALT)
 						app.ToggleFullscreen();
@@ -177,15 +186,47 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 					else if (event.key.key == SDLK_S)
 						app.SyncToNearestBeat();
 					else if (event.key.key == SDLK_R)
-						app.LoadPreset(Preset::Random());
+						app.ResetWindow();
+					else if (event.key.key == SDLK_M)
+						app.SetMiniPlayer(!app.GetMiniPlayer());
+					break;
+				case SDL_EVENT_WINDOW_MOUSE_ENTER:
+					if (app.GetMiniPlayer()) {
+						logger.LogInfo("Mouse entered!");
+						app.GetControls().Fade(true);
+
+						// Keep controls faded in as long
+						// as the mouse is hovered over
+						// the mini player
+						app.GetControls().Stick();
+					}
+					break;
+				case SDL_EVENT_WINDOW_MOUSE_LEAVE:
+					if (app.GetMiniPlayer()) {
+						logger.LogInfo("Mouse left!");
+
+						app.GetControls().Unstick();
+
+						// We want to fade _in_ so that the
+						// user-controlled wait time passes
+						// before the eventual fade _out_
+						app.GetControls().Fade(true);
+
+						app.OnMouseLeave();
+					}
 					break;
 				case SDL_EVENT_MOUSE_MOTION:
 					mousePos.x = static_cast<int32_t>(event.motion.x);
 					mousePos.y = static_cast<int32_t>(event.motion.y);
 
 					if (mouseButtonDown) {
-						app.OnMouseDragged(mousePos);
-					}
+						if (!skipEvents) {
+							if (app.OnMouseDragged(mousePos)) {
+								skipEvents = 1;
+							}
+						} else --skipEvents;
+						mouseDragged = true;
+					} else app.OnMouseMoved(mousePos);
 					break;
 				case SDL_EVENT_MOUSE_BUTTON_DOWN:
 					if (event.button.button == SDL_BUTTON_LEFT
@@ -194,6 +235,7 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 #endif
 						&& app.OnMouseDown(mousePos)) {
 						mouseButtonDown = true;
+						mouseDragged = false;
 					}
 					break;
 				case SDL_EVENT_MOUSE_BUTTON_UP:
@@ -202,10 +244,15 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 						&& !io.WantCaptureMouse
 #endif
 						) {
-						if (!mouseButtonDown)
-							app.OnMouseClicked(mousePos);
-						else
-							mouseButtonDown = false;
+						if (!mouseDragged) {
+							if (app.OnMouseClicked(mousePos))
+								running = false;
+						} else app.OnMouseUp(mousePos);
+
+						app.GetAlbumArt().OnMouseUp(mousePos);
+
+						mouseButtonDown = false;
+						mouseDragged = false;
 					}
 					break;
 				case SDL_EVENT_DROP_FILE: {
@@ -220,11 +267,25 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 					);
 					break;
 				}
+				case SDL_EVENT_DISPLAY_ADDED:
+				case SDL_EVENT_DISPLAY_REMOVED:
+				case SDL_EVENT_DISPLAY_MOVED:
+					app.UpdateDisplayBoundingBox();
+					break;
+				case SDL_EVENT_MOUSE_WHEEL:
+					app.GetControls().AddToScrollOffset(
+						event.wheel.y * (event.wheel.direction == SDL_MOUSEWHEEL_NORMAL ? -1 : 1)
+					);
+					break;
 				default:
 					break;
 			}
 
-			app.FadeControls(true);
+			// Mini-player fades controls based
+			// on mouse enter / leave, not on
+			// interaction itself.
+			if (!app.GetMiniPlayer())
+				app.FadeControls(true);
 		}
 
 		app.OnLoop(timer.Update());

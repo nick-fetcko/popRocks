@@ -93,7 +93,8 @@ public:
 		const Colour<float> &brightColor,
 		float frameCount,
 		float maxHeartSample = 0.0f,
-		bool resetGain = false
+		bool resetGain = false,
+		bool miniPlayer = false
 	) = 0;
 
 	virtual void Draw(

@@ -11,23 +11,23 @@ class ExclusiveIndicator {
 public:
 	void OnInit(OpenGLFont *font, OpenGLFont *outlineFont, Context *context) {
 		text.OnInit(font, context);
-		text.SetText("Exclusive");
-		
 		outline.OnInit(outlineFont, context);
-		outline.SetText("Exclusive");
+
+		SetMiniPlayer(miniPlayer);
 	}
 
 	const int32_t GetHeight() const { return text.GetSize().y; }
+	const int32_t GetWidth() const { return text.GetSize().x; }
 
-	void OnLoop(int x, int y, float alpha, Context &context) {
+	const int32_t GetOutlineWidth() const { return outline.GetBounds().width; }
+
+	void OnLoop(int x, int y, float alpha, const AlbumArt * const albumArt, Context &context) {
+		const auto OutlineColor = miniPlayer ? albumArt->GetBlackColor() : (IsExclusive() ? 0.0f : 0.25f * HDR::WhiteLevel);
+
 		pos.x = x;
 		pos.y = y - text.GetSize().y / 2;
 
-		if (IsExclusive())
-			context.Color(0.0f, 0.0f, 0.0f, alpha);
-		else
-			context.Color(0.25f * HDR::WhiteLevel, 0.25f * HDR::WhiteLevel, 0.25f * HDR::WhiteLevel, alpha);
-
+		context.Color(OutlineColor, OutlineColor, OutlineColor, alpha);
 		outline.OnLoop(x, y - text.GetSize().y / 2);
 
 		if (IsExclusive())
@@ -58,9 +58,20 @@ public:
 		return false;
 	}
 
+	void SetMiniPlayer(bool miniPlayer) { 
+		this->miniPlayer = miniPlayer;
+
+		const auto *label = miniPlayer ? "Ex" : "Exclusive";
+
+		text.SetText(label);
+		outline.SetText(label);
+	}
+
 private:
 	Vector2i pos {0, 0};
 
 	Text text;
 	Text outline;
+
+	bool miniPlayer = Settings::settings.GetMiniPlayer();
 };

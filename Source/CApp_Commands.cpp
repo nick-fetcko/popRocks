@@ -456,13 +456,9 @@ void CApp::AddCommands() {
 			"radius", [&](const std::vector<std::string> &args) {
 				if (args.size() > 1) {
 					try {
-						auto radius = IsDefault(args[1]) ? 200.0f : std::stof(args[1]);
+						auto radius = IsDefault(args[1]) ? AlbumArt::BaseRadius : std::stof(args[1]);
 
-						albumArt.SetRadius(radius);
-						albumArt.Scale(true);
-						controls.GetVolume().SetRadius(radius);
-						controls.GetPause().OnResize(radius);
-						controls.GetPlay().OnResize(radius);
+						SetRadius(radius);
 					} catch (std::exception &e) {
 						LogError("Could not set radius: ", e.what());
 					}

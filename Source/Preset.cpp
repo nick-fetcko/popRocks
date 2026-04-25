@@ -9,6 +9,7 @@
 #include "Utils.hpp"
 
 std::vector<Preset> Preset::Presets;
+std::set<Preset::ChangeListener *> Preset::ChangeListeners;
 
 std::vector<Preset> Preset::Load() {
 	std::vector<Preset> ret;
@@ -56,6 +57,7 @@ Preset Preset::Random() {
 	Preset ret(
 		"Random",
 		1 + prng() % 512, // limit to 512
+		8192, // use default FFT size
 		Duration<Microseconds>(
 			std::chrono::duration<double>(
 				(prng() % 10000) / 5000.0f // 0 - 2
@@ -112,18 +114,34 @@ void Preset::AddPreset(Preset &&preset) {
 	Presets.emplace_back(std::move(preset));
 
 	Save();
+
+	for (auto listener : ChangeListeners)
+		listener->OnPresetsChanged(Presets);
 }
 
 void Preset::RemovePreset(std::size_t index) {
 	Presets.erase(Presets.begin() + index);
 
 	Save();
+
+	for (auto listener : ChangeListeners)
+		listener->OnPresetsChanged(Presets);
+}
+
+void Preset::AddChangeListener(ChangeListener *listener) {
+	ChangeListeners.emplace(listener);
+}
+
+void Preset::RemoveChangeListener(ChangeListener *listener) {
+	ChangeListeners.erase(listener);
 }
 
 const Node &operator>>(const Node &node, Preset &preset) {
 	node["name"]->get(preset.name);
 
 	node["bufferSize"]->get(preset.bufferSize);
+	if (node.has("fftSize"))
+		node["fftSize"]->get(preset.fftSize);
 
 	preset.decayTime = Duration<Microseconds>(
 		std::chrono::duration<double>(
@@ -201,6 +219,7 @@ Node &operator<<(Node &node, const Preset &preset) {
 	node["name"]->set(preset.name);
 
 	node["bufferSize"]->set(preset.bufferSize);
+	node["fftSize"]->set(preset.fftSize);
 	node["decayTime"]->set(preset.decayTime.AsSeconds());
 	node["fadeTime"]->set(preset.fadeDecayTime.AsSeconds());
 	node["pulse"]->set(preset.pulse);

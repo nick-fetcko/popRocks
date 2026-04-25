@@ -124,9 +124,20 @@ void FFTRenderer::OnLoop(
 	const Colour<float> &brightColor,
 	float frameCount,
 	float maxHeardSample,
-	bool resetGain
+	bool resetGain,
+	bool miniPlayer
 ) {
-	for (int i = 0; i < fullBufferLength; i++) {
+	const float thickness = std::ceil(std::max((albumArt->GetRadius(miniPlayer) * Maths::PI<float>) / bufferLength, 1.0f));
+
+	// FIXME: cache this value
+	const auto effectOffset = std::max(Settings::settings.GetEffectRadiation() * 2.0f, 0.0f) + std::max(Settings::settings.GetEffectIntensity() * 2.0f, 0.0f);
+
+	// TODO: Make setting for "constrained to window size" mode
+	const auto height = std::max(miniPlayer ?
+		(std::min(windowWidth, windowHeight) / 2.0f - albumArt->GetRadius(miniPlayer)) * scale - thickness * 2 - effectOffset : // Min
+		(std::max(windowWidth, windowHeight) / 2.0f - albumArt->GetRadius(miniPlayer)) * scale, 0.0f); // Max
+
+	for (std::size_t i = 0; i < fullBufferLength; i++) {
 		auto rawValue = floatBuffer[i];
 
 		if (resetGain) {
@@ -150,17 +161,15 @@ void FFTRenderer::OnLoop(
 				max[i] -= dynamicGain->smallStep;
 		}
 
-		auto height = (std::max(windowWidth, windowHeight) / 2.0f - albumArt->GetRadius() / 2.0f) * scale;
-
 		// If we're listening, skip normalization
-		auto scaledValue =
+		const auto scaledValue =
 			//fileLoaded ?
-			((rawValue - min[i]) / (max[i] - min[i])) * height //:
+			std::clamp(((rawValue - min[i]) / (max[i] - min[i])) * height, 0.0f, height) //:
 			//rawValue * height;
 		;
 
 		shrinkDecays[i].Update(time);
-		if (scaledValue > shrinkDecays[i].Get()) {
+		if (time.change == 0us || scaledValue > shrinkDecays[i].Get()) {
 			shrinkDecays[i].Reset(scaledValue);
 			fadeDecays[i].Reset(1.0f);
 		}
@@ -181,9 +190,7 @@ void FFTRenderer::OnLoop(
 
 			fadeDecays[i].Update(time);
 
-			float thickness = std::ceil(std::max((albumArt->GetRadius() * Maths::PI<float>) / bufferLength, 1.0f));
-			auto angle = (((((static_cast<float>(i) / bufferLength * 360.0f) - frameCount) / distribution) * 360.0f));
-			angle *= Maths::DEG2RAD<float>;
+			const auto angle = (((((static_cast<float>(i) / bufferLength * 360.0f) - frameCount) / distribution) * 360.0f)) * Maths::DEG2RAD<float>;
 
 			// Top left
 			rects[i * Indices::Total + Indices::TopLeftCoords] = -thickness;

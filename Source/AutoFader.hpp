@@ -27,7 +27,7 @@ public:
 					targetAlpha = std::nullopt;
 				}
 			} else targetAlpha = std::nullopt;
-		} else if (auto now = std::chrono::system_clock::now(); (now - lastEventTime) > waitTime) {
+		} else if (auto now = std::chrono::system_clock::now(); !paused && (now - lastEventTime) > waitTime) {
 			if constexpr (UserControlled) {
 				if (Settings::settings.GetAutoFade())
 					Fade(false);
@@ -66,12 +66,15 @@ public:
 
 	void SetAutoFadeSpeed(float autoFadeSpeed) { this->autoFadeSpeed = autoFadeSpeed; }
 
-	const float &GetAlpha() const { return alpha; }
+	virtual const float &GetAlpha() const { return alpha; }
+
+	void Stick() { paused = true; }
+	void Unstick() { paused = false; }
 
 protected:
 	std::chrono::seconds waitTime = Settings::settings.GetWaitTime();
 
-	float alpha = 1.0f;
+	float alpha = 0.0f;
 	std::optional<float> targetAlpha = std::nullopt;
 
 	std::chrono::system_clock::time_point lastEventTime = std::chrono::system_clock::now();
@@ -81,4 +84,6 @@ protected:
 	std::optional<bool> lastFade = std::nullopt;
 
 	float autoFadeSpeed = Settings::settings.GetAutoFadeSpeed();
+
+	bool paused = false;
 };

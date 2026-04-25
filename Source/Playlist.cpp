@@ -8,6 +8,9 @@
 #include "OGG.hpp"
 #include "WV.hpp"
 
+#include "Circle.hpp"
+#include "Controls.hpp"
+
 Playlist::Sorter::iterator Playlist::GuessDisc(Sorter &sorter, std::optional<std::size_t> &index) {
 	std::size_t discGuess = 1;
 
@@ -38,6 +41,11 @@ Playlist::Sorter::iterator Playlist::GuessDisc(Sorter &sorter, std::optional<std
 		index = sorter.rbegin()->second.size() + 1;
 
 	return discSorter;
+}
+
+void Playlist::AddFile(const std::filesystem::path &path) {
+	currentFile = files.emplace(files.end(), path);
+	numberOfVisibleItems = files.size();
 }
 
 std::optional<Playlist::Track> Playlist::OnLoad(
@@ -311,14 +319,19 @@ inline void Playlist::UpdateSize() {
 	vbo->Unbind();
 }
 
-void Playlist::OnInit(int windowWidth, int windowHeight, OpenGLFont *font, OpenGLFont *outlineFont, Context *context, float scale) {
+void Playlist::OnInit(int windowWidth, int windowHeight, OpenGLFont *font, OpenGLFont *boldFont, OpenGLFont *outlineFont, OpenGLFont *boldOutlineFont, Context *context, float scale) {
 	this->windowWidth = windowWidth;
 	this->windowHeight = windowHeight;
 	this->font = font;
+	this->boldFont = boldFont;
 	this->outlineFont = outlineFont;
+	this->boldOutlineFont = boldOutlineFont;
 	this->context = context;
 	this->scale = scale;
 
+	MiniPlayerList::OnInit(font, boldFont, outlineFont, boldOutlineFont, context);
+
+	currentTitle.OnInit(font, context);
 	outline.OnInit(outlineFont, context);
 
 	vao = std::make_unique<VertexArray>();
@@ -341,22 +354,36 @@ void Playlist::OnInit(int windowWidth, int windowHeight, OpenGLFont *font, OpenG
 	eab->Unbind();
 }
 
-void Playlist::OnResize(int windowWidth, int windowHeight, float scale) {
+void Playlist::OnResize(int windowWidth, int windowHeight, float scale, bool miniPlayer, float maxWidth) {
 	this->windowWidth = windowWidth;
 	this->windowHeight = windowHeight;
-	if (this->scale != scale && !titles.empty()) {
+	this->maxWidth = maxWidth;
+
+	MiniPlayerList::OnResize(windowWidth, windowHeight);
+	MiniPlayerList::SetMaxWidth(maxWidth);
+
+	if ((this->scale != scale || this->miniPlayer != miniPlayer) && !items.empty()) {
 		size = { 0, 0 };
-		for (auto &title : titles) {
+		for (auto &title : items) {
 			title.OnInit(font, context);
 
 			size.y += title.GetBounds().height;
-			if (title.GetSize().x > size.x)
-				size.x = title.GetSize().x;
+			if (title.GetBounds().width > size.x)
+				size.x = title.GetBounds().width;
 		}
 		outline.OnInit(outlineFont, context);
 
 		this->scale = scale;
+		this->miniPlayer = miniPlayer;
+
+		MiniPlayerList::SetMiniPlayer(miniPlayer);
 	}
+
+	currentTitle.SetMaxWidth(miniPlayer ? maxWidth : windowWidth);
+	currentTitle.OnResize(windowWidth, windowHeight);
+	outline.SetMaxWidth(miniPlayer ? maxWidth : windowWidth);
+	outline.OnResize(windowWidth, windowHeight);
+
 	UpdateSize();
 }
 
@@ -371,10 +398,7 @@ void Playlist::Clear() {
 	files.clear();
 	currentFile = files.end();
 
-	for (auto &title : titles)
-		title.OnDestroy();
-
-	titles.clear();
+	MiniPlayerList::Clear();
 
 	cue.reset();
 }
@@ -460,20 +484,47 @@ const std::optional<Playlist::Track> Playlist::GetNext() const {
 	return Track{ *(currentFile + 1) };
 }
 
-void Playlist::OnLoop(Vector2i pos, float maxHeight, float alpha, Context &context) {
+void Playlist::OnLoop(const Delta &time, Vector2i pos, float maxHeight, float alpha, Context &context, bool miniPlayer, bool hidden) {
 	if (!visible) return;
 
 	// We want to store its _origin_
 	this->pos = pos;
 
 	if (!files.empty())
-		OnLoop(files, currentFile, pos, maxHeight, alpha, context);
+		OnLoop(time, files, currentFile, pos, maxHeight, alpha, context, miniPlayer, hidden);
 	else if (cue)
-		OnLoop(cue->GetTracks(), cue->GetCurrentTrack(), pos, maxHeight, alpha, context);
+		OnLoop(time, cue->GetTracks(), cue->GetCurrentTrack(), pos, maxHeight, alpha, context, miniPlayer, hidden);
+}
+
+bool Playlist::OnMouseMoved(const Vector2i &mousePos) {
+	return MiniPlayerList::OnMouseMoved(
+		mousePos,
+		{
+			pos.x - outline.GetBounds().width / 2,
+			pos.y - outline.GetBounds().height / 2,
+			pos.x + outline.GetBounds().width / 2,
+			pos.y + outline.GetBounds().height / 2
+		}
+	);
 }
 
 std::optional<Playlist::Track> Playlist::OnMouseClicked(const Vector2i &mousePos) {
-	if (visible && !titles.empty() && mousePos.y >= pos.y && mousePos.y <= maxHeight) {
+	if (miniPlayer && hovered && hoveredOffset != -1) {
+		if (!files.empty()) {
+			currentFile = files.begin() + (hoveredOffset + scrollOffset);
+
+			LogInfo("Click captured! Mini-player playlist, files route");
+
+			return currentFile == files.end() ? Track{ *(--currentFile) } : Track{ *currentFile };
+		}
+		else if (cue) {
+			const auto &track = cue->TrackAtOffset(hoveredOffset + scrollOffset);
+
+			LogInfo("Click captured! Mini-player playlist, .cue route");
+
+			return Track{ track.filePath, track.title, track.startTime };
+		}
+	} else if (!miniPlayer && visible && !items.empty() && mousePos.y >= pos.y && mousePos.y <= maxHeight) {
 		const auto offset = 
 			cue ?
 				std::distance(cue->GetTracks().begin(), cue->GetCurrentTrack()) :
@@ -484,17 +535,22 @@ std::optional<Playlist::Track> Playlist::OnMouseClicked(const Vector2i &mousePos
 				std::distance(cue->GetCurrentTrack(), cue->GetTracks().end()) :
 				std::distance(currentFile, files.end());
 
-		auto &bounds = titles.begin()->GetBounds();
+		auto &bounds = items.begin()->GetBounds();
 
 		// If our offset is not 0, we need to account for the previous track
 		if (auto index = (mousePos.y - pos.y + bounds.y / 2) / bounds.height - (offset != 0 ? 1 : 0);
 			index < distance) {
-			if (mousePos.x >= pos.x && mousePos.x <= pos.x + titles[offset + index].GetSize().x) {
+			if (mousePos.x >= pos.x && mousePos.x <= pos.x + items[offset + index].GetSize().x) {
 				if (!files.empty()) {
 					currentFile += index;
+
+					LogInfo("Click captured! Playlist, files route");
+
 					return currentFile == files.end() ? Track{ *(--currentFile) } : Track{ *currentFile };
 				} else if (cue) {
 					const auto &track = cue->TrackAtOffset(index);
+
+					LogInfo("Click captured! Playlist, .cue route");
 
 					return Track{ track.filePath, track.title, track.startTime };
 				} else return std::nullopt;
@@ -522,4 +578,11 @@ std::vector<std::filesystem::path> Playlist::FindCue(const std::filesystem::path
 	}
 
 	return ret;
+}
+
+void Playlist::OnBlackChanged(const float &black) {
+	outline.SetColor({ black, black, black });
+	outline.SetText(outline.GetText(), true);
+
+	MiniPlayerList::OnBlackChanged(black);
 }

@@ -117,8 +117,12 @@ void Desktop::SetHdr(bool enabled, void *hwnd, int width, int height) {
 
 		if (auto font = app->GetControls().GetFont())
 			font->SetDefaultFramebuffer(GetInterop()->GetFramebuffer());
+		if (auto boldFont = app->GetControls().GetFont())
+			boldFont->SetDefaultFramebuffer(GetInterop()->GetFramebuffer());
 		if (auto outlineFont = app->GetControls().GetOutlineFont())
 			outlineFont->SetDefaultFramebuffer(GetInterop()->GetFramebuffer());
+		if (auto boldOutlineFont = app->GetControls().GetBoldOutlineFont())
+			boldOutlineFont->SetDefaultFramebuffer(GetInterop()->GetFramebuffer());
 	}
 }
 
@@ -154,5 +158,10 @@ const char *Desktop::GetOpenGlContextError() {
 // ------------------- FBO blitting --------------------
 // -----------------------------------------------------
 void Desktop::BlitBlurFbo() {
-	app->GetBlurFbo()->Blit(*app->GetContext());
+	app->GetBlurFbo()->Blit(
+		*app->GetContext(),
+		nullptr,
+		app->GetMiniPlayer() ? app->GetAlbumArt().GetChromaColor() : 0.0f,
+		app->GetMiniPlayer() ? 1.0f : 0.0f
+	);
 }

@@ -4,6 +4,10 @@
 
 class Next : public Symbol {
 public:
+	Next(AlbumArt *const albumArt) : Symbol(albumArt) {
+
+	}
+
 	void OnInit(float radius) override {
 		rectVao = std::make_unique<VertexArray>();
 		rectVbo = std::make_unique<ArrayBuffer>();
@@ -59,24 +63,35 @@ public:
 		rectVao->Unbind();
 	}
 
-	void OnLoop(float x, float y, const Delta &time, Context &context) {
+	void OnLoop(float x, float y, const Delta &time, Context &context, const float *alpha = nullptr) override {
+		Symbol::OnLoop(x, y, time, context, alpha);
+
+		const auto OutlineColor = alpha ? albumArt->GetBlackColor() : 0.0f;
+
+		const auto TriangleHorizontalScale = alpha ? 1.45f : 1.15f;
+		const auto TriangleVerticalScale = alpha ? 1.45f : 1.2f;
+
+		const auto RectangleHorizontalScale = alpha ? 2.25f : 1.5f;
+		const auto RectangleVerticalScale = alpha ? 1.15f : 1.1f;
+
 		context.Use("basic"_hash);
 
 		AutoFader::OnLoop(time);
 
 		context.Translate(x, y, 0);
-		context.Scale(1.15f, 1.2f, 1.0f);
+		context.Scale(TriangleHorizontalScale, TriangleVerticalScale, 1.0f);
 		context.Apply();
 
-		context.Color(0.0f, 0.0f, 0.0f, alpha);
+		context.Color(OutlineColor, OutlineColor, OutlineColor, alpha ? *alpha : this->alpha);
 
 		// Left Outline
 		vao->Bind();
 		vbo->DrawArrays(GL_TRIANGLES, 0, 3);
 		vao->Unbind();
 
-		context.Color(color.r, color.g, color.b, alpha);
-		context.Scale(1.0f / 1.15f, 1.0f / 1.2f, 1.0f);
+		context.Color(GetColor().r, GetColor().g, GetColor().b, alpha ? *alpha : this->alpha);
+		context.Translate(-TriangleHorizontalScale, 0, 0);
+		context.Scale(1.0f / TriangleHorizontalScale, 1.0f / TriangleVerticalScale, 1.0f);
 		context.Apply();
 
 		// Left Triangle
@@ -85,10 +100,10 @@ public:
 		vao->Unbind();
 
 		context.Translate(radius / 1.5f, 0, 0);
-		context.Scale(1.5f, 1.1f, 1.0f);
+		context.Scale(RectangleHorizontalScale, RectangleVerticalScale, 1.0f);
 		context.Apply();
 
-		context.Color(0.0f, 0.0f, 0.0f, alpha);
+		context.Color(OutlineColor, OutlineColor, OutlineColor, alpha ? *alpha : this->alpha);
 
 		// Right outline
 		rectVao->Bind();
@@ -97,8 +112,8 @@ public:
 		rectEab->Unbind();
 		rectVao->Unbind();
 
-		context.Color(color.r, color.g, color.b, alpha);
-		context.Scale(1.0f / 1.5f, 1.0f / 1.1f, 1.0f);
+		context.Color(GetColor().r, GetColor().g, GetColor().b, alpha ? *alpha : this->alpha);
+		context.Scale(1.0f / RectangleHorizontalScale, 1.0f / RectangleVerticalScale, 1.0f);
 		context.Apply();
 
 		// Right rectangle
@@ -107,12 +122,6 @@ public:
 		rectEab->DrawElements(GL_TRIANGLES);
 		rectEab->Unbind();
 		rectVao->Unbind();
-
-		context.Translate(radius / 3.0f * 2.0f, 0, 0);
-		context.Scale(1.5f, 1.1f, 1.0f);
-		context.Apply();
-
-		context.Color(0.0f, 0.0f, 0.0f, alpha);
 
 		context.Use("texture"_hash);
 		context.LoadIdentity();

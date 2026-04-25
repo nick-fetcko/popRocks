@@ -8,6 +8,7 @@
 
 #include "Utils/Filesystem.hpp"
 
+#include "AlbumArt.hpp"
 #include "Preset.hpp"
 
 #ifndef __ANDROID__
@@ -55,6 +56,14 @@ std::map<std::string, GLenum> Settings::Colorspaces = {
 #endif
 };
 
+Settings::Settings() {
+	radius = AlbumArt::BaseRadius;
+	miniPlayerRadius = AlbumArt::BaseRadius;
+
+	miniPlayerWidth = radius * miniPlayerVisualizerRatio;
+	miniPlayerHeight = radius * miniPlayerVisualizerRatio;
+}
+
 void Settings::SetPath(const std::string &path) {
 	Filesystem::SetPath(path);
 
@@ -99,577 +108,656 @@ Settings Settings::Load() {
 	return ret;
 }
 
-void Settings::SetVolume(float volume) {
+void Settings::SetVolume(float volume, bool delayed) {
 	if (volume != this->volume) {
 		this->volume = volume;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetExclusive(bool exclusive) {
+void Settings::SetExclusive(bool exclusive, bool delayed) {
 	if (exclusive != this->exclusive) {
 		this->exclusive = exclusive;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetColorSelection(ColorSelection colorSelection) {
+void Settings::SetColorSelection(ColorSelection colorSelection, bool delayed) {
 	if (colorSelection != this->colorSelection) {
 		this->colorSelection = colorSelection;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetWindowWidth(int windowWidth) {
+void Settings::SetWindowWidth(int windowWidth, bool delayed) {
 	if (windowWidth != this->windowWidth) {
 		this->windowWidth = windowWidth;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetWindowHeight(int windowHeight) {
+void Settings::SetWindowHeight(int windowHeight, bool delayed) {
 	if (windowHeight != this->windowHeight) {
 		this->windowHeight = windowHeight;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetWindowX(int windowX) {
+void Settings::SetWindowX(int windowX, bool delayed) {
 	if (windowX != this->windowX) {
 		this->windowX = windowX;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetWindowY(int windowY) {
+void Settings::SetWindowY(int windowY, bool delayed) {
 	if (windowY != this->windowY) {
 		this->windowY = windowY;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetBufferLength(std::size_t bufferLength) {
+void Settings::SetBufferLength(std::size_t bufferLength, bool delayed) {
 	if (bufferLength != this->bufferLength) {
 		this->bufferLength = bufferLength;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetDecayTime(Duration<Microseconds> decayTime) {
+void Settings::SetDecayTime(Duration<Microseconds> decayTime, bool delayed) {
 	if (decayTime != this->decayTime) {
 		this->decayTime = decayTime;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetFadeTime(Duration<Microseconds> fadeTime) {
+void Settings::SetFadeTime(Duration<Microseconds> fadeTime, bool delayed) {
 	if (fadeTime != this->fadeTime) {
 		this->fadeTime = fadeTime;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetPulse(bool pulse) {
+void Settings::SetPulse(bool pulse, bool delayed) {
 	if (pulse != this->pulse) {
 		this->pulse = pulse;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetDarkenPulseOnBrightColors(bool darkenPulseOnBrightColors) {
+void Settings::SetDarkenPulseOnBrightColors(bool darkenPulseOnBrightColors, bool delayed) {
 	if (darkenPulseOnBrightColors != this->darkenPulseOnBrightColors) {
 		this->darkenPulseOnBrightColors = darkenPulseOnBrightColors;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetPulseTime(Duration<Microseconds> pulseTime) {
+void Settings::SetPulseTime(Duration<Microseconds> pulseTime, bool delayed) {
 	if (pulseTime != this->pulseTime) {
 		this->pulseTime = pulseTime;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetStrobe(bool strobe) {
+void Settings::SetStrobe(bool strobe, bool delayed) {
 	if (strobe != this->strobe) {
 		this->strobe = strobe;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetStrobeIntensity(float strobeIntensity) {
+void Settings::SetStrobeIntensity(float strobeIntensity, bool delayed) {
 	if (strobeIntensity != this->strobeIntensity) {
 		this->strobeIntensity = strobeIntensity;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetRotating(bool rotating) {
+void Settings::SetRotating(bool rotating, bool delayed) {
 	if (rotating != this->rotating) {
 		this->rotating = rotating;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetRotationSpeed(float rotationSpeed) {
+void Settings::SetRotationSpeed(float rotationSpeed, bool delayed) {
 	if (rotationSpeed != this->rotationSpeed) {
 		this->rotationSpeed = rotationSpeed;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetRadius(float radius) {
+void Settings::SetRadius(float radius, bool delayed) {
 	if (radius != this->radius) {
 		this->radius = radius;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetDetectBpm(bool detectBpm) {
+void Settings::SetDetectBpm(bool detectBpm, bool delayed) {
 	if (detectBpm != this->detectBpm) {
 		this->detectBpm = detectBpm;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetCacheDetectionResults(bool cacheDetectionResults) {
+void Settings::SetCacheDetectionResults(bool cacheDetectionResults, bool delayed) {
 	if (cacheDetectionResults != this->cacheDetectionResults) {
 		this->cacheDetectionResults = cacheDetectionResults;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetHalveBpm(bool halveBpm) {
+void Settings::SetHalveBpm(bool halveBpm, bool delayed) {
 	if (halveBpm != this->halveBpm) {
 		this->halveBpm = halveBpm;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetWidth(float width) {
+void Settings::SetWidth(float width, bool delayed) {
 	if (width != this->width) {
 		this->width = width;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetRenderer(const std::string &renderer) {
+void Settings::SetRenderer(const std::string &renderer, bool delayed) {
 	if (renderer != this->renderer) {
 		this->renderer = renderer;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetLightPackVisualizationType(const std::string &lightPackVisualizationType) {
+void Settings::SetLightPackVisualizationType(const std::string &lightPackVisualizationType, bool delayed) {
 	if (lightPackVisualizationType != this->lightPackVisualizationType) {
 		this->lightPackVisualizationType = lightPackVisualizationType;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetLightPackMapping(const std::string &lightPackMapping) {
+void Settings::SetLightPackMapping(const std::string &lightPackMapping, bool delayed) {
 	if (lightPackMapping != this->lightPackMapping) {
 		this->lightPackMapping = lightPackMapping;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetLightPackFocusArea(const std::string &lightPackFocusArea) {
+void Settings::SetLightPackFocusArea(const std::string &lightPackFocusArea, bool delayed) {
 	if (lightPackFocusArea != this->lightPackFocusArea) {
 		this->lightPackFocusArea = lightPackFocusArea;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetPresetIndex(std::optional<std::size_t> presetIndex) {
+void Settings::SetPresetIndex(std::optional<std::size_t> presetIndex, bool delayed) {
 	if (presetIndex != this->presetIndex) {
 		this->presetIndex = presetIndex;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetSmooth(uint8_t smooth) {
+void Settings::SetMiniPlayerPresetIndex(std::optional<std::size_t> miniPlayerPresetIndex, bool delayed) {
+	if (miniPlayerPresetIndex != this->miniPlayerPresetIndex) {
+		this->miniPlayerPresetIndex = miniPlayerPresetIndex;
+		if (!delayed) Save();
+	}
+}
+
+void Settings::SetSmooth(uint8_t smooth, bool delayed) {
 	if (smooth != this->smooth) {
 		this->smooth = smooth;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetGamma(float gamma) {
+void Settings::SetGamma(float gamma, bool delayed) {
 	if (gamma != this->gamma) {
 		this->gamma = gamma;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetBlur(bool blur) {
+void Settings::SetBlur(bool blur, bool delayed) {
 	if (blur != this->blur) {
 		this->blur = blur;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetBlurIntensity(float blurIntensity) {
+void Settings::SetBlurIntensity(float blurIntensity, bool delayed) {
 	if (blurIntensity != this->blurIntensity) {
 		this->blurIntensity = blurIntensity;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetBlurOpacity(float blurOpacity) {
+void Settings::SetBlurOpacity(float blurOpacity, bool delayed) {
 	if (blurOpacity != this->blurOpacity) {
 		this->blurOpacity = blurOpacity;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetCurrentSongVisible(bool currentSongVisible) {
+void Settings::SetCurrentSongVisible(bool currentSongVisible, bool delayed) {
 	if (currentSongVisible != this->currentSongVisible) {
 		this->currentSongVisible = currentSongVisible;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetPlaylistFade(bool playlistFade) {
+void Settings::SetPlaylistFade(bool playlistFade, bool delayed) {
 	if (playlistFade != this->playlistFade) {
 		this->playlistFade = playlistFade;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetPlaylistOnScreen(bool playlistOnScreen) {
+void Settings::SetPlaylistOnScreen(bool playlistOnScreen, bool delayed) {
 	if (playlistOnScreen != this->playlistOnScreen) {
 		this->playlistOnScreen = playlistOnScreen;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetFftSize(int fftSize) {
+void Settings::SetFftSize(int fftSize, bool delayed) {
 	if (fftSize != this->fftSize) {
 		this->fftSize = fftSize;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetListening(bool listening) {
+void Settings::SetListening(bool listening, bool delayed) {
 	if (listening != this->listening) {
 		this->listening = listening;
 		if (listening) loopback = false;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetLoopback(bool loopback) {
+void Settings::SetLoopback(bool loopback, bool delayed) {
 	if (loopback != this->loopback) {
 		this->loopback = loopback;
 		if (loopback) listening = false;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetOutputDevice(const std::string &outputDevice) {
+void Settings::SetOutputDevice(const std::string &outputDevice, bool delayed) {
 	if (outputDevice != this->outputDevice) {
 		this->outputDevice = outputDevice;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetInputDevice(const std::string &inputDevice) {
+void Settings::SetInputDevice(const std::string &inputDevice, bool delayed) {
 	if (inputDevice != this->inputDevice) {
 		this->inputDevice = inputDevice;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetEffect(const std::string &effect) {
+void Settings::SetEffect(const std::string &effect, bool delayed) {
 	if (effect != this->effect) {
 		this->effect = effect;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetEffectIntensity(float effectIntensity) {
+void Settings::SetEffectIntensity(float effectIntensity, bool delayed) {
 	if (effectIntensity != this->effectIntensity) {
 		this->effectIntensity = effectIntensity;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetEffectXOffset(float effectXOffset) {
+void Settings::SetEffectXOffset(float effectXOffset, bool delayed) {
 	if (effectXOffset != this->effectXOffset) {
 		this->effectXOffset = effectXOffset;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetEffectYOffset(float effectYOffset) {
+void Settings::SetEffectYOffset(float effectYOffset, bool delayed) {
 	if (effectYOffset != this->effectYOffset) {
 		this->effectYOffset = effectYOffset;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetEffectRadiation(float effectRadiation) {
+void Settings::SetEffectRadiation(float effectRadiation, bool delayed) {
 	if (effectRadiation != this->effectRadiation) {
 		this->effectRadiation = effectRadiation;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetEffectHorizontalSpread(float effectHorizontalSpread) {
+void Settings::SetEffectHorizontalSpread(float effectHorizontalSpread, bool delayed) {
 	if (effectHorizontalSpread != this->effectHorizontalSpread) {
 		this->effectHorizontalSpread = effectHorizontalSpread;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetEffectVerticalSpread(float effectVerticalSpread) {
+void Settings::SetEffectVerticalSpread(float effectVerticalSpread, bool delayed) {
 	if (effectVerticalSpread != this->effectVerticalSpread) {
 		this->effectVerticalSpread = effectVerticalSpread;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetEffectRotation(float effectRotation) {
+void Settings::SetEffectRotation(float effectRotation, bool delayed) {
 	if (effectRotation != this->effectRotation) {
 		this->effectRotation = effectRotation;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetLimitFramerate(bool limitFramerate) {
+void Settings::SetLimitFramerate(bool limitFramerate, bool delayed) {
 	if (limitFramerate != this->limitFramerate) {
 		this->limitFramerate = limitFramerate;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetFrameLimit(int frameLimit) {
+void Settings::SetFrameLimit(int frameLimit, bool delayed) {
 	if (frameLimit != this->frameLimit) {
 		this->frameLimit = frameLimit;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetRandomize(bool randomize) {
+void Settings::SetRandomize(bool randomize, bool delayed) {
 	if (randomize != this->randomize) {
 		this->randomize = randomize;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetRandomizeTime(Duration<Microseconds> randomizeTime) {
+void Settings::SetRandomizeTime(Duration<Microseconds> randomizeTime, bool delayed) {
 	if (randomizeTime != this->randomizeTime) {
 		this->randomizeTime = randomizeTime;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetScale(float scale) {
+void Settings::SetScale(float scale, bool delayed) {
 	if (scale != this->scale) {
 		this->scale = scale;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetSelectedPresets(const std::set<std::size_t> &selectedPresets) {
+void Settings::SetSelectedPresets(const std::set<std::size_t> &selectedPresets, bool delayed) {
 	if (selectedPresets != this->selectedPresets) {
 		this->selectedPresets = selectedPresets;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetRandomizePresets(bool randomizePresets) {
+void Settings::SetRandomizePresets(bool randomizePresets, bool delayed) {
 	if (randomizePresets != this->randomizePresets) {
 		this->randomizePresets = randomizePresets;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetRandomizePresetsTime(Duration<Microseconds> randomizePresetsTime) {
+void Settings::SetRandomizePresetsTime(Duration<Microseconds> randomizePresetsTime, bool delayed) {
 	if (randomizePresetsTime != this->randomizePresetsTime) {
 		this->randomizePresetsTime = randomizePresetsTime;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetRandomizePresetsByBeats(bool randomizePresetsByBeats) {
+void Settings::SetRandomizePresetsByBeats(bool randomizePresetsByBeats, bool delayed) {
 	if (randomizePresetsByBeats != this->randomizePresetsByBeats) {
 		this->randomizePresetsByBeats = randomizePresetsByBeats;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetRandomizePresetsBeats(int randomizePresetsBeats) {
+void Settings::SetRandomizePresetsBeats(int randomizePresetsBeats, bool delayed) {
 	if (randomizePresetsBeats != this->randomizePresetsBeats) {
 		this->randomizePresetsBeats = randomizePresetsBeats;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetAutoFade(bool autoFade) {
+void Settings::SetAutoFade(bool autoFade, bool delayed) {
 	if (autoFade != this->autoFade) {
 		this->autoFade = autoFade;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetWaitTime(Duration<Microseconds> waitTime) {
+void Settings::SetWaitTime(Duration<Microseconds> waitTime, bool delayed) {
 	if (waitTime != this->waitTime) {
 		this->waitTime = waitTime;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetAutoFadeSpeed(float autoFadeSpeed) {
+void Settings::SetMiniPlayerWaitTime(Duration<Microseconds> miniPlayerWaitTime, bool delayed) {
+	if (miniPlayerWaitTime != this->miniPlayerWaitTime) {
+		this->waitTime = miniPlayerWaitTime;
+		if (!delayed) Save();
+	}
+}
+
+void Settings::SetAutoFadeSpeed(float autoFadeSpeed, bool delayed) {
 	if (autoFadeSpeed != this->autoFadeSpeed) {
 		this->autoFadeSpeed = autoFadeSpeed;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetSaveRenderer(bool saveRenderer) {
+void Settings::SetSaveRenderer(bool saveRenderer, bool delayed) {
 	if (saveRenderer != this->saveRenderer) {
 		this->saveRenderer = saveRenderer;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetSaveScale(bool saveScale) {
+void Settings::SetSaveScale(bool saveScale, bool delayed) {
 	if (saveScale != this->saveScale) {
 		this->saveScale = saveScale;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetRendererOffset(int rendererOffset) {
+void Settings::SetRendererOffset(int rendererOffset, bool delayed) {
 	if (rendererOffset != this->rendererOffset) {
 		this->rendererOffset = rendererOffset;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetPulseBackground(bool pulseBackground) {
+void Settings::SetPulseBackground(bool pulseBackground, bool delayed) {
 	if (pulseBackground != this->pulseBackground) {
 		this->pulseBackground = pulseBackground;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetSourceFactor(GLenum sourceFactor) {
+void Settings::SetSourceFactor(GLenum sourceFactor, bool delayed) {
 	if (this->sourceFactor != sourceFactor) {
 		this->sourceFactor = sourceFactor;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetDestFactor(GLenum destFactor) {
+void Settings::SetDestFactor(GLenum destFactor, bool delayed) {
 	if (this->destFactor != destFactor) {
 		this->destFactor = destFactor;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetLut(const std::string &lut) {
+void Settings::SetLut(const std::string &lut, bool delayed) {
 	if (this->lut != lut) {
 		this->lut = lut;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetAlbumArtGamma(float albumArtGamma) {
+void Settings::SetAlbumArtGamma(float albumArtGamma, bool delayed) {
 	if (this->albumArtGamma != albumArtGamma) {
 		this->albumArtGamma = albumArtGamma;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetAlbumArtContrast(float albumArtContrast) {
+void Settings::SetAlbumArtContrast(float albumArtContrast, bool delayed) {
 	if (this->albumArtContrast != albumArtContrast) {
 		this->albumArtContrast = albumArtContrast;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetAlbumArtBrightness(float albumArtBrightness) {
+void Settings::SetAlbumArtBrightness(float albumArtBrightness, bool delayed) {
 	if (this->albumArtBrightness != albumArtBrightness) {
 		this->albumArtBrightness = albumArtBrightness;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetHdrWhitePoint(std::optional<float> hdrWhitePoint) {
+void Settings::SetHdrWhitePoint(std::optional<float> hdrWhitePoint, bool delayed) {
 	if (this->hdrWhitePoint != hdrWhitePoint) {
 		this->hdrWhitePoint = hdrWhitePoint;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetPulseUi(bool pulseUi) {
+void Settings::SetPulseUi(bool pulseUi, bool delayed) {
 	if (this->pulseUi != pulseUi) {
 		this->pulseUi = pulseUi;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetUiGamma(float uiGamma) {
+void Settings::SetUiGamma(float uiGamma, bool delayed) {
 	if (this->uiGamma != uiGamma) {
 		this->uiGamma = uiGamma;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetUiContrast(float uiContrast) {
+void Settings::SetUiContrast(float uiContrast, bool delayed) {
 	if (this->uiContrast != uiContrast) {
 		this->uiContrast = uiContrast;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetUiBrightness(float uiBrightness) {
+void Settings::SetUiBrightness(float uiBrightness, bool delayed) {
 	if (this->uiBrightness != uiBrightness) {
 		this->uiBrightness = uiBrightness;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetHdr(bool hdr) {
+void Settings::SetHdr(bool hdr, bool delayed) {
 	if (this->hdr != hdr) {
 		this->hdr = hdr;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetColorspace(const std::string &colorspace) {
+void Settings::SetColorspace(const std::string &colorspace, bool delayed) {
 	if (this->colorspace != colorspace) {
 		this->colorspace = colorspace;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetPulseMaxBrightness(bool pulseMaxBrightness) {
+void Settings::SetPulseMaxBrightness(bool pulseMaxBrightness, bool delayed) {
 	if (this->pulseMaxBrightness != pulseMaxBrightness) {
 		this->pulseMaxBrightness = pulseMaxBrightness;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetVsync(bool vsync) {
+void Settings::SetVsync(bool vsync, bool delayed) {
 	if (this->vsync != vsync) {
 		this->vsync = vsync;
-		Save();
+		if (!delayed) Save();
 	}
 }
 
-void Settings::SetRngSource(const std::string &rngSource) {
+void Settings::SetRngSource(const std::string &rngSource, bool delayed) {
 	if (this->rngSource != rngSource) {
 		this->rngSource = rngSource;
-		Save();
+		if (!delayed) Save();
+	}
+}
+
+void Settings::SetMiniPlayer(bool miniPlayer, bool delayed) {
+	if (this->miniPlayer != miniPlayer) {
+		this->miniPlayer = miniPlayer;
+		if (!delayed) Save();
+	}
+}
+
+void Settings::SetMiniPlayerX(int miniPlayerX, bool delayed) {
+	if (this->miniPlayerX != miniPlayerX) {
+		this->miniPlayerX = miniPlayerX;
+		if (!delayed) Save();
+	}
+}
+
+void Settings::SetMiniPlayerY(int miniPlayerY, bool delayed) {
+	if (this->miniPlayerY != miniPlayerY) {
+		this->miniPlayerY = miniPlayerY;
+		if (!delayed) Save();
+	}
+}
+
+void Settings::SetMiniPlayerWidth(int miniPlayerWidth, bool delayed) {
+	if (this->miniPlayerWidth != miniPlayerWidth) {
+		this->miniPlayerWidth = miniPlayerWidth;
+		if (!delayed) Save();
+	}
+}
+
+void Settings::SetMiniPlayerHeight(int miniPlayerHeight, bool delayed) {
+	if (this->miniPlayerHeight != miniPlayerHeight) {
+		this->miniPlayerHeight = miniPlayerHeight;
+		if (!delayed) Save();
+	}
+}
+
+void Settings::SetMiniPlayerRadius(float miniPlayerRadius, bool delayed) {
+	if (this->miniPlayerRadius != miniPlayerRadius) {
+		this->miniPlayerRadius = miniPlayerRadius;
+		if (!delayed) Save();
+	}
+}
+
+void Settings::SetMiniPlayerFontSize(int miniPlayerFontSize, bool delayed) {
+	if (this->miniPlayerFontSize != miniPlayerFontSize) {
+		this->miniPlayerFontSize = miniPlayerFontSize;
+		if (!delayed) Save();
+	}
+}
+
+void Settings::SetMiniPlayerVisualizerRatio(float miniPlayerVisualizerRatio, bool delayed) {
+	if (this->miniPlayerVisualizerRatio != miniPlayerVisualizerRatio) {
+		this->miniPlayerVisualizerRatio = miniPlayerVisualizerRatio;
+		if (!delayed) Save();
+	}
+}
+
+void Settings::SetCaptureKeyboardMediaKeys(bool captureKeyboardMediaKeys, bool delayed) {
+	if (this->captureKeyboardMediaKeys != captureKeyboardMediaKeys) {
+		this->captureKeyboardMediaKeys = captureKeyboardMediaKeys;
+		if (!delayed) Save();
 	}
 }
 
 void Settings::Save() {
 	if (auto path = Filesystem::GetPath(); !path.empty()) {
+		LogInfo("Saving settings...");
+
 		std::ofstream outFile(path, std::ios::out);
 
 		Node json;
@@ -804,6 +892,8 @@ const Node &operator>>(const Node &node, Settings &settings) {
 
 	if (node.has("presetIndex"))
 		node["presetIndex"]->get(settings.presetIndex);
+	if (node.has("miniPlayerPresetIndex"))
+		node["miniPlayerPresetIndex"]->get(settings.miniPlayerPresetIndex);
 
 	if (node.has("smooth"))
 		node["smooth"]->get(settings.smooth);
@@ -897,6 +987,13 @@ const Node &operator>>(const Node &node, Settings &settings) {
 			)
 		);
 	}
+	if (node.has("miniPlayerWaitTime")) {
+		settings.miniPlayerWaitTime = Duration<Microseconds>(
+			std::chrono::duration<double>(
+				node["miniPlayerWaitTime"]->get<double>()
+			)
+		);
+	}
 	if (node.has("autoFadeSpeed"))
 		node["autoFadeSpeed"]->get(settings.autoFadeSpeed);
 
@@ -947,6 +1044,26 @@ const Node &operator>>(const Node &node, Settings &settings) {
 
 	if (node.has("rngSource"))
 		node["rngSource"]->get(settings.rngSource);
+
+	if (node.has("miniPlayer"))
+		node["miniPlayer"]->get(settings.miniPlayer);
+	if (node.has("miniPlayerX"))
+		node["miniPlayerX"]->get(settings.miniPlayerX);
+	if (node.has("miniPlayerY"))
+		node["miniPlayerY"]->get(settings.miniPlayerY);
+	if (node.has("miniPlayerWidth"))
+		node["miniPlayerWidth"]->get(settings.miniPlayerWidth);
+	if (node.has("miniPlayerHeight"))
+		node["miniPlayerHeight"]->get(settings.miniPlayerHeight);
+	if (node.has("miniPlayerRadius"))
+		node["miniPlayerRadius"]->get(settings.miniPlayerRadius);
+	if (node.has("miniPlayerFontSize"))
+		node["miniPlayerFontSize"]->get(settings.miniPlayerFontSize);
+	if (node.has("miniPlayerVisualizerRatio"))
+		node["miniPlayerVisualizerRatio"]->get(settings.miniPlayerVisualizerRatio);
+
+	if (node.has("captureKeyboardMediaKeys"))
+		node["captureKeyboardMediaKeys"]->get(settings.captureKeyboardMediaKeys);
 		
 	return node;
 }
@@ -977,6 +1094,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["width"]->set(settings.width);
 	node["renderer"]->set(settings.renderer);
 	node["presetIndex"]->set(settings.presetIndex);
+	node["miniPlayerPresetIndex"]->set(settings.miniPlayerPresetIndex);
 	node["smooth"]->set(settings.smooth);
 	node["gamma"]->set(settings.gamma);
 	node["blur"]->set(settings.blur);
@@ -1013,6 +1131,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["effectRotation"]->set(settings.effectRotation);
 	node["autoFade"]->set(settings.autoFade);
 	node["waitTime"]->set(settings.waitTime.AsSeconds());
+	node["miniPlayerWaitTime"]->set(settings.miniPlayerWaitTime.AsSeconds());
 	node["autoFadeSpeed"]->set(settings.autoFadeSpeed);
 	node["saveRenderer"]->set(settings.saveRenderer);
 	node["saveScale"]->set(settings.saveScale);
@@ -1033,6 +1152,15 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["pulseMaxBrightness"]->set(settings.pulseMaxBrightness);
 	node["vsync"]->set(settings.vsync);
 	node["rngSource"]->set(settings.rngSource);
+	node["miniPlayer"]->set(settings.miniPlayer);
+	node["miniPlayerX"]->set(settings.miniPlayerX);
+	node["miniPlayerY"]->set(settings.miniPlayerY);
+	node["miniPlayerWidth"]->set(settings.miniPlayerWidth);
+	node["miniPlayerHeight"]->set(settings.miniPlayerHeight);
+	node["miniPlayerRadius"]->set(settings.miniPlayerRadius);
+	node["miniPlayerFontSize"]->set(settings.miniPlayerFontSize);
+	node["miniPlayerVisualizerRatio"]->set(settings.miniPlayerVisualizerRatio);
+	node["captureKeyboardMediaKeys"]->set(settings.captureKeyboardMediaKeys);
 
 	return node;
 }

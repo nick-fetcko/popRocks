@@ -2,13 +2,27 @@
 
 #include "Source/Platforms/Windows.hpp"
 
+#include <winuser.h>
+
 #include <imgui.h>
 #include <backends/imgui_impl_sdl3.h>
 #include <backends/imgui_impl_opengl3.h>
 
 #include "Source/CApp.h"
 
+// From wingdi.h
+#define RGB(r,g,b)          ((COLORREF)(((BYTE)(r)|((WORD)((BYTE)(g))<<8))|(((DWORD)(BYTE)(b))<<16)))
+
 HHOOK keyboardHook = nullptr;
+
+enum class KeyboardHookMode {
+	None,
+	MediaKeys,
+	Volume,
+	Both
+};
+
+KeyboardHookMode keyboardHookMode = KeyboardHookMode::None;
 
 // =====================================================
 // ================ Factory Registration ===============
@@ -31,6 +45,8 @@ Windows::Windows(CApp *app) : Desktop(app), dxgi(false) {
 #else
 	interop = &dxgi;
 #endif
+
+	UpdateKeyboardHookMode();
 }
 
 Windows::~Windows() {
@@ -49,6 +65,8 @@ Windows::~Windows() {
 // -----------------------------------------------------
 void Windows::OnInit(Interop::InitArgs args, Context &context) {
 	dxgi.OnInit(args);
+
+	HookKeyboard();
 
 #if VULKAN
 	Desktop::OnInit(args, context);
@@ -118,7 +136,15 @@ void Windows::SwapBuffers() {
 // ------------------ Keyboard hooks -------------------
 // -----------------------------------------------------
 void Windows::HookKeyboard() {
-	keyboardHook = SetWindowsHookExA(WH_KEYBOARD_LL, LowLevelKeyboardProc, NULL, 0);
+	if (keyboardHook) {
+		UnhookWindowsHookEx(keyboardHook);
+		keyboardHook = nullptr;
+	}
+
+	UpdateKeyboardHookMode();
+
+	if (keyboardHookMode != KeyboardHookMode::None)
+		keyboardHook = SetWindowsHookExA(WH_KEYBOARD_LL, LowLevelKeyboardProc, NULL, 0);
 }
 
 // -----------------------------------------------------
@@ -309,10 +335,7 @@ bool Windows::OpenExclusive(const std::filesystem::path &path, const std::string
 void Windows::StopExclusive(bool reset) {
 	BASS_WASAPI_Stop(reset ? TRUE : FALSE);
 
-	if (keyboardHook) {
-		UnhookWindowsHookEx(keyboardHook);
-		keyboardHook = nullptr;
-	}
+	HookKeyboard();
 
 	if (reset && BASS_WASAPI_GetDevice() != -1)
 		BASS_WASAPI_Free();
@@ -328,6 +351,8 @@ std::optional<std::tuple<bool, float, float>> Windows::GetHdrProperties(int disp
 }
 
 void Windows::SetHdr(bool enabled, void *hwnd, int width, int height) {
+	hwnd = SDL_GetPointerProperty(SDL_GetWindowProperties(app->GetSdlWindow()), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
+
 	if (!enabled && HDR::Enabled) {
 #if VULKAN
 		Desktop::SetHdr(enabled, hwnd, width, height);
@@ -341,8 +366,12 @@ void Windows::SetHdr(bool enabled, void *hwnd, int width, int height) {
 
 		if (auto font = app->GetControls().GetFont())
 			font->SetDefaultFramebuffer(0);
+		if (auto boldFont = app->GetControls().GetBoldFont())
+			boldFont->SetDefaultFramebuffer(0);
 		if (auto outlineFont = app->GetControls().GetOutlineFont())
 			outlineFont->SetDefaultFramebuffer(0);
+		if (auto boldOutlineFont = app->GetControls().GetBoldOutlineFont())
+			boldOutlineFont->SetDefaultFramebuffer(0);
 
 		if (auto &context = app->GetContext()) {
 			context->SetIdentity(glm::ortho(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f));
@@ -380,8 +409,7 @@ void Windows::SetHdr(bool enabled, void *hwnd, int width, int height) {
 		ImGui_ImplSDL3_InitForOpenGL(app->GetSdlWindow(), app->GetOpenGlContext());
 		ImGui_ImplOpenGL3_Init();
 #endif
-	} else if (enabled && !HDR::Enabled) {
-		HWND hwnd = (HWND)SDL_GetPointerProperty(SDL_GetWindowProperties(app->GetSdlWindow()), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
+	} else if (enabled && !HDR::Enabled) {	
 		int width = 0, height = 0;
 		SDL_GetWindowSize(app->GetSdlWindow(), &width, &height);
 		if (app->GetBlur()) {
@@ -400,7 +428,7 @@ void Windows::SetHdr(bool enabled, void *hwnd, int width, int height) {
 #endif
 		);
 #else
-		dxgi.OnCreate(hwnd, width, height);
+		dxgi.OnCreate(reinterpret_cast<HWND>(hwnd), width, height);
 		dxgi.OnResize(width, height);
 #endif
 
@@ -533,6 +561,75 @@ void Windows::ToggleFullscreen() {
 	}
 }
 
+// -----------------------------------------------------
+// -------------------- Miniplayer ---------------------
+// -----------------------------------------------------
+void Windows::SetMiniPlayer(bool miniPlayer, uint8_t chromaKey) {
+	const auto hwnd = reinterpret_cast<HWND>(
+		SDL_GetPointerProperty(
+			SDL_GetWindowProperties(app->GetSdlWindow()),
+			SDL_PROP_WINDOW_WIN32_HWND_POINTER,
+			NULL
+		)
+	);
+
+	if (miniPlayer) {
+		SetLastError(0);
+		SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) & (~WS_EX_LAYERED));
+		auto style = SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);
+
+		auto ret = SetLayeredWindowAttributes(hwnd, RGB(chromaKey, chromaKey, chromaKey), app->IsFileLoaded() ? 0xFF : 0xDD, LWA_COLORKEY | LWA_ALPHA);
+
+		if (auto error = GetLastError())
+			LogError("Chroma key could not be set! ret = ", ret, " error = ", error);
+		else
+			LogDebug("Chroma key set to ", static_cast<int>(chromaKey));
+
+		SDL_ShowWindow(app->GetSdlWindow());
+	} else {
+		SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) & (~WS_EX_LAYERED));
+	}
+}
+
+std::optional<Vector2i> Windows::SetWindowPos(int x, int y, int width, int height) {
+	std::optional<Vector2i> ret = std::nullopt;
+
+	const auto hwnd = reinterpret_cast<HWND>(
+		SDL_GetPointerProperty(
+			SDL_GetWindowProperties(app->GetSdlWindow()),
+			SDL_PROP_WINDOW_WIN32_HWND_POINTER,
+			NULL
+		)
+	);
+
+	if (x == SDL_WINDOWPOS_CENTERED ||
+		y == SDL_WINDOWPOS_CENTERED) {
+		// Center on the _primary_ monitor
+		//
+		// From https://devblogs.microsoft.com/oldnewthing/20141106-00/?p=43683
+		const POINT ptZero = { 0, 0 };
+		const auto monitor = MonitorFromPoint(ptZero, MONITOR_DEFAULTTOPRIMARY);
+
+		MONITORINFO info = { 0 };
+		info.cbSize = sizeof(info);
+
+		GetMonitorInfoW(monitor, &info);
+
+		if (x == SDL_WINDOWPOS_CENTERED)
+			x = (info.rcMonitor.right - info.rcMonitor.left) / 2 - width / 2;
+
+		if (y == SDL_WINDOWPOS_CENTERED)
+			y = (info.rcMonitor.bottom - info.rcMonitor.top) / 2 - height / 2;
+
+		ret = { x, y };
+	}
+
+	MoveWindow(hwnd, x, y, width, height, FALSE);
+	//::SetWindowPos(hwnd, NULL, x, y, width, height, 0);
+
+	return ret;
+}
+
 // =====================================================
 // ===================== Virtuals ======================
 // =====================================================
@@ -542,6 +639,7 @@ void Windows::ToggleFullscreen() {
 // -----------------------------------------------------
 bool Windows::OnMouseClicked(const Vector2i &mousePos) {
 	if (auto toggled = app->GetControls().GetExclusiveIndicator().OnMouseClicked(mousePos)) {
+		LogInfo("Click captured! Windows exclusive toggle");
 		app->ToggleExclusive();
 		return true;
 	}
@@ -708,11 +806,49 @@ bool Windows::GetDeviceIndex(int &index, const std::string &device) {
 }
 
 // =====================================================
+// ================= Private Functions =================
+// =====================================================
+void Windows::UpdateKeyboardHookMode() {
+	keyboardHookMode =
+		Settings::settings.GetCaptureKeyboardMediaKeys() ?
+			Settings::settings.GetExclsuive() ?
+				KeyboardHookMode::Both :
+				KeyboardHookMode::MediaKeys :
+			Settings::settings.GetExclsuive() ?
+				KeyboardHookMode::Volume :
+				KeyboardHookMode::None;
+
+	std::string string;
+	switch (keyboardHookMode) {
+	case KeyboardHookMode::None:
+		string = "none";
+		break;
+	case KeyboardHookMode::MediaKeys:
+		string = "media keys";
+		break;
+	case KeyboardHookMode::Volume:
+		string = "volume";
+		break;
+	case KeyboardHookMode::Both:
+		string = "both";
+		break;
+	default:
+		string = "unknown";
+		break;
+	}
+
+	LogInfo("KeyboardHookMode = ", string);
+}
+
+// =====================================================
 // ===================== Callbacks =====================
 // =====================================================
-const std::map<DWORD, SDL_Keycode> KeyMap = {
+const std::map<DWORD, SDL_Keycode> ExclusiveKeyMap = {
 	{ VK_VOLUME_DOWN, SDLK_VOLUMEDOWN },
-	{ VK_VOLUME_UP, SDLK_VOLUMEUP },
+	{ VK_VOLUME_UP, SDLK_VOLUMEUP }
+};
+
+const std::map<DWORD, SDL_Keycode> KeyMap = {
 	{ VK_MEDIA_NEXT_TRACK, SDLK_MEDIA_NEXT_TRACK },
 	{ VK_MEDIA_PREV_TRACK, SDLK_MEDIA_PREVIOUS_TRACK },
 	{ VK_MEDIA_PLAY_PAUSE, SDLK_MEDIA_PLAY }
@@ -727,20 +863,32 @@ LRESULT CALLBACK LowLevelKeyboardProc(
 
 	auto hookStruct = reinterpret_cast<KBDLLHOOKSTRUCT *>(lParam);
 
+	const auto exclusiveIter = (keyboardHookMode == KeyboardHookMode::Volume || keyboardHookMode == KeyboardHookMode::Both) ?
+		ExclusiveKeyMap.find(hookStruct->vkCode) :
+		ExclusiveKeyMap.end();
+	const auto iter = (keyboardHookMode == KeyboardHookMode::MediaKeys || keyboardHookMode == KeyboardHookMode::Both) ?
+		KeyMap.find(hookStruct->vkCode) :
+		KeyMap.end();
+
 	// From https://learn.microsoft.com/en-us/windows/win32/winmsg/lowlevelkeyboardproc
 	// 
 	// If the hook procedure processed the message, it may return
 	// a nonzero value to prevent the system from passing the message
 	// to the rest of the hook chain or the target window procedure.
-	if (KeyMap.find(hookStruct->vkCode) != KeyMap.end()) {
+	if (exclusiveIter != ExclusiveKeyMap.end() ||
+		iter != KeyMap.end()) {
 		if (wParam == WM_KEYDOWN) {
 			SDL_Event event;
 			event.type = SDL_EVENT_KEY_DOWN;
-			event.key.key = KeyMap.at(hookStruct->vkCode);
+			event.key.key = exclusiveIter == ExclusiveKeyMap.end() ? iter->second : exclusiveIter->second;
+
 			SDL_PushEvent(&event);
 		}
+
 		return 1;
-	} else return CallNextHookEx(keyboardHook, nCode, wParam, lParam);
+	}
+
+	return CallNextHookEx(keyboardHook, nCode, wParam, lParam);
 }
 
 // WASAPI input processing function

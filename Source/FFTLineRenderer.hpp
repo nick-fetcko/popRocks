@@ -39,7 +39,8 @@ public:
 		const Colour<float> &brightColor,
 		float frameCount,
 		float maxHeardSample = 0.0f,
-		bool resetGain = false
+		bool resetGain = false,
+		bool miniPlayer = false
 	) override {
 		minPoint = std::numeric_limits<float>::max();
 		maxPoint = std::numeric_limits<float>::lowest();
@@ -54,7 +55,7 @@ public:
 				minPoint = points[i].y;
 		}
 
-		auto [newMin, newMax] = CenterPoints();
+		auto [newMin, newMax] = CenterPoints(miniPlayer);
 
 		for (int i = 0; i < bufferLength; i++)
 			points[i].y += (newMax - newMin) / 2.0;

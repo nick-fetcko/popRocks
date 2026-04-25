@@ -1,5 +1,6 @@
 #pragma once
 
+#include <set>
 #include <vector>
 
 #include <glad/glad.h>
@@ -16,11 +17,19 @@ class Preset {
 friend class Settings;
 
 public:
+	class ChangeListener {
+	public:
+		virtual ~ChangeListener() = default;
+
+		virtual void OnPresetsChanged(const std::vector<Preset> &presets) = 0;
+	};
+
 	Preset() = default;
 
 	Preset(
 		const std::string &name,
 		std::size_t bufferSize,
+		int fftSize,
 		Duration<Microseconds> decayTime,
 		Duration<Microseconds> fadeTime,
 		bool pulse,
@@ -48,6 +57,7 @@ public:
 		std::optional<int> rendererOffset = std::nullopt
 	) : name(name),
 		bufferSize(bufferSize),
+		fftSize(fftSize),
 		decayTime(decayTime),
 		fadeDecayTime(fadeTime),
 		pulse(pulse),
@@ -109,6 +119,10 @@ public:
 	const std::optional<std::string> &GetRenderer() const { return renderer; }
 	const std::optional<float> &GetScale() const { return scale; }
 	const std::optional<int> &GetRendererOffset() const { return rendererOffset; }
+	const int &GetFftSize() const { return fftSize; }
+
+	static void AddChangeListener(ChangeListener *listener);
+	static void RemoveChangeListener(ChangeListener *listener);
 
 	friend const Node &operator>>(const Node &node, Preset &preset);
 	friend Node &operator<<(Node &node, const Preset &preset);
@@ -117,6 +131,7 @@ private:
 	static std::vector<Preset> Load();
 	static void Save();
 	static std::vector<Preset> Presets;
+	static std::set<ChangeListener *> ChangeListeners;
 
 	std::string name;
 
@@ -153,4 +168,6 @@ private:
 	std::optional<std::string> renderer = std::nullopt;
 	std::optional<float> scale = std::nullopt;
 	std::optional<int> rendererOffset = std::nullopt;
+
+	int fftSize = 8192;
 };

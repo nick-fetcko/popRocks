@@ -34,8 +34,9 @@ using namespace MathsCPP;
 // ======================= CApp ========================
 // =====================================================
 CApp::CApp() : 
-	albumArt(context), 
-	controls(&albumArt), 
+	albumArt(&controls, context, platform), 
+	controls(&albumArt),
+	close(&albumArt),
 	circleLine(12.0f), 
 	prng(
 		PRNGFactory<unsigned int>::Build(
@@ -63,7 +64,10 @@ CApp::CApp() :
 	// If we close the console, make sure to
 	// clean up before exit
 	Logger::SetOnClose([this] {
-		OnDestroy();
+		shuttingDown = true;
+	});
+	Logger::SetIsClosed([this] {
+		return destroyed;
 	});
 
 	// Add our console commands
@@ -180,6 +184,9 @@ float CApp::GetScale(SDL_Window *window, int *w, int *h) {
 	scale = (virtualW == 0 ? 1.0f : static_cast<float>(*w) / virtualW);
 
 	scale *= SDL_GetWindowDisplayScale(window);
+
+	if (scale != originalScale)
+		scaleDelta = scale - originalScale;
 
 	originalScale = scale;
 
@@ -340,6 +347,11 @@ void CApp::LoadShaders() {
 		Utils::GetResource("fragment-blit.glsl"),
 		"blit"_hash
 	);
+	context->AddShader(
+		Utils::GetResource("vertex-texture.glsl"),
+		Utils::GetResource("fragment-scrolling.glsl"),
+		"scrolling"_hash
+	);
 
 	// Cache our uniforms
 	for (auto &[hash, shader] : *context) {
@@ -410,11 +422,28 @@ void CApp::LoadShaders() {
 
 			shader.program.CacheUniformLocation("bgr");
 			shader.program.Uniform1i("bgr"_hash, 0);
+
+			shader.program.CacheUniformLocation("origin");
+			shader.program.Uniform2f("origin"_hash, 0, 0);
 		}
 
 		if (hash == "basic"_hash) {
 			shader.program.CacheUniformLocation("bgr");
 			shader.program.Uniform1i("bgr"_hash, 0);
+		}
+
+		if (hash == "scrolling"_hash) {
+			shader.program.CacheUniformLocation("maxWidth");
+			shader.program.Uniform1f("maxWidth"_hash, windowWidth);
+
+			shader.program.CacheUniformLocation("screenSize");
+			shader.program.Uniform2f("screenSize"_hash, 0, 0);
+
+			shader.program.CacheUniformLocation("origin");
+			shader.program.Uniform2f("origin"_hash, 0, 0);
+
+			shader.program.CacheUniformLocation("bleedEdge");
+			shader.program.Uniform1i("bleedEdge"_hash, ScrollingText::BleedEdge);
 		}
 	}
 }
@@ -464,6 +493,207 @@ void CApp::UpdateVsync() {
 	// using an interop
 	if (!Settings::settings.GetVsync() || HDR::Enabled)
 		SDL_GL_SetSwapInterval(0);
+}
+
+inline SDL_PropertiesID CApp::CreateSdlWindow() {
+	SDL_PropertiesID props = SDL_CreateProperties();
+
+	windowX = Settings::settings.GetMiniPlayerX();
+	windowY = Settings::settings.GetMiniPlayerY();
+
+	SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "popRocks");
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, miniPlayer ? Settings::settings.GetMiniPlayerWidth() : Settings::settings.GetWindowWidth());
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, miniPlayer ? Settings::settings.GetMiniPlayerHeight() : Settings::settings.GetWindowHeight());
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, miniPlayer ? windowX : Settings::settings.GetWindowX());
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, miniPlayer ? windowY : Settings::settings.GetWindowY());
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_VULKAN_BOOLEAN, platform->GetVulkanProperty());
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_OPENGL_BOOLEAN, platform->GetOpenGlProperty());
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HIGH_PIXEL_DENSITY_BOOLEAN, true);
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_BORDERLESS_BOOLEAN, miniPlayer);
+
+	// FIXME: Transparent SDL windows don't play well with Windows' layered windows
+	//        The window will always appear at ~50% opacity with this combination,
+	//        even for colors well outside of the chosen chroma key.
+	//
+	//			HDR doesn't play well with this, either.
+	//SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_TRANSPARENT_BOOLEAN, miniPlayer && !VULKAN);
+
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_ALWAYS_ON_TOP_BOOLEAN, miniPlayer);
+
+	// Start miniPlayer hidden so we don't see the full, rectangular window
+	// before we can make it layered / transparent
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HIDDEN_BOOLEAN, miniPlayer);
+
+	sdlWindow = SDL_CreateWindowWithProperties(
+		props
+	);
+
+	return props;
+}
+
+Interop::InitArgs CApp::GetInteropArgs() {
+	Interop::InitArgs args;
+
+	args.adapterIndex = platform->GetAdapterIndex();
+	args.width = windowWidth;
+	args.height = windowHeight;
+	args.surfaceCallback = [&](void *instance) {
+		VkSurfaceKHR surface;
+
+		if (!SDL_Vulkan_CreateSurface(sdlWindow, reinterpret_cast<VkInstance>(instance), nullptr, &surface))
+			LogError("Could not create Vulkan surface: ", SDL_GetError());
+
+		return reinterpret_cast<void *>(surface);
+	};
+
+	return args;
+}
+
+void CApp::UpdateMiniPlayer() {
+	if (miniPlayer) {
+		if (const auto pos = platform->SetWindowPos(
+			Settings::settings.GetMiniPlayerX(),
+			Settings::settings.GetMiniPlayerY(),
+			Settings::settings.GetMiniPlayerWidth(),
+			Settings::settings.GetMiniPlayerHeight()
+		)) {
+			// If SetWindowPos changed our position,
+			// make sure to update it.
+			Settings::settings.SetMiniPlayerX(pos->x);
+			Settings::settings.SetMiniPlayerY(pos->y);
+
+			windowX = pos->x;
+			windowY = pos->y;
+		}
+	}
+}
+
+void CApp::SetMiniPlayer(bool miniPlayer, bool inLoop) {
+	if (miniPlayer) SDL_HideWindow(sdlWindow);
+
+	this->miniPlayer = miniPlayer;
+	Settings::settings.SetMiniPlayer(miniPlayer);
+
+	// Update our font size first, as everything
+	// downstream depends on it
+	controls.SetMiniPlayer(*context, miniPlayer);
+	controls.UpdateFontSize();
+
+	SetRadius(albumArt.GetRadius(miniPlayer));
+
+	if (sdlWindow) {
+#if 0//VULKAN
+		ImGui_ImplOpenGL3_Shutdown();
+		ImGui_ImplSDL3_Shutdown();
+
+		platform->GetInterop()->OnDestroy();
+
+		SDL_DestroyWindow(sdlWindow);
+
+		CreateSdlWindow();
+
+		ImGui_ImplSDL3_InitForOpenGL(sdlWindow, openGlContext);
+		ImGui_ImplOpenGL3_Init();
+#else
+		SDL_SetWindowAlwaysOnTop(sdlWindow, miniPlayer);
+		platform->SetWindowPos(
+			miniPlayer ? Settings::settings.GetMiniPlayerX() : Settings::settings.GetWindowX(),
+			miniPlayer ? Settings::settings.GetMiniPlayerY() : Settings::settings.GetWindowY(),
+			miniPlayer ? Settings::settings.GetMiniPlayerWidth() : Settings::settings.GetWindowWidth(),
+			miniPlayer ? Settings::settings.GetMiniPlayerHeight() : Settings::settings.GetWindowHeight()
+		);
+		SDL_SetWindowBordered(sdlWindow, !miniPlayer);
+#endif
+
+#if 0//VULKAN
+		platform->GetInterop()->OnInit(GetInteropArgs());
+
+		// Menu callbacks take place
+		// between OnLoop() and SwapBuffers(),
+		// so we have to return to that state
+		if (inLoop) platform->GetInterop()->OnLoop();
+#endif
+
+		backgroundAlpha = ((miniPlayer && !VULKAN) ? 0.0f : 1.0f);
+
+		// Either recalculate or reset our
+		// chroma value before sending it to
+		// the platform
+		if (miniPlayer) albumArt.CalculateChroma();
+		else albumArt.ResetChroma();
+
+		platform->SetMiniPlayer(miniPlayer, static_cast<uint8_t>(albumArt.GetChromaColor() * 0xFF));
+
+		context->With("blur"_hash, [this](Context::Shader &shader) {
+			const auto premultipliedAlpha = platform->IsAlphaPremultiplied();
+			LogDebug("Turning premultiplied alpha ", premultipliedAlpha ? "ON" : "OFF");
+			shader.program.Uniform1i("premultipliedAlpha"_hash, premultipliedAlpha);
+		});
+	}
+	UpdateMiniPlayer();
+
+	// We need to resize the control icons
+	controls.OnResize(
+		miniPlayer ? Settings::settings.GetMiniPlayerWidth() : Settings::settings.GetWindowWidth(),
+		miniPlayer ? Settings::settings.GetMiniPlayerHeight() : Settings::settings.GetWindowHeight(),
+		*context,
+		scale,
+		platform->GetDefaultFramebuffer(),
+		miniPlayer
+	);
+
+	if (auto index = miniPlayer ? Settings::settings.GetMiniPlayerPresetIndex() : Settings::settings.GetPresetIndex())
+		LoadPreset(Preset::GetPresets().at(*index));
+
+	// Update scale to reflect radius change
+	if (albumArt.Loaded()) albumArt.Scale(true);
+}
+
+inline void CApp::SetRadius(float radius) {
+	albumArt.SetRadius(radius, miniPlayer);
+
+	if (!albumArt.IsResizing())
+		albumArt.Scale(true);
+
+	controls.OnRadiusChanged(*context, miniPlayer);
+
+	// Update our scrolling text's bleed edges relative to the radius
+	context->With("scrolling"_hash, [this, radius](Context::Shader &shader) {
+		shader.program.Uniform1i("bleedEdge"_hash, ScrollingText::BleedEdge * (radius / AlbumArt::BaseRadius));
+	});
+}
+
+void CApp::ResetWindow() {
+	if (miniPlayer) {
+		// Use temporary scaled values to ensure any
+		// DPI changes when moving back to the primary
+		// monitor are handled correctly.
+		Settings::settings.SetMiniPlayerWidth(1080 * scale, true);
+		Settings::settings.SetMiniPlayerHeight(1080 * scale, true);
+
+		Settings::settings.SetMiniPlayerX(SDL_WINDOWPOS_CENTERED, true);
+		Settings::settings.SetMiniPlayerY(SDL_WINDOWPOS_CENTERED, true);
+		Settings::settings.SetMiniPlayerVisualizerRatio(5.4f, true);
+		Settings::settings.SetMiniPlayerRadius(AlbumArt::BaseRadius);
+
+		UpdateMiniPlayer();
+
+		// Prepare for potential DPI change
+		Settings::settings.SetMiniPlayerWidth(1080, true);
+		Settings::settings.SetMiniPlayerHeight(1080);
+
+		SetRadius(Settings::settings.GetMiniPlayerRadius() * scale);
+	}
+	else {
+		Settings::settings.SetWindowWidth(1920, true);
+		Settings::settings.SetWindowHeight(1080, true);
+		Settings::settings.SetWindowX(SDL_WINDOWPOS_CENTERED, true);
+		Settings::settings.SetWindowY(SDL_WINDOWPOS_CENTERED);
+
+		SDL_SetWindowSize(sdlWindow, Settings::settings.GetWindowWidth(), Settings::settings.GetWindowHeight());
+		SDL_SetWindowPosition(sdlWindow, Settings::settings.GetWindowX(), Settings::settings.GetWindowY());
+	}
 }
 
 void CApp::OnInit() {
@@ -527,23 +757,10 @@ void CApp::OnInit() {
 	windowWidth = Settings::settings.GetWindowWidth();
 	windowHeight = Settings::settings.GetWindowHeight();
 
-	SDL_PropertiesID props = SDL_CreateProperties();
-
-	SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "popRocks");
-	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, windowWidth);
-	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, windowHeight);
-	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, Settings::settings.GetWindowX());
-	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, Settings::settings.GetWindowY());
-	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_VULKAN_BOOLEAN, platform->GetVulkanProperty());
-	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_OPENGL_BOOLEAN, platform->GetOpenGlProperty());
-	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
-	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HIGH_PIXEL_DENSITY_BOOLEAN, true);
-
-	sdlWindow = SDL_CreateWindowWithProperties(
-		props
-	);
+	auto props = CreateSdlWindow();
 
 	platform->OpenOpenGlWindow(props);
+	platform->SetMiniPlayer(miniPlayer, static_cast<uint8_t>(albumArt.GetChromaColor() * 0xFF));
 
 	if (platform->CreateOpenGlContext()) {
 		LogDebug("gladLoadGL() returned ", platform->LoadGlad());
@@ -552,21 +769,10 @@ void CApp::OnInit() {
 
 		LoadShaders();
 
-		Interop::InitArgs args;
+		platform->OnInit(GetInteropArgs(), *context);
 
-		args.adapterIndex = platform->GetAdapterIndex();
-		args.width = windowWidth;
-		args.height = windowHeight;
-		args.surfaceCallback = [&](void *instance) {
-			VkSurfaceKHR surface;
-
-			if (!SDL_Vulkan_CreateSurface(sdlWindow, reinterpret_cast<VkInstance>(instance), nullptr, &surface))
-				LogError("Could not create Vulkan surface: ", SDL_GetError());
-
-			return reinterpret_cast<void*>(surface);
-		};
-
-		platform->OnInit(args, *context);
+		// Get our initial bounding box
+		UpdateDisplayBoundingBox();
 
 		UpdateHdrProperties();
 
@@ -777,11 +983,7 @@ void CApp::OnInit() {
 			);
 		});
 		menu.SetOnRadiusChanged([this](int radius) {
-			albumArt.SetRadius(radius);
-			albumArt.Scale(true);
-			controls.GetVolume().SetRadius(radius);
-			controls.GetPause().OnResize(radius);
-			controls.GetPlay().OnResize(radius);
+			SetRadius(radius);
 		});
 		menu.SetOnLineWidthChanged([this](float lineWidth) {
 			if (auto lineRenderer = dynamic_cast<LineRenderer *>(renderer))
@@ -1024,13 +1226,7 @@ void CApp::OnInit() {
 			ClearBlurFbo();
 		});
 		menu.SetOnResetWindow([this] {
-			Settings::settings.SetWindowWidth(1920);
-			Settings::settings.SetWindowHeight(1080);
-			Settings::settings.SetWindowX(SDL_WINDOWPOS_CENTERED);
-			Settings::settings.SetWindowY(SDL_WINDOWPOS_CENTERED);
-
-			SDL_SetWindowSize(sdlWindow, Settings::settings.GetWindowWidth(), Settings::settings.GetWindowHeight());
-			SDL_SetWindowPosition(sdlWindow, Settings::settings.GetWindowX(), Settings::settings.GetWindowY());
+			ResetWindow();
 		});
 		menu.SetOnQuit([this] {
 			SDL_Event event;
@@ -1187,6 +1383,9 @@ void CApp::OnInit() {
 
 			prng = PRNGFactory<unsigned int>::Build(rngSource, &streamHandle);
 		});
+		menu.SetOnMiniPlayerChanged([this](bool miniPlayer) {
+			SetMiniPlayer(miniPlayer, true);
+		});
 
 		platform->AddMenuCallbacks(&menu);
 
@@ -1196,7 +1395,6 @@ void CApp::OnInit() {
 
 	LogDebug("OpenGL Version: ", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
 
-	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -1219,22 +1417,30 @@ void CApp::OnInit() {
 		LogError("Could not initialize audio device!");
 
 	lightPack.OnInit();
-	albumArt.OnInit(windowWidth, windowHeight, scale);
-#if GUI
-	albumArt.AddColorChangeListener(&menu);
-#endif
-	renderer->OnInit(windowWidth, windowHeight);
-	albumArt.AddColorChangeListener(this);
-	controls.OnInit(windowWidth, windowHeight, *context, scale, platform->GetDefaultFramebuffer());
 
+	renderer->OnInit(windowWidth, windowHeight);
+
+	// controls.OnInit() calls albumArt.OnInit()
+	controls.OnInit(windowWidth, windowHeight, *context, scale, platform->GetDefaultFramebuffer(), miniPlayer);
 	controls.SetFadeCallback([this](bool in) {
 		if (in) SDL_ShowCursor();
 		else SDL_HideCursor();
 	});
 
-	spindle.OnInit(albumArt.GetRadius() / SpindleSize);
+	close.OnInit(controls.GetIconSize());
 
-	OnResize(windowWidth, windowHeight, scale);
+#if GUI
+	albumArt.AddColorChangeListener(&menu);
+#endif
+	albumArt.AddColorChangeListener(this);
+	albumArt.AddColorChangeListener(&close);
+	albumArt.AddBlackChangedListener(this);
+
+	spindle.OnInit(albumArt.GetRadius(miniPlayer) / SpindleSize);
+
+	UpdateMiniPlayer();
+
+	OnResize(windowWidth, windowHeight, scale, true);
 
 	if (Settings::settings.GetListening())
 		platform->Listen();
@@ -1255,22 +1461,48 @@ HSTREAM CApp::GetNextStreamHandle() const {
 	return nextStreamHandle;
 }
 
-void CApp::OnResize(int width, int height, float scale) {
+void CApp::OnResize(int width, int height, float scale, bool force) {
+	if (width == windowWidth && height == windowHeight && !scaleDelta && !force) return;
+
 	windowWidth = width;
 	windowHeight = height;
 
-	Settings::settings.SetWindowWidth(
-		width
+	//LogDebug("Resizing to ", width, " x ", height);
+
+	if (!miniPlayer) {
+		Settings::settings.SetWindowWidth(
+			width
 #ifdef __linux__
-		/ scale
+			/ scale
 #endif
-	);
-	Settings::settings.SetWindowHeight(
-		height
+		);
+		Settings::settings.SetWindowHeight(
+			height
 #ifdef __linux__
-		/ scale
+			/ scale
 #endif
-	);
+		);
+	} else if (scaleDelta) {
+		const auto scaled = width + Settings::settings.GetMiniPlayerWidth() * *scaleDelta;
+		const auto delta = (scaled - width);
+
+		scaleDelta = std::nullopt;
+
+		windowWidth = scaled;
+		windowHeight = scaled;
+
+		platform->SetWindowPos(
+			windowX -= delta / 2,
+			windowY -= delta / 2,
+			scaled,
+			scaled
+		);
+
+		if (lastMousePos) {
+			lastMousePos->x += delta / 2;
+			lastMousePos->y += delta / 2;
+		}
+	}
 
 	platform->OnResize(windowWidth, windowHeight);
 
@@ -1278,8 +1510,11 @@ void CApp::OnResize(int width, int height, float scale) {
 
 	albumArt.OnResize(windowWidth, windowHeight, scale);
 	controls.OnResize(windowWidth, windowHeight, *context, scale,
-		platform->GetDefaultFramebuffer()
+		platform->GetDefaultFramebuffer(),
+		miniPlayer
 	);
+
+	close.OnResize(controls.GetIconSize());
 
 	if (blur) {
 		maxDimension = std::sqrt(std::pow(windowWidth, 2) + std::pow(windowHeight, 2));
@@ -1319,6 +1554,8 @@ void CApp::OnResize(int width, int height, float scale) {
 	}
 
 	renderer->OnResize(windowWidth, windowHeight, maxDimension);
+	if (!playing && !platform->IsListening())
+		updateRenderer = true;
 
 #if GUI
 	uiFbo = std::make_unique<MultisampledFramebufferObject>(windowWidth, windowHeight, platform->GetFboInternalFormat(HDR::Enabled), platform->IsUiInverted());
@@ -1393,7 +1630,37 @@ void CApp::LoadRandomPreset() {
 	shuffledPresets.erase(shuffledPresets.begin());
 }
 
+inline void CApp::DrawCloseButton(const Delta &time) {
+	if (miniPlayer) {
+		const auto closeSize = controls.GetIconSize() / Close::GetLowestRatio();
+		const float one = 1.0f;
+
+		close.OnLoop(
+			windowWidth / 2 + albumArt.GetRadius(miniPlayer) - closeSize,
+			windowHeight / 2 - albumArt.GetRadius(miniPlayer) + closeSize,
+			time,
+			*context,
+			(!fileLoaded && !platform->IsListening()) ? &one : &controls.GetAlpha()
+		);
+	}
+}
+
+inline bool CApp::IsOnCloseButton(const Vector2i &mousePos) {
+	const auto radius = albumArt.GetRadius(miniPlayer);
+	const auto closeSize = controls.GetIconSize() / Close::GetLowestRatio();
+
+	return
+		mousePos.x >= windowWidth / 2 + radius - closeSize * 2 && windowWidth / 2 + radius &&
+		mousePos.y >= windowHeight / 2 - radius && mousePos.y <= windowHeight / 2 - radius + closeSize * 2;
+}
+
 void CApp::OnLoop(const Delta &time) {
+	if (shuttingDown) {
+		if (!destroyed) OnDestroy(false);
+
+		return;
+	}
+
 	Logger::ProcessCommands();
 
 	if (auto looped = platform->OnLoop(); looped && !(*looped)) {
@@ -1406,17 +1673,54 @@ void CApp::OnLoop(const Delta &time) {
 
 		if (auto font = controls.GetFont())
 			font->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
+		if (auto boldFont = controls.GetBoldFont())
+			boldFont->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
 		if (auto outlineFont = controls.GetOutlineFont())
 			outlineFont->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
+		if (auto boldOutlineFont = controls.GetBoldOutlineFont())
+			boldOutlineFont->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
 	} else if (!looped) return;
 
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	const auto &chroma = albumArt.GetChromaColor();
+
+	if (miniPlayer) {
+		glClearColor(
+			chroma,
+			chroma,
+			chroma,
+			backgroundAlpha
+		);
+	} else glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
 	glClear(GL_COLOR_BUFFER_BIT);
 	
 	context->Use("texture"_hash);
 
+	if (miniPlayer && (mouseCaptureAccum += time.change.AsSeconds()) >= 0.06668 /* Capture mouse at 15FPS maximum */) {
+		float x = 0.0f, y = 0.0f;
+		SDL_GetGlobalMouseState(&x, &y);
+
+		albumArt.OnMouseMoved({ x - windowX, y - windowY });
+
+		mouseCaptureAccum = 0.0;
+	}
+
 	if (!fileLoaded && !platform->IsListening()) {
+		// Draw blank album art
+		albumArt.OnLoop(
+			time,
+			windowWidth / 2.0f,
+			windowHeight / 2.0f,
+			frameCount,
+			1.0f,
+			*context,
+			fileLoaded || platform->IsListening()
+		);
+
+		DrawCloseButton(time);
+
 		SwapBuffers(time);
+
 		return;
 	}
 
@@ -1467,13 +1771,15 @@ void CApp::OnLoop(const Delta &time) {
 		}
 	}
 
-	if (playing || platform->IsListening()) {
+	if (playing || platform->IsListening() || updateRenderer) {
+		static const Delta zero;
+
 		auto hsv = color.ToHsv();
 		auto brightHsv = this->brightColor.ToHsv();
 		brightHsv.v = std::max(0.0f, brightHsv.v - strobeIntensity * lerp);
 
 		renderer->OnLoop(
-			time,
+			updateRenderer ? zero : time,
 			fileLoaded,
 			hStep,
 			*context,
@@ -1481,8 +1787,11 @@ void CApp::OnLoop(const Delta &time) {
 			((strobe && playing) ? Colour<float>::FromHsv(brightHsv) : ((!darkenPulseOnBrightColors || hsv.v < 0.66 * (HDR::Enabled ? HDR::WhiteLevel * HDR::Headroom : 1.0f)) ? this->brightColor : color)),
 			frameCount,
 			platform->GetMaxHeardSample(),
-			resetGain
+			resetGain,
+			miniPlayer
 		);
+
+		if (updateRenderer) updateRenderer = false;
 	}
 
 	//}
@@ -1523,6 +1832,8 @@ void CApp::OnLoop(const Delta &time) {
 
 		if (pulseBackground)
 			glClearColor(platform->IsBgr() ? color.b : color.r, color.g, platform->IsBgr() ? color.r : color.b, 1.0f);
+		else if (miniPlayer)
+			glClearColor(chroma, chroma, chroma, backgroundAlpha);
 		else
 			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -1616,18 +1927,21 @@ void CApp::OnLoop(const Delta &time) {
 	// Draw album art OVER the accumulation buffer
 	// since we don't want it getting blurry
 	albumArt.OnLoop(
+		time,
 		windowWidth / 2.0f,
 		windowHeight / 2.0f,
 		frameCount,
-		*context
+		controls.GetAlpha(),
+		*context,
+		fileLoaded || platform->IsListening()
 	);
 
 	// 45 RPM = 270
 	// 33 RPM = 198
 	// 33.34 RPM = 200.04
 	if (rotationSpeed == 270.0f || (rotationSpeed >= 198.0f && rotationSpeed <= 200.05f)) {
-		if (spindle.GetRadius() != albumArt.GetRadius() / SpindleSize)
-			spindle.SetRadius(albumArt.GetRadius() / SpindleSize);
+		if (spindle.GetRadius() != albumArt.GetRadius(miniPlayer) / SpindleSize)
+			spindle.SetRadius(albumArt.GetRadius(miniPlayer) / SpindleSize);
 
 		context->Use("basic"_hash);
 		context->Color(0.0f, 0.0f, 0.0f, 1.0f);
@@ -1640,8 +1954,11 @@ void CApp::OnLoop(const Delta &time) {
 		time,
 		streamHandle,
 		*context,
-		GetColor()
+		miniPlayer ? brightColor : GetColor(),
+		playing
 	);
+
+	DrawCloseButton(time);
 	
 	// Line up the next file at >= 90% completion of current file
 	if (controls.GetExclusiveIndicator().IsExclusive() && elapsed >= controls.GetCurrentSongLength() * 0.9 && !nextStreamHandle && !controls.GetPlaylist().GetCue()) {
@@ -1734,87 +2051,88 @@ inline void CApp::SwapBuffers(const Delta &time) {
 	controls.GetFpsCounter().OnFrame();
 
 #if GUI
-	ImGui_ImplOpenGL3_NewFrame();
-	ImGui_ImplSDL3_NewFrame();
-	ImGui::NewFrame();
+	if (!miniPlayer) {
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplSDL3_NewFrame();
+		ImGui::NewFrame();
 
-	// Keep the controls on screen if a menu is open
-	context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, 1.0f);
-	if (menu.OnLoop(lightPack, controls, albumArt, *context))
-		controls.Fade(true);
+		// Keep the controls on screen if a menu is open
+		context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, 1.0f);
+		if (!miniPlayer && menu.OnLoop(lightPack, controls, albumArt, *context))
+			controls.Fade(true);
 
-	if (menu.HasColorChanged() && updateUi == 0)
-		updateUi = 1;
+		if (menu.HasColorChanged() && updateUi == 0)
+			updateUi = 1;
 
-	// Keep the UI in an FBO and only update it as needed
-	//
-	// Why?
-	// 
-	// The high overhead involved in caching the OpenGL context (+5% CPU usage on a 9950X)
-	// as part of ImGui_ImplOpenGL3_RenderDrawData() conflicts with my goal of ~1% CPU usage
-	//LogDebug("updateUi = ", static_cast<int>(updateUi));
-	if (updateUi && (uiAccum += time.change.AsSeconds()) >= 0.01667 /* Render UI at 60FPS maximum */) {
-		uiFbo->Bind();
-		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
-		ImGui::Render();
-		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-		uiFbo->Unbind();
-
-		// https://github.com/ocornut/imgui/issues/314#issuecomment-1750082073
-		// 
-		// Need to call this on the first *two* frames
-		if (updateUi > 1)
-			ImGui::SetWindowFocus(nullptr);
-
-		--updateUi;
-		uiAccum = 0.0;
-	} else ImGui::EndFrame();
-
-	if (HDR::Enabled) {
-		context->Color(1.0f, 1.0f, 1.0f, (menu.IsPresetPopupVisible() ? 1.0f : 0.98f) * controls.GetAlpha());
-
-		context->GetShaderProgram().Uniform1i("hdr"_hash, true);
-
-		context->GetShaderProgram().Uniform1f("gamma"_hash, uiGamma);
-		context->GetShaderProgram().Uniform1f("contrast"_hash, uiContrast);
-		context->GetShaderProgram().Uniform1f("brightness"_hash, uiBrightness);
-
-		glActiveTexture(GL_TEXTURE0 + 1);
-		albumArt.GetCube()->Bind();
-		glActiveTexture(GL_TEXTURE0 + 0);
-
-		// FIXME: this is the only FBO that's rendered upside down
+		// Keep the UI in an FBO and only update it as needed
 		//
-		// The yOffset uniform is a stopgap until a better
-		// solution can be found.
-		context->With("blit"_hash, [this](Context::Shader &shader) {
-			shader.program.Uniform1f("yOffset"_hash, -windowHeight);
-		});
-	} else context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, (menu.IsPresetPopupVisible() ? 1.0f : 0.90f) * controls.GetAlpha());
+		// Why?
+		// 
+		// The high overhead involved in caching the OpenGL context (+5% CPU usage on a 9950X)
+		// as part of ImGui_ImplOpenGL3_RenderDrawData() conflicts with my goal of ~1% CPU usage
+		if (updateUi && (uiAccum += time.change.AsSeconds()) >= 0.01667 /* Render UI at 60FPS maximum */) {
+			uiFbo->Bind();
+			glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+			glClear(GL_COLOR_BUFFER_BIT);
+			ImGui::Render();
+			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+			uiFbo->Unbind();
+
+			// https://github.com/ocornut/imgui/issues/314#issuecomment-1750082073
+			// 
+			// Need to call this on the first *two* frames
+			if (updateUi > 1)
+				ImGui::SetWindowFocus(nullptr);
+
+			--updateUi;
+			uiAccum = 0.0;
+		} else ImGui::EndFrame();
+
+		if (HDR::Enabled) {
+			context->Color(1.0f, 1.0f, 1.0f, (menu.IsPresetPopupVisible() ? 1.0f : 0.98f) * controls.GetAlpha());
+
+			context->GetShaderProgram().Uniform1i("hdr"_hash, true);
+
+			context->GetShaderProgram().Uniform1f("gamma"_hash, uiGamma);
+			context->GetShaderProgram().Uniform1f("contrast"_hash, uiContrast);
+			context->GetShaderProgram().Uniform1f("brightness"_hash, uiBrightness);
+
+			glActiveTexture(GL_TEXTURE0 + 1);
+			albumArt.GetCube()->Bind();
+			glActiveTexture(GL_TEXTURE0 + 0);
+
+			// FIXME: this is the only FBO that's rendered upside down
+			//
+			// The yOffset uniform is a stopgap until a better
+			// solution can be found.
+			context->With("blit"_hash, [this](Context::Shader &shader) {
+				shader.program.Uniform1f("yOffset"_hash, -windowHeight);
+			});
+		} else context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, (menu.IsPresetPopupVisible() ? 1.0f : 0.90f) * controls.GetAlpha());
 
 #if VULKAN
-	context->With("blit"_hash, [this](Context::Shader &shader) {
-		shader.program.Uniform1f("yOffset"_hash, -windowHeight);
-
-		if (platform->IsBgr()) shader.program.Uniform1i("bgr"_hash, 0);
-	});
-#endif
-
-	uiFbo->Draw(0, 0, *context);
-
-	if (HDR::Enabled) {
-		albumArt.GetCube()->Unbind();
-		context->GetShaderProgram().Uniform1i("hdr"_hash, 0);
-		context->GetShaderProgram().Uniform1f("gamma"_hash, Settings::settings.GetAlbumArtGamma());
-		context->GetShaderProgram().Uniform1f("contrast"_hash, Settings::settings.GetAlbumArtContrast());
-		context->GetShaderProgram().Uniform1f("brightness"_hash, Settings::settings.GetAlbumArtBrightness());
-
 		context->With("blit"_hash, [this](Context::Shader &shader) {
-			shader.program.Uniform1f("yOffset"_hash, 0.0f);
+			shader.program.Uniform1f("yOffset"_hash, -windowHeight);
+
+			if (platform->IsBgr()) shader.program.Uniform1i("bgr"_hash, 0);
 		});
-	}
 #endif
+
+		uiFbo->Draw(0, 0, *context);
+
+		if (HDR::Enabled) {
+			albumArt.GetCube()->Unbind();
+			context->GetShaderProgram().Uniform1i("hdr"_hash, 0);
+			context->GetShaderProgram().Uniform1f("gamma"_hash, Settings::settings.GetAlbumArtGamma());
+			context->GetShaderProgram().Uniform1f("contrast"_hash, Settings::settings.GetAlbumArtContrast());
+			context->GetShaderProgram().Uniform1f("brightness"_hash, Settings::settings.GetAlbumArtBrightness());
+
+			context->With("blit"_hash, [this](Context::Shader &shader) {
+				shader.program.Uniform1f("yOffset"_hash, 0.0f);
+			});
+		}
+#endif
+	}
 
 #if VULKAN
 	context->With("blit"_hash, [this](Context::Shader &shader) {
@@ -1835,8 +2153,12 @@ inline void CApp::SwapBuffers(const Delta &time) {
 
 		if (auto font = controls.GetFont())
 			font->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
+		if (auto boldFont = controls.GetBoldFont())
+			boldFont->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
 		if (auto outlineFont = controls.GetOutlineFont())
 			outlineFont->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
+		if (auto boldOutlineFont = controls.GetBoldOutlineFont())
+			boldOutlineFont->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
 	}
 #else
 	platform->SwapBuffers();
@@ -1854,7 +2176,9 @@ void CApp::SyncToNearestBeat() {
 	LogDebug("Setting beatCounter to ", beatCounter);
 }
 
-void CApp::OnDestroy() {
+void CApp::OnDestroy(bool includingLog) {
+	LogDebug("Shutting down...");
+
 	shuttingDown = true;
 
 	platform->OnDestroy();
@@ -1891,11 +2215,13 @@ void CApp::OnDestroy() {
 	SDL_GL_DestroyContext(openGlContext);
 	SDL_DestroyWindow(sdlWindow);
 
-
 	if (openGlWindow)
 		SDL_DestroyWindow(openGlWindow);
 
-	Logger::OnDestroy();
+	if (includingLog)
+		Logger::OnDestroy();
+
+	destroyed = true;
 }
 
 bool CApp::Open(const std::filesystem::path &path, const std::string &extension, bool exclusive, HSTREAM &target, bool force) {
@@ -1906,6 +2232,10 @@ bool CApp::Open(const std::filesystem::path &path, const std::string &extension,
 		controls.GetExclusiveIndicator().SetExclusive(false);
 		BASS_StreamFree(streamHandle);
 		target = platform->OpenWithFlags(path, extension, BASS_STREAM_PRESCAN);
+
+		// Update keyboard hook if we got
+		// forced out of exclusive mode
+		platform->HookKeyboard();
 	}
 
 	// Reset beat counter on each song
@@ -2031,7 +2361,11 @@ void CApp::ResetBeatDetection() {
 inline void CApp::ClearBlurFbo() {
 	blurFbo->Bind();
 
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	if (miniPlayer) {
+		const auto &chroma = albumArt.GetChromaColor();
+		glClearColor(chroma, chroma, chroma, backgroundAlpha);
+	} else glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	blurFbo->Unbind();
@@ -2190,6 +2524,12 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 		if (!fromPlaylist)
 			controls.ClearTags();
 
+		// Metadata's OnLoad updates the
+		// _embedded_ album art, so we need
+		// to make sure the hash reset happens
+		// _before_ metadata.OnLoad()
+		albumArt.UpdateParentPath(originalPath);
+
 		metadata.OnLoad(
 			path,
 			extension,
@@ -2197,6 +2537,11 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 			&controls,
 			&albumArt
 		);
+
+		if (controls.GetPlaylist().Empty()) {
+			controls.GetPlaylist().AddFile(path);
+			controls.GetPlaylist().AddItem(controls.GetTitle(), 0, controls.GetTitle());
+		}
 
 		// Always look for external art,
 		// in case it's higher resolution
@@ -2224,7 +2569,18 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 			playing = true;
 		else playing = false;
 
+		bool lastFileLoaded = fileLoaded;
+
 		fileLoaded = true;
+
+		// Use updated chroma color
+		if (albumArt.HasChromaChanged() || lastFileLoaded != fileLoaded) {
+			platform->SetMiniPlayer(miniPlayer, static_cast<uint8_t>(albumArt.GetChromaColor() * 0xFF));
+
+			if (blur)
+				ClearBlurFbo();
+		}
+
 		loadedFile = path;
 		loadedFileExtension = extension;
 	}
@@ -2479,6 +2835,9 @@ void CApp::ToggleExclusive() {
 		!exclusive
 	);
 
+	if (!exclusive)
+		controls.GetVolume().SetRadius(albumArt.GetRadius(miniPlayer) / scale);
+
 	Open(loadedFile, loadedFileExtension, controls.GetExclusiveIndicator().IsExclusive(), streamHandle);
 
 	// Restore our last position
@@ -2499,14 +2858,24 @@ void CApp::ToggleExclusive() {
 	}
 }
 
-void CApp::OnMouseClicked(const Vector2i &mousePos) {
+bool CApp::OnMouseClicked(const Vector2i &mousePos) {
+	lastMousePos = std::nullopt;
+
+	if (auto preset = controls.GetPresetList().OnMouseClicked(mousePos)) {
+		LoadPreset(preset);
+		return false;
+	}
+
 	// Playlist::OnMouseClicked automatically advances
 	// our playlist to the clicked position, so we have
 	// to figure out what our next track is _before_
 	// that happens.
 	const auto next = controls.GetPlaylist().GetNext();
 
-	if (auto file = controls.GetPlaylist().OnMouseClicked(mousePos)) {
+	auto file = 
+		controls.GetPlaylist().OnMouseClicked(mousePos);
+
+	if (file) {
 		// If we didn't select the _next_ song in the playlist,
 		// we need to reset beat detection.
 		if (!next || file->path != next->path || next->title != file->title)
@@ -2515,11 +2884,28 @@ void CApp::OnMouseClicked(const Vector2i &mousePos) {
 		LoadFile(file->path, true);
 
 		SeekTo(file->startTime);
-	} else if (!platform->OnMouseClicked(mousePos) && albumArt.OnMouseClicked(mousePos)) {
+	} else if (auto button = 
+		controls.OnMouseClicked(
+			mousePos,
+			[this](float pos) { if (fileLoaded && !miniPlayer) SeekTo(pos * controls.GetCurrentSongLength()); },
+			playing
+		);
+		button != Controls::ControlButton::None
+	) {
+		if (button == Controls::ControlButton::Previous)
+			PreviousTrack();
+		else if (button == Controls::ControlButton::Next)
+			NextTrack();
+		else if (button != Controls::ControlButton::CaptureCheckbox)
+			TogglePlaying();
+		else
+			platform->HookKeyboard();
+
+	} else if (!miniPlayer && !platform->OnMouseClicked(mousePos) && albumArt.OnMouseClicked(mousePos)) {
 		TogglePlaying();
 		if (!playing) controls.GetPause().Fade(true);
 		else controls.GetPlay().Fade(true);
-	} else {
+	} else if (!miniPlayer) {
 		if (mousePos.x > windowWidth / 2 && doubleClick.OnClick({ windowWidth / 2, 0 })) {
 			NextTrack();
 			controls.GetNext().Fade(true);
@@ -2527,27 +2913,161 @@ void CApp::OnMouseClicked(const Vector2i &mousePos) {
 			PreviousTrack();
 			controls.GetPrevious().Fade(true);
 		}
+	} else if (miniPlayer && !platform->OnMouseClicked(mousePos)) {
+		return IsOnCloseButton(mousePos);
 	}
+
+	return false;
 }
 
 bool CApp::OnMouseDown(const Vector2i &mousePos) {
-	return SeekToMousePos(mousePos);
+	auto ret = fileLoaded && !miniPlayer ? SeekToMousePos(mousePos) : false;
+
+	if (!ret && miniPlayer) {
+		if (!albumArt.OnMouseDown(mousePos)) {
+			lastMousePos = mousePos;
+
+			if (fileLoaded) {
+				// Did we click the mini player's seekbar?
+				controls.OnMouseClicked(mousePos, [this](float pos) {
+					SeekTo(pos * controls.GetCurrentSongLength());
+					lastMousePos = std::nullopt;
+				}, playing, false);
+			}
+
+			SDL_CaptureMouse(lastMousePos.has_value());
+		}
+
+		ret = true;
+	}
+
+	return ret;
 }
 
-void CApp::OnMouseDragged(const Vector2i &mousePos) {
-	SeekToMousePos(mousePos, true);
+void CApp::OnMouseUp(const Vector2i &mousePos) {
+	if (miniPlayer) {
+		LogInfo("Mouse up...");
+
+		miniPlayerVisualizerRatio = Settings::settings.GetMiniPlayerVisualizerRatio();
+
+		lastMousePos = std::nullopt;
+
+		SDL_CaptureMouse(false);
+
+		Settings::settings.SetMiniPlayerX(windowX, true);
+		Settings::settings.SetMiniPlayerY(windowY, true);
+		Settings::settings.SetMiniPlayerWidth(albumArt.GetRadius(miniPlayer) * miniPlayerVisualizerRatio / scale, true);
+		Settings::settings.SetMiniPlayerHeight(albumArt.GetRadius(miniPlayer) * miniPlayerVisualizerRatio / scale, true);
+
+		Settings::settings.Save();
+	}
+}
+
+void CApp::OnMouseMoved(const Vector2i &mousePos) {
+	controls.OnMouseMoved(mousePos);
+
+	if (miniPlayer) {
+		albumArt.OnMouseMoved(mousePos);
+
+		close.SetHovered(IsOnCloseButton(mousePos));
+	}
+}
+
+bool CApp::OnMouseDragged(const Vector2i &mousePos) {
+	bool seek = false;
+
+	if (fileLoaded && !lastMousePos && !albumArt.IsResizing()) {
+		// Did we drag the mini player's seekbar?
+		controls.OnMouseClicked(mousePos, [this, &seek](float pos) {
+			seek = true;
+			SeekTo(pos * controls.GetCurrentSongLength());
+		}, playing);
+	}
+
+	if (lastMousePos) {
+		if (!seek) {
+			if (windowX == SDL_WINDOWPOS_CENTERED)
+				SDL_GetWindowPosition(sdlWindow, &windowX, &windowY);
+
+			Vector2i delta = {
+				(mousePos.x - lastMousePos->x),
+				(mousePos.y - lastMousePos->y)
+			};
+
+			// Don't allow window to move further than halfway outside of the total display area
+			windowX = std::clamp(windowX + delta.x, displayBoundingBox.x - windowWidth / 2, displayBoundingBox.w - windowWidth / 2);
+			windowY = std::clamp(windowY + delta.y, displayBoundingBox.y - windowHeight / 2, displayBoundingBox.h - windowHeight / 2);
+
+			SDL_SetWindowPosition(sdlWindow, windowX, windowY);
+
+			// The window moving is going to change
+			// our mouse pos by delta
+			lastMousePos = mousePos - delta;
+		}
+	} else if (miniPlayer && albumArt.OnMouseDragged(mousePos)) {
+		const auto &ratio = Settings::settings.GetMiniPlayerVisualizerRatio();
+		const auto oldRadius = dynamic_cast<Circle<Circles::Textured>*>(&albumArt)->GetRadius();
+
+		const auto newRadius = albumArt.GetRadius(miniPlayer);
+
+		SetRadius(newRadius);
+
+		Vector2i delta = {
+			std::lround((newRadius * ratio - windowWidth) / 2),
+			std::lround((newRadius * ratio - windowHeight) / 2)
+		};
+
+		// If deltas don't match, we likely hit the edge of the
+		// screen. Let us _shrink_ in this case, but not _grow_
+		if (delta.x == delta.y || (delta.x < 0 && delta.y < 0)) {
+			windowX -= delta.x;
+			windowY -= delta.y;
+
+			platform->SetWindowPos(
+				windowX,
+				windowY,
+				std::lround(newRadius * ratio),
+				std::lround(newRadius * ratio)
+			);
+
+			miniPlayerVisualizerRatio = ratio;
+		} else { // If we hit the edge of the screen, revert the change
+			Settings::settings.SetMiniPlayerVisualizerRatio(miniPlayerVisualizerRatio, true);
+
+			// FIXME: Make this a proactive approach instead of a reactive one
+			SetRadius(oldRadius);
+
+			Settings::settings.SetMiniPlayerFontSize(controls.UpdateFontSize() / scale, true);
+		}
+
+		return true;
+
+	} else if (!miniPlayer) SeekToMousePos(mousePos, true);
+
+	return false;
+}
+
+void CApp::OnMouseLeave() {
+	albumArt.OnMouseLeave();
+	close.SetHovered(false);
 }
 
 void CApp::LoadPreset(std::optional<std::size_t> index) {
-	if (const auto &presets = Preset::GetPresets(); index && presets.size() > *index) {
+	const auto &presets = Preset::GetPresets();
+
+	if (index && presets.size() > *index) {
 		const auto &preset = presets.at(*index);
 
 		LoadPreset(preset);
 	} else index = std::nullopt;
 
-	presetIndex = index;
-
-	Settings::settings.SetPresetIndex(index);
+	if (miniPlayer) {
+		Settings::settings.SetMiniPlayerPresetIndex(index);
+		controls.OnPresetChanged(presets);
+	} else {
+		Settings::settings.SetPresetIndex(index);
+		presetIndex = index;
+	}
 }
 
 void CApp::LoadPreset(const Preset &preset) {
@@ -2555,16 +3075,19 @@ void CApp::LoadPreset(const Preset &preset) {
 
 	if (preset.GetName() == "Random") {
 		presetIndex = std::nullopt;
-		Settings::settings.SetPresetIndex(presetIndex);
+		Settings::settings.SetPresetIndex(presetIndex, true);
 	}
 
 	if (auto renderer = preset.GetRenderer())
 		LoadRenderer(*renderer);
 
-	if (auto scale = preset.GetScale())
+	if (auto scale = preset.GetScale(); scale && !miniPlayer)
 		SetVisualizerScale(*scale);
+	else // scale doesn't apply to mini-player
+		SetVisualizerScale(1.0f);
 
 	SetBufferLength(preset.GetBufferSize());
+	SetFftLength(preset.GetFftSize());
 	SetDecayTime(preset.GetDecayTime());
 	SetFadeTime(preset.GetFadeTime());
 	renderer->SetPulse(preset.GetPulse());
@@ -2572,20 +3095,20 @@ void CApp::LoadPreset(const Preset &preset) {
 	context->With("blur"_hash, [this](Context::Shader &shader) {
 		shader.program.Uniform1i("premultipliedAlpha"_hash, platform->IsAlphaPremultiplied());
 	});
-	Settings::settings.SetPulseBackground(pulseBackground);
+	Settings::settings.SetPulseBackground(pulseBackground, true);
 	renderer->SetPulseTime(preset.GetPulseTime());
 
 	if (const auto &rendererOffset = preset.GetRendererOffset()) {
 		renderer->SetOffset(*rendererOffset);
-		Settings::settings.SetRendererOffset(*rendererOffset);
+		Settings::settings.SetRendererOffset(*rendererOffset, true);
 	} else {
 		renderer->SetOffset(0);
-		Settings::settings.SetRendererOffset(0);
+		Settings::settings.SetRendererOffset(0, true);
 	}
 
 	SetStrobe(preset.GetStrobe());
 	strobeIntensity = preset.GetStrobeIntensity();
-	Settings::settings.SetStrobeIntensity(strobeIntensity);
+	Settings::settings.SetStrobeIntensity(strobeIntensity, true);
 
 	auto rotating = preset.GetRotating();
 
@@ -2608,23 +3131,27 @@ void CApp::LoadPreset(const Preset &preset) {
 		ClearBlurFbo();
 
 	sourceFactor = preset.GetSourceFactor();
-	Settings::settings.SetSourceFactor(sourceFactor);
+	Settings::settings.SetSourceFactor(sourceFactor, true);
 	destFactor = preset.GetDestFactor();
-	Settings::settings.SetDestFactor(destFactor);
+	Settings::settings.SetDestFactor(destFactor, true);
 	if (blur && *blur) {
 		SetBlurIntensity(preset.GetBlurIntensity());
 
-		Settings::settings.SetBlurOpacity(preset.GetBlurOpacity());
+		Settings::settings.SetBlurOpacity(preset.GetBlurOpacity(), true);
 		blurOpacity = preset.GetBlurOpacity();
 	}
 
-	Settings::settings.SetEffectIntensity(preset.GetEffectIntensity());
-	Settings::settings.SetEffectXOffset(preset.GetEffectXOffset());
-	Settings::settings.SetEffectYOffset(preset.GetEffectYOffset());
-	Settings::settings.SetEffectRadiation(preset.GetEffectRadiation());
-	Settings::settings.SetEffectHorizontalSpread(preset.GetEffectHorizontalSpread());
-	Settings::settings.SetEffectVerticalSpread(preset.GetEffectVerticalSpread());
-	Settings::settings.SetEffectRotation(preset.GetEffectRotation());
+	Settings::settings.SetEffectIntensity(preset.GetEffectIntensity(), true);
+	Settings::settings.SetEffectXOffset(preset.GetEffectXOffset(), true);
+	Settings::settings.SetEffectYOffset(preset.GetEffectYOffset(), true);
+	Settings::settings.SetEffectRadiation(preset.GetEffectRadiation(), true);
+	Settings::settings.SetEffectHorizontalSpread(preset.GetEffectHorizontalSpread(), true);
+	Settings::settings.SetEffectVerticalSpread(preset.GetEffectVerticalSpread(), true);
+	Settings::settings.SetEffectRotation(preset.GetEffectRotation(), true);
+
+	// Force a save at the end, since
+	// all settings changes were delayed
+	Settings::settings.Save();
 
 	SetEffect(preset.GetEffect());
 
@@ -2641,6 +3168,27 @@ void CApp::SaveBlurFBO() {
 	filename << "popRocks-" << std::put_time(&tm, "%Y%m%d%H%M%S") << ".png";
 
 	blurFbo->SaveAsPNG(filename.str());
+}
+
+void CApp::UpdateDisplayBoundingBox() {
+	int numDisplays = 0;
+	const auto displays = SDL_GetDisplays(&numDisplays);
+
+	displayBoundingBox = { 0, 0, 0, 0 };
+	for (int i = 0; i < numDisplays; ++i) {
+		SDL_Rect bounds;
+		SDL_GetDisplayBounds(displays[i], &bounds);
+
+		if (bounds.x < displayBoundingBox.x)
+			displayBoundingBox.x = bounds.x;
+		if (bounds.y < displayBoundingBox.y)
+			displayBoundingBox.y = bounds.y;
+
+		if (bounds.x + bounds.w > displayBoundingBox.w)
+			displayBoundingBox.w = bounds.x + bounds.w;
+		if (bounds.y + bounds.h > displayBoundingBox.h)
+			displayBoundingBox.h = bounds.y + bounds.h;
+	}
 }
 
 void CApp::OnColorChanged(const MathsCPP::Colour<float> &color, bool silent) {
@@ -2695,4 +3243,12 @@ void CApp::OnColorChanged(const MathsCPP::Colour<float> &color, bool silent) {
 	// "Let's Just Live"'s primary color looks better at 1.5
 	// gamma vs. the above function's selected 2.04
 	lightPack.SetGamma(3.5f - std::pow(2.7f, color.ToHsv().s), silent);
+}
+
+void CApp::OnBlackChanged(const float &black) {
+	context->With("blur"_hash, [this](Context::Shader &shader) {
+		const auto premultipliedAlpha = platform->IsAlphaPremultiplied();
+		LogDebug("Turning premultiplied alpha ", premultipliedAlpha ? "ON" : "OFF");
+		shader.program.Uniform1i("premultipliedAlpha"_hash, premultipliedAlpha);
+	});
 }
