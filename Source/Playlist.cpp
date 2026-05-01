@@ -362,7 +362,7 @@ void Playlist::OnResize(int windowWidth, int windowHeight, float scale, bool min
 	MiniPlayerList::OnResize(windowWidth, windowHeight);
 	MiniPlayerList::SetMaxWidth(maxWidth);
 
-	if ((this->scale != scale || this->miniPlayer != miniPlayer) && !items.empty()) {
+	if ((this->scale != scale || this->miniPlayer != miniPlayer)) {
 		size = { 0, 0 };
 		for (auto &title : items) {
 			title.OnInit(font, context);
