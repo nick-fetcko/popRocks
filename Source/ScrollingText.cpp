@@ -41,7 +41,10 @@ void ScrollingText::OnLoop(int x, int y, const Delta & time) {
 	// Our shader _could_ be "texture" instead of "scrolling",
 	// so we have a dummy uniform in fragment-texture to hold this
 	context->GetShaderProgram().Uniform2f("origin"_hash, x, y);
-	Text::OnLoop(x - offset, y);
+
+	context->Blend(true, [this, x, y] {
+		Text::OnLoop(x - offset, y);
+	});
 
 	if (widthDelta > 0) {
 		glDisable(GL_SCISSOR_TEST);
@@ -76,6 +79,20 @@ void ScrollingText::SetMaxWidth(float maxWidth) {
 	this->maxWidth = maxWidth;
 
 	UpdateWidthDelta();
+}
+
+// FIXME: This is a copy/paste from Text. 
+//        Make it more DRY
+void ScrollingText::SetFont(OpenGLFont *font) {
+	if (this->font)
+		this->font->RemoveSizeChangedListener(this);
+
+	this->font = font;
+
+	if (font)
+		font->AddSizeChangedListener(this);
+
+	SetText(text, true);
 }
 
 // In pixels-per-second

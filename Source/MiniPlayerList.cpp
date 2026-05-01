@@ -141,9 +141,9 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::size_t current
 		const auto isCurrent = indices.at(index) == currentIndex;
 
 		if (isCurrent && outlines[index].GetFont() != boldOutlineFont)
-			outlines[index].OnInit(boldOutlineFont, context);
+			outlines[index].SetFont(boldOutlineFont);
 		else if (!isCurrent && outlines[index].GetFont() == boldOutlineFont)
-			outlines[index].OnInit(outlineFont, context);
+			outlines[index].SetFont(outlineFont);
 
 		context->Color(1.0f, 1.0f, 1.0f, alpha);
 
@@ -151,10 +151,10 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::size_t current
 
 		if (isCurrent) {
 			if (items[index].GetFont() != boldFont)
-				items[index].OnInit(boldFont, context);
+				items[index].SetFont(boldFont);
 		} else {
 			if (items[index].GetFont() == boldFont)
-				items[index].OnInit(font, context);
+				items[index].SetFont(font);
 		}
 
 		if (hovered && i == hoveredOffset)

@@ -37,6 +37,9 @@ public:
 	// FBO blitting
 	void BlitBlurFbo() override;
 
+	// Miniplayer
+	void SetBgr(bool enabled, Context &context) override;
+
 protected:
 	// Helper for UpdateHdrProperties()
 	void UpdateHdrProperties(int displayId, bool force = false);

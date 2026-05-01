@@ -190,31 +190,6 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 					else if (event.key.key == SDLK_M)
 						app.SetMiniPlayer(!app.GetMiniPlayer());
 					break;
-				case SDL_EVENT_WINDOW_MOUSE_ENTER:
-					if (app.GetMiniPlayer()) {
-						logger.LogInfo("Mouse entered!");
-						app.GetControls().Fade(true);
-
-						// Keep controls faded in as long
-						// as the mouse is hovered over
-						// the mini player
-						app.GetControls().Stick();
-					}
-					break;
-				case SDL_EVENT_WINDOW_MOUSE_LEAVE:
-					if (app.GetMiniPlayer()) {
-						logger.LogInfo("Mouse left!");
-
-						app.GetControls().Unstick();
-
-						// We want to fade _in_ so that the
-						// user-controlled wait time passes
-						// before the eventual fade _out_
-						app.GetControls().Fade(true);
-
-						app.OnMouseLeave();
-					}
-					break;
 				case SDL_EVENT_MOUSE_MOTION:
 					mousePos.x = static_cast<int32_t>(event.motion.x);
 					mousePos.y = static_cast<int32_t>(event.motion.y);

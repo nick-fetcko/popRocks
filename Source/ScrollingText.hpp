@@ -25,6 +25,8 @@ public:
 
 	void SetMaxWidth(float maxWidth);
 
+	void SetFont(OpenGLFont *font) override;
+
 	// In pixels-per-second
 	// Default: 20
 	void SetSpeed(float speed);

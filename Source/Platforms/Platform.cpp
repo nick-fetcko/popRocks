@@ -21,8 +21,7 @@ const float Platform::GetScale(float scale) const {
 }
 
 const int Platform::IsAlphaPremultiplied() const {
-	// FIXME: Any way to make premultiplied alpha work when our chroma color is NOT 0?
-	return (HDR::Enabled || app->GetPulseBackground() || (app->GetMiniPlayer() && app->GetAlbumArt().GetChromaColor() != 0.0f)) ? 0 : 1;
+	return (HDR::Enabled || app->GetPulseBackground() || app->GetMiniPlayer()) ? 0 : 1;
 }
 
 bool Platform::IsUiInverted() { 

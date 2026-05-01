@@ -65,7 +65,9 @@ public:
 	void ToggleFullscreen() override;
 
 	// Miniplayer
-	virtual void SetMiniPlayer(bool miniPlayer, uint8_t chromaKey = 0) override;
+	void SetMiniPlayer(bool miniPlayer, uint8_t chromaKey = 0) override;
+	void SetChromaKey(bool enabled) override;
+	bool SetTransparent(bool transparent) override;
 
 	// Window management
 	std::optional<Vector2i> SetWindowPos(int x, int y, int width, int height) override;
@@ -114,6 +116,9 @@ private:
 	MyAudioSink *audioSink = nullptr;
 
 	BASS_WASAPI_INFO wasapiInfo{ 0 };
+
+	bool transparent = false;
+	bool colorKeyEnabled = false;
 };
 
 // =====================================================

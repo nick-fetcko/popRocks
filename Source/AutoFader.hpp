@@ -43,16 +43,15 @@ public:
 		if (in) lastEventTime = std::chrono::system_clock::now();
 
 		if (!lastFade || *lastFade != in) {
-			if (in) {
+			if (in)
 				targetAlpha = 1.0f;
-			} else {
+			else
 				targetAlpha = 0.0f;
-			}
 
-			if (fadeCallback) {
+			if (fadeCallback)
 				fadeCallback(in);
-				lastFade = in;
-			}
+
+			lastFade = in;
 		}
 	}
 

@@ -523,10 +523,12 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 		const auto &tintedBlack = albumArt->GetTintedBlackColor();
 		if (miniPlayer) {
 			context.Color(tintedBlack.r, tintedBlack.g, tintedBlack.b, alpha * 0.667f);
-
+			
 			sepVao->Bind();
 			sepEab->Bind();
-			sepEab->DrawElements(GL_TRIANGLES);
+			context.Blend(alpha > 0.0f, [&] {
+				sepEab->DrawElements(GL_TRIANGLES);
+			});
 			sepEab->Unbind();
 			sepVao->Unbind();
 		}
@@ -759,6 +761,9 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 				);
 			}
 
+			if (miniPlayer)
+				context.StartBlend();
+
 			if ((playing || pause.IsClicked()) && !play.IsClicked()) {
 				pause.OnLoop(
 					windowWidth / 2.0f,
@@ -799,6 +804,8 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 					context,
 					miniPlayer ? &alpha : nullptr
 				);
+
+				context.EndBlend();
 
 				if (presetList.GetAlpha() != 1.0f && volume.GetAlpha() != 1.0f) {
 					playlist.OnLoop(

@@ -22,20 +22,22 @@ public:
 	const int32_t GetOutlineWidth() const { return outline.GetBounds().width; }
 
 	void OnLoop(int x, int y, float alpha, const AlbumArt * const albumArt, Context &context) {
-		const auto OutlineColor = miniPlayer ? albumArt->GetBlackColor() : (IsExclusive() ? 0.0f : 0.25f * HDR::WhiteLevel);
+		context.Blend(!IsExclusive(), [&] {
+			const auto OutlineColor = miniPlayer ? albumArt->GetBlackColor() : (IsExclusive() ? 0.0f : 0.25f * HDR::WhiteLevel);
 
-		pos.x = x;
-		pos.y = y - text.GetSize().y / 2;
+			pos.x = x;
+			pos.y = y - text.GetSize().y / 2;
 
-		context.Color(OutlineColor, OutlineColor, OutlineColor, alpha);
-		outline.OnLoop(x, y - text.GetSize().y / 2);
+			context.Color(OutlineColor, OutlineColor, OutlineColor, alpha);
+			outline.OnLoop(x, y - text.GetSize().y / 2);
 
-		if (IsExclusive())
-			context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
-		else
-			context.Color(0.5f * HDR::WhiteLevel, 0.5f * HDR::WhiteLevel, 0.5f * HDR::WhiteLevel, alpha);
+			if (IsExclusive())
+				context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
+			else
+				context.Color(0.5f * HDR::WhiteLevel, 0.5f * HDR::WhiteLevel, 0.5f * HDR::WhiteLevel, alpha);
 
-		text.OnLoop(x, y - text.GetSize().y / 2);
+			text.OnLoop(x, y - text.GetSize().y / 2);
+		});
 	}
 
 	void OnDestroy() {

@@ -26,23 +26,7 @@ void Desktop::OnInit(Interop::InitArgs args, Context &context) {
 
 	const auto format = dynamic_cast<Vulkan *>(interop)->GetSwapchainImageFormat();
 	if ((format > 29 && format < 37) || (format > 43 && format < 51)) {
-		context.With("texture"_hash, [this](Context::Shader &shader) {
-			shader.program.Uniform1i("bgr"_hash, 1);
-		});
-		context.With("rotate"_hash, [this](Context::Shader &shader) {
-			shader.program.Uniform1i("bgr"_hash, 1);
-		});
-		context.With("blur"_hash, [this](Context::Shader &shader) {
-			shader.program.Uniform1i("bgr"_hash, 1);
-		});
-		context.With("basic"_hash, [this](Context::Shader &shader) {
-			shader.program.Uniform1i("bgr"_hash, 1);
-		});
-		context.With("blit"_hash, [this](Context::Shader &shader) {
-			shader.program.Uniform1i("bgr"_hash, 1);
-		});
-
-		bgr = true;
+		SetBgr(true, context);
 	}
 }
 
@@ -162,6 +146,34 @@ void Desktop::BlitBlurFbo() {
 		*app->GetContext(),
 		nullptr,
 		app->GetMiniPlayer() ? app->GetAlbumArt().GetChromaColor() : 0.0f,
-		app->GetMiniPlayer() ? 1.0f : 0.0f
+		0.0f
 	);
+}
+
+// -----------------------------------------------------
+// -------------------- Miniplayer ---------------------
+// -----------------------------------------------------
+void Desktop::SetBgr(bool enabled, Context &context) {
+	context.With("texture"_hash, [enabled](Context::Shader &shader) {
+		shader.program.Uniform1i("bgr"_hash, enabled ? 1 : 0);
+	});
+	context.With("rotate"_hash, [enabled](Context::Shader &shader) {
+		shader.program.Uniform1i("bgr"_hash, enabled ? 1 : 0);
+	});
+	context.With("blur"_hash, [enabled](Context::Shader &shader) {
+		shader.program.Uniform1i("bgr"_hash, enabled ? 1 : 0);
+	});
+	context.With("basic"_hash, [enabled](Context::Shader &shader) {
+		shader.program.Uniform1i("bgr"_hash, enabled ? 1 : 0);
+	});
+	context.With("blit"_hash, [enabled](Context::Shader &shader) {
+		shader.program.Uniform1i("bgr"_hash, enabled ? 1 : 0);
+	});
+	context.With("scrolling"_hash, [enabled](Context::Shader &shader) {
+		shader.program.Uniform1i("bgr"_hash, enabled ? 1 : 0);
+	});
+
+	bgr = enabled;
+
+	LogDebug("BGR: ", enabled ? "ON" : "OFF");
 }

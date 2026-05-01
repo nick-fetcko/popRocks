@@ -564,6 +564,57 @@ void Windows::ToggleFullscreen() {
 // -----------------------------------------------------
 // -------------------- Miniplayer ---------------------
 // -----------------------------------------------------
+void Windows::SetChromaKey(bool enabled) {
+	if (enabled == colorKeyEnabled) return;
+
+	colorKeyEnabled = enabled;
+
+	const auto hwnd = reinterpret_cast<HWND>(
+		SDL_GetPointerProperty(
+			SDL_GetWindowProperties(app->GetSdlWindow()),
+			SDL_PROP_WINDOW_WIN32_HWND_POINTER,
+			NULL
+		)
+	);
+
+	auto flags = (enabled ? LWA_COLORKEY : 0);
+	if (!app->IsFileLoaded())
+		flags |= LWA_ALPHA;
+
+	if (enabled) {
+		SetWindowLongPtr(hwnd, GWL_EXSTYLE, GetWindowLongPtr(hwnd, GWL_EXSTYLE) & (~WS_EX_LAYERED));
+		SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);
+
+		// Value of R = 1, G = 2, B = 3 chosen completely arbitrarily
+		SetLayeredWindowAttributes(hwnd, RGB(1, 2, 3), (app->IsFileLoaded() || !enabled) ? 0xFF : 0xDD, flags);
+	} else {
+		SetWindowLongPtr(hwnd, GWL_EXSTYLE, GetWindowLongPtr(hwnd, GWL_EXSTYLE) & (~WS_EX_LAYERED));
+
+		// FIXME: I've found no way to invalidate the
+		//        window in a way that restores proper
+		//        transparency without having one,
+		//        final post-resize resize. Quickly hiding
+		//        the window and then showing it has the
+		//        same effect, but with a visible flicker.
+		//
+		// InvalidateRect(), UpdateWindow(), SetWindowPos()
+		// with SWP_NOSIZE | SWP_NOMOVE | SWP_FRAMECHANGED, etc.
+		// have no effect.
+		SetWindowPos(
+			Settings::settings.GetMiniPlayerX() - 1,
+			Settings::settings.GetMiniPlayerY() - 1,
+			Settings::settings.GetMiniPlayerWidth() + 2,
+			Settings::settings.GetMiniPlayerHeight() + 2
+		);
+
+		SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);
+
+		SetLayeredWindowAttributes(hwnd, 0, (app->IsFileLoaded()) ? 0xFF : 0xDD, flags);
+	}
+
+	LogDebug("ColorKey ", enabled ? "Enabled" : "Disabled");
+}
+
 void Windows::SetMiniPlayer(bool miniPlayer, uint8_t chromaKey) {
 	const auto hwnd = reinterpret_cast<HWND>(
 		SDL_GetPointerProperty(
@@ -578,17 +629,36 @@ void Windows::SetMiniPlayer(bool miniPlayer, uint8_t chromaKey) {
 		SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) & (~WS_EX_LAYERED));
 		auto style = SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);
 
-		auto ret = SetLayeredWindowAttributes(hwnd, RGB(chromaKey, chromaKey, chromaKey), app->IsFileLoaded() ? 0xFF : 0xDD, LWA_COLORKEY | LWA_ALPHA);
+		auto ret = SetLayeredWindowAttributes(hwnd, RGB(chromaKey, chromaKey, chromaKey), app->IsFileLoaded() ? 0xFF : 0xDD, app->IsFileLoaded() ? 0 : LWA_ALPHA);
 
 		if (auto error = GetLastError())
 			LogError("Chroma key could not be set! ret = ", ret, " error = ", error);
 		else
 			LogDebug("Chroma key set to ", static_cast<int>(chromaKey));
-
-		SDL_ShowWindow(app->GetSdlWindow());
 	} else {
 		SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) & (~WS_EX_LAYERED));
 	}
+}
+
+bool Windows::SetTransparent(bool transparent) {
+	if (transparent == this->transparent) return false;
+
+	const auto hwnd = reinterpret_cast<HWND>(
+		SDL_GetPointerProperty(
+			SDL_GetWindowProperties(app->GetSdlWindow()),
+			SDL_PROP_WINDOW_WIN32_HWND_POINTER,
+			NULL
+		)
+	);
+
+	if (transparent)
+		SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) | WS_EX_TRANSPARENT);
+	else
+		SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) & (~WS_EX_TRANSPARENT));
+
+	this->transparent = transparent;
+
+	return true;
 }
 
 std::optional<Vector2i> Windows::SetWindowPos(int x, int y, int width, int height) {
@@ -625,8 +695,7 @@ std::optional<Vector2i> Windows::SetWindowPos(int x, int y, int width, int heigh
 	}
 
 	MoveWindow(hwnd, x, y, width, height, FALSE);
-	//::SetWindowPos(hwnd, NULL, x, y, width, height, 0);
-
+	
 	return ret;
 }
 

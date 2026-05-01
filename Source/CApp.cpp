@@ -444,6 +444,9 @@ void CApp::LoadShaders() {
 
 			shader.program.CacheUniformLocation("bleedEdge");
 			shader.program.Uniform1i("bleedEdge"_hash, ScrollingText::BleedEdge);
+
+			shader.program.CacheUniformLocation("bgr");
+			shader.program.Uniform1i("bgr"_hash, 0);
 		}
 	}
 }
@@ -517,13 +520,9 @@ inline SDL_PropertiesID CApp::CreateSdlWindow() {
 	//        even for colors well outside of the chosen chroma key.
 	//
 	//			HDR doesn't play well with this, either.
-	//SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_TRANSPARENT_BOOLEAN, miniPlayer && !VULKAN);
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_TRANSPARENT_BOOLEAN, miniPlayer);
 
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_ALWAYS_ON_TOP_BOOLEAN, miniPlayer);
-
-	// Start miniPlayer hidden so we don't see the full, rectangular window
-	// before we can make it layered / transparent
-	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HIDDEN_BOOLEAN, miniPlayer);
 
 	sdlWindow = SDL_CreateWindowWithProperties(
 		props
@@ -570,7 +569,7 @@ void CApp::UpdateMiniPlayer() {
 }
 
 void CApp::SetMiniPlayer(bool miniPlayer, bool inLoop) {
-	if (miniPlayer) SDL_HideWindow(sdlWindow);
+	//if (miniPlayer) SDL_HideWindow(sdlWindow);
 
 	this->miniPlayer = miniPlayer;
 	Settings::settings.SetMiniPlayer(miniPlayer);
@@ -583,7 +582,7 @@ void CApp::SetMiniPlayer(bool miniPlayer, bool inLoop) {
 	SetRadius(albumArt.GetRadius(miniPlayer));
 
 	if (sdlWindow) {
-#if 0//VULKAN
+#if 1
 		ImGui_ImplOpenGL3_Shutdown();
 		ImGui_ImplSDL3_Shutdown();
 
@@ -606,7 +605,7 @@ void CApp::SetMiniPlayer(bool miniPlayer, bool inLoop) {
 		SDL_SetWindowBordered(sdlWindow, !miniPlayer);
 #endif
 
-#if 0//VULKAN
+#if 1
 		platform->GetInterop()->OnInit(GetInteropArgs());
 
 		// Menu callbacks take place
@@ -615,7 +614,7 @@ void CApp::SetMiniPlayer(bool miniPlayer, bool inLoop) {
 		if (inLoop) platform->GetInterop()->OnLoop();
 #endif
 
-		backgroundAlpha = ((miniPlayer && !VULKAN) ? 0.0f : 1.0f);
+		backgroundAlpha = miniPlayer ? 0.0f : 1.0f;
 
 		// Either recalculate or reset our
 		// chroma value before sending it to
@@ -648,6 +647,10 @@ void CApp::SetMiniPlayer(bool miniPlayer, bool inLoop) {
 
 	// Update scale to reflect radius change
 	if (albumArt.Loaded()) albumArt.Scale(true);
+
+	// Make sure our cursor is visible
+	if (miniPlayer)
+		SDL_ShowCursor();
 }
 
 inline void CApp::SetRadius(float radius) {
@@ -715,6 +718,7 @@ void CApp::OnInit() {
 
 	// https://tgui.eu/tutorials/latest-stable/dpi-scaling/
 	//SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
+	SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
 
 	auto ret = SDL_Init(
 		SDL_INIT_VIDEO |
@@ -1423,8 +1427,10 @@ void CApp::OnInit() {
 	// controls.OnInit() calls albumArt.OnInit()
 	controls.OnInit(windowWidth, windowHeight, *context, scale, platform->GetDefaultFramebuffer(), miniPlayer);
 	controls.SetFadeCallback([this](bool in) {
-		if (in) SDL_ShowCursor();
-		else SDL_HideCursor();
+		if (!miniPlayer) {
+			if (in) SDL_ShowCursor();
+			else SDL_HideCursor();
+		}
 	});
 
 	close.OnInit(controls.GetIconSize());
@@ -1650,7 +1656,7 @@ inline bool CApp::IsOnCloseButton(const Vector2i &mousePos) {
 	const auto closeSize = controls.GetIconSize() / Close::GetLowestRatio();
 
 	return
-		mousePos.x >= windowWidth / 2 + radius - closeSize * 2 && windowWidth / 2 + radius &&
+		mousePos.x >= windowWidth / 2 + radius - closeSize * 2 && mousePos.x <= windowWidth / 2 + radius &&
 		mousePos.y >= windowHeight / 2 - radius && mousePos.y <= windowHeight / 2 - radius + closeSize * 2;
 }
 
@@ -1693,14 +1699,48 @@ void CApp::OnLoop(const Delta &time) {
 	} else glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
 	glClear(GL_COLOR_BUFFER_BIT);
-	
+
 	context->Use("texture"_hash);
 
-	if (miniPlayer && (mouseCaptureAccum += time.change.AsSeconds()) >= 0.06668 /* Capture mouse at 15FPS maximum */) {
+	if (miniPlayer && (mouseCaptureAccum += time.change.AsSeconds()) >= 0.06667 /* Capture mouse at 15FPS maximum */) {
 		float x = 0.0f, y = 0.0f;
 		SDL_GetGlobalMouseState(&x, &y);
 
-		albumArt.OnMouseMoved({ x - windowX, y - windowY });
+		x -= windowX;
+		y -= windowY;
+
+		// Only show the controls if we're
+		// hovered over the album art circle
+		// or close button
+		if (auto onClose = IsOnCloseButton({ x, y }); 
+			Vector2f(x, y).Distance({ windowWidth / 2, windowHeight / 2 }) / scale <= albumArt.GetRadius(miniPlayer) ||
+			onClose) {
+			platform->SetTransparent(false);
+
+			controls.Fade(true);
+			controls.Stick();
+
+			close.SetHovered(onClose);
+		} else {
+			close.SetHovered(false);
+
+			if (albumArt.OnMouseMoved({ x, y })) {
+				platform->SetTransparent(false);
+				controls.Unstick();
+			}
+			else if (platform->SetTransparent(true)) {
+				controls.Unstick();
+
+				// We want to fade _in_ so that the
+				// user-controlled wait time passes
+				// before the eventual fade _out_
+				if (controls.GetAlpha() > 0.0f) {
+					controls.Fade(true);
+
+					OnMouseLeave();
+				}
+			}
+		}
 
 		mouseCaptureAccum = 0.0;
 	}
@@ -1743,11 +1783,6 @@ void CApp::OnLoop(const Delta &time) {
 	} else {
 		platform->LoadHeardSamples(renderer, floatBuffer, shortBuffer, bufferLength);
 	}
-
-	//rect.x = 0;
-	//rect.y = 0;
-	//rect.w = buffer[0]/1000000;
-	//rect.h = 10;
 
 	if (renderer->IsFloatingPoint())
 		lightPack.NextSamples(floatBuffer, bufferLength);
@@ -1795,19 +1830,6 @@ void CApp::OnLoop(const Delta &time) {
 	}
 
 	//}
-
-	// If more than half of our bins
-	// grew larger (and we've not seen
-	// this for at least a half second)
-	// change the color
-	/*
-	if ((timeSinceLastColorChange += time.change.AsSeconds()) >= 0.5 &&
-		detectBpm &&
-		maxUpdates >= bufferLength / 2 / 2) {
-		albumArt.NextBin(true);
-		timeSinceLastColorChange = 0.0;
-	}
-	*/
 
 	if (resetGain) resetGain = false;
 
@@ -2936,6 +2958,40 @@ bool CApp::OnMouseDown(const Vector2i &mousePos) {
 			}
 
 			SDL_CaptureMouse(lastMousePos.has_value());
+		} else {
+			// INSANE HACK:
+			//   In order to prevent redrawing while resizing
+			//   (creating flicker), we enable chroma keying
+			//   on the window. This appears to bypass redrawing
+			//   entirely. However, when using Vulkan, this also
+			//   causes ALL graphical elements to become semi-
+			//   transparent, no matter their distance from
+			//   the chroma key (multiplicative blending, possibly?).
+			//   The only way I've found to prevent this is to use
+			//   BGR instead of RGB. I've absolutely NO IDEA why
+			//   this works, but it's what I'm going with
+			//   for now.
+			//
+			//   A more proper solution will probably be to hijack
+			//   window creation from SDL so we have full access
+			//   to WindowProc. SDL's event filters only go so
+			//   far and can't seem to intercept WM_NCCALCSIZE
+			//
+			//   Further reading:
+			//      https://stackoverflow.com/questions/53000291/how-to-smooth-ugly-jitter-flicker-jumping-when-resizing-windows-especially-drag
+#if VULKAN
+			if (!HDR::Enabled) {
+				dynamic_cast<Vulkan *>(platform->GetInterop())->SetFormat(
+					VK_FORMAT_B8G8R8A8_UNORM,
+					VK_COLORSPACE_SRGB_NONLINEAR_KHR,
+					GL_RGBA8
+				);
+
+				platform->SetBgr(true, *context);
+			}
+#endif
+
+			platform->SetChromaKey(true);
 		}
 
 		ret = true;
@@ -2954,10 +3010,24 @@ void CApp::OnMouseUp(const Vector2i &mousePos) {
 
 		SDL_CaptureMouse(false);
 
+#if VULKAN
+		if (!HDR::Enabled) {
+			dynamic_cast<Vulkan *>(platform->GetInterop())->SetFormat(
+				VK_FORMAT_R8G8B8A8_UNORM,
+				VK_COLORSPACE_SRGB_NONLINEAR_KHR,
+				GL_RGBA8
+			);
+
+			platform->SetBgr(false, *context);
+		}
+#endif
+
 		Settings::settings.SetMiniPlayerX(windowX, true);
 		Settings::settings.SetMiniPlayerY(windowY, true);
 		Settings::settings.SetMiniPlayerWidth(albumArt.GetRadius(miniPlayer) * miniPlayerVisualizerRatio / scale, true);
 		Settings::settings.SetMiniPlayerHeight(albumArt.GetRadius(miniPlayer) * miniPlayerVisualizerRatio / scale, true);
+
+		platform->SetChromaKey(false);
 
 		Settings::settings.Save();
 	}
@@ -2966,11 +3036,8 @@ void CApp::OnMouseUp(const Vector2i &mousePos) {
 void CApp::OnMouseMoved(const Vector2i &mousePos) {
 	controls.OnMouseMoved(mousePos);
 
-	if (miniPlayer) {
+	if (miniPlayer)
 		albumArt.OnMouseMoved(mousePos);
-
-		close.SetHovered(IsOnCloseButton(mousePos));
-	}
 }
 
 bool CApp::OnMouseDragged(const Vector2i &mousePos) {
@@ -3127,7 +3194,8 @@ void CApp::LoadPreset(const Preset &preset) {
 
 	// Make sure we don't blow out any existing colors
 	if ((blur && *blur) && (Settings::IsColorBlend(sourceFactor) != Settings::IsColorBlend(preset.GetSourceFactor()) ||
-		Settings::IsColorBlend(destFactor) != Settings::IsColorBlend(preset.GetDestFactor())))
+		Settings::IsColorBlend(destFactor) != Settings::IsColorBlend(preset.GetDestFactor()) ||
+		miniPlayer))
 		ClearBlurFbo();
 
 	sourceFactor = preset.GetSourceFactor();

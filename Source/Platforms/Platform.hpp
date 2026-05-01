@@ -78,6 +78,9 @@ public:
 
 	// Miniplayer
 	virtual void SetMiniPlayer(bool miniPlayer, uint8_t chromaKey = 0) = 0;
+	virtual bool SetTransparent(bool transparent) = 0;
+	virtual void SetChromaKey(bool enabled) = 0;
+	virtual void SetBgr(bool enabled, Context &context) = 0;
 
 	// Window management
 	virtual std::optional<Vector2i> SetWindowPos(int x, int y, int width, int height) = 0;

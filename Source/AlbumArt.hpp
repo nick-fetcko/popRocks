@@ -155,7 +155,12 @@ public:
 	const bool IsBlackAndWhite() const { return blackAndWhite; }
 
 	void CalculateChroma();
-	const float &GetChromaColor() const { return chromaColor; }
+	const float &GetChromaColor() const { 
+		const static float zero = 0.0f;
+		return zero; 
+
+		//return chromaColor;
+	}
 	const float &GetBlackColor() const { return blackColor; }
 	void ResetChroma();
 
@@ -295,7 +300,7 @@ private:
 	float chromaColor = 0.0f;
 	std::atomic<bool> chromaChanged = false;
 
-	float blackColor = 0.01f;
+	float blackColor = 0.0f;
 	Colourf tintedBlackColor = { blackColor, blackColor, blackColor };
 
 	SDL_Cursor *resizeCursor = nullptr;

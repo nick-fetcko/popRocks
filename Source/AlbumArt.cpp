@@ -231,7 +231,9 @@ void AlbumArt::OnLoop(const Delta &time, GLfloat x, GLfloat y, float frameCount,
 	}
 
 	if (Settings::settings.GetMiniPlayer() || !albumLoaded) {
-		DrawPlaceholder(x, y, alpha, context);
+		context.Blend(albumLoaded, [&] {
+			DrawPlaceholder(x, y, alpha, context);
+		});
 
 		if (!albumLoaded && !playing) {
 			dragAndDropPrompt.OnLoop(
@@ -562,7 +564,7 @@ void AlbumArt::CalculateChroma(SDL_Surface *surface, const uint8_t *pixels) {
 	chromaChanged = true;
 
 	for (auto *listener : blackChangedListeners)
-		listener->OnBlackChanged(this->blackColor);
+		;// listener->OnBlackChanged(this->blackColor);
 
 	LogDebug("Chroma key: ", static_cast<int>(*chromaColor), " black: ", static_cast<int>(blackColor * 255.0f));
 }
@@ -574,7 +576,7 @@ void AlbumArt::ResetChroma() {
 	chromaChanged = true;
 
 	for (auto *listener : blackChangedListeners)
-		listener->OnBlackChanged(this->blackColor);
+		;// listener->OnBlackChanged(this->blackColor);
 
 	LogDebug("Chroma key and black color reset!");
 }
@@ -1478,11 +1480,10 @@ bool AlbumArt::OnMouseMoved(const Vector2i &mousePos) {
 
 	if (target == Outline::None) {
 		OnMouseLeave();
-
-		SDL_SetCursor(SDL_GetDefaultCursor());
 	} else if (!hoverTimer) {
 		hoverTimer = std::chrono::system_clock::now();
 
+		return true;
 	} else if (hovered) {
 		UpdateCursor(mousePos);
 
@@ -1497,7 +1498,8 @@ void AlbumArt::OnMouseLeave() {
 		if (resizeCursor) {
 			SDL_DestroyCursor(resizeCursor);
 			resizeCursor = nullptr;
-		}
+			SDL_SetCursor(SDL_GetDefaultCursor());
+;		}
 		hovered = false;
 		hoverTimer = std::nullopt;
 

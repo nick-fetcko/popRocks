@@ -440,7 +440,7 @@ private:
 	bool miniPlayer = Settings::settings.GetMiniPlayer();
 	std::optional<Vector2i> lastMousePos = std::nullopt;
 
-	float backgroundAlpha = Settings::settings.GetMiniPlayer() && !VULKAN ? 0.0f : 1.0f;
+	float backgroundAlpha = Settings::settings.GetMiniPlayer() ? 0.0f : 1.0f;
 
 	int windowX = 0, windowY = 0;
 
