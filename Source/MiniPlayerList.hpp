@@ -13,11 +13,13 @@
 class MiniPlayerList : public ColorChangeListener, public AlbumArt::BlackChangedListener {
 private:
 	constexpr static std::size_t ArcWidth = 75;
-	constexpr static float ArcStartAngle = 238;
+	constexpr static std::array<float, 2> ArcStartAngles = { 233, 239 };
+
+	constexpr static float UpwardsBias = 0.515f;
 
 public:
-	enum class Direction {
-		Up,
+	enum class Direction : uint8_t {
+		Up = 0,
 		Down
 	};
 

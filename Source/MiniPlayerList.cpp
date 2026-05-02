@@ -129,7 +129,8 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::size_t current
 
 	this->pos = pos;
 
-	float yOffset = pos.y + font->GetEm().height;
+	// Bias upwards-facing lists toward the top
+	float yOffset = pos.y + (font->GetEm().height * (direction == Direction::Up ? UpwardsBias : 1));
 	for (long i = 0; i < numberOfVisibleItems; ++i) {
 		const auto index = i + scrollOffset;
 
@@ -207,7 +208,7 @@ bool MiniPlayerList::OnMouseMoved(const Vector2i &mousePos, Rectanglei bounds) {
 
 		return true;
 	} else if (hovered && inX && inY) {
-		float yOffset = pos.y + font->GetEm().height;
+		float yOffset = pos.y + (font->GetEm().height * (direction == Direction::Up ? UpwardsBias : 1));
 
 		for (long i = 0; i < numberOfVisibleItems; ++i) {
 			const auto &title = items[i + scrollOffset];
@@ -249,7 +250,7 @@ void MiniPlayerList::OnRadiusChanged() {
 	std::vector<Vector2f> points(ArcWidth);
 
 	for (auto i = 0; i < ArcWidth; ++i) {
-		auto degInRad = (i + ArcStartAngle) * Maths::DEG2RAD<float>;
+		auto degInRad = (i + ArcStartAngles[static_cast<uint8_t>(direction)]) * Maths::DEG2RAD<float>;
 
 		points[i].x = -sin(degInRad) * (radius - inset);
 		points[i].y = cos(degInRad) * (radius - inset);
@@ -261,7 +262,7 @@ void MiniPlayerList::OnRadiusChanged() {
 	const auto start = ((ArcWidth - 1) - end) / (items.size() - numberOfVisibleItems) * scrollOffset;
 
 	for (auto i = 1; i < end; ++i) {
-		auto degInRad = (i + start + ArcStartAngle) * Maths::DEG2RAD<float>;
+		auto degInRad = (i + start + ArcStartAngles[static_cast<uint8_t>(direction)]) * Maths::DEG2RAD<float>;
 
 		points[i - 1].x = -sin(degInRad) * (radius - inset);
 		points[i - 1].y = cos(degInRad) * (radius - inset);
