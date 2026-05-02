@@ -12,8 +12,8 @@
 
 class MiniPlayerList : public ColorChangeListener, public AlbumArt::BlackChangedListener {
 private:
-	constexpr static std::size_t ArcWidth = 70;
-	constexpr static float ArcStartAngle = 240;
+	constexpr static std::size_t ArcWidth = 75;
+	constexpr static float ArcStartAngle = 238;
 
 public:
 	enum class Direction {
