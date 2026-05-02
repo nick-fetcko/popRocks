@@ -54,7 +54,8 @@ public:
 		float effectRotation,
 		std::optional<std::string> renderer = std::nullopt,
 		std::optional<float> scale = std::nullopt,
-		std::optional<int> rendererOffset = std::nullopt
+		std::optional<int> rendererOffset = std::nullopt,
+		bool availableInMiniPlayer = false
 	) : name(name),
 		bufferSize(bufferSize),
 		fftSize(fftSize),
@@ -82,7 +83,8 @@ public:
 		effectRotation(effectRotation),
 		renderer(renderer),
 		scale(scale),
-		rendererOffset(rendererOffset) {
+		rendererOffset(rendererOffset),
+		availableInMiniPlayer(availableInMiniPlayer) {
 
 	}
 
@@ -120,6 +122,7 @@ public:
 	const std::optional<float> &GetScale() const { return scale; }
 	const std::optional<int> &GetRendererOffset() const { return rendererOffset; }
 	const int &GetFftSize() const { return fftSize; }
+	const bool &GetAvailableInMiniPlayer() const { return availableInMiniPlayer; }
 
 	static void AddChangeListener(ChangeListener *listener);
 	static void RemoveChangeListener(ChangeListener *listener);
@@ -170,4 +173,6 @@ private:
 	std::optional<int> rendererOffset = std::nullopt;
 
 	int fftSize = 8192;
+
+	bool availableInMiniPlayer = false;
 };

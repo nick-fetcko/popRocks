@@ -132,8 +132,7 @@ void Controls::OnPresetsChanged(const std::vector<Preset> &presets) {
 	presetList.Clear();
 	for (const auto &[i, preset] : Utils::Enumerate(presets)) {
 		if (!preset.GetPulseBackground() &&
-			preset.GetRenderer() &&
-			*preset.GetRenderer() == "fft")
+			preset.GetAvailableInMiniPlayer())
 			presetList.AddItem(preset.GetName(), i);
 	}
 }

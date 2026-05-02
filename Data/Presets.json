@@ -7,7 +7,8 @@
 		"pulse" : false,
 		"pulseTime" : 0.1,
 		"renderer" : "fft",
-		"scale" : 1.0
+		"scale" : 1.0,
+		"availableInMiniPlayer" : true
 	},
 	"1" : {
 		"name" : "Fast",
@@ -17,7 +18,8 @@
 		"pulse" : false,
 		"pulseTime" : 0.04,
 		"renderer" : "fft",
-		"scale" : 1.0
+		"scale" : 1.0,
+		"availableInMiniPlayer" : true
 	},
 	"2" : {
 		"name" : "Slow",
@@ -27,7 +29,8 @@
 		"pulse" : true,
 		"pulseTime" : 1,
 		"renderer" : "fft",
-		"scale" : 1.0
+		"scale" : 1.0,
+		"availableInMiniPlayer" : true
 	},
 	"3" : {
 		"name" : "Flower",
@@ -41,7 +44,8 @@
 		"blur": true,
 		"blurIntensity": 0.170000,
 		"renderer" : "fft",
-		"scale" : 1.0
+		"scale" : 1.0,
+		"availableInMiniPlayer" : true
 	},
 	"4": {
 		"name": "Neon Flower",
@@ -69,7 +73,8 @@
 		"effectVerticalSpread": 0.000000,
 		"effectRotation": 0.000000,
 		"renderer": "fft",
-		"scale": 1.000000
+		"scale": 1.000000,
+		"availableInMiniPlayer" : true
 	},
 	"5" : {
 		"name" : "Smoke",
@@ -129,7 +134,8 @@
 		"effectYOffset": 0.530000,
 		"effectRadiation": -10.000000,
 		"renderer" : "fft",
-		"scale" : 1.0
+		"scale" : 1.0,
+		"availableInMiniPlayer" : true
 	},
 	"8": {
 		"name": "Ripples",

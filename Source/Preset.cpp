@@ -212,6 +212,9 @@ const Node &operator>>(const Node &node, Preset &preset) {
 	if (node.has("rendererOffset"))
 		node["rendererOffset"]->get(preset.rendererOffset);
 
+	if (node.has("availableInMiniPlayer"))
+		node["availableInMiniPlayer"]->get(preset.availableInMiniPlayer);
+
 	return node;
 }
 
@@ -242,6 +245,7 @@ Node &operator<<(Node &node, const Preset &preset) {
 	node["effectHorizontalSpread"]->set(preset.effectHorizontalSpread);
 	node["effectVerticalSpread"]->set(preset.effectVerticalSpread);
 	node["effectRotation"]->set(preset.effectRotation);
+	node["availableInMiniPlayer"]->set(preset.availableInMiniPlayer);
 	if (preset.renderer)
 		node["renderer"]->set(preset.renderer);
 	if (preset.scale)

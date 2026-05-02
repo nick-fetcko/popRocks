@@ -791,6 +791,8 @@ public:
 				if (ImGui::Checkbox("Save scale?", &saveScale))
 					Settings::settings.SetSaveScale(saveScale);
 
+				ImGui::Checkbox("Available in mini-player?", &availableInMiniPlayer);
+
 				if (ImGui::Button("Cancel")) {
 					saveRenderer = lastSaveRenderer;
 					Settings::settings.SetSaveRenderer(lastSaveRenderer);
@@ -832,7 +834,8 @@ public:
 						Settings::settings.GetEffectRotation(),
 						saveRenderer ? Settings::settings.GetRenderer() : static_cast<std::optional<std::string>>(std::nullopt),
 						saveScale ? Settings::settings.GetScale() : static_cast<std::optional<float>>(std::nullopt),
-						fftLine ? Settings::settings.GetRendererOffset() : static_cast<std::optional<int>>(std::nullopt)
+						fftLine ? Settings::settings.GetRendererOffset() : static_cast<std::optional<int>>(std::nullopt),
+						availableInMiniPlayer
 					);
 
 					Preset::AddPreset(std::move(preset));
@@ -1759,4 +1762,6 @@ private:
 	std::string rngSource = Settings::settings.GetRngSource();
 
 	bool miniPlayer = Settings::settings.GetMiniPlayer();
+
+	bool availableInMiniPlayer = false;
 };
