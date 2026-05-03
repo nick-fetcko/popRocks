@@ -536,7 +536,9 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 
 		vao->Bind();
 		eab->Bind();
-		eab->DrawElements(GL_TRIANGLES);
+		context.Blend(miniPlayer && alpha > 0.0f, [&] {
+			eab->DrawElements(GL_TRIANGLES);
+		});
 		eab->Unbind();
 		vao->Unbind();
 
