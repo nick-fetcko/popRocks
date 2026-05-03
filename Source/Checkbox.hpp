@@ -40,7 +40,7 @@ public:
 		square.SetWidth(width);
 		check.SetWidth(width);
 		outline.SetWidth(outlineWidth);
-		checkOutline.SetWidth(outlineWidth);
+		checkOutline.SetWidth(outlineWidth / 1.5);
 
 		size = { radius / 4.0f + outlineWidth, radius / 4.0f + outlineWidth };
 
@@ -65,6 +65,13 @@ public:
 		};
 
 		check.SetPoints<Polyline::Join::Miter>(checkPoints.data(), checkPoints.size());
+
+		checkPoints = {
+			{ -radius / 6.0f,           0.0f - outlineWidth / 6 },
+			{           0.0f,  radius / 6.0f - outlineWidth / 6 },
+			{  radius / 6.0f, -radius / 6.0f - outlineWidth / 6 }
+		};
+		
 		checkOutline.SetPoints<Polyline::Join::Miter>(checkPoints.data(), checkPoints.size());
 	}
 
