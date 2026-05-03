@@ -2,6 +2,8 @@
 
 #include "CApp.h"
 
+float ScrollingText::bleedEdgeRatio = 1.0f;
+
 void ScrollingText::OnResize(int windowWidth, int windowHeight) {
 	this->windowHeight = windowHeight;
 }
@@ -24,7 +26,7 @@ void ScrollingText::OnLoop(int x, int y, const Delta & time) {
 
 		// FIXME: OpenGL is cartesian, Vulkan is not
 		glScissor(
-			x - BleedEdge,
+			x - BleedEdge * bleedEdgeRatio,
 #if !VULKAN
 			windowHeight -
 #endif
@@ -33,7 +35,7 @@ void ScrollingText::OnLoop(int x, int y, const Delta & time) {
 			- bounds.height / 2 - font->GetOutlineRadius() - bounds.renderedHeight / 2
 #endif
 			,
-			maxWidth + BleedEdge * 2,
+			maxWidth + BleedEdge * 2 * bleedEdgeRatio,
 			bounds.height
 		);
 	}
@@ -93,6 +95,10 @@ void ScrollingText::SetFont(OpenGLFont *font) {
 		font->AddSizeChangedListener(this);
 
 	SetText(text, true);
+}
+
+void ScrollingText::SetBleedEdgeRatio(float ratio) {
+	bleedEdgeRatio = ratio;
 }
 
 // In pixels-per-second

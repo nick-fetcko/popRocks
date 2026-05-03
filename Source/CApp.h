@@ -264,6 +264,7 @@ private:
 	Interop::InitArgs GetInteropArgs();
 
 	inline void SetRadius(float radius);
+	inline void UpdateBleedEdge(float radius);
 
 	inline void UpdateMiniPlayer();
 

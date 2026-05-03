@@ -551,6 +551,7 @@ Interop::InitArgs CApp::GetInteropArgs() {
 
 void CApp::UpdateMiniPlayer() {
 	if (miniPlayer) {
+		UpdateBleedEdge(albumArt.GetRadius(miniPlayer));
 		if (const auto pos = platform->SetWindowPos(
 			Settings::settings.GetMiniPlayerX(),
 			Settings::settings.GetMiniPlayerY(),
@@ -653,6 +654,18 @@ void CApp::SetMiniPlayer(bool miniPlayer, bool inLoop) {
 		SDL_ShowCursor();
 }
 
+inline void CApp::UpdateBleedEdge(float radius) {
+	const auto ratio = (radius / AlbumArt::BaseRadius);
+	ScrollingText::SetBleedEdgeRatio(ratio);
+	const auto bleedEdge = ScrollingText::BleedEdge * ratio;
+	LogDebug("Setting bleed edge to ", bleedEdge, " pixels");
+
+	// Update our scrolling text's bleed edges relative to the radius
+	context->With("scrolling"_hash, [bleedEdge](Context::Shader &shader) {
+		shader.program.Uniform1i("bleedEdge"_hash, bleedEdge);
+	});
+}
+
 inline void CApp::SetRadius(float radius) {
 	albumArt.SetRadius(radius, miniPlayer);
 
@@ -661,10 +674,7 @@ inline void CApp::SetRadius(float radius) {
 
 	controls.OnRadiusChanged(*context, miniPlayer);
 
-	// Update our scrolling text's bleed edges relative to the radius
-	context->With("scrolling"_hash, [this, radius](Context::Shader &shader) {
-		shader.program.Uniform1i("bleedEdge"_hash, ScrollingText::BleedEdge * (radius / AlbumArt::BaseRadius));
-	});
+	UpdateBleedEdge(radius);
 }
 
 void CApp::ResetWindow() {

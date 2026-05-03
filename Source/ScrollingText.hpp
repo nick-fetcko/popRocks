@@ -27,6 +27,8 @@ public:
 
 	void SetFont(OpenGLFont *font) override;
 
+	static void SetBleedEdgeRatio(float ratio);
+
 	// In pixels-per-second
 	// Default: 20
 	void SetSpeed(float speed);
@@ -55,4 +57,6 @@ private:
 	std::optional<std::chrono::system_clock::time_point> pauseTimer = std::nullopt;
 
 	int windowHeight = 0;
+
+	static float bleedEdgeRatio;
 };
