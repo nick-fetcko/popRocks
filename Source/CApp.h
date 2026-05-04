@@ -339,7 +339,7 @@ private:
 
 	// This config gives the "original", less normalized look
 	DynamicGain<float> dynamicGain { 
-		0.001f, 0.0000001f, 0.0f, 0.0f, false, true, true
+		0.001f, 0.0000001f, 0.0f, 0.05f, false, true, true
 	};
 
 	double timeSinceLastColorChange = 0.0;

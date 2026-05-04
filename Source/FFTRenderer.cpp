@@ -142,10 +142,10 @@ void FFTRenderer::OnLoop(
 
 		if (resetGain) {
 			if (dynamicGain->adjustMin)
-				min[i] = rawValue;
+				min[i] = dynamicGain->minReset;
 
 			if (dynamicGain->adjustMax)
-				max[i] = rawValue;
+				max[i] = dynamicGain->maxReset;
 		}
 
 		if (dynamicGain->adjustMin) {
