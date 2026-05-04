@@ -222,6 +222,11 @@ public:
 
 	void OnBlackChanged(const float &black) override;
 
+	void SetSourceFactor(GLenum factor) { this->sourceFactor = factor; }
+	void SetDestFactor(GLenum factor) { this->destFactor = factor; }
+	void SetSourceAlphaFactor(GLenum factor) { this->sourceAlphaFactor = factor; }
+	void SetDestAlphaFactor(GLenum factor) { this->destAlphaFactor = factor; }
+
 private:
 	void AddCommands();
 
@@ -420,6 +425,8 @@ private:
 
 	GLenum sourceFactor = Settings::settings.GetSourceFactor();
 	GLenum destFactor = Settings::settings.GetDestFactor();
+	GLenum sourceAlphaFactor = Settings::settings.GetSourceAlphaFactor();
+	GLenum destAlphaFactor = Settings::settings.GetDestAlphaFactor();
 
 	float uiGamma = Settings::settings.GetUiGamma();
 	float uiContrast = Settings::settings.GetUiContrast();

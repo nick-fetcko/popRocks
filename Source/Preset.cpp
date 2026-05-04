@@ -181,6 +181,15 @@ const Node &operator>>(const Node &node, Preset &preset) {
 		node["sourceFactor"]->get(preset.sourceFactor);
 	if (node.has("destFactor"))
 		node["destFactor"]->get(preset.destFactor);
+	if (node.has("sourceAlphaFactor"))
+		node["sourceAlphaFactor"]->get(preset.sourceAlphaFactor);
+	else
+		preset.sourceAlphaFactor = preset.sourceFactor;
+	if (node.has("destAlphaFactor"))
+		node["destAlphaFactor"]->get(preset.destAlphaFactor);
+	else
+		preset.destAlphaFactor = preset.destFactor;
+
 	if (node.has("blurIntensity"))
 		node["blurIntensity"]->get(preset.blurIntensity);
 	if (node.has("blurOpacity"))

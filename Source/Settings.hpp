@@ -299,6 +299,12 @@ public:
 	const GLenum &GetDestFactor() const { return destFactor; }
 	void SetDestFactor(GLenum destFactor, bool delayed = false);
 
+	const GLenum &GetSourceAlphaFactor() const { return sourceFactor; }
+	void SetSourceAlphaFactor(GLenum sourceAlphaFactor, bool delayed = false);
+
+	const GLenum &GetDestAlphaFactor() const { return destAlphaFactor; }
+	void SetDestAlphaFactor(GLenum destAlphaFactor, bool delayed = false);
+
 	const std::string &GetLut() const { return lut; }
 	void SetLut(const std::string &lut, bool delayed = false);
 
@@ -489,6 +495,8 @@ private:
 
 	GLenum sourceFactor = GL_ONE;
 	GLenum destFactor = GL_ZERO;
+	GLenum sourceAlphaFactor = GL_ONE;
+	GLenum destAlphaFactor = GL_ZERO;
 
 	std::string lut = "BT709_to_HLG.cube";
 

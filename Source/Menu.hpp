@@ -420,7 +420,7 @@ public:
 			}
 
 			sourceFactor = Settings::settings.GetSourceFactor();
-			if (ImGui::BeginMenu("Blending source factor")) {
+			if (ImGui::BeginMenu("Blending source factor (color)")) {
 				for (const auto &[factor, name] : Settings::BlendModes) {
 					bool selected = sourceFactor == factor;
 
@@ -432,14 +432,40 @@ public:
 				ImGui::EndMenu();
 			}
 
+			sourceAlphaFactor = Settings::settings.GetSourceAlphaFactor();
+			if (ImGui::BeginMenu("Blending source factor (alpha)")) {
+				for (const auto &[factor, name] : Settings::BlendModes) {
+					bool selected = sourceAlphaFactor == factor;
+
+					if (ImGui::MenuItem(name.c_str(), nullptr, &selected)) {
+						if (onSourceAlphaFactorChanged)
+							onSourceAlphaFactorChanged(factor);
+					}
+				}
+				ImGui::EndMenu();
+			}
+
 			destFactor = Settings::settings.GetDestFactor();
-			if (ImGui::BeginMenu("Blending destination factor")) {
+			if (ImGui::BeginMenu("Blending destination factor (color)")) {
 				for (const auto &[factor, name] : Settings::BlendModes) {
 					bool selected = destFactor == factor;
 
 					if (ImGui::MenuItem(name.c_str(), nullptr, &selected)) {
 						if (onDestFactorChanged)
 							onDestFactorChanged(factor);
+					}
+				}
+				ImGui::EndMenu();
+			}
+
+			destAlphaFactor = Settings::settings.GetDestAlphaFactor();
+			if (ImGui::BeginMenu("Blending destination factor (alpha)")) {
+				for (const auto &[factor, name] : Settings::BlendModes) {
+					bool selected = destAlphaFactor == factor;
+
+					if (ImGui::MenuItem(name.c_str(), nullptr, &selected)) {
+						if (onDestAlphaFactorChanged)
+							onDestAlphaFactorChanged(factor);
 					}
 				}
 				ImGui::EndMenu();
@@ -835,7 +861,9 @@ public:
 						saveRenderer ? Settings::settings.GetRenderer() : static_cast<std::optional<std::string>>(std::nullopt),
 						saveScale ? Settings::settings.GetScale() : static_cast<std::optional<float>>(std::nullopt),
 						fftLine ? Settings::settings.GetRendererOffset() : static_cast<std::optional<int>>(std::nullopt),
-						availableInMiniPlayer
+						availableInMiniPlayer,
+						sourceAlphaFactor,
+						destAlphaFactor
 					);
 
 					Preset::AddPreset(std::move(preset));
@@ -1400,6 +1428,8 @@ public:
 	void SetOnBlurChanged(std::function<void(bool)> f) { onBlurChanged = f; }
 	void SetOnSourceFactorChanged(std::function<void(GLenum)> f) { onSourceFactorChanged = f; }
 	void SetOnDestFactorChanged(std::function<void(GLenum)> f) { onDestFactorChanged = f; }
+	void SetOnSourceAlphaFactorChanged(std::function<void(GLenum)> f) { onSourceAlphaFactorChanged = f; }
+	void SetOnDestAlphaFactorChanged(std::function<void(GLenum)> f) { onDestAlphaFactorChanged = f; }
 	void SetOnRotatingChanged(std::function<void(bool)> f) { onRotatingChanged = f; }
 	void SetOnDetectBpmChanged(std::function<void(bool)> f) { onDetectBpmChanged = f; }
 	void SetOnHalveBpmChanged(std::function<void(bool)> f) { onHalveBpmChanged = f; }
@@ -1547,6 +1577,8 @@ private:
 	bool blur = Settings::settings.GetBlur();
 	GLenum sourceFactor = Settings::settings.GetSourceFactor();
 	GLenum destFactor = Settings::settings.GetDestFactor();
+	GLenum sourceAlphaFactor = Settings::settings.GetSourceAlphaFactor();
+	GLenum destAlphaFactor = Settings::settings.GetDestAlphaFactor();
 
 	float rpm = Settings::settings.GetRotationSpeed() / (360.0f / 60.0f);
 
@@ -1643,6 +1675,8 @@ private:
 	std::function<void(bool)> onBlurChanged;
 	std::function<void(GLenum)> onSourceFactorChanged;
 	std::function<void(GLenum)> onDestFactorChanged;
+	std::function<void(GLenum)> onSourceAlphaFactorChanged;
+	std::function<void(GLenum)> onDestAlphaFactorChanged;
 	std::function<void(bool)> onRotatingChanged;
 	std::function<void(bool)> onDetectBpmChanged;
 	std::function<void(bool)> onHalveBpmChanged;

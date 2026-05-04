@@ -55,7 +55,9 @@ public:
 		std::optional<std::string> renderer = std::nullopt,
 		std::optional<float> scale = std::nullopt,
 		std::optional<int> rendererOffset = std::nullopt,
-		bool availableInMiniPlayer = false
+		bool availableInMiniPlayer = false,
+		std::optional<GLenum> sourceAlphaFactor = std::nullopt,
+		std::optional<GLenum> destAlphaFactor = std::nullopt
 	) : name(name),
 		bufferSize(bufferSize),
 		fftSize(fftSize),
@@ -85,7 +87,15 @@ public:
 		scale(scale),
 		rendererOffset(rendererOffset),
 		availableInMiniPlayer(availableInMiniPlayer) {
+		if (sourceAlphaFactor)
+			this->sourceAlphaFactor = *sourceAlphaFactor;
+		else
+			this->sourceAlphaFactor = sourceFactor;
 
+		if (destAlphaFactor)
+			this->destAlphaFactor = *destAlphaFactor;
+		else
+			this->destAlphaFactor = destFactor;
 	}
 
 	static Preset Random();
@@ -108,6 +118,8 @@ public:
 	const std::optional<bool> &GetBlur() const { return blur; }
 	const GLenum &GetSourceFactor() const { return sourceFactor; }
 	const GLenum &GetDestFactor() const { return destFactor; }
+	const GLenum &GetSourceAlphaFactor() const { return sourceAlphaFactor; }
+	const GLenum &GetDestAlphaFactor() const { return destAlphaFactor; }
 	const float GetBlurIntensity() const { return blurIntensity; }
 	const float GetBlurOpacity() const { return blurOpacity; }
 	const std::string &GetEffect() const { return effect; }
@@ -156,6 +168,8 @@ private:
 	std::optional<bool> blur = std::nullopt;
 	GLenum sourceFactor = GL_ONE;
 	GLenum destFactor = GL_ZERO;
+	GLenum sourceAlphaFactor = GL_ONE;
+	GLenum destAlphaFactor = GL_ZERO;
 	float blurIntensity = 0.5;
 	float blurOpacity = 1.0f;
 

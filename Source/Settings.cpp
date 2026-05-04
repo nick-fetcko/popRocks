@@ -593,6 +593,20 @@ void Settings::SetDestFactor(GLenum destFactor, bool delayed) {
 	}
 }
 
+void Settings::SetSourceAlphaFactor(GLenum sourceAlphaFactor, bool delayed) {
+	if (this->sourceAlphaFactor != sourceAlphaFactor) {
+		this->sourceAlphaFactor = sourceAlphaFactor;
+		if (!delayed) Save();
+	}
+}
+
+void Settings::SetDestAlphaFactor(GLenum destAlphaFactor, bool delayed) {
+	if (this->destAlphaFactor != destAlphaFactor) {
+		this->destAlphaFactor = destAlphaFactor;
+		if (!delayed) Save();
+	}
+}
+
 void Settings::SetLut(const std::string &lut, bool delayed) {
 	if (this->lut != lut) {
 		this->lut = lut;
@@ -1009,6 +1023,10 @@ const Node &operator>>(const Node &node, Settings &settings) {
 		node["sourceFactor"]->get(settings.sourceFactor);
 	if (node.has("destFactor"))
 		node["destFactor"]->get(settings.destFactor);
+	if (node.has("sourceAlphaFactor"))
+		node["sourceAlphaFactor"]->get(settings.sourceAlphaFactor);
+	if (node.has("destAlphaFactor"))
+		node["destAlphaFactor"]->get(settings.destAlphaFactor);
 
 	if (node.has("lut"))
 		node["lut"]->get(settings.lut);
@@ -1138,6 +1156,8 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["rendererOffset"]->set(settings.rendererOffset);
 	node["sourceFactor"]->set(settings.sourceFactor);
 	node["destFactor"]->set(settings.destFactor);
+	node["sourceAlphaFactor"]->set(settings.sourceAlphaFactor);
+	node["destAlphaFactor"]->set(settings.destAlphaFactor);
 	node["lut"]->set(settings.lut);
 	node["albumArtGamma"]->set(settings.albumArtGamma);
 	node["albumArtContrast"]->set(settings.albumArtContrast);

@@ -903,6 +903,22 @@ void CApp::OnInit() {
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
+		menu.SetOnSourceAlphaFactorChanged([this](GLenum sourceAlphaFactor) {
+			Settings::settings.SetSourceAlphaFactor(sourceAlphaFactor);
+
+			this->sourceAlphaFactor = sourceAlphaFactor;
+
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
+		});
+		menu.SetOnDestAlphaFactorChanged([this](GLenum destAlphaFactor) {
+			Settings::settings.SetDestAlphaFactor(destAlphaFactor);
+
+			this->destAlphaFactor = destAlphaFactor;
+
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
+		});
 		menu.SetOnBlurIntensityChanged([this](float blurIntensity) {
 			SetBlurIntensity(blurIntensity);
 
@@ -1871,7 +1887,12 @@ void CApp::OnLoop(const Delta &time) {
 
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		glBlendFunc(sourceFactor, destFactor);
+		glBlendFuncSeparate(
+			sourceFactor,
+			destFactor,
+			sourceAlphaFactor,
+			destAlphaFactor
+		);
 		
 		context->Use("blur"_hash);
 		context->GetShaderProgram().Uniform1f(
@@ -1918,7 +1939,12 @@ void CApp::OnLoop(const Delta &time) {
 		if ((Settings::IsColorBlend(sourceFactor) || Settings::IsColorBlend(destFactor)) && HDR::Enabled)
 			context->GetShaderProgram().Uniform1i("expand"_hash, 1);
 
-		glBlendFunc(sourceFactor, destFactor);
+		glBlendFuncSeparate(
+			sourceFactor,
+			destFactor,
+			sourceAlphaFactor,
+			destAlphaFactor
+		);
 
 		context->LoadIdentity();
 		blurFbo->Unbind();
@@ -3212,6 +3238,10 @@ void CApp::LoadPreset(const Preset &preset) {
 	Settings::settings.SetSourceFactor(sourceFactor, true);
 	destFactor = preset.GetDestFactor();
 	Settings::settings.SetDestFactor(destFactor, true);
+	sourceAlphaFactor = preset.GetSourceAlphaFactor();
+	Settings::settings.SetSourceAlphaFactor(sourceAlphaFactor, true);
+	destAlphaFactor = preset.GetDestAlphaFactor();
+	Settings::settings.SetDestAlphaFactor(destAlphaFactor, true);
 	if (blur && *blur) {
 		SetBlurIntensity(preset.GetBlurIntensity());
 
