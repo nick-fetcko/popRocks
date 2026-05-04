@@ -658,7 +658,7 @@ inline void CApp::UpdateBleedEdge(float radius) {
 	const auto ratio = (radius / AlbumArt::BaseRadius);
 	ScrollingText::SetBleedEdgeRatio(ratio);
 	const auto bleedEdge = ScrollingText::BleedEdge * ratio;
-	LogDebug("Setting bleed edge to ", bleedEdge, " pixels");
+	LogInfo("Setting bleed edge to ", bleedEdge, " pixels");
 
 	// Update our scrolling text's bleed edges relative to the radius
 	context->With("scrolling"_hash, [bleedEdge](Context::Shader &shader) {
