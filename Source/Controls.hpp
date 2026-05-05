@@ -50,7 +50,7 @@ public:
 		CaptureCheckbox
 	};
 
-	Controls(AlbumArt *const albumArt);
+	Controls(AlbumArt *const albumArt, const bool &vulkan);
 	~Controls();
 
 	void OnInit(int windowWidth, int windowHeight, Context &context, float scale = 1.0f, GLuint defaultFramebuffer = 0, bool miniPlayer = false);

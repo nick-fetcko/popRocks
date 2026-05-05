@@ -46,7 +46,7 @@ int Platform::GetDefaultFramebuffer() {
 
 // OpenGL
 const bool Platform::GetOpenGlProperty() const {
-	return !static_cast<bool>(VULKAN);
+	return !app->GetVulkan();
 }
 
 const char *Platform::GetOpenGlContextError() { 
@@ -55,7 +55,7 @@ const char *Platform::GetOpenGlContextError() {
 
 // Vulkan
 const bool Platform::GetVulkanProperty() const {
-	return static_cast<bool>(VULKAN);
+	return app->GetVulkan();
 }
 
 // Exclusive mode

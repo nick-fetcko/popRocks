@@ -6,16 +6,22 @@
 #include "HDR.hpp"
 #include "Preset.hpp"
 
-Controls::Controls(AlbumArt *const albumArt) : 
+Controls::Controls(AlbumArt *const albumArt, const bool &vulkan) :
 	albumArt(albumArt),
-	playlist(albumArt),
-	presetList(albumArt),
+	playlist(albumArt, vulkan),
+	presetList(albumArt, vulkan),
 	play(albumArt),
 	pause(albumArt),
 	next(albumArt),
 	previous(albumArt),
 	captureCheckbox(albumArt),
-	FontRoot("KurintoSans") {
+	FontRoot("KurintoSans"),
+	artistText(vulkan),
+	artistOutline(vulkan),
+	albumText(vulkan),
+	albumOutline(vulkan),
+	presetText(vulkan),
+	presetOutline(vulkan) {
 	albumArt->AddBlackChangedListener(this);
 	Preset::AddChangeListener(this);
 }

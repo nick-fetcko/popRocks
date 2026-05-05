@@ -180,7 +180,7 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 					else if (event.key.key == SDLK_ESCAPE)
 						running = false;
 					else if (event.key.key == SDLK_V)
-						app.GetControls().GetVolume().ToggleVolumeControl();
+						app.SetVulkan(!app.GetVulkan());
 					else if (event.key.key >= SDLK_F1 && event.key.key <= SDLK_F12)
 						app.LoadPreset(event.key.key - SDLK_F1);
 					else if (event.key.key == SDLK_S)

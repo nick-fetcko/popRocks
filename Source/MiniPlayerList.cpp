@@ -3,7 +3,7 @@
 #include "Controls.hpp"
 #include "HDR.hpp"
 
-MiniPlayerList::MiniPlayerList(Direction direction, AlbumArt * const albumArt) : direction(direction), albumArt(albumArt) {
+MiniPlayerList::MiniPlayerList(Direction direction, AlbumArt * const albumArt, const bool &vulkan) : direction(direction), albumArt(albumArt), vulkan(vulkan) {
 	albumArt->AddColorChangeListener(this);
 }
 
@@ -45,13 +45,13 @@ void MiniPlayerList::SetAlpha(float alpha) {
 const OpenGLFont::Bounds &MiniPlayerList::AddItem(const std::string &text, std::optional<std::size_t> index, std::string altText) {
 	const auto &black = albumArt->GetBlackColor();
 
-	ScrollingText item;
+	ScrollingText item(vulkan);
 	item.OnInit(font, context);
 	item.SetText(text);
 	item.SetAltText(altText);
 	item.SetMaxWidth(miniPlayer ? maxWidth : windowWidth);
 
-	ScrollingText outline;
+	ScrollingText outline(vulkan);
 	outline.OnInit(outlineFont, context);
 	outline.SetColor({ black, black, black });
 	outline.SetText(text);

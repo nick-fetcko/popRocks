@@ -53,6 +53,10 @@ public:
 	virtual void OpenOpenGlWindow(SDL_PropertiesID &props) = 0;
 	virtual bool LoadGlad() = 0;
 
+	// Interops
+	virtual void DestroyInterop() = 0;
+	virtual void CreateInterop() = 0;
+
 	// Device listening
 	virtual void Listen(bool loopback = false) = 0;
 	virtual void StopListening() = 0;

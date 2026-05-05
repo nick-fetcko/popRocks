@@ -41,6 +41,10 @@ public:
 	bool CreateOpenGlContext() override;
 	void OpenOpenGlWindow(SDL_PropertiesID &props) override;
 
+	// Interops
+	void DestroyInterop() override;
+	void CreateInterop() override;
+
 	// Device listening
 	void Listen(bool loopback) override;
 	void StopListening() override;

@@ -35,26 +35,27 @@ using namespace MathsCPP;
 // =====================================================
 CApp::CApp() : 
 	albumArt(&controls, context, platform), 
-	controls(&albumArt),
+	controls(&albumArt, vulkan),
 	close(&albumArt),
 	circleLine(12.0f), 
 	prng(
 		PRNGFactory<unsigned int>::Build(
 			Settings::settings.GetRngSource(), &streamHandle
 		)
-	),
-	platform(PlatformFactory::Build(
+	) {
+	platform = PlatformFactory::Build(
 #ifdef WIN32
-	"windows"
+		"windows"
 #elif defined(__ANDROID__)
-	"android"
+		"android"
 #elif defined(USING_FLATPAK)
-	"flatpak"
+		"flatpak"
 #else
-	"linux"
+		"linux"
 #endif
-	, this
-)) {
+		, this
+	);
+
 	renderer = RendererFactory::Build(
 		Settings::settings.GetRenderer(),
 		&dynamicGain,
@@ -496,6 +497,43 @@ void CApp::UpdateVsync() {
 	// using an interop
 	if (!Settings::settings.GetVsync() || HDR::Enabled)
 		SDL_GL_SetSwapInterval(0);
+}
+
+void CApp::SetVulkan(bool vulkan) {
+	if (this->vulkan == vulkan) return;
+
+	LogDebug("Toggling Vulkan interop ", vulkan ? "ON" : "OFF");
+
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplSDL3_Shutdown();
+
+	platform->DestroyInterop();
+
+	SDL_DestroyWindow(sdlWindow);
+
+	if (openGlWindow) {
+		SDL_DestroyWindow(openGlWindow);
+		openGlWindow = nullptr;
+	}
+
+	this->vulkan = vulkan;
+	Settings::settings.SetVulkan(vulkan);
+
+	platform->CreateInterop();
+
+	auto props = CreateSdlWindow();
+
+	if (vulkan)
+		platform->OpenOpenGlWindow(props);
+
+	SDL_GL_MakeCurrent(vulkan ? openGlWindow : sdlWindow, openGlContext);
+	platform->OnInit(GetInteropArgs(), *context);
+
+	ImGui_ImplSDL3_InitForOpenGL(sdlWindow, openGlContext);
+	ImGui_ImplOpenGL3_Init();
+
+	// Force a resize to update projection matrix
+	OnResize(windowWidth, windowHeight, scale, true);
 }
 
 inline SDL_PropertiesID CApp::CreateSdlWindow() {
@@ -2168,13 +2206,13 @@ inline void CApp::SwapBuffers(const Delta &time) {
 			});
 		} else context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, (menu.IsPresetPopupVisible() ? 1.0f : 0.90f) * controls.GetAlpha());
 
-#if VULKAN
-		context->With("blit"_hash, [this](Context::Shader &shader) {
-			shader.program.Uniform1f("yOffset"_hash, -windowHeight);
+		if (vulkan) {
+			context->With("blit"_hash, [this](Context::Shader &shader) {
+				shader.program.Uniform1f("yOffset"_hash, -windowHeight);
 
-			if (platform->IsBgr()) shader.program.Uniform1i("bgr"_hash, 0);
-		});
-#endif
+				if (platform->IsBgr()) shader.program.Uniform1i("bgr"_hash, 0);
+				});
+		}
 
 		uiFbo->Draw(0, 0, *context);
 
@@ -2192,35 +2230,35 @@ inline void CApp::SwapBuffers(const Delta &time) {
 #endif
 	}
 
-#if VULKAN
-	context->With("blit"_hash, [this](Context::Shader &shader) {
-		shader.program.Uniform1f("yOffset"_hash, 0.0f);
-		
-		if (platform->IsBgr()) shader.program.Uniform1i("bgr"_hash, 1);
-	});
+	if (vulkan) {
+		context->With("blit"_hash, [this](Context::Shader &shader) {
+			shader.program.Uniform1f("yOffset"_hash, 0.0f);
 
-	// Wait for the new FBO to be generated before
-	// swapping to it
-	if (!platform->GetInterop()->SwapBuffers()) {
-		if (blurFbo)
-			blurFbo->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
-		if (lastFrame)
-			lastFrame->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
-		if (uiFbo)
-			uiFbo->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
+			if (platform->IsBgr()) shader.program.Uniform1i("bgr"_hash, 1);
+			});
 
-		if (auto font = controls.GetFont())
-			font->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
-		if (auto boldFont = controls.GetBoldFont())
-			boldFont->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
-		if (auto outlineFont = controls.GetOutlineFont())
-			outlineFont->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
-		if (auto boldOutlineFont = controls.GetBoldOutlineFont())
-			boldOutlineFont->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
+		// Wait for the new FBO to be generated before
+		// swapping to it
+		if (!platform->GetInterop()->SwapBuffers()) {
+			if (blurFbo)
+				blurFbo->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
+			if (lastFrame)
+				lastFrame->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
+			if (uiFbo)
+				uiFbo->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
+
+			if (auto font = controls.GetFont())
+				font->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
+			if (auto boldFont = controls.GetBoldFont())
+				boldFont->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
+			if (auto outlineFont = controls.GetOutlineFont())
+				outlineFont->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
+			if (auto boldOutlineFont = controls.GetBoldOutlineFont())
+				boldOutlineFont->SetDefaultFramebuffer(platform->GetInterop()->GetFramebuffer());
+		}
+	} else {
+		platform->SwapBuffers();
 	}
-#else
-	platform->SwapBuffers();
-#endif
 
 	frameStart = std::chrono::steady_clock::now() - std::chrono::duration_cast<std::chrono::microseconds>(over);
 }
@@ -3015,17 +3053,17 @@ bool CApp::OnMouseDown(const Vector2i &mousePos) {
 			//
 			//   Further reading:
 			//      https://stackoverflow.com/questions/53000291/how-to-smooth-ugly-jitter-flicker-jumping-when-resizing-windows-especially-drag
-#if VULKAN
-			if (!HDR::Enabled) {
-				dynamic_cast<Vulkan *>(platform->GetInterop())->SetFormat(
-					VK_FORMAT_B8G8R8A8_UNORM,
-					VK_COLORSPACE_SRGB_NONLINEAR_KHR,
-					GL_RGBA8
-				);
+			if (vulkan) {
+				if (!HDR::Enabled) {
+					dynamic_cast<Vulkan *>(platform->GetInterop())->SetFormat(
+						VK_FORMAT_B8G8R8A8_UNORM,
+						VK_COLORSPACE_SRGB_NONLINEAR_KHR,
+						GL_RGBA8
+					);
 
-				platform->SetBgr(true, *context);
+					platform->SetBgr(true, *context);
+				}
 			}
-#endif
 
 			platform->SetChromaKey(true);
 		}
@@ -3046,17 +3084,17 @@ void CApp::OnMouseUp(const Vector2i &mousePos) {
 
 		SDL_CaptureMouse(false);
 
-#if VULKAN
-		if (!HDR::Enabled) {
-			dynamic_cast<Vulkan *>(platform->GetInterop())->SetFormat(
-				VK_FORMAT_R8G8B8A8_UNORM,
-				VK_COLORSPACE_SRGB_NONLINEAR_KHR,
-				GL_RGBA8
-			);
+		if (vulkan) {
+			if (!HDR::Enabled) {
+				dynamic_cast<Vulkan *>(platform->GetInterop())->SetFormat(
+					VK_FORMAT_R8G8B8A8_UNORM,
+					VK_COLORSPACE_SRGB_NONLINEAR_KHR,
+					GL_RGBA8
+				);
 
-			platform->SetBgr(false, *context);
+				platform->SetBgr(false, *context);
+			}
 		}
-#endif
 
 		Settings::settings.SetMiniPlayerX(windowX, true);
 		Settings::settings.SetMiniPlayerY(windowY, true);

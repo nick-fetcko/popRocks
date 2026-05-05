@@ -4,7 +4,7 @@
 
 class PresetList : public MiniPlayerList {
 public:
-	PresetList(AlbumArt *const albumArt) : MiniPlayerList(Direction::Up, albumArt) {
+	PresetList(AlbumArt *const albumArt, const bool &vulkan) : MiniPlayerList(Direction::Up, albumArt, vulkan) {
 		albumArt->AddBlackChangedListener(this);
 	}
 

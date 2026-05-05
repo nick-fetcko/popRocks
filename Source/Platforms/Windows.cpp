@@ -40,11 +40,7 @@ bool Windows::registered = Register();
 // =================== Implementation ==================
 // =====================================================
 Windows::Windows(CApp *app) : Desktop(app), dxgi(false) {
-#if VULKAN
-	interop = new Vulkan();
-#else
-	interop = &dxgi;
-#endif
+	CreateInterop();
 
 	UpdateKeyboardHookMode();
 }
@@ -68,9 +64,8 @@ void Windows::OnInit(Interop::InitArgs args, Context &context) {
 
 	HookKeyboard();
 
-#if VULKAN
-	Desktop::OnInit(args, context);
-#endif
+	if (app->GetVulkan())
+		Desktop::OnInit(args, context);
 }
 
 void Windows::OnDestroy() {
@@ -79,12 +74,7 @@ void Windows::OnDestroy() {
 		keyboardHook = nullptr;
 	}
 
-#if !VULKAN
-	if (HDR::Enabled)
-		dxgi.OnDestroy();
-#endif
-	if (interop != &dxgi)
-		interop->OnDestroy();
+	DestroyInterop();
 
 	if (listening) {
 		audioSink->done = true;
@@ -98,35 +88,35 @@ void Windows::OnDestroy() {
 
 void Windows::OnResize(int windowWidth, int windowHeight) {
 	if (auto &context = app->GetContext()) {
-#if !VULKAN
+		if (!app->GetVulkan()) {
 #ifdef WIN32
-		if (HDR::Enabled) {
-			dxgi.OnResize(windowWidth, windowHeight);
-			context->SetIdentity(glm::ortho(0.0f, static_cast<float>(windowWidth), 0.0f, static_cast<float>(windowHeight)));
+			if (HDR::Enabled) {
+				dxgi.OnResize(windowWidth, windowHeight);
+				context->SetIdentity(glm::ortho(0.0f, static_cast<float>(windowWidth), 0.0f, static_cast<float>(windowHeight)));
+			} else {
+#endif
+				context->SetIdentity(glm::ortho(0.0f, static_cast<float>(windowWidth), static_cast<float>(windowHeight), 0.0f));
+				context->Apply();
+#ifdef WIN32
+			}
+#endif
 		} else {
-#endif
-			context->SetIdentity(glm::ortho(0.0f, static_cast<float>(windowWidth), static_cast<float>(windowHeight), 0.0f));
-			context->Apply();
-#ifdef WIN32
+			Desktop::OnResize(windowWidth, windowHeight);
 		}
-#endif
-#else
-		Desktop::OnResize(windowWidth, windowHeight);
-#endif
 	}
 }
 
 std::optional<bool> Windows::OnLoop() {
-	if (!VULKAN && HDR::Enabled)
+	if (!app->GetVulkan() && HDR::Enabled)
 		return dxgi.OnLoop();
-	else if (VULKAN)
+	else if (app->GetVulkan())
 		return interop->OnLoop();
 
 	return true;
 }
 
 void Windows::SwapBuffers() {
-	if (!VULKAN && HDR::Enabled)
+	if (!app->GetVulkan() && HDR::Enabled)
 		dxgi.SwapBuffers();
 	else
 		SDL_GL_SwapWindow(app->GetSdlWindow());
@@ -152,20 +142,40 @@ void Windows::HookKeyboard() {
 // -----------------------------------------------------
 bool Windows::CreateOpenGlContext() {
 	app->SetOpenGlContext(SDL_GL_CreateContext(
-#if VULKAN
-		app->GetOpenGlWindow()
-#else
-		app->GetSdlWindow()
-#endif
+		app->GetVulkan() ? 
+			app->GetOpenGlWindow() :
+			app->GetSdlWindow()
 	));
 
 	return app->GetOpenGlContext() != nullptr;
 }
 
 void Windows::OpenOpenGlWindow(SDL_PropertiesID &props) {
-#if VULKAN
-	Desktop::OpenOpenGlWindow(props);
-#endif
+	if (app->GetVulkan())
+		Desktop::OpenOpenGlWindow(props);
+}
+
+// -----------------------------------------------------
+// --------------------- Interops ----------------------
+// -----------------------------------------------------
+void Windows::DestroyInterop() {
+	if (!app->GetVulkan()) {
+		if (HDR::Enabled)
+			dxgi.OnDestroy();
+	}
+
+	if (interop != &dxgi) {
+		interop->OnDestroy();
+		delete interop;
+		interop = nullptr;
+	}
+}
+
+void Windows::CreateInterop() {
+	if (app->GetVulkan())
+		interop = new Vulkan();
+	else
+		interop = &dxgi;
 }
 
 // -----------------------------------------------------
@@ -354,61 +364,61 @@ void Windows::SetHdr(bool enabled, void *hwnd, int width, int height) {
 	hwnd = SDL_GetPointerProperty(SDL_GetWindowProperties(app->GetSdlWindow()), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
 
 	if (!enabled && HDR::Enabled) {
-#if VULKAN
-		Desktop::SetHdr(enabled, hwnd, width, height);
-#else
-		if (auto &blurFbo = app->GetBlurFbo())
-			blurFbo->SetDefaultFramebuffer(0);
-		if (auto &lastFrame = app->GetLastFrame())
-			lastFrame->SetDefaultFramebuffer(0);
-		if (auto &uiFbo = app->GetUiFbo())
-			uiFbo->SetDefaultFramebuffer(0);
+		if (app->GetVulkan())
+			Desktop::SetHdr(enabled, hwnd, width, height);
+		else {
+			if (auto &blurFbo = app->GetBlurFbo())
+				blurFbo->SetDefaultFramebuffer(0);
+			if (auto &lastFrame = app->GetLastFrame())
+				lastFrame->SetDefaultFramebuffer(0);
+			if (auto &uiFbo = app->GetUiFbo())
+				uiFbo->SetDefaultFramebuffer(0);
 
-		if (auto font = app->GetControls().GetFont())
-			font->SetDefaultFramebuffer(0);
-		if (auto boldFont = app->GetControls().GetBoldFont())
-			boldFont->SetDefaultFramebuffer(0);
-		if (auto outlineFont = app->GetControls().GetOutlineFont())
-			outlineFont->SetDefaultFramebuffer(0);
-		if (auto boldOutlineFont = app->GetControls().GetBoldOutlineFont())
-			boldOutlineFont->SetDefaultFramebuffer(0);
+			if (auto font = app->GetControls().GetFont())
+				font->SetDefaultFramebuffer(0);
+			if (auto boldFont = app->GetControls().GetBoldFont())
+				boldFont->SetDefaultFramebuffer(0);
+			if (auto outlineFont = app->GetControls().GetOutlineFont())
+				outlineFont->SetDefaultFramebuffer(0);
+			if (auto boldOutlineFont = app->GetControls().GetBoldOutlineFont())
+				boldOutlineFont->SetDefaultFramebuffer(0);
 
-		if (auto &context = app->GetContext()) {
-			context->SetIdentity(glm::ortho(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f));
-			context->Apply();
+			if (auto &context = app->GetContext()) {
+				context->SetIdentity(glm::ortho(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f));
+				context->Apply();
+			}
+
+			ImGui_ImplOpenGL3_Shutdown();
+			ImGui_ImplSDL3_Shutdown();
+
+			// FIXME: It appears that calling swapChain->Present(1, 0)
+			//        prevents us from restoring the window's original
+			//        OpenGL context.
+			//
+			//        Destroying the window is only a workaround until
+			//        a better solution is found.
+			SDL_DestroyWindow(app->GetSdlWindow());
+
+			SDL_PropertiesID props = SDL_CreateProperties();
+
+			SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "popRocks");
+			SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, app->GetWindowSize().first);
+			SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, app->GetWindowSize().second);
+			SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, Settings::settings.GetWindowX());
+			SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, Settings::settings.GetWindowY());
+			SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_OPENGL_BOOLEAN, true);
+			SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
+
+			app->SetSdlWindow(SDL_CreateWindowWithProperties(
+				props
+			));
+
+			SDL_GL_MakeCurrent(app->GetSdlWindow(), app->GetOpenGlContext());
+
+			// Setup Platform/Renderer backends
+			ImGui_ImplSDL3_InitForOpenGL(app->GetSdlWindow(), app->GetOpenGlContext());
+			ImGui_ImplOpenGL3_Init();
 		}
-
-		ImGui_ImplOpenGL3_Shutdown();
-		ImGui_ImplSDL3_Shutdown();
-
-		// FIXME: It appears that calling swapChain->Present(1, 0)
-		//        prevents us from restoring the window's original
-		//        OpenGL context.
-		//
-		//        Destroying the window is only a workaround until
-		//        a better solution is found.
-		SDL_DestroyWindow(app->GetSdlWindow());
-
-		SDL_PropertiesID props = SDL_CreateProperties();
-
-		SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "popRocks");
-		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, app->GetWindowSize().first);
-		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, app->GetWindowSize().second);
-		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, Settings::settings.GetWindowX());
-		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, Settings::settings.GetWindowY());
-		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_OPENGL_BOOLEAN, true);
-		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
-
-		app->SetSdlWindow(SDL_CreateWindowWithProperties(
-			props
-		));
-
-		SDL_GL_MakeCurrent(app->GetSdlWindow(), app->GetOpenGlContext());
-
-		// Setup Platform/Renderer backends
-		ImGui_ImplSDL3_InitForOpenGL(app->GetSdlWindow(), app->GetOpenGlContext());
-		ImGui_ImplOpenGL3_Init();
-#endif
 	} else if (enabled && !HDR::Enabled) {	
 		int width = 0, height = 0;
 		SDL_GetWindowSize(app->GetSdlWindow(), &width, &height);
@@ -419,18 +429,18 @@ void Windows::SetHdr(bool enabled, void *hwnd, int width, int height) {
 
 		app->SetUiFbo(std::make_unique<MultisampledFramebufferObject>(app->GetWindowSize().first, app->GetWindowSize().second, enabled ? GL_RGBA16F : GL_RGBA, IsUiInverted()));
 
-#if VULKAN
-		GetInterop()->SetHdr(enabled,
+		if (app->GetVulkan()) {
+			GetInterop()->SetHdr(enabled,
 #ifdef WIN32
-			hwnd,
-			width,
-			height
+				hwnd,
+				width,
+				height
 #endif
-		);
-#else
-		dxgi.OnCreate(reinterpret_cast<HWND>(hwnd), width, height);
-		dxgi.OnResize(width, height);
-#endif
+			);
+		} else {
+			dxgi.OnCreate(reinterpret_cast<HWND>(hwnd), width, height);
+			dxgi.OnResize(width, height);
+		}
 
 		Desktop::SetHdr(enabled, hwnd, width, height);
 	}
@@ -532,31 +542,23 @@ void Windows::LoadBassPlugins() {
 // -----------------------------------------------------
 void Windows::ToggleFullscreen() {
 	// It appears Windows captures Alt-Enter when using DXGI
-#if !VULKAN
-	return;
+	if (!app->GetVulkan()) {
+		return;
 
-	BOOL fullscreen = FALSE;
-	if (HDR::Enabled)
-		dxgi.GetSwapChain()->GetFullscreenState(&fullscreen, NULL);
-#endif
-
-	if (SDL_GetWindowFlags(app->GetSdlWindow()) & SDL_WINDOW_FULLSCREEN
-#if !VULKAN
-		|| fullscreen
-#endif
-		) {
-#if !VULKAN
+		BOOL fullscreen = FALSE;
 		if (HDR::Enabled)
+			dxgi.GetSwapChain()->GetFullscreenState(&fullscreen, NULL);
+	}
+
+	if (SDL_GetWindowFlags(app->GetSdlWindow()) & SDL_WINDOW_FULLSCREEN) {
+		if (!app->GetVulkan() && HDR::Enabled)
 			dxgi.GetSwapChain()->SetFullscreenState(FALSE, NULL);
 		else
-#endif
 			SDL_SetWindowFullscreen(app->GetSdlWindow(), 0);
 	} else {
-#if !VULKAN
-		if (HDR::Enabled)
+		if (!app->GetVulkan() && HDR::Enabled)
 			dxgi.GetSwapChain()->SetFullscreenState(TRUE, NULL);
 		else
-#endif
 			SDL_SetWindowFullscreen(app->GetSdlWindow(), SDL_WINDOW_FULLSCREEN);
 	}
 }
@@ -725,11 +727,9 @@ int Windows::GetAdapterIndex() {
 
 	if (!SDL_GetDXGIOutputInfo(
 		SDL_GetDisplayForWindow(
-#if VULKAN
-			app->GetOpenGlWindow()
-#else
-			app->GetSdlWindow()
-#endif
+			app->GetVulkan() ? 
+				app->GetOpenGlWindow() :
+				app->GetSdlWindow()
 		),
 		&adapterIndex, &outputIndex)) {
 		LogError(
@@ -742,7 +742,7 @@ int Windows::GetAdapterIndex() {
 }
 
 int Windows::GetDefaultFramebuffer() {
-	return (HDR::Enabled || VULKAN) ? GetInterop()->GetFramebuffer() : 0;
+	return (HDR::Enabled || app->GetVulkan()) ? GetInterop()->GetFramebuffer() : 0;
 }
 
 // -----------------------------------------------------

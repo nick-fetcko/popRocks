@@ -222,6 +222,9 @@ public:
 
 	void OnBlackChanged(const float &black) override;
 
+	void SetVulkan(bool vulkan);
+	const bool &GetVulkan() const { return vulkan; }
+
 	void SetSourceFactor(GLenum factor) { this->sourceFactor = factor; }
 	void SetDestFactor(GLenum factor) { this->destFactor = factor; }
 	void SetSourceAlphaFactor(GLenum factor) { this->sourceAlphaFactor = factor; }
@@ -463,4 +466,6 @@ private:
 	double mouseCaptureAccum = 0.0;
 
 	bool updateRenderer = false;
+
+	bool vulkan = Settings::settings.GetVulkan();
 };

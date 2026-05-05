@@ -4,11 +4,15 @@
 
 float ScrollingText::bleedEdgeRatio = 1.0f;
 
+ScrollingText::ScrollingText(const bool &vulkan) : vulkan(vulkan) {
+
+}
+
 void ScrollingText::OnResize(int windowWidth, int windowHeight) {
 	this->windowHeight = windowHeight;
 }
 
-void ScrollingText::OnLoop(int x, int y, const Delta & time) {
+void ScrollingText::OnLoop(int x, int y, const Delta &time) {
 	if (widthDelta > 0) {
 		// Center horizontally
 		x += (bounds.width - maxWidth) / 2 - font->GetOutlineRadius();
@@ -27,14 +31,7 @@ void ScrollingText::OnLoop(int x, int y, const Delta & time) {
 		// FIXME: OpenGL is cartesian, Vulkan is not
 		glScissor(
 			x - BleedEdge * bleedEdgeRatio,
-#if !VULKAN
-			windowHeight -
-#endif
-			centeredY
-#if !VULKAN
-			- bounds.height / 2 - font->GetOutlineRadius() - bounds.renderedHeight / 2
-#endif
-			,
+			(vulkan ? centeredY : (windowHeight - centeredY - bounds.height / 2 - font->GetOutlineRadius() - bounds.renderedHeight / 2)),
 			maxWidth + BleedEdge * 2 * bleedEdgeRatio,
 			bounds.height
 		);

@@ -17,6 +17,8 @@ private:
 public:
 	constexpr static int BleedEdge = 20;
 
+	ScrollingText(const bool &vulkan);
+
 	void OnResize(int windowWidth, int windowHeight);
 
 	void OnLoop(int x, int y, const Delta &time);
@@ -59,4 +61,6 @@ private:
 	int windowHeight = 0;
 
 	static float bleedEdgeRatio;
+
+	const bool &vulkan;
 };

@@ -23,7 +23,7 @@ public:
 		Down
 	};
 
-	MiniPlayerList(Direction direction, AlbumArt * const albumArt);
+	MiniPlayerList(Direction direction, AlbumArt * const albumArt, const bool &vulkan);
 	virtual ~MiniPlayerList();
 
 	void OnInit(OpenGLFont *font, OpenGLFont *boldFont, OpenGLFont *outlineFont, OpenGLFont *boldOutlineFont, Context *context);
@@ -94,4 +94,6 @@ protected:
 	Fetcko::Polyline scrollBarOutline;
 
 	std::map<std::size_t, std::size_t> indices;
+
+	const bool &vulkan;
 };

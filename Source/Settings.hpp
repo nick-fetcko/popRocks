@@ -376,6 +376,9 @@ public:
 	const bool &GetCaptureKeyboardMediaKeys() const { return captureKeyboardMediaKeys; }
 	void SetCaptureKeyboardMediaKeys(bool captureKeyboardMediaKeys, bool delayed = false);
 
+	const bool &GetVulkan() const { return vulkan; }
+	void SetVulkan(bool vulkan, bool delayed = false);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -554,4 +557,6 @@ private:
 	Duration<Microseconds> hoverTime = 200ms;
 
 	bool captureKeyboardMediaKeys = false;
+
+	bool vulkan = false;
 };

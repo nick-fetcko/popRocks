@@ -31,7 +31,7 @@ public:
 		double startTime = 0.0;
 	};
 
-	Playlist(AlbumArt *const albumArt) : MiniPlayerList(Direction::Down, albumArt), albumArt(albumArt) {
+	Playlist(AlbumArt *const albumArt, const bool &vulkan) : MiniPlayerList(Direction::Down, albumArt, vulkan), albumArt(albumArt), currentTitle(vulkan), outline(vulkan) {
 		albumArt->AddBlackChangedListener(this);
 
 		const auto &black = albumArt->GetBlackColor();

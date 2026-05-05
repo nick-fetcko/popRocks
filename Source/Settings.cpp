@@ -768,6 +768,13 @@ void Settings::SetCaptureKeyboardMediaKeys(bool captureKeyboardMediaKeys, bool d
 	}
 }
 
+void Settings::SetVulkan(bool vulkan, bool delayed) {
+	if (this->vulkan != vulkan) {
+		this->vulkan = vulkan;
+		if (!delayed) Save();
+	}
+}
+
 void Settings::Save() {
 	if (auto path = Filesystem::GetPath(); !path.empty()) {
 		LogInfo("Saving settings...");
@@ -1082,6 +1089,9 @@ const Node &operator>>(const Node &node, Settings &settings) {
 
 	if (node.has("captureKeyboardMediaKeys"))
 		node["captureKeyboardMediaKeys"]->get(settings.captureKeyboardMediaKeys);
+
+	if (node.has("vulkan"))
+		node["vulkan"]->get(settings.vulkan);
 		
 	return node;
 }
@@ -1181,6 +1191,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["miniPlayerFontSize"]->set(settings.miniPlayerFontSize);
 	node["miniPlayerVisualizerRatio"]->set(settings.miniPlayerVisualizerRatio);
 	node["captureKeyboardMediaKeys"]->set(settings.captureKeyboardMediaKeys);
+	node["vulkan"]->set(settings.vulkan);
 
 	return node;
 }
