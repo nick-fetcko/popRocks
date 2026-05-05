@@ -523,6 +523,9 @@ void CApp::SetVulkan(bool vulkan) {
 
 	auto props = CreateSdlWindow();
 
+	if (miniPlayer)
+		platform->SetMiniPlayer(true, static_cast<uint8_t>(albumArt.GetChromaColor() * 0xFF));
+
 	if (vulkan)
 		platform->OpenOpenGlWindow(props);
 
