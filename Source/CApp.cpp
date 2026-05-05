@@ -3174,6 +3174,9 @@ bool CApp::OnMouseDragged(const Vector2i &mousePos) {
 				std::lround(newRadius * ratio)
 			);
 
+			if (!vulkan)
+				OnResize(std::lround(newRadius * ratio), std::lround(newRadius * ratio), true);
+
 			miniPlayerVisualizerRatio = ratio;
 		} else { // If we hit the edge of the screen, revert the change
 			Settings::settings.SetMiniPlayerVisualizerRatio(miniPlayerVisualizerRatio, true);
