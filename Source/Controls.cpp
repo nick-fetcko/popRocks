@@ -585,6 +585,8 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 
 			auto yOffset = static_cast<int>(SeekbarSize * scale);
 
+			if (miniPlayer) context.StartBlend();
+
 			context.Color(1.0f, 1.0f, 1.0f, alpha);
 			for (const auto *text : { &elapsedOutline, &elapsedText }) {
 				text->OnLoop(
@@ -616,6 +618,8 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 				);
 				context.Color(1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, alpha);
 			}
+
+			if (miniPlayer) context.EndBlend();
 
 			iconY = windowHeight / 2.0f + (miniPlayer ? SeekbarSize + albumArt->GetRadius(miniPlayer) * MiniPlayerIconRatio * 2.0f : 0.0f);
 
