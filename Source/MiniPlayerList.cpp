@@ -22,6 +22,12 @@ void MiniPlayerList::OnInit(OpenGLFont *font, OpenGLFont *boldFont, OpenGLFont *
 void MiniPlayerList::OnResize(int windowWidth, int windowHeight) {
 	this->windowWidth = windowWidth;
 	this->windowHeight = windowHeight;
+
+	for (auto &item : items)
+		item.OnResize(windowWidth, windowHeight);
+
+	for (auto &outline : outlines)
+		outline.OnResize(windowWidth, windowHeight);
 }
 
 void MiniPlayerList::SetMiniPlayer(bool miniPlayer) {
@@ -47,12 +53,14 @@ const OpenGLFont::Bounds &MiniPlayerList::AddItem(const std::string &text, std::
 
 	ScrollingText item(vulkan);
 	item.OnInit(font, context);
+	item.OnResize(windowWidth, windowHeight);
 	item.SetText(text);
 	item.SetAltText(altText);
 	item.SetMaxWidth(miniPlayer ? maxWidth : windowWidth);
 
 	ScrollingText outline(vulkan);
 	outline.OnInit(outlineFont, context);
+	outline.OnResize(windowWidth, windowHeight);
 	outline.SetColor({ black, black, black });
 	outline.SetText(text);
 	outline.SetMaxWidth(miniPlayer ? maxWidth : windowWidth);
