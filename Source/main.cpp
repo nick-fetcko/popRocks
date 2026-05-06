@@ -91,6 +91,7 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 #endif
 
 	Vector2i mousePos{ 0, 0 };
+	auto mouseTimer = std::chrono::system_clock::now();
 	bool mouseButtonDown = false;
 	bool mouseDragged = false;
 
@@ -200,7 +201,11 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 								skipEvents = 1;
 							}
 						} else --skipEvents;
-						mouseDragged = true;
+
+						// Only consider our mouse dragged if we've held the
+						// button for more than 500ms
+						if (!mouseDragged && std::chrono::system_clock::now() - mouseTimer > 500ms)
+							mouseDragged = true;
 					} else app.OnMouseMoved(mousePos);
 					break;
 				case SDL_EVENT_MOUSE_BUTTON_DOWN:
@@ -228,6 +233,7 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 
 						mouseButtonDown = false;
 						mouseDragged = false;
+						mouseTimer = std::chrono::system_clock::now();
 					}
 					break;
 				case SDL_EVENT_DROP_FILE: {
