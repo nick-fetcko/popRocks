@@ -183,7 +183,10 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::size_t current
 		context->Apply();
 
 		context->Color(albumArt->GetBlackColor(), albumArt->GetBlackColor(), albumArt->GetBlackColor(), 0.6f * alpha);
-		scrollBarOutline.Draw<false>(*context);
+
+		context->Blend(true, [this] {
+			scrollBarOutline.Draw<false>(*context);
+		});
 
 		context->Color(hoveredColor.r, hoveredColor.g, hoveredColor.b, alpha);
 		scrollBar.Draw<true>(*context);
