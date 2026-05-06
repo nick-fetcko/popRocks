@@ -634,6 +634,9 @@ void CApp::SetMiniPlayer(bool miniPlayer, bool inLoop) {
 
 		CreateSdlWindow();
 
+		if (!vulkan)
+			SDL_GL_MakeCurrent(sdlWindow, openGlContext);
+
 		ImGui_ImplSDL3_InitForOpenGL(sdlWindow, openGlContext);
 		ImGui_ImplOpenGL3_Init();
 #else
