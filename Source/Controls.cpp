@@ -2,6 +2,7 @@
 
 #include <sstream>
 
+#include "Close.hpp"
 #include "Hash.hpp"
 #include "HDR.hpp"
 #include "Preset.hpp"
@@ -21,7 +22,8 @@ Controls::Controls(AlbumArt *const albumArt, const bool &vulkan) :
 	albumText(vulkan),
 	albumOutline(vulkan),
 	presetText(vulkan),
-	presetOutline(vulkan) {
+	presetOutline(vulkan),
+	help(MiniPlayerList::Direction::Down, albumArt, vulkan) {
 	albumArt->AddBlackChangedListener(this);
 	Preset::AddChangeListener(this);
 }
@@ -132,6 +134,8 @@ void Controls::OnRadiusChanged(Context &context, bool miniPlayer) {
 	playlist.OnRadiusChanged();
 	presetList.SetMiniPlayer(miniPlayer);
 	presetList.OnRadiusChanged();
+	help.SetMiniPlayer(miniPlayer);
+	help.OnRadiusChanged();
 }
 
 void Controls::OnPresetsChanged(const std::vector<Preset> &presets) {
@@ -194,6 +198,7 @@ void Controls::OnInit(int windowWidth, int windowHeight, Context &context, float
 
 	playlist.OnInit(windowWidth, windowHeight, font, boldFont, outlineFont, boldOutlineFont, &context, scale);
 	presetList.OnInit(font, boldFont, outlineFont, boldOutlineFont, &context);
+	help.OnInit(font, boldFont, outlineFont, boldOutlineFont, &context);
 
 	// Populate preset list
 	const auto &presets = Preset::GetPresets();
@@ -296,6 +301,10 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 	presetList.OnResize(windowWidth, windowHeight);
 	presetList.SetMaxWidth(maxWidth);
 
+	help.SetMiniPlayer(miniPlayer);
+	help.OnResize(windowWidth, windowHeight);
+	help.SetMaxWidth(maxWidth);
+
 	artistText.OnResize(windowWidth, windowHeight);
 	artistOutline.OnResize(windowWidth, windowHeight);
 	albumText.OnResize(windowWidth, windowHeight);
@@ -303,6 +312,93 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 
 	presetText.OnResize(windowWidth, windowHeight);
 	presetOutline.OnResize(windowWidth, windowHeight);
+
+	help.AddArrow(
+		{ windowWidth / 2, windowHeight / 2 - radius - font->GetEm().height },
+		{ windowWidth / 2, windowHeight / 2 - radius / 2 - font->GetEm().height },
+		{ "Hover for playlist" }
+	);
+
+	help.AddArrow(
+		{ windowWidth / 2, windowHeight / 2 + radius + font->GetEm().height },
+		{ windowWidth / 2, windowHeight / 2 + radius - font->GetEm().height },
+		{ "Hover for visualizer styles" }
+	);
+
+	help.AddArrow(
+		{ 
+			windowWidth / 2 - cos(0.5) * radius * 1.75f,
+			windowHeight / 2 - sin(0.5) * radius * 1.75f
+		},
+		{ 
+			windowWidth / 2 - cos(0.5) * (radius + albumArt->GetOutline().GetWidth()),
+			windowHeight / 2 - sin(0.5) * (radius + albumArt->GetOutline().GetWidth())
+		},
+		{ "Hover, click, and drag to resize album art" }
+	);
+
+	help.AddArrow(
+		{
+			windowWidth / 2 + cos(0.5) * ((radius * Settings::settings.GetMiniPlayerVisualizerRatio() / 3) + albumArt->GetOutline().GetWidth()),
+			windowHeight / 2 + sin(0.5) * ((radius * Settings::settings.GetMiniPlayerVisualizerRatio() / 3) + albumArt->GetOutline().GetWidth())
+		},
+		{ 
+			windowWidth / 2 + cos(0.5) * (radius * Settings::settings.GetMiniPlayerVisualizerRatio() / 2 - albumArt->GetOutline().GetWidth()),
+			windowHeight / 2 + sin(0.5) * (radius * Settings::settings.GetMiniPlayerVisualizerRatio() / 2 - albumArt->GetOutline().GetWidth())
+		},
+		{ "Hover, click, and drag to resize visualizer" }
+	);
+
+	help.AddArrow(
+		{ 
+			windowWidth / 2 - cos(0.5) * radius * 2.1f,
+			windowHeight / 2
+		},
+		{ 
+			windowWidth / 2 - (radius * MiniPlayerSeekbarRatio) / 2.0f - exclusiveIndicator.GetOutlineWidth() * 1.05f - exclusiveIndicator.GetWidth() / 2,
+			windowHeight / 2 + font->GetEm().height
+		},
+		{ "Click to toggle exclusive output" }
+	);
+
+	help.AddArrow(
+		{
+			windowWidth / 2 + cos(0.5) * radius * 2.1f,
+			windowHeight / 2
+		},
+		{
+			windowWidth / 2 + (radius * MiniPlayerSeekbarRatio) / 2.0f + captureCheckbox.GetSize().x * 2,
+			windowHeight / 2 + font->GetEm().height
+		},
+		{ "Click to toggle capturing", "of keyboard media keys" }
+	);
+
+	const auto closeSize = GetIconSize() / Close::GetLowestRatio();
+	help.AddArrow(
+		{ 
+			windowWidth / 2 + radius * 1.5f,
+			windowHeight / 2 - radius * 1.5f
+		},
+		{ 
+			windowWidth / 2 + radius + closeSize / 2,
+			windowHeight / 2 - radius - closeSize / 2, 
+		},
+		{ "Click to close" }
+	);
+
+	if (!Settings::settings.GetHelpDismissed()) {
+		help.AddArrow(
+			{
+				windowWidth / 2 + radius * 2,
+				windowHeight / 2 + radius / 2.25f
+			},
+			{
+				windowWidth / 2.0f + radius * MiniPlayerIconRatio * 4.25f,
+				(windowHeight / 2.0f + (SeekbarSize + radius * MiniPlayerIconRatio * 2.0f)) - help.GetPrompt().GetBounds().height / 2 + radius * MiniPlayerIconRatio / 4
+			},
+			{ "Click to dismiss", "Hover to show again" }
+		);
+	}
 }
 
 QWORD Controls::OnLoad(HSTREAM streamHandle) {
@@ -851,6 +947,20 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 				}
 
 				presetList.PostLoop(time);
+
+				context.Use("texture"_hash);
+				context.Color(1.0f, 1.0f, 1.0f, alpha);
+				const auto closeSize = GetIconSize() / Close::GetLowestRatio();
+				
+				help.OnLoop(
+					time, 
+					{ 
+						windowWidth / 2.0f + albumArt->GetRadius(miniPlayer) * MiniPlayerIconRatio * 3.75f,
+						iconY - help.GetPrompt().GetBounds().height / 2 + albumArt->GetRadius(miniPlayer) * MiniPlayerIconRatio / 4
+					},
+					context
+				);
+				
 			}
 
 #ifdef WIN32
@@ -914,6 +1024,8 @@ void Controls::OnDestroy() {
 	letterboxEab.reset();
 
 	playlist.OnDestroy();
+	presetList.OnDestroy();
+	help.OnDestroy();
 
 	pause.OnDestroy();
 	play.OnDestroy();
@@ -993,19 +1105,22 @@ Controls::ControlButton Controls::GetButtonAtPos(const Vector2i &pos) {
 }
 
 void Controls::OnMouseMoved(const Vector2i &mousePos) {
-	auto button = GetButtonAtPos(mousePos);
+	// Don't allow interaction if Help is visible
+	auto button = help.IsHovered() ? ControlButton::None : GetButtonAtPos(mousePos);
 
-	if (playlist.OnMouseMoved(mousePos))
+	if (!help.IsHovered() && playlist.OnMouseMoved(mousePos))
 		button = ControlButton::None;
-	else if (presetList.OnMouseMoved(
+	else if (!help.IsHovered() && presetList.OnMouseMoved(
 		mousePos,
-		{ 
+		{
 			windowWidth / 2 - presetText.GetBounds().width / 2,
 			static_cast<int>(iconY + albumArt->GetRadius(miniPlayer) * MiniPlayerIconRatio * 1.5f - presetText.GetBounds().height / 2.0f),
 			windowWidth / 2 + presetText.GetBounds().width / 2,
 			static_cast<int>(iconY + albumArt->GetRadius(miniPlayer) * MiniPlayerIconRatio * 1.5f + presetText.GetBounds().height / 2.0f)
 		}
 	))
+		button = ControlButton::None;
+	else if (help.OnMouseMoved(mousePos))
 		button = ControlButton::None;
 
 	next.SetHovered(button == ControlButton::Next);
@@ -1017,6 +1132,19 @@ void Controls::OnMouseMoved(const Vector2i &mousePos) {
 }
 
 Controls::ControlButton Controls::OnMouseClicked(const Vector2i &mousePos, std::function<void(float)> seekCallback, bool playing, bool canTakeAction) {
+	// Don't allow interaction if Help is visible
+	if (help.IsHovered()) {
+		if (!Settings::settings.GetHelpDismissed() && help.OnMouseClicked(mousePos)) {
+			help.SetHovered(false, false, false, [this] {
+				help.RemoveArrow("Click to dismiss");
+			});
+
+			Settings::settings.SetHelpDismissed(true);
+		}
+
+		return ControlButton::None;
+	}
+
 	const auto SeekbarSize = Controls::SeekbarSize * (miniPlayer ? (albumArt->GetRadius(miniPlayer) / AlbumArt::BaseRadius) : 1.0f);
 	const auto seekbarPos = windowHeight / 2 + font->GetEm().height - SeekbarSize / 2 * scale;
 
@@ -1065,6 +1193,7 @@ Controls::ControlButton Controls::OnMouseClicked(const Vector2i &mousePos, std::
 void Controls::AddToScrollOffset(int offset) {
 	playlist.AddToScrollOffset(offset);
 	presetList.AddToScrollOffset(offset);
+	help.AddToScrollOffset(offset);
 }
 
 void Controls::OnBlackChanged(const float &black) {

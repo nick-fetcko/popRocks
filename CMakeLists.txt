@@ -72,6 +72,7 @@ set(_poprocks_cpp_headers
 	Source/FPSCounter.hpp
 	Source/Gaussian.hpp
 	Source/HDR.hpp
+	Source/Help.hpp
 	Source/ID3V2.hpp
 	Source/imconfig.h
 	Source/JPEG.hpp

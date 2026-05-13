@@ -775,6 +775,13 @@ void Settings::SetVulkan(bool vulkan, bool delayed) {
 	}
 }
 
+void Settings::SetHelpDismissed(bool helpDismissed, bool delayed) {
+	if (this->helpDismissed != helpDismissed) {
+		this->helpDismissed = helpDismissed;
+		if (!delayed) Save();
+	}
+}
+
 void Settings::Save() {
 	if (auto path = Filesystem::GetPath(); !path.empty()) {
 		LogInfo("Saving settings...");
@@ -1092,6 +1099,9 @@ const Node &operator>>(const Node &node, Settings &settings) {
 
 	if (node.has("vulkan"))
 		node["vulkan"]->get(settings.vulkan);
+
+	if (node.has("helpDismissed"))
+		node["helpDismissed"]->get(settings.helpDismissed);
 		
 	return node;
 }
@@ -1192,6 +1202,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["miniPlayerVisualizerRatio"]->set(settings.miniPlayerVisualizerRatio);
 	node["captureKeyboardMediaKeys"]->set(settings.captureKeyboardMediaKeys);
 	node["vulkan"]->set(settings.vulkan);
+	node["helpDismissed"]->set(settings.helpDismissed);
 
 	return node;
 }

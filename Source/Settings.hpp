@@ -379,6 +379,9 @@ public:
 	const bool &GetVulkan() const { return vulkan; }
 	void SetVulkan(bool vulkan, bool delayed = false);
 
+	const bool &GetHelpDismissed() const { return helpDismissed; }
+	void SetHelpDismissed(bool helpDismissed, bool delayed = false);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -535,7 +538,7 @@ private:
 	float uiBrightness = 1.0f;
 #endif
 
-	bool miniPlayer = false;
+	bool miniPlayer = true;
 
 	bool hdr = true;
 	std::string colorspace = "EGL_EXT_gl_colorspace_bt2020_hlg";
@@ -559,4 +562,6 @@ private:
 	bool captureKeyboardMediaKeys = false;
 
 	bool vulkan = false;
+
+	bool helpDismissed = false;
 };

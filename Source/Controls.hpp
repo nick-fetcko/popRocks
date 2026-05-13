@@ -22,6 +22,7 @@
 #include "Checkbox.hpp"
 #include "ExclusiveIndicator.hpp"
 #include "FPSCounter.hpp"
+#include "Help.hpp"
 #include "Next.hpp"
 #include "Pause.hpp"
 #include "Play.hpp"
@@ -113,6 +114,8 @@ public:
 
 	void OnPresetsChanged(const std::vector<Preset> &presets) override;
 
+	Help &GetHelp() { return help; }
+
 	inline const float GetIconSize() const {
 		return albumArt->GetRadius(miniPlayer) * (miniPlayer ? Controls::MiniPlayerIconRatio : 1.0f);
 	}
@@ -172,6 +175,8 @@ private:
 	Next next;
 	Previous previous;
 	Checkbox captureCheckbox;
+
+	Help help;
 
 	std::unique_ptr<VertexArray> vao;
 	std::unique_ptr<ArrayBuffer> vbo;

@@ -172,6 +172,10 @@ public:
 
 	void DrawPlaceholder(GLfloat x, GLfloat y, float alpha, Context &context) const;
 
+	void OverrideOutlineAlpha(float overrideOutlineAlpha) { this->overrideOutlineAlpha = overrideOutlineAlpha; }
+
+	const Fetcko::Polyline &GetOutline() const { return outline; }
+
 private:
 	constexpr inline static std::array<std::string_view, 3> SupportedExtensions = { ".jpg", ".png", ".webp" };
 
@@ -309,6 +313,7 @@ private:
 	Fetcko::Polyline visualizerOutline;
 	float outlineAlpha = 0.0f;
 	float targetOutlineAlpha = 0.0f;
+	float overrideOutlineAlpha = 0.0f;
 
 	std::set<BlackChangedListener*> blackChangedListeners;
 

@@ -248,9 +248,9 @@ void AlbumArt::OnLoop(const Delta &time, GLfloat x, GLfloat y, float frameCount,
 			hoverTimer = std::nullopt;
 		}
 
-		if (outlineAlpha > 0.0f) {
+		if (outlineAlpha > 0.0f || overrideOutlineAlpha > 0.0f) {
 			context.Use("basic"_hash);
-			context.Color(1.0f, 1.0f, 1.0f, outlineAlpha);
+			context.Color(1.0f, 1.0f, 1.0f, overrideOutlineAlpha > 0.0f ? overrideOutlineAlpha : outlineAlpha);
 			context.Translate(x, y, 0);
 			context.Apply();
 			outline.Draw<false>(context);

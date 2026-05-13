@@ -388,6 +388,8 @@ void Playlist::OnResize(int windowWidth, int windowHeight, float scale, bool min
 }
 
 void Playlist::OnDestroy() {
+	MiniPlayerList::OnDestroy();
+
 	vao.reset();
 	vbo.reset();
 	eab.reset();

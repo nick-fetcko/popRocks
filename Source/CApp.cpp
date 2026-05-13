@@ -353,6 +353,11 @@ void CApp::LoadShaders() {
 		Utils::GetResource("fragment-scrolling.glsl"),
 		"scrolling"_hash
 	);
+	context->AddShader(
+		Utils::GetResource("vertex.glsl"),
+		Utils::GetResource("fragment-ring.glsl"),
+		"ring"_hash
+	);
 
 	// Cache our uniforms
 	for (auto &[hash, shader] : *context) {
@@ -448,6 +453,13 @@ void CApp::LoadShaders() {
 
 			shader.program.CacheUniformLocation("bgr");
 			shader.program.Uniform1i("bgr"_hash, 0);
+		}
+
+		if (hash == "ring"_hash) {
+			shader.program.CacheUniformLocation("radius");
+			shader.program.Uniform1f("radius"_hash, albumArt.GetRadius(miniPlayer));
+			shader.program.CacheUniformLocation("screenSize");
+			shader.program.Uniform2f("screenSize"_hash, 0, 0);
 		}
 	}
 }
@@ -1791,7 +1803,7 @@ void CApp::OnLoop(const Delta &time) {
 			controls.Stick();
 
 			close.SetHovered(onClose);
-		} else {
+		} else if (!controls.GetHelp().IsHovered()) {
 			close.SetHovered(false);
 
 			if (albumArt.OnMouseMoved({ x, y })) {
@@ -2683,6 +2695,11 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 				ClearBlurFbo();
 		}
 
+		// If this is our first load and Help
+		// has never been dismissed, show it
+		if (!lastFileLoaded && !Settings::settings.GetHelpDismissed())
+			controls.GetHelp().SetHovered(true, true, true /* bypass loading lag */);
+
 		loadedFile = path;
 		loadedFileExtension = extension;
 	}
@@ -3015,7 +3032,7 @@ bool CApp::OnMouseClicked(const Vector2i &mousePos) {
 			PreviousTrack();
 			controls.GetPrevious().Fade(true);
 		}
-	} else if (miniPlayer && !platform->OnMouseClicked(mousePos)) {
+	} else if (controls.GetHelp().IsHovered() /* short circuit */ || (miniPlayer && !platform->OnMouseClicked(mousePos))) {
 		return IsOnCloseButton(mousePos);
 	}
 

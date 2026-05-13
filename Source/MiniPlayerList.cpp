@@ -30,6 +30,16 @@ void MiniPlayerList::OnResize(int windowWidth, int windowHeight) {
 		outline.OnResize(windowWidth, windowHeight);
 }
 
+void MiniPlayerList::OnDestroy() {
+	for (auto &item : items)
+		item.OnDestroy();
+	for (auto &outline : outlines)
+		outline.OnDestroy();
+
+	scrollBar.OnDestroy();
+	scrollBarOutline.OnDestroy();
+}
+
 void MiniPlayerList::SetMiniPlayer(bool miniPlayer) {
 	this->miniPlayer = miniPlayer;
 }
@@ -102,8 +112,18 @@ void MiniPlayerList::AddToScrollOffset(int offset) {
 	OnRadiusChanged();
 }
 
+void MiniPlayerList::SetHovered(bool hovered, bool sticky, bool ignoreNextTimeDelta, std::function<void()> afterFade) {
+	this->hovered = hovered;
+	targetAlpha = hovered ? 1.0f : 0.0f;
+	hoverTimer = std::nullopt;
+
+	isHoverSticky = sticky;
+	this->ignoreNextTimeDelta = ignoreNextTimeDelta;
+	this->afterFade = afterFade;
+}
+
 void MiniPlayerList::PreLoop() {
-	if (hoverTimer && (std::chrono::system_clock::now() - *hoverTimer) >= Settings::settings.GetHoverTime()) {
+	if (!isHoverSticky && hoverTimer && (std::chrono::system_clock::now() - *hoverTimer) >= Settings::settings.GetHoverTime()) {
 		hovered = true;
 		targetAlpha = 1.0f;
 		hoverTimer = std::nullopt;
@@ -111,6 +131,11 @@ void MiniPlayerList::PreLoop() {
 }
 
 void MiniPlayerList::PostLoop(const Delta &time) {
+	if (ignoreNextTimeDelta) {
+		ignoreNextTimeDelta = false;
+		return;
+	}
+
 	if (targetAlpha != this->alpha) {
 		if (targetAlpha > this->alpha) {
 			this->alpha += time.change.AsSeconds() * targetAlpha * 2;
@@ -123,16 +148,19 @@ void MiniPlayerList::PostLoop(const Delta &time) {
 			if (this->alpha < targetAlpha)
 				this->alpha = targetAlpha;
 		}
+	} else if (afterFade) {
+		afterFade();
+		afterFade = nullptr;
 	}
 }
 
-void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::size_t currentIndex) {
+void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::size_t> currentIndex) {
 	PreLoop();
 	OnLoop(time, pos, currentIndex, alpha);
 	PostLoop(time);
 }
 
-void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::size_t currentIndex, const float &alpha) {
+void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::size_t> currentIndex, const float &alpha) {
 	if (!hovered && this->alpha == targetAlpha) return;
 
 	this->pos = pos;
@@ -147,7 +175,7 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::size_t current
 		else if (index < 0)
 			continue;
 
-		const auto isCurrent = indices.at(index) == currentIndex;
+		const auto isCurrent = currentIndex && indices.at(index) == *currentIndex;
 
 		if (isCurrent && outlines[index].GetFont() != boldOutlineFont)
 			outlines[index].SetFont(boldOutlineFont);
@@ -193,20 +221,20 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::size_t current
 	}
 }
 
-bool MiniPlayerList::OnMouseMoved(const Vector2i &mousePos, Rectanglei bounds) {
+bool MiniPlayerList::OnMouseMoved(const Vector2i &mousePos, Rectanglei bounds, bool justBounds) {
 	if (!miniPlayer) return false;
 
 	const auto inTriggerX =
 		mousePos.x > bounds.x &&
 		mousePos.x < bounds.w;
 
-	const auto inX =
+	const auto inX = justBounds ? inTriggerX : 
 		mousePos.x > pos.x - albumArt->GetRadius(miniPlayer) * Controls::MiniPlayerSeekbarRatio / 2 &&
 		mousePos.x < pos.x + albumArt->GetRadius(miniPlayer) * Controls::MiniPlayerSeekbarRatio / 2;
 
 	const auto radius = albumArt->GetRadius(miniPlayer);
 
-	const auto inY = (
+	const auto inY = justBounds ? (mousePos.y > bounds.y && mousePos.y < bounds.h) : (
 		(direction == Direction::Down && mousePos.y > bounds.y && mousePos.y < bounds.h + (bounds.h - bounds.y) + radius) ||
 		(direction == Direction::Up && mousePos.y < bounds.h && mousePos.y > bounds.y - (bounds.h - bounds.y) - radius)
 	);
@@ -234,7 +262,7 @@ bool MiniPlayerList::OnMouseMoved(const Vector2i &mousePos, Rectanglei bounds) {
 		}
 
 		return true;
-	} else {
+	} else if (!isHoverSticky) {
 		hovered = false;
 		hoverTimer = std::nullopt;
 		targetAlpha = 0.0f;

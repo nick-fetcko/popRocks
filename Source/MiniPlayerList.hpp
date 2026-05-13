@@ -27,14 +27,16 @@ public:
 	virtual ~MiniPlayerList();
 
 	void OnInit(OpenGLFont *font, OpenGLFont *boldFont, OpenGLFont *outlineFont, OpenGLFont *boldOutlineFont, Context *context);
-	void OnResize(int windowWidth, int windowHeight);
+	virtual void OnResize(int windowWidth, int windowHeight);
 
 	void PreLoop();
-	void OnLoop(const Delta &time, Vector2i pos, std::size_t currentIndex);
-	void OnLoop(const Delta &time, Vector2i pos, std::size_t currentIndex, const float &alpha);
+	void OnLoop(const Delta &time, Vector2i pos, std::optional<std::size_t> currentIndex);
+	void OnLoop(const Delta &time, Vector2i pos, std::optional<std::size_t> currentIndex, const float &alpha);
 	void PostLoop(const Delta &time);
 
-	bool OnMouseMoved(const Vector2i &mousePos, Rectanglei bounds);
+	virtual void OnDestroy();
+
+	bool OnMouseMoved(const Vector2i &mousePos, Rectanglei bounds, bool justBounds = false);
 
 	void OnRadiusChanged();
 
@@ -53,6 +55,7 @@ public:
 	void OnBlackChanged(const float &black) override;
 
 	const bool &IsHovered() const { return hovered; }
+	void SetHovered(bool hovered, bool sticky, bool ignoreNextTimeDelta, std::function<void()> afterFade = nullptr);
 
 	const bool Empty() const { return items.empty(); }
 
@@ -80,6 +83,8 @@ protected:
 	int scrollOffset = 0;
 
 	bool hovered = false;
+	bool isHoverSticky = false;
+	bool ignoreNextTimeDelta = false;
 	std::optional<std::chrono::system_clock::time_point> hoverTimer = std::nullopt;
 	int hoveredOffset = -1;
 	Colourf hoveredColor;
@@ -94,6 +99,8 @@ protected:
 	Fetcko::Polyline scrollBarOutline;
 
 	std::map<std::size_t, std::size_t> indices;
+
+	std::function<void()> afterFade;
 
 	const bool &vulkan;
 };
