@@ -6,9 +6,9 @@
 
 class Arrow : public LoggableClass {
 private:
-	constexpr static float LineWidth = 2.5f;
-	constexpr static float OutlineWidth = 4.0f;
-	constexpr static int ArrowLength = 15;
+	constexpr static float LineWidth = 3.5f;
+	constexpr static float OutlineWidth = 4.5f;
+	constexpr static int ArrowLength = 25;
 
 public:
 	void OnInit(
@@ -20,11 +20,12 @@ public:
 		Vector2f start,
 		Vector2f end,
 		const std::vector<std::string> &lines,
+		float scale = 1.0f,
 		bool bold = false) {
 		this->font = font;
 		this->bold = bold;
 
-		Update(start, end);
+		Update(start, end, scale);
 
 		for (const auto &[i, text] : Utils::Enumerate(lines)) {
 			Text prompt;
@@ -89,7 +90,7 @@ public:
 		}
 	}
 
-	void Update(Vector2f start, Vector2f end) {
+	void Update(Vector2f start, Vector2f end, float scale = 1.0f) {
 		this->start = start;
 
 		std::vector<Vector2f> points = {
@@ -97,7 +98,7 @@ public:
 			end
 		};
 
-		line.SetWidth(LineWidth * (bold ? 2.0f : 1.0f));
+		line.SetWidth(LineWidth * (bold ? 2.0f : 1.0f) * scale);
 		line.SetPoints<Polyline::Join::None>(points.data(), points.size());
 
 		angle = std::atan2((end.y - start.y), (end.x - start.x));
@@ -119,20 +120,20 @@ public:
 		outline.SetPoints<Polyline::Join::None>(points.data(), points.size());
 
 		points = {
-			{end.x + ArrowLength * (bold ? 1.5f : 1.0f) * ax, end.y + ArrowLength * (bold ? 1.5f : 1.0f) * ay},
+			{end.x + ArrowLength * scale * (bold ? 1.5f : 1.0f) * ax, end.y + ArrowLength * scale * (bold ? 1.5f : 1.0f) * ay},
 			end,
-			{end.x + ArrowLength * (bold ? 1.5f : 1.0f) * bx, end.y + ArrowLength * (bold ? 1.5f : 1.0f) * by}
+			{end.x + ArrowLength * scale * (bold ? 1.5f : 1.0f) * bx, end.y + ArrowLength * scale * (bold ? 1.5f : 1.0f) * by}
 		};
 
 		arrow.SetWidth(line.GetWidth());
 		arrow.SetPoints<Polyline::Join::Miter>(points.data(), points.size());
 
 		// Extend arrow's outline
-		points.begin()->x = end.x + (ArrowLength * (bold ? 1.5f : 1.0f) + outline.GetWidth() / OutlineWidth) * ax;
-		points.begin()->y = end.y + (ArrowLength * (bold ? 1.5f : 1.0f) + outline.GetWidth() / OutlineWidth) * ay;
+		points.begin()->x = end.x + (ArrowLength * scale * (bold ? 1.5f : 1.0f) + outline.GetWidth() / OutlineWidth) * ax;
+		points.begin()->y = end.y + (ArrowLength * scale * (bold ? 1.5f : 1.0f) + outline.GetWidth() / OutlineWidth) * ay;
 
-		points.rbegin()->x = end.x + (ArrowLength * (bold ? 1.5f : 1.0f) + outline.GetWidth() / OutlineWidth) * bx;
-		points.rbegin()->y = end.y + (ArrowLength * (bold ? 1.5f : 1.0f) + outline.GetWidth() / OutlineWidth) * by;
+		points.rbegin()->x = end.x + (ArrowLength * scale * (bold ? 1.5f : 1.0f) + outline.GetWidth() / OutlineWidth) * bx;
+		points.rbegin()->y = end.y + (ArrowLength * scale * (bold ? 1.5f : 1.0f) + outline.GetWidth() / OutlineWidth) * by;
 
 		arrowOutline.SetWidth(arrow.GetWidth() * OutlineWidth / (bold ? 1.5f : 1.0f));
 		arrowOutline.SetPoints<Polyline::Join::Miter>(points.data(), points.size());
@@ -273,14 +274,14 @@ public:
 		}
 	}
 
-	void AddArrow(Vector2f start, Vector2f end, const std::string &key, const std::vector<std::string> &lines, bool bold = false) {
+	void AddArrow(Vector2f start, Vector2f end, const std::string &key, const std::vector<std::string> &lines, float scale = 1.0f, bool bold = false) {
 		if (auto iter = arrows.find(key); iter != arrows.end()) {
-			iter->second.Update(start, end);
+			iter->second.Update(start, end, scale);
 			return;
 		}
 
 		Arrow arrow;
-		arrow.OnInit(font, boldFont, outlineFont, boldOutlineFont, *context, start, end, lines, bold);
+		arrow.OnInit(font, boldFont, outlineFont, boldOutlineFont, *context, start, end, lines, scale, bold);
 		arrows.emplace(std::make_pair(key, std::move(arrow)));
 	}
 

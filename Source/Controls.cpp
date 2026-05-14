@@ -317,14 +317,16 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 		{ windowWidth / 2, windowHeight / 2 - radius - font->GetEm().height },
 		{ windowWidth / 2, windowHeight / 2 - radius / 2 - font->GetEm().height },
 		"playlist",
-		{ "Hover for playlist" }
+		{ "Hover for playlist" },
+		radius / AlbumArt::BaseRadius
 	);
 
 	help.AddArrow(
 		{ windowWidth / 2 - radius, windowHeight / 2 + radius + font->GetEm().height },
 		{ windowWidth / 2 - presetText.GetBounds().width / 2 - font->GetEm().width / 2, windowHeight / 2 + radius - font->GetEm().height * 2},
 		"presetList",
-		{ "Hover for visualizer styles" }
+		{ "Hover for visualizer styles" },
+		radius / AlbumArt::BaseRadius
 	);
 
 	help.AddArrow(
@@ -337,7 +339,8 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 			windowHeight / 2 - sin(0.5) * (radius + albumArt->GetOutline().GetWidth())
 		},
 		"resizeAlbumArt",
-		{ "Hover, click, and drag", "to resize album art"}
+		{ "Hover, click, and drag", "to resize album art"},
+		radius / AlbumArt::BaseRadius
 	);
 
 	help.AddArrow(
@@ -350,7 +353,8 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 			windowHeight / 2 + sin(0.5) * (radius * Settings::settings.GetMiniPlayerVisualizerRatio() / 2 - albumArt->GetOutline().GetWidth())
 		},
 		"resizeVisualizer",
-		{ "Hover, click, and drag", "to resize visualizer" }
+		{ "Hover, click, and drag", "to resize visualizer" },
+		radius / AlbumArt::BaseRadius
 	);
 
 	help.AddArrow(
@@ -363,7 +367,8 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 			windowHeight / 2 + font->GetEm().height
 		},
 		"exclusive",
-		{ "Click to toggle exclusive output" }
+		{ "Click to toggle", "exclusive output"},
+		radius / AlbumArt::BaseRadius
 	);
 
 	help.AddArrow(
@@ -376,7 +381,8 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 			windowHeight / 2 + font->GetEm().height
 		},
 		"capture",
-		{ "Click to toggle capturing", "of keyboard media keys" }
+		{ "Click to toggle capturing", "of keyboard media keys" },
+		radius / AlbumArt::BaseRadius
 	);
 
 	const auto closeSize = GetIconSize() / Close::GetLowestRatio();
@@ -390,7 +396,8 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 			windowHeight / 2 - radius - closeSize / 2, 
 		},
 		"close",
-		{ "Click to close" }
+		{ "Click to close" },
+		radius / AlbumArt::BaseRadius
 	);
 
 	const auto SeekbarSize = Controls::SeekbarSize * (miniPlayer ? (albumArt->GetRadius(miniPlayer) / scale / AlbumArt::BaseRadius) : 1.0f);
@@ -406,6 +413,7 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 			},
 			"help",
 			{ "Click to dismiss this help", "Hover to show help again" },
+			radius / AlbumArt::BaseRadius,
 			true
 		);
 	}
