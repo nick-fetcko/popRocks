@@ -2047,7 +2047,8 @@ void CApp::OnLoop(const Delta &time) {
 		frameCount,
 		controls.GetAlpha(),
 		*context,
-		fileLoaded || platform->IsListening()
+		fileLoaded || platform->IsListening(),
+		!controls.GetHelp().IsHovered()
 	);
 
 	// 45 RPM = 270
@@ -3133,7 +3134,7 @@ void CApp::OnMouseUp(const Vector2i &mousePos) {
 void CApp::OnMouseMoved(const Vector2i &mousePos) {
 	controls.OnMouseMoved(mousePos);
 
-	if (miniPlayer)
+	if (miniPlayer && !controls.GetHelp().IsHovered())
 		albumArt.OnMouseMoved(mousePos);
 }
 
@@ -3168,7 +3169,7 @@ bool CApp::OnMouseDragged(const Vector2i &mousePos) {
 			// our mouse pos by delta
 			lastMousePos = mousePos - delta;
 		}
-	} else if (miniPlayer && albumArt.OnMouseDragged(mousePos)) {
+	} else if (miniPlayer && !controls.GetHelp().IsHovered() && albumArt.OnMouseDragged(mousePos)) {
 		const auto &ratio = Settings::settings.GetMiniPlayerVisualizerRatio();
 		const auto oldRadius = dynamic_cast<Circle<Circles::Textured>*>(&albumArt)->GetRadius();
 

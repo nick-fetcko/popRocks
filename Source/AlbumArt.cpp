@@ -171,7 +171,7 @@ void AlbumArt::DrawPlaceholder(GLfloat x, GLfloat y, float alpha, Context &conte
 	context.Use("texture"_hash);
 }
 
-void AlbumArt::OnLoop(const Delta &time, GLfloat x, GLfloat y, float frameCount, float alpha, Context &context, bool playing) {
+void AlbumArt::OnLoop(const Delta &time, GLfloat x, GLfloat y, float frameCount, float alpha, Context &context, bool playing, bool resizable) {
 	cube->OnLoop();
 
 	// try_lock so we don't miss a frame or two
@@ -262,7 +262,7 @@ void AlbumArt::OnLoop(const Delta &time, GLfloat x, GLfloat y, float frameCount,
 				outlineAlpha += 5.0f * time.change.AsSeconds();
 				if (outlineAlpha > targetOutlineAlpha) {
 					outlineAlpha = targetOutlineAlpha;
-					UpdateCursor(mousePos);
+					if (resizable) UpdateCursor(mousePos);
 				}
 			} else {
 				outlineAlpha -= 5.0f * time.change.AsSeconds();
