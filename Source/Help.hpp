@@ -11,15 +11,27 @@ private:
 	constexpr static int ArrowLength = 15;
 
 public:
-	void OnInit(OpenGLFont *font, OpenGLFont *outlineFont, Context &context, Vector2f start, Vector2f end, const std::vector<std::string> &lines) {
+	void OnInit(
+		OpenGLFont *font,
+		OpenGLFont *boldFont,
+		OpenGLFont *outlineFont,
+		OpenGLFont *boldOutlineFont,
+		Context &context,
+		Vector2f start,
+		Vector2f end,
+		const std::vector<std::string> &lines,
+		bool bold = false) {
+		this->font = font;
+		this->bold = bold;
+
 		Update(start, end);
 
-		for (const auto &text : lines) {
+		for (const auto &[i, text] : Utils::Enumerate(lines)) {
 			Text prompt;
 			Text promptOutline;
 
-			prompt.OnInit(font, &context);
-			promptOutline.OnInit(outlineFont, &context);
+			prompt.OnInit(((bold && i == 0) ? boldFont : font), &context);
+			promptOutline.OnInit(((bold && i == 0) ? boldOutlineFont : outlineFont), &context);
 			prompt.SetText(text);
 			promptOutline.SetText(text);
 
@@ -57,20 +69,22 @@ public:
 		context.Color(0.0f, 0.0f, 0.0f, alpha);
 		for (const auto &[i, promptOutline] : Utils::Enumerate(promptOutlines)) {
 			const auto offset = static_cast<int>(promptOutlines.size() - i);
+			const auto inverse = static_cast<int>(promptOutlines.size() - offset);
 
 			promptOutline.OnLoop(
 				start.x - prompts[i].GetBounds().width / 2,
-				start.y - (angle > 0 ? prompts[i].GetBounds().height * offset: -prompts[i].GetBounds().height / 2 * offset)
+				start.y - (angle > 0 ? font->GetEm().height * offset : -font->GetEm().height / 2 - (font->GetEm().height * inverse))
 			);
 		}
 
 		context.Color(1.0f, 1.0f, 1.0f, alpha);
 		for (const auto &[i, prompt] : Utils::Enumerate(prompts)) {
-			const auto offset = static_cast<int>(promptOutlines.size() - i);
+			const auto offset = static_cast<int>(prompts.size() - i);
+			const auto inverse = static_cast<int>(prompts.size() - offset);
 
 			prompt.OnLoop(
 				start.x - prompt.GetBounds().width / 2,
-				start.y - (angle > 0 ? prompt.GetBounds().height * offset : -prompt.GetBounds().height / 2 * offset)
+				start.y - (angle > 0 ? font->GetEm().height * offset : -font->GetEm().height / 2 - (font->GetEm().height * inverse))
 			);
 		}
 	}
@@ -83,7 +97,7 @@ public:
 			end
 		};
 
-		line.SetWidth(LineWidth);
+		line.SetWidth(LineWidth * (bold ? 2.0f : 1.0f));
 		line.SetPoints<Polyline::Join::None>(points.data(), points.size());
 
 		angle = std::atan2((end.y - start.y), (end.x - start.x));
@@ -96,7 +110,7 @@ public:
 		const auto bx = backward.x * std::cos(arrowAngle) + backward.y * std::sin(arrowAngle);
 		const auto by = -backward.x * std::sin(arrowAngle) + backward.y * std::cos(arrowAngle);
 
-		outline.SetWidth(line.GetWidth() * OutlineWidth);
+		outline.SetWidth(line.GetWidth() * OutlineWidth / (bold ? 1.5f : 1.0f));
 
 		// Extend line's outline past the start
 		points.begin()->x = start.x - cos(angle) * outline.GetWidth() / OutlineWidth;
@@ -105,26 +119,33 @@ public:
 		outline.SetPoints<Polyline::Join::None>(points.data(), points.size());
 
 		points = {
-			{end.x + ArrowLength * ax, end.y + ArrowLength * ay},
+			{end.x + ArrowLength * (bold ? 1.5f : 1.0f) * ax, end.y + ArrowLength * (bold ? 1.5f : 1.0f) * ay},
 			end,
-			{end.x + ArrowLength * bx, end.y + ArrowLength * by}
+			{end.x + ArrowLength * (bold ? 1.5f : 1.0f) * bx, end.y + ArrowLength * (bold ? 1.5f : 1.0f) * by}
 		};
 
 		arrow.SetWidth(line.GetWidth());
 		arrow.SetPoints<Polyline::Join::Miter>(points.data(), points.size());
 
 		// Extend arrow's outline
-		points.begin()->x = end.x + (ArrowLength + outline.GetWidth() / OutlineWidth) * ax;
-		points.begin()->y = end.y + (ArrowLength + outline.GetWidth() / OutlineWidth) * ay;
+		points.begin()->x = end.x + (ArrowLength * (bold ? 1.5f : 1.0f) + outline.GetWidth() / OutlineWidth) * ax;
+		points.begin()->y = end.y + (ArrowLength * (bold ? 1.5f : 1.0f) + outline.GetWidth() / OutlineWidth) * ay;
 
-		points.rbegin()->x = end.x + (ArrowLength + outline.GetWidth() / OutlineWidth) * bx;
-		points.rbegin()->y = end.y + (ArrowLength + outline.GetWidth() / OutlineWidth) * by;
+		points.rbegin()->x = end.x + (ArrowLength * (bold ? 1.5f : 1.0f) + outline.GetWidth() / OutlineWidth) * bx;
+		points.rbegin()->y = end.y + (ArrowLength * (bold ? 1.5f : 1.0f) + outline.GetWidth() / OutlineWidth) * by;
 
-		arrowOutline.SetWidth(arrow.GetWidth() * OutlineWidth);
+		arrowOutline.SetWidth(arrow.GetWidth() * OutlineWidth / (bold ? 1.5f : 1.0f));
 		arrowOutline.SetPoints<Polyline::Join::Miter>(points.data(), points.size());
 	}
 
+	const bool &IsBold() const { return bold; }
+	
+	Text &GetPrompt() { return *prompts.begin(); }
+
 private:
+	bool bold = false;
+	OpenGLFont *font = nullptr;
+
 	float angle = 0.0f;
 
 	Vector2f start;
@@ -241,14 +262,25 @@ public:
 			mousePos.y >= pos.y - promptOutline.GetBounds().height / 2 && mousePos.y <= pos.y + promptOutline.GetBounds().height / 2;
 	}
 
-	void AddArrow(Vector2f start, Vector2f end, const std::vector<std::string> &lines) {
+	void OnColorChanged(const Colour<float> &color, bool silent) override {
+		MiniPlayerList::OnColorChanged(color, silent);
+
+		for (auto &[text, arrow] : arrows) {
+			if (arrow.IsBold()) {
+				arrow.GetPrompt().SetColor(hoveredColor);
+				arrow.GetPrompt().SetText(arrow.GetPrompt().GetText(), true);
+			}
+		}
+	}
+
+	void AddArrow(Vector2f start, Vector2f end, const std::vector<std::string> &lines, bool bold = false) {
 		if (auto iter = arrows.find(lines[0]); iter != arrows.end()) {
 			iter->second.Update(start, end);
 			return;
 		}
 
 		Arrow arrow;
-		arrow.OnInit(font, outlineFont, *context, start, end, lines);
+		arrow.OnInit(font, boldFont, outlineFont, boldOutlineFont, *context, start, end, lines, bold);
 		arrows.emplace(std::make_pair(lines[0], std::move(arrow)));
 	}
 

@@ -320,8 +320,8 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 	);
 
 	help.AddArrow(
-		{ windowWidth / 2, windowHeight / 2 + radius + font->GetEm().height },
-		{ windowWidth / 2, windowHeight / 2 + radius - font->GetEm().height },
+		{ windowWidth / 2 - radius, windowHeight / 2 + radius + font->GetEm().height },
+		{ windowWidth / 2 - presetText.GetBounds().width / 2 - font->GetEm().width / 2, windowHeight / 2 + radius - font->GetEm().height * 2},
 		{ "Hover for visualizer styles" }
 	);
 
@@ -386,17 +386,19 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 		{ "Click to close" }
 	);
 
+	const auto SeekbarSize = Controls::SeekbarSize * (miniPlayer ? (albumArt->GetRadius(miniPlayer) / scale / AlbumArt::BaseRadius) : 1.0f);
 	if (!Settings::settings.GetHelpDismissed()) {
 		help.AddArrow(
 			{
-				windowWidth / 2 + radius * 2,
-				windowHeight / 2 + radius / 2.25f
+				windowWidth / 2 + radius / 2,
+				windowHeight / 2 + radius * 1.5f
 			},
 			{
-				windowWidth / 2.0f + radius * MiniPlayerIconRatio * 4.25f,
-				(windowHeight / 2.0f + (SeekbarSize + radius * MiniPlayerIconRatio * 2.0f)) - help.GetPrompt().GetBounds().height / 2 + radius * MiniPlayerIconRatio / 4
+				windowWidth / 2.0f + radius * MiniPlayerIconRatio * 3.5f + help.GetPrompt().GetBounds().width,
+				(windowHeight / 2.0f + (SeekbarSize + radius * MiniPlayerIconRatio * 2.0f)) + font->GetEm().height / 2 + radius * MiniPlayerIconRatio / 4
 			},
-			{ "Click to dismiss", "Hover to show again" }
+			{ "Click to dismiss this help", "Hover to show help again" },
+			true
 		);
 	}
 }
@@ -950,7 +952,6 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 
 				context.Use("texture"_hash);
 				context.Color(1.0f, 1.0f, 1.0f, alpha);
-				const auto closeSize = GetIconSize() / Close::GetLowestRatio();
 				
 				help.OnLoop(
 					time, 
@@ -1136,7 +1137,7 @@ Controls::ControlButton Controls::OnMouseClicked(const Vector2i &mousePos, std::
 	if (help.IsHovered()) {
 		if (!Settings::settings.GetHelpDismissed() && help.OnMouseClicked(mousePos)) {
 			help.SetHovered(false, false, false, [this] {
-				help.RemoveArrow("Click to dismiss");
+				help.RemoveArrow("Click to dismiss this help");
 			});
 
 			Settings::settings.SetHelpDismissed(true);
