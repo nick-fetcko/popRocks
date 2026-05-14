@@ -273,23 +273,23 @@ public:
 		}
 	}
 
-	void AddArrow(Vector2f start, Vector2f end, const std::vector<std::string> &lines, bool bold = false) {
-		if (auto iter = arrows.find(lines[0]); iter != arrows.end()) {
+	void AddArrow(Vector2f start, Vector2f end, const std::string &key, const std::vector<std::string> &lines, bool bold = false) {
+		if (auto iter = arrows.find(key); iter != arrows.end()) {
 			iter->second.Update(start, end);
 			return;
 		}
 
 		Arrow arrow;
 		arrow.OnInit(font, boldFont, outlineFont, boldOutlineFont, *context, start, end, lines, bold);
-		arrows.emplace(std::make_pair(lines[0], std::move(arrow)));
+		arrows.emplace(std::make_pair(key, std::move(arrow)));
 	}
 
 	void UpdateArrow(const std::string text, Vector2f start, Vector2f end) {
 		arrows[text].Update(start, end);
 	}
 
-	void RemoveArrow(const std::string &text) {
-		if (const auto iter = arrows.find(text); iter != arrows.end()) {
+	void RemoveArrow(const std::string &key) {
+		if (const auto iter = arrows.find(key); iter != arrows.end()) {
 			iter->second.OnDestroy();
 			arrows.erase(iter);
 		}

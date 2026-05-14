@@ -316,12 +316,14 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 	help.AddArrow(
 		{ windowWidth / 2, windowHeight / 2 - radius - font->GetEm().height },
 		{ windowWidth / 2, windowHeight / 2 - radius / 2 - font->GetEm().height },
+		"playlist",
 		{ "Hover for playlist" }
 	);
 
 	help.AddArrow(
 		{ windowWidth / 2 - radius, windowHeight / 2 + radius + font->GetEm().height },
 		{ windowWidth / 2 - presetText.GetBounds().width / 2 - font->GetEm().width / 2, windowHeight / 2 + radius - font->GetEm().height * 2},
+		"presetList",
 		{ "Hover for visualizer styles" }
 	);
 
@@ -334,7 +336,8 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 			windowWidth / 2 - cos(0.5) * (radius + albumArt->GetOutline().GetWidth()),
 			windowHeight / 2 - sin(0.5) * (radius + albumArt->GetOutline().GetWidth())
 		},
-		{ "Hover, click, and drag to resize album art" }
+		"resizeAlbumArt",
+		{ "Hover, click, and drag", "to resize album art"}
 	);
 
 	help.AddArrow(
@@ -346,7 +349,8 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 			windowWidth / 2 + cos(0.5) * (radius * Settings::settings.GetMiniPlayerVisualizerRatio() / 2 - albumArt->GetOutline().GetWidth()),
 			windowHeight / 2 + sin(0.5) * (radius * Settings::settings.GetMiniPlayerVisualizerRatio() / 2 - albumArt->GetOutline().GetWidth())
 		},
-		{ "Hover, click, and drag to resize visualizer" }
+		"resizeVisualizer",
+		{ "Hover, click, and drag", "to resize visualizer" }
 	);
 
 	help.AddArrow(
@@ -358,6 +362,7 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 			windowWidth / 2 - (radius * MiniPlayerSeekbarRatio) / 2.0f - exclusiveIndicator.GetOutlineWidth() * 1.05f - exclusiveIndicator.GetWidth() / 2,
 			windowHeight / 2 + font->GetEm().height
 		},
+		"exclusive",
 		{ "Click to toggle exclusive output" }
 	);
 
@@ -370,6 +375,7 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 			windowWidth / 2 + (radius * MiniPlayerSeekbarRatio) / 2.0f + captureCheckbox.GetSize().x * 2,
 			windowHeight / 2 + font->GetEm().height
 		},
+		"capture",
 		{ "Click to toggle capturing", "of keyboard media keys" }
 	);
 
@@ -383,6 +389,7 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 			windowWidth / 2 + radius + closeSize / 2,
 			windowHeight / 2 - radius - closeSize / 2, 
 		},
+		"close",
 		{ "Click to close" }
 	);
 
@@ -397,6 +404,7 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 				windowWidth / 2.0f + radius * MiniPlayerIconRatio * 3.5f + help.GetPrompt().GetBounds().width,
 				(windowHeight / 2.0f + (SeekbarSize + radius * MiniPlayerIconRatio * 2.0f)) + font->GetEm().height / 2 + radius * MiniPlayerIconRatio / 4
 			},
+			"help",
 			{ "Click to dismiss this help", "Hover to show help again" },
 			true
 		);
@@ -1137,7 +1145,7 @@ Controls::ControlButton Controls::OnMouseClicked(const Vector2i &mousePos, std::
 	if (help.IsHovered()) {
 		if (!Settings::settings.GetHelpDismissed() && help.OnMouseClicked(mousePos)) {
 			help.SetHovered(false, false, false, [this] {
-				help.RemoveArrow("Click to dismiss this help");
+				help.RemoveArrow("help");
 			});
 
 			Settings::settings.SetHelpDismissed(true);
