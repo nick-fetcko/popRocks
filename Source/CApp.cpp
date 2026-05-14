@@ -1799,8 +1799,8 @@ void CApp::OnLoop(const Delta &time) {
 			onClose) {
 			platform->SetTransparent(false);
 
-			controls.Fade(true);
-			controls.Stick();
+			if (controls.Stick())
+				controls.Fade(true);
 
 			close.SetHovered(onClose);
 		} else if (!controls.GetHelp().IsHovered()) {
@@ -1808,18 +1808,22 @@ void CApp::OnLoop(const Delta &time) {
 
 			if (albumArt.OnMouseMoved({ x, y })) {
 				platform->SetTransparent(false);
-				controls.Unstick();
+				
+				// Need to trigger a SINGLE, fresh event
+				if (controls.Unstick())
+					controls.Fade(true);
 			}
 			else if (platform->SetTransparent(true)) {
-				controls.Unstick();
+				if (controls.Unstick()) {
 
-				// We want to fade _in_ so that the
-				// user-controlled wait time passes
-				// before the eventual fade _out_
-				if (controls.GetAlpha() > 0.0f) {
-					controls.Fade(true);
+					// We want to fade _in_ so that the
+					// user-controlled wait time passes
+					// before the eventual fade _out_
+					if (controls.GetAlpha() > 0.0f) {
+						controls.Fade(true);
 
-					OnMouseLeave();
+						OnMouseLeave();
+					}
 				}
 			}
 		}

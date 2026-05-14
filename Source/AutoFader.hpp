@@ -27,7 +27,7 @@ public:
 					targetAlpha = std::nullopt;
 				}
 			} else targetAlpha = std::nullopt;
-		} else if (auto now = std::chrono::system_clock::now(); !paused && (now - lastEventTime) > waitTime) {
+		} else if (auto now = std::chrono::system_clock::now(); !paused && lastFade == true && (now - lastEventTime) > waitTime) {
 			if constexpr (UserControlled) {
 				if (Settings::settings.GetAutoFade())
 					Fade(false);
@@ -67,8 +67,10 @@ public:
 
 	virtual const float &GetAlpha() const { return alpha; }
 
-	void Stick() { paused = true; }
-	void Unstick() { paused = false; }
+	bool Stick() { if (paused) return false; paused = true; return true; }
+	bool Unstick() { if (!paused) return false; paused = false; return true; }
+
+	const bool &IsPaused() const { return paused; }
 
 protected:
 	std::chrono::seconds waitTime = Settings::settings.GetWaitTime();
