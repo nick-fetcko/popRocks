@@ -31,7 +31,7 @@ void ScrollingText::OnLoop(int x, int y, const Delta &time) {
 		// FIXME: OpenGL is cartesian, Vulkan is not
 		glScissor(
 			x - BleedEdge * bleedEdgeRatio,
-			(vulkan ? centeredY : (windowHeight - centeredY - bounds.height / 2 - font->GetOutlineRadius() - bounds.renderedHeight / 2)),
+			(vulkan ? centeredY : (windowHeight - centeredY - bounds.height / 2 - bounds.renderedHeight / 2)),
 			maxWidth + BleedEdge * 2 * bleedEdgeRatio,
 			bounds.height
 		);
