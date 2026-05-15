@@ -229,8 +229,8 @@ bool MiniPlayerList::OnMouseMoved(const Vector2i &mousePos, Rectanglei bounds, b
 		mousePos.x < bounds.w;
 
 	const auto inX = justBounds ? inTriggerX : 
-		mousePos.x > pos.x - albumArt->GetRadius(miniPlayer) * Controls::MiniPlayerSeekbarRatio / 2 &&
-		mousePos.x < pos.x + albumArt->GetRadius(miniPlayer) * Controls::MiniPlayerSeekbarRatio / 2;
+		mousePos.x > pos.x - albumArt->GetRadius(miniPlayer) &&
+		mousePos.x < pos.x + albumArt->GetRadius(miniPlayer);
 
 	const auto radius = albumArt->GetRadius(miniPlayer);
 
@@ -269,6 +269,90 @@ bool MiniPlayerList::OnMouseMoved(const Vector2i &mousePos, Rectanglei bounds, b
 	}
 
 	return false;
+}
+
+inline float MiniPlayerList::GetAngle(const Vector2i &mousePos) const {
+	const auto diff = Vector2i{ windowWidth / 2, windowHeight / 2 } - mousePos;
+	auto angle = std::atan2(diff.y, diff.x) / Maths::DEG2RAD<float>;
+
+	if (angle < 0) angle = 360 + angle;
+
+	return angle + 90;
+}
+
+bool MiniPlayerList::OnMouseDown(const Vector2i &mousePos) {
+	if (!miniPlayer || alpha == 0.0f) return false;
+
+	const auto angle = GetAngle(mousePos);
+
+	const auto distance = Vector2i{ windowWidth / 2, windowHeight / 2 }.Distance(mousePos);
+
+	const auto radius = albumArt->GetRadius(miniPlayer);
+	const auto inset = (radius / AlbumArt::BaseRadius) * 12.0f + scrollBar.GetWidth();
+
+	if (angle >= ArcStartAngles[static_cast<uint8_t>(direction)] &&
+		angle <= ArcStartAngles[static_cast<uint8_t>(direction)] + ArcWidth &&
+		distance >= radius - inset &&
+		distance <= radius) {
+		scrolling = true;
+		startAngle = angle;
+		return true;
+	}
+
+	return false;
+}
+
+bool MiniPlayerList::OnMouseDragged(const Vector2i &mousePos) {
+	if (!miniPlayer || alpha == 0.0f) return false;
+
+	if (scrolling) {
+		const auto angle = GetAngle(mousePos);
+		const auto itemWidth = static_cast<float>(ArcWidth) / items.size();
+
+		const auto delta = angle - startAngle;
+
+		if (delta >= itemWidth) {
+			startAngle += itemWidth;
+			AddToScrollOffset(1);
+		} else if (delta <= -itemWidth) {
+			startAngle -= itemWidth;
+			AddToScrollOffset(-1);
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
+void MiniPlayerList::OnMouseUp(const Vector2i &mouse) {
+	scrolling = false;
+}
+
+void MiniPlayerList::PageUp() {
+	if (!miniPlayer || alpha == 0.0f) return;
+
+	AddToScrollOffset(numberOfVisibleItems * -1);
+}
+
+void MiniPlayerList::PageDown() {
+	if (!miniPlayer || alpha == 0.0f) return;
+
+	AddToScrollOffset(numberOfVisibleItems);
+}
+
+void MiniPlayerList::Home() {
+	if (!miniPlayer || alpha == 0.0f) return;
+
+	scrollOffset = 0;
+	OnRadiusChanged();
+}
+
+void MiniPlayerList::End() {
+	if (!miniPlayer || alpha == 0.0f) return;
+
+	scrollOffset = items.size() - numberOfVisibleItems;
+	OnRadiusChanged();
 }
 
 void MiniPlayerList::OnRadiusChanged() {

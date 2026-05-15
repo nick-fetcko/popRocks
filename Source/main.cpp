@@ -168,11 +168,7 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 					else if (event.key.key == SDLK_LEFT ||
 						event.key.key == SDLK_A)
 						app.GetAlbumArt().PreviousBin();
-					else if (event.key.key == SDLK_UP ||
-						event.key.key == SDLK_W) {
-						auto lock = app.GetAlbumArt().Lock();
-						app.GetAlbumArt().ResetBin();
-					} else if (event.key.key == SDLK_P)
+					else if (event.key.key == SDLK_P)
 						app.SaveBlurFBO();
 					else if (event.key.key == SDLK_SPACE || event.key.key == SDLK_MEDIA_PLAY || event.key.key == SDLK_MEDIA_PLAY_PAUSE)
 						app.TogglePlaying();
@@ -190,6 +186,18 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 						app.ResetWindow();
 					else if (event.key.key == SDLK_M)
 						app.SetMiniPlayer(!app.GetMiniPlayer());
+					else if (event.key.key == SDLK_PAGEDOWN)
+						app.GetControls().PageDown();
+					else if (event.key.key == SDLK_PAGEUP)
+						app.GetControls().PageUp();
+					else if (event.key.key == SDLK_HOME)
+						app.GetControls().Home();
+					else if (event.key.key == SDLK_END)
+						app.GetControls().End();
+					else if (event.key.key == SDLK_UP)
+						app.GetControls().AddToScrollOffset(-1);
+					else if (event.key.key == SDLK_DOWN)
+						app.GetControls().AddToScrollOffset(1);
 					break;
 				case SDL_EVENT_MOUSE_MOTION:
 					mousePos.x = static_cast<int32_t>(event.motion.x);

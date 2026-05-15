@@ -1148,6 +1148,43 @@ void Controls::OnMouseMoved(const Vector2i &mousePos) {
 	captureCheckbox.SetMousePos(mousePos);
 }
 
+const bool Controls::IsScrolling() const {
+	return playlist.IsScrolling() || presetList.IsScrolling();
+}
+
+bool Controls::OnMouseDown(const Vector2i &mousePos) {
+	return playlist.OnMouseDown(mousePos) || presetList.OnMouseDown(mousePos);
+}
+
+bool Controls::OnMouseDragged(const Vector2i &mousePos) {
+	return playlist.OnMouseDragged(mousePos) || presetList.OnMouseDragged(mousePos);
+}
+
+void Controls::OnMouseUp(const Vector2i &mousePos) {
+	playlist.OnMouseUp(mousePos);
+	presetList.OnMouseUp(mousePos);
+}
+
+void Controls::PageUp() {
+	playlist.PageUp();
+	presetList.PageUp();
+}
+
+void Controls::PageDown() {
+	playlist.PageDown();
+	presetList.PageDown();
+}
+
+void Controls::Home() {
+	playlist.Home();
+	presetList.Home();
+}
+
+void Controls::End() {
+	playlist.End();
+	presetList.End();
+}
+
 Controls::ControlButton Controls::OnMouseClicked(const Vector2i &mousePos, std::function<void(float)> seekCallback, bool playing, bool canTakeAction) {
 	// Don't allow interaction if Help is visible
 	if (help.IsHovered()) {

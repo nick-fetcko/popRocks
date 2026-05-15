@@ -37,6 +37,9 @@ public:
 	virtual void OnDestroy();
 
 	bool OnMouseMoved(const Vector2i &mousePos, Rectanglei bounds, bool justBounds = false);
+	bool OnMouseDown(const Vector2i &mousePos);
+	bool OnMouseDragged(const Vector2i &mousePos);
+	void OnMouseUp(const Vector2i &mousePos);
 
 	void OnRadiusChanged();
 
@@ -59,7 +62,16 @@ public:
 
 	const bool Empty() const { return items.empty(); }
 
+	const bool &IsScrolling() const { return scrolling; }
+
+	void PageUp();
+	void PageDown();
+	void Home();
+	void End();
+
 protected:
+	inline float GetAngle(const Vector2i &mousePos) const;
+
 	Direction direction = Direction::Down;
 
 	AlbumArt * const albumArt = nullptr;
@@ -101,6 +113,9 @@ protected:
 	std::map<std::size_t, std::size_t> indices;
 
 	std::function<void()> afterFade;
+
+	bool scrolling = false;
+	float startAngle = 0.0f;
 
 	const bool &vulkan;
 };

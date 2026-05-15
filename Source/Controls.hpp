@@ -102,7 +102,10 @@ public:
 	Previous &GetPrevious() { return previous; }
 
 	void OnMouseMoved(const Vector2i &mousePos);
+	bool OnMouseDown(const Vector2i &mousePos);
+	bool OnMouseDragged(const Vector2i &mousePos);
 	ControlButton OnMouseClicked(const Vector2i &mousePos, std::function<void(float)> seekCallback, bool playing, bool canTakeAction = true);
+	void OnMouseUp(const Vector2i &mousePos);
 
 	void AddToScrollOffset(int offset);
 
@@ -121,6 +124,13 @@ public:
 	}
 
 	float UpdateFontSize(std::optional<float> radius = std::nullopt);
+
+	const bool IsScrolling() const;
+
+	void PageUp();
+	void PageDown();
+	void Home();
+	void End();
 
 private:
 	inline void OpenFont(Context *context, GLuint defaultFramebuffer);

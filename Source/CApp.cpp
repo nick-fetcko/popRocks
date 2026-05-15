@@ -1784,7 +1784,7 @@ void CApp::OnLoop(const Delta &time) {
 
 	context->Use("texture"_hash);
 
-	if (miniPlayer && (mouseCaptureAccum += time.change.AsSeconds()) >= 0.06667 /* Capture mouse at 15FPS maximum */) {
+	if (miniPlayer && (mouseCaptureAccum += time.change.AsSeconds()) >= 0.06667 /* Capture mouse at 15FPS maximum */ && !controls.IsScrolling()) {
 		float x = 0.0f, y = 0.0f;
 		SDL_GetGlobalMouseState(&x, &y);
 
@@ -3045,6 +3045,9 @@ bool CApp::OnMouseClicked(const Vector2i &mousePos) {
 }
 
 bool CApp::OnMouseDown(const Vector2i &mousePos) {
+	if (controls.OnMouseDown(mousePos))
+		return true;
+
 	auto ret = fileLoaded && !miniPlayer ? SeekToMousePos(mousePos) : false;
 
 	if (!ret && miniPlayer) {
@@ -3106,6 +3109,8 @@ void CApp::OnMouseUp(const Vector2i &mousePos) {
 	if (miniPlayer) {
 		LogInfo("Mouse up...");
 
+		controls.OnMouseUp(mousePos);
+
 		miniPlayerVisualizerRatio = Settings::settings.GetMiniPlayerVisualizerRatio();
 
 		lastMousePos = std::nullopt;
@@ -3136,6 +3141,8 @@ void CApp::OnMouseUp(const Vector2i &mousePos) {
 }
 
 void CApp::OnMouseMoved(const Vector2i &mousePos) {
+	if (controls.IsScrolling()) return;
+
 	controls.OnMouseMoved(mousePos);
 
 	if (miniPlayer && !controls.GetHelp().IsHovered())
@@ -3143,6 +3150,9 @@ void CApp::OnMouseMoved(const Vector2i &mousePos) {
 }
 
 bool CApp::OnMouseDragged(const Vector2i &mousePos) {
+	if (controls.OnMouseDragged(mousePos))
+		return false;
+
 	bool seek = false;
 
 	if (fileLoaded && !lastMousePos && !albumArt.IsResizing()) {
