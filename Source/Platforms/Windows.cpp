@@ -542,13 +542,8 @@ void Windows::LoadBassPlugins() {
 // -----------------------------------------------------
 void Windows::ToggleFullscreen() {
 	// It appears Windows captures Alt-Enter when using DXGI
-	if (!app->GetVulkan()) {
+	if (!app->GetVulkan() && HDR::Enabled)
 		return;
-
-		BOOL fullscreen = FALSE;
-		if (HDR::Enabled)
-			dxgi.GetSwapChain()->GetFullscreenState(&fullscreen, NULL);
-	}
 
 	if (SDL_GetWindowFlags(app->GetSdlWindow()) & SDL_WINDOW_FULLSCREEN) {
 		if (!app->GetVulkan() && HDR::Enabled)
