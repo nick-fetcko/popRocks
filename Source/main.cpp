@@ -30,6 +30,19 @@ extern "C" { FILE __iob_func[3] = { *stdin,*stdout,*stderr }; }
 
 Delta timer;
 
+bool pauseFilter = true;
+
+#ifdef WIN32
+bool WindowsMessageHook(void *userdata, MSG *msg) {
+	if (msg->message == WM_ENTERSIZEMOVE)
+		pauseFilter = false;
+	else if (msg->message == WM_EXITSIZEMOVE)
+		pauseFilter = true;
+
+	return true;
+}
+#endif
+
 // See https://stackoverflow.com/a/27195881
 // 
 // This allows the window to continue rendering
@@ -44,7 +57,8 @@ Delta timer;
 // let go of the window
 bool EventFilter(void *pThis, SDL_Event *event) {
 	auto *app = reinterpret_cast<CApp *>(pThis);
-	if ((event->type == SDL_EVENT_WINDOW_EXPOSED && !Settings::settings.GetMiniPlayer()))
+	const auto id = SDL_GetWindowID(app->GetSdlWindow());
+	if ((event->type == SDL_EVENT_WINDOW_EXPOSED && !Settings::settings.GetMiniPlayer() && !pauseFilter))
 		app->OnLoop(timer.Update());
 
 	return true;
@@ -78,6 +92,7 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 
 #ifdef WIN32
 	SDL_SetEventFilter(EventFilter, &app);
+	SDL_SetWindowsMessageHook(WindowsMessageHook, nullptr);
 #endif
 
 #ifndef __ANDROID__
