@@ -35,6 +35,9 @@ using namespace Fetcko;
 class Platform;
 class Controls;
 class AlbumArt : public Circle<Circles::Textured> {
+private:
+	constexpr static std::size_t OutlinePoints = 100;
+
 public:
 	static constexpr bool IsSupported(const std::string_view &lowercaseExtension) {
 		for (const auto &extension : SupportedExtensions)

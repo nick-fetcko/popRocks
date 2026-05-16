@@ -3097,6 +3097,8 @@ bool CApp::OnMouseDown(const Vector2i &mousePos) {
 			}
 
 			platform->SetChromaKey(true);
+
+			scaleTimer = std::chrono::system_clock::now();
 		}
 
 		ret = true;
@@ -3108,6 +3110,8 @@ bool CApp::OnMouseDown(const Vector2i &mousePos) {
 void CApp::OnMouseUp(const Vector2i &mousePos) {
 	if (miniPlayer) {
 		LogInfo("Mouse up...");
+
+		scaleTimer = std::nullopt;
 
 		controls.OnMouseUp(mousePos);
 
@@ -3220,6 +3224,12 @@ bool CApp::OnMouseDragged(const Vector2i &mousePos) {
 			SetRadius(oldRadius);
 
 			Settings::settings.SetMiniPlayerFontSize(controls.UpdateFontSize() / scale, true);
+		}
+
+		// Rescale the album art every second while scaling
+		if (const auto now = std::chrono::system_clock::now(); scaleTimer && now - *scaleTimer >= 1s) {
+			albumArt.Scale(true);
+			scaleTimer = now;
 		}
 
 		return true;

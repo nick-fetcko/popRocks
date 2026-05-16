@@ -33,27 +33,27 @@ AlbumArt::~AlbumArt() {
 }
 
 inline void AlbumArt::UpdateOutline() {
-	std::vector<Vector2f> points(361);
+	std::vector<Vector2f> points(OutlinePoints + 1);
 
-	for (auto i = 0; i < 361; ++i) {
-		auto degInRad = i * Maths::DEG2RAD<float>;
+	for (auto i = 0; i < OutlinePoints + 1; ++i) {
+		auto degInRad = (i / static_cast<double>(OutlinePoints)) * 360.0f * Maths::DEG2RAD<float>;
 
 		points[i].x = -sin(degInRad) * Circle::radius;
 		points[i].y = cos(degInRad) * Circle::radius;
 	}
 
-	outline.SetPoints<Polyline::Join::Miter>(points.data(), 361);
+	outline.SetPoints<Polyline::Join::Miter>(points.data(), OutlinePoints + 1);
 
 	const auto &ratio = Settings::settings.GetMiniPlayerVisualizerRatio();
 
-	for (auto i = 0; i < 361; ++i) {
-		auto degInRad = i * Maths::DEG2RAD<float>;
+	for (auto i = 0; i < OutlinePoints + 1; ++i) {
+		auto degInRad = (i / static_cast<double>(OutlinePoints)) * 360.0f * Maths::DEG2RAD<float>;
 
 		points[i].x = -sin(degInRad) * (Circle::radius * ratio / 2.0f - visualizerOutline.GetWidth());
 		points[i].y = cos(degInRad) * (Circle::radius * ratio / 2.0f - visualizerOutline.GetWidth());
 	}
 
-	visualizerOutline.SetPoints<Polyline::Join::Miter>(points.data(), 361);
+	visualizerOutline.SetPoints<Polyline::Join::Miter>(points.data(), OutlinePoints + 1);
 }
 
 void AlbumArt::OnInit(int windowWidth, int windowHeight, float scale) {

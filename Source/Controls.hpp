@@ -145,6 +145,8 @@ private:
 	OpenGLFont *boldFont = nullptr;
 	OpenGLFont *outlineFont = nullptr;
 	OpenGLFont *boldOutlineFont = nullptr;
+	float lastFontSize = 18;
+
 	Text elapsedText;
 	Text elapsedOutline;
 	Text remainingText;

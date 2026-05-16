@@ -468,4 +468,6 @@ private:
 	bool updateRenderer = false;
 
 	bool vulkan = Settings::settings.GetVulkan();
+
+	std::optional<std::chrono::system_clock::time_point> scaleTimer = std::nullopt;
 };

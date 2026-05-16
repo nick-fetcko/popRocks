@@ -1273,17 +1273,27 @@ float Controls::UpdateFontSize(std::optional<float> radius) {
 		radius = miniPlayer ? Settings::settings.GetMiniPlayerRadius() : Settings::settings.GetRadius();
 
 	const auto newFontSize = miniPlayer ? std::lround(20 / (AlbumArt::BaseRadius / *radius)) * scale : 18.0f * scale;
-	const auto newOutlineSize = miniPlayer ? 4.75f / (AlbumArt::BaseRadius / *radius) * scale : 3.0f * scale;
 
-	font->SetFontSize(newFontSize);
-	boldFont->SetFontSize(newFontSize);
-	outlineFont->SetOutlineRadius(newOutlineSize);
-	outlineFont->SetFontSize(newFontSize);
-	boldOutlineFont->SetOutlineRadius(newOutlineSize);
-	boldOutlineFont->SetFontSize(newFontSize);
+	// Only update font size when we've changed more than one point
+	if (std::abs(newFontSize - lastFontSize) >= 1.0f) {
+		const auto newOutlineSize = miniPlayer ? 4.75f / (AlbumArt::BaseRadius / *radius) * scale : 3.0f * scale;
 
-	if (miniPlayer)
-		Settings::settings.SetMiniPlayerFontSize(newFontSize / scale, true);
+		LogInfo("Updating font size to ", newFontSize);
 
-	return newFontSize;
+		font->SetFontSize(newFontSize);
+		boldFont->SetFontSize(newFontSize);
+		outlineFont->SetOutlineRadius(newOutlineSize);
+		outlineFont->SetFontSize(newFontSize);
+		boldOutlineFont->SetOutlineRadius(newOutlineSize);
+		boldOutlineFont->SetFontSize(newFontSize);
+
+		if (miniPlayer)
+			Settings::settings.SetMiniPlayerFontSize(newFontSize / scale, true);
+
+		lastFontSize = newFontSize;
+
+		return newFontSize;
+	}
+
+	return lastFontSize;
 }
