@@ -9,6 +9,8 @@
 #include "Serial/Json.hpp"
 #include "Utils/Logger.hpp"
 
+#include "DynamicGain.hpp"
+
 using namespace Fetcko;
 using namespace MathsCPP;
 using namespace serial;
@@ -52,6 +54,7 @@ public:
 		float effectHorizontalSpread,
 		float effectVerticalSpread,
 		float effectRotation,
+		const DynamicGain<float> &dynamicGain,
 		std::optional<std::string> renderer = std::nullopt,
 		std::optional<float> scale = std::nullopt,
 		std::optional<int> rendererOffset = std::nullopt,
@@ -83,6 +86,7 @@ public:
 		effectHorizontalSpread(effectHorizontalSpread),
 		effectVerticalSpread(effectVerticalSpread),
 		effectRotation(effectRotation),
+		dynamicGain(dynamicGain),
 		renderer(renderer),
 		scale(scale),
 		rendererOffset(rendererOffset),
@@ -98,7 +102,7 @@ public:
 			this->destAlphaFactor = destFactor;
 	}
 
-	static Preset Random();
+	static Preset Random(const DynamicGain<float> &dynamicGain);
 
 	static const std::vector<Preset> &GetPresets() { return Presets; }
 	static void AddPreset(Preset &&preset);
@@ -135,6 +139,7 @@ public:
 	const std::optional<int> &GetRendererOffset() const { return rendererOffset; }
 	const int &GetFftSize() const { return fftSize; }
 	const bool &GetAvailableInMiniPlayer() const { return availableInMiniPlayer; }
+	const DynamicGain<float> &GetDynamicGain() const { return dynamicGain; }
 
 	static void AddChangeListener(ChangeListener *listener);
 	static void RemoveChangeListener(ChangeListener *listener);
@@ -189,4 +194,6 @@ private:
 	int fftSize = 8192;
 
 	bool availableInMiniPlayer = false;
+
+	DynamicGain<float> dynamicGain { 0 };
 };

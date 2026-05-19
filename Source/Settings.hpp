@@ -12,6 +12,8 @@
 
 #include "Utils/Logger.hpp"
 
+#include "DynamicGain.hpp"
+
 using namespace std::chrono_literals;
 
 using namespace Fetcko;
@@ -19,6 +21,9 @@ using namespace MathsCPP;
 using namespace serial;
 
 class Settings : public LoggableClass {
+private:
+	static const DynamicGain<float> BaseDynamicGain;
+
 public:
 	static std::map<GLenum, std::string> BlendModes;
 	static std::map<std::string, GLenum> Colorspaces;
@@ -382,11 +387,17 @@ public:
 	const bool &GetHelpDismissed() const { return helpDismissed; }
 	void SetHelpDismissed(bool helpDismissed, bool delayed = false);
 
+	const DynamicGain<float> &GetDynamicGain() const { return dynamicGain; }
+	void SetDynamicGain(const DynamicGain<float> &dynamicGain, bool delayed = false);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
 	friend const Node &operator>>(const Node &node, ColorSelection &colorSelection);
 	friend Node &operator<<(Node &node, const ColorSelection &colorSelection);
+
+	static const DynamicGain<float> &GetBaseDynamicGain() { return BaseDynamicGain; }
+
 private:
 	static Settings Load();
 
@@ -564,4 +575,6 @@ private:
 	bool vulkan = false;
 
 	bool helpDismissed = false;
+
+	DynamicGain<float> dynamicGain = BaseDynamicGain;
 };

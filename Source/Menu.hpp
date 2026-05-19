@@ -128,7 +128,7 @@ public:
 		return ret;
 	}
 
-	bool OnLoop(const LightPack &lightPack, const Controls &controls, AlbumArt &albumArt, Context &context) {
+	bool OnLoop(const LightPack &lightPack, const Controls &controls, AlbumArt &albumArt, Context &context, const DynamicGain<float> &dynamicGain) {
 		bool open = false;
 
 		//ImGui::ShowStyleEditor();
@@ -858,6 +858,7 @@ public:
 						Settings::settings.GetEffectHorizontalSpread(),
 						Settings::settings.GetEffectVerticalSpread(),
 						Settings::settings.GetEffectRotation(),
+						dynamicGain,
 						saveRenderer ? Settings::settings.GetRenderer() : static_cast<std::optional<std::string>>(std::nullopt),
 						saveScale ? Settings::settings.GetScale() : static_cast<std::optional<float>>(std::nullopt),
 						fftLine ? Settings::settings.GetRendererOffset() : static_cast<std::optional<int>>(std::nullopt),

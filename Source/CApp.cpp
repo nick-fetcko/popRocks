@@ -1320,7 +1320,7 @@ void CApp::OnInit() {
 			SDL_PushEvent(&event);
 		});
 		menu.SetOnRandom([this] {
-			LoadPreset(Preset::Random());
+			LoadPreset(Preset::Random(dynamicGain));
 		});
 		menu.SetOnAutoFadeChanged([this](bool autoFade) {
 			Settings::settings.SetAutoFade(autoFade);
@@ -1851,7 +1851,7 @@ void CApp::OnLoop(const Delta &time) {
 	}
 
 	if (randomizeTime && std::chrono::system_clock::now() > lastRandomize + std::chrono::duration<double>(randomizeTime->AsSeconds())) {
-		LoadPreset(Preset::Random());
+		LoadPreset(Preset::Random(dynamicGain));
 		lastRandomize = std::chrono::system_clock::now();
 	} else if (randomizePresetsTime && std::chrono::system_clock::now() > lastPresetRandomize + std::chrono::duration<double>(randomizePresetsTime->AsSeconds())) {
 		LoadRandomPreset();
@@ -2177,7 +2177,7 @@ inline void CApp::SwapBuffers(const Delta &time) {
 
 		// Keep the controls on screen if a menu is open
 		context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, 1.0f);
-		if (!miniPlayer && menu.OnLoop(lightPack, controls, albumArt, *context))
+		if (!miniPlayer && menu.OnLoop(lightPack, controls, albumArt, *context, dynamicGain))
 			controls.Fade(true);
 
 		if (menu.HasColorChanged() && updateUi == 0)
@@ -3279,6 +3279,10 @@ void CApp::LoadPreset(const Preset &preset) {
 		SetVisualizerScale(1.0f);
 
 	SetBufferLength(preset.GetBufferSize());
+	dynamicGain = preset.GetDynamicGain();
+	// FFTRenderer needs to be reset
+	// with the new DynamicGain
+	renderer->Reset();
 	SetFftLength(preset.GetFftSize());
 	SetDecayTime(preset.GetDecayTime());
 	SetFadeTime(preset.GetFadeTime());
@@ -3345,6 +3349,7 @@ void CApp::LoadPreset(const Preset &preset) {
 	Settings::settings.SetEffectHorizontalSpread(preset.GetEffectHorizontalSpread(), true);
 	Settings::settings.SetEffectVerticalSpread(preset.GetEffectVerticalSpread(), true);
 	Settings::settings.SetEffectRotation(preset.GetEffectRotation(), true);
+	Settings::settings.SetDynamicGain(preset.GetDynamicGain(), true);
 
 	// Force a save at the end, since
 	// all settings changes were delayed

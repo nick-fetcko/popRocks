@@ -56,6 +56,16 @@ std::map<std::string, GLenum> Settings::Colorspaces = {
 #endif
 };
 
+// This config has much more aggressive normalization
+//	const DynamicGain<float> Settings::BaseDynamicGain = { 
+//		0.001f, 0.000001f, std::numeric_limits<float>::max(), std::numeric_limits<float>::lowest(), true, true, true
+//	};
+
+// This config gives the "original", less normalized look
+const DynamicGain<float> Settings::BaseDynamicGain = {
+	0.001f, 0.0000001f, 0.0f, 0.00f, false, true, true
+};
+
 Settings::Settings() {
 	radius = AlbumArt::BaseRadius;
 	miniPlayerRadius = AlbumArt::BaseRadius;
@@ -782,6 +792,13 @@ void Settings::SetHelpDismissed(bool helpDismissed, bool delayed) {
 	}
 }
 
+void Settings::SetDynamicGain(const DynamicGain<float> &dynamicGain, bool delayed) {
+	if (this->dynamicGain != dynamicGain) {
+		this->dynamicGain = dynamicGain;
+		if (!delayed) Save();
+	}
+}
+
 void Settings::Save() {
 	if (auto path = Filesystem::GetPath(); !path.empty()) {
 		LogInfo("Saving settings...");
@@ -1102,6 +1119,9 @@ const Node &operator>>(const Node &node, Settings &settings) {
 
 	if (node.has("helpDismissed"))
 		node["helpDismissed"]->get(settings.helpDismissed);
+
+	if (node.has("dynamicGain"))
+		node["dynamicGain"]->get(settings.dynamicGain);
 		
 	return node;
 }
@@ -1203,6 +1223,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["captureKeyboardMediaKeys"]->set(settings.captureKeyboardMediaKeys);
 	node["vulkan"]->set(settings.vulkan);
 	node["helpDismissed"]->set(settings.helpDismissed);
+	node["dynamicGain"]->set(settings.dynamicGain);
 
 	return node;
 }

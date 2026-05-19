@@ -335,15 +335,7 @@ private:
 	
 	bool resetGain = false;
 
-	// This config has much more aggressive normalization
-//	DynamicGain<float> dynamicGain{ 
-//		0.001f, 0.000001f, std::numeric_limits<float>::max(), std::numeric_limits<float>::lowest(), true, true, true
-//	};
-
-	// This config gives the "original", less normalized look
-	DynamicGain<float> dynamicGain { 
-		0.001f, 0.0000001f, 0.0f, 0.05f, false, true, true
-	};
+	DynamicGain<float> dynamicGain = Settings::settings.GetDynamicGain();
 
 	double timeSinceLastColorChange = 0.0;
 

@@ -38,7 +38,7 @@ std::vector<Preset> Preset::Load() {
 	return ret;
 }
 
-Preset Preset::Random() {
+Preset Preset::Random(const DynamicGain<float> &dynamicGain) {
 	std::mt19937 prng(time(nullptr));
 
 	auto files = Utils::GetFiles(Utils::GetResourceFolder() / "Effects");
@@ -91,7 +91,8 @@ Preset Preset::Random() {
 		(prng() % 10000) / 1000.0f * ((prng() % 1) ? -1 : 1),
 		(prng() % 10000) / 1000.0f * ((prng() % 1) ? -1 : 1),
 		(prng() % 10000) / 1000.0f * ((prng() % 1) ? -1 : 1),
-		(prng() % 10000) / 2000.0f * ((prng() % 1) ? -1 : 1)
+		(prng() % 10000) / 2000.0f * ((prng() % 1) ? -1 : 1),
+		dynamicGain
 	);
 
 	return ret;
@@ -224,6 +225,11 @@ const Node &operator>>(const Node &node, Preset &preset) {
 	if (node.has("availableInMiniPlayer"))
 		node["availableInMiniPlayer"]->get(preset.availableInMiniPlayer);
 
+	if (node.has("dynamicGain"))
+		node["dynamicGain"]->get(preset.dynamicGain);
+	else 
+		preset.dynamicGain = Settings::GetBaseDynamicGain();
+
 	return node;
 }
 
@@ -255,6 +261,7 @@ Node &operator<<(Node &node, const Preset &preset) {
 	node["effectVerticalSpread"]->set(preset.effectVerticalSpread);
 	node["effectRotation"]->set(preset.effectRotation);
 	node["availableInMiniPlayer"]->set(preset.availableInMiniPlayer);
+	node["dynamicGain"]->set(preset.dynamicGain);
 	if (preset.renderer)
 		node["renderer"]->set(preset.renderer);
 	if (preset.scale)
