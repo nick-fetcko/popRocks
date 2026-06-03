@@ -521,10 +521,14 @@ void CApp::SetVulkan(bool vulkan) {
 
 	platform->DestroyInterop();
 
-	SDL_DestroyWindow(sdlWindow);
+	// Keep the old window around to
+	// swap out its OpenGL context
+	auto oldWindow = sdlWindow;
+	sdlWindow = nullptr;
 
 	if (openGlWindow) {
-		SDL_DestroyWindow(openGlWindow);
+		SDL_DestroyWindow(oldWindow);
+		oldWindow = openGlWindow;
 		openGlWindow = nullptr;
 	}
 
@@ -534,18 +538,23 @@ void CApp::SetVulkan(bool vulkan) {
 	platform->CreateInterop();
 
 	auto props = CreateSdlWindow();
-
-	if (miniPlayer)
-		platform->SetMiniPlayer(true, static_cast<uint8_t>(albumArt.GetChromaColor() * 0xFF));
-
 	if (vulkan)
 		platform->OpenOpenGlWindow(props);
+	SDL_DestroyProperties(props);
 
 	SDL_GL_MakeCurrent(vulkan ? openGlWindow : sdlWindow, openGlContext);
+
+	// Once the OpenGL context has been
+	// swapped, destroy the old window.
+	platform->DestroyWindow(oldWindow);
+
 	platform->OnInit(GetInteropArgs(), *context);
 
 	ImGui_ImplSDL3_InitForOpenGL(sdlWindow, openGlContext);
 	ImGui_ImplOpenGL3_Init();
+
+	if (miniPlayer)
+		platform->SetMiniPlayer(true, static_cast<uint8_t>(albumArt.GetChromaColor() * 0xFF));
 
 	// Force a resize to update projection matrix
 	OnResize(windowWidth, windowHeight, scale, true);
@@ -567,6 +576,10 @@ inline SDL_PropertiesID CApp::CreateSdlWindow() {
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HIGH_PIXEL_DENSITY_BOOLEAN, true);
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_BORDERLESS_BOOLEAN, miniPlayer);
+
+#ifdef __linux__
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WAYLAND_SURFACE_ROLE_CUSTOM_BOOLEAN, miniPlayer);
+#endif
 
 	// FIXME: Transparent SDL windows don't play well with Windows' layered windows
 	//        The window will always appear at ~50% opacity with this combination,
@@ -619,10 +632,12 @@ void CApp::UpdateMiniPlayer() {
 			windowX = pos->x;
 			windowY = pos->y;
 		}
+		platform->UpdateWindowShape();
 	}
 }
 
 void CApp::SetMiniPlayer(bool miniPlayer, bool inLoop) {
+	LogDebug("Setting miniPlayer to ", miniPlayer? "ON" : "OFF");
 	//if (miniPlayer) SDL_HideWindow(sdlWindow);
 
 	this->miniPlayer = miniPlayer;
@@ -640,14 +655,28 @@ void CApp::SetMiniPlayer(bool miniPlayer, bool inLoop) {
 		ImGui_ImplOpenGL3_Shutdown();
 		ImGui_ImplSDL3_Shutdown();
 
-		platform->GetInterop()->OnDestroy();
+		if (auto interop = platform->GetInterop())
+			interop->OnDestroy();
 
-		SDL_DestroyWindow(sdlWindow);
+		// Keep the old window around to
+		// swap out its OpenGL context
+		auto oldWindow = sdlWindow;
 
-		CreateSdlWindow();
+		// We don't need the properties here,
+		// so destroy them right away
+		SDL_DestroyProperties(CreateSdlWindow());
 
 		if (!vulkan)
 			SDL_GL_MakeCurrent(sdlWindow, openGlContext);
+
+		// Since the platform hasn't yet been given
+		// the new miniPlayer value, we need to
+		// explicitly pass it here.
+		platform->HookWindow(miniPlayer);
+
+		// Now that we've swapped the OpenGL
+		// context, destroy the old window
+		platform->DestroyWindow(oldWindow);
 
 		ImGui_ImplSDL3_InitForOpenGL(sdlWindow, openGlContext);
 		ImGui_ImplOpenGL3_Init();
@@ -663,12 +692,14 @@ void CApp::SetMiniPlayer(bool miniPlayer, bool inLoop) {
 #endif
 
 #if 1
-		platform->GetInterop()->OnInit(GetInteropArgs());
+		if (auto interop = platform->GetInterop()) {
+			interop->OnInit(GetInteropArgs());
 
-		// Menu callbacks take place
-		// between OnLoop() and SwapBuffers(),
-		// so we have to return to that state
-		if (inLoop) platform->GetInterop()->OnLoop();
+			// Menu callbacks take place
+			// between OnLoop() and SwapBuffers(),
+			// so we have to return to that state
+			if (inLoop) interop->OnLoop();
+		}
 #endif
 
 		backgroundAlpha = miniPlayer ? 0.0f : 1.0f;
@@ -828,8 +859,9 @@ void CApp::OnInit() {
 	windowHeight = Settings::settings.GetWindowHeight();
 
 	auto props = CreateSdlWindow();
-
 	platform->OpenOpenGlWindow(props);
+	SDL_DestroyProperties(props);
+
 	platform->SetMiniPlayer(miniPlayer, static_cast<uint8_t>(albumArt.GetChromaColor() * 0xFF));
 
 	if (platform->CreateOpenGlContext()) {
@@ -1784,18 +1816,28 @@ void CApp::OnLoop(const Delta &time) {
 
 	context->Use("texture"_hash);
 
-	if (miniPlayer && (mouseCaptureAccum += time.change.AsSeconds()) >= 0.06667 /* Capture mouse at 15FPS maximum */ && !controls.IsScrolling()) {
+	if (miniPlayer &&
+		(mouseCaptureAccum += time.change.AsSeconds()) >= 0.06667 /* Capture mouse at 15FPS maximum */ &&
+		!controls.IsScrolling() &&
+		platform->IsPointerInWindow() &&
+		!platform->IsMoving() &&
+		!platform->IsResizing()) {
 		float x = 0.0f, y = 0.0f;
+
+#ifdef WIN32
 		SDL_GetGlobalMouseState(&x, &y);
 
 		x -= windowX;
 		y -= windowY;
+#else
+		SDL_GetMouseState(&x, &y);
+#endif
 
 		// Only show the controls if we're
 		// hovered over the album art circle
 		// or close button
 		if (auto onClose = IsOnCloseButton({ x, y }); 
-			Vector2f(x, y).Distance({ windowWidth / 2, windowHeight / 2 }) / scale <= albumArt.GetRadius(miniPlayer) ||
+			Vector2f(x, y).Distance({ windowWidth / 2, windowHeight / 2 }) / scale <= albumArt.GetRadius(miniPlayer) + albumArt.GetOutline().GetWidth() ||
 			onClose) {
 			platform->SetTransparent(false);
 
@@ -1829,6 +1871,17 @@ void CApp::OnLoop(const Delta &time) {
 		}
 
 		mouseCaptureAccum = 0.0;
+	} else if (!platform->IsPointerInWindow() && !platform->IsResizing() && platform->SetTransparent(true)) {
+		if (controls.Unstick()) {
+			// We want to fade _in_ so that the
+			// user-controlled wait time passes
+			// before the eventual fade _out_
+			if (controls.GetAlpha() > 0.0f) {
+				controls.Fade(true);
+			}
+		}
+
+		OnMouseLeave();
 	}
 
 	if (!fileLoaded && !platform->IsListening()) {
@@ -2077,6 +2130,16 @@ void CApp::OnLoop(const Delta &time) {
 		playing
 	);
 
+	for (auto integration : integrations) {
+		integration->SetPosition(
+			std::chrono::duration_cast<std::chrono::microseconds>(
+				std::chrono::duration<double>(
+					elapsed
+				)
+			).count()
+		);
+	}
+
 	DrawCloseButton(time);
 	
 	// Line up the next file at >= 90% completion of current file
@@ -2117,7 +2180,7 @@ void CApp::OnLoop(const Delta &time) {
 				!controls.GetExclusiveIndicator().IsExclusive() &&
 				controls.GetPlaylist().GetCue()) {
 				BASS_ChannelPlay(streamHandle, TRUE);
-				playing = true;
+				SetPlaying(true);
 			}
 		} else {
 			if (controls.GetExclusiveIndicator().IsExclusive())
@@ -2125,7 +2188,7 @@ void CApp::OnLoop(const Delta &time) {
 			else
 				Stop(FALSE);
 
-			playing = false;
+			SetPlaying(false);
 		}
 	}
 
@@ -2369,7 +2432,7 @@ void CApp::Stop(BOOL reset) {
 	if (reset == TRUE)
 		BASS_StreamFree(streamHandle);
 
-	playing = false;
+	SetPlaying(false);
 }
 
 void CApp::StopExclusive() {
@@ -2382,7 +2445,7 @@ void CApp::StopExclusive(BOOL reset) {
 	if (reset == TRUE)
 		BASS_StreamFree(streamHandle);
 
-	playing = false;
+	SetPlaying(false);
 }
 
 void CApp::LoadBeats(
@@ -2670,6 +2733,33 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 			originalPath
 		);
 
+		for (auto integration : integrations) {
+			auto file = albumArt.GetCurrentFile();
+			if (albumArt.HasEmbedded()) {
+				if (auto tempFile = platform->GetTemporaryFile("/tmp/popRocks_embedded_art.XXXXXX"); !tempFile.empty()) {
+					const auto [bytes, size] = albumArt.GetEmbedded();
+
+					std::ofstream outFile(tempFile, std::ios::out | std::ios::binary);
+					outFile.write(reinterpret_cast<const char *>(bytes), size);
+
+					file = tempFile;
+				}
+			}
+
+			integration->OnSongChanged(
+				beatDetect->GetHash(),
+				controls.GetTitle(),
+				controls.GetArtist(),
+				controls.GetAlbum(),
+				file,
+				std::chrono::duration_cast<std::chrono::microseconds>(
+					std::chrono::duration<double>(
+						controls.GetCurrentSongLength()
+					)
+				).count()
+			);
+		}
+
 		// Once we have our final art,
 		// scale it down
 		albumArt.Scale();
@@ -2685,8 +2775,8 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 		}
 
 		if (platform->PlayAfterLoad())
-			playing = true;
-		else playing = false;
+			SetPlaying(true);
+		else SetPlaying(false);
 
 		bool lastFileLoaded = fileLoaded;
 
@@ -2872,6 +2962,15 @@ void CApp::FadeControls(bool in) {
 	controls.Fade(in);
 }
 
+void CApp::SetPlaying(bool playing) { 
+	this->playing = playing;
+
+	for (auto integration : integrations) {
+		if (playing) integration->OnPlay();
+		else         integration->OnPause();
+	}
+}
+
 void CApp::TogglePlaying() {
 	if (streamHandle) {
 		// If we hit the end of the song, we might be in an error state
@@ -2882,10 +2981,10 @@ void CApp::TogglePlaying() {
 		if (!platform->StopPlayingExclusive()) {
 			if (BASS_ChannelIsActive(streamHandle) != BASS_ACTIVE_PLAYING) {
 				BASS_ChannelPlay(streamHandle, FALSE);
-				playing = true;
+				SetPlaying(true);
 			} else {
 				BASS_ChannelPause(streamHandle);
-				playing = false;
+				SetPlaying(false);
 			}
 		}
 	}
@@ -2978,7 +3077,7 @@ void CApp::ToggleExclusive() {
 		BASS_Start();
 		BASS_ChannelPlay(streamHandle, false);
 
-		playing = true;
+		SetPlaying(true);
 	}
 }
 
@@ -3044,7 +3143,7 @@ bool CApp::OnMouseClicked(const Vector2i &mousePos) {
 	return false;
 }
 
-bool CApp::OnMouseDown(const Vector2i &mousePos) {
+bool CApp::OnMouseDown(const Vector2i &mousePos, MouseDownState *state) {
 	if (controls.OnMouseDown(mousePos))
 		return true;
 
@@ -3063,6 +3162,11 @@ bool CApp::OnMouseDown(const Vector2i &mousePos) {
 			}
 
 			SDL_CaptureMouse(lastMousePos.has_value());
+
+			if (state && lastMousePos) {
+				lastMousePos = std::nullopt;
+				*state = MouseDownState::Dragging;
+			}
 		} else {
 			// INSANE HACK:
 			//   In order to prevent redrawing while resizing
@@ -3099,16 +3203,19 @@ bool CApp::OnMouseDown(const Vector2i &mousePos) {
 			platform->SetChromaKey(true);
 
 			scaleTimer = std::chrono::system_clock::now();
+
+			if (state)
+				*state = MouseDownState::Resizing;
 		}
 
-		ret = true;
+		ret = (state == nullptr);
 	}
 
 	return ret;
 }
 
 void CApp::OnMouseUp(const Vector2i &mousePos) {
-	if (miniPlayer) {
+	if (miniPlayer && !platform->IsResizing()) {
 		LogInfo("Mouse up...");
 
 		scaleTimer = std::nullopt;
@@ -3139,6 +3246,7 @@ void CApp::OnMouseUp(const Vector2i &mousePos) {
 		Settings::settings.SetMiniPlayerHeight(albumArt.GetRadius(miniPlayer) * miniPlayerVisualizerRatio / scale, true);
 
 		platform->SetChromaKey(false);
+		platform->UpdateWindowShape();
 
 		Settings::settings.Save();
 	}
@@ -3193,37 +3301,55 @@ bool CApp::OnMouseDragged(const Vector2i &mousePos) {
 
 		const auto newRadius = albumArt.GetRadius(miniPlayer);
 
+		if (!platform->AllowsWindowMovement()) {
+			miniPlayerVisualizerRatio = std::min(windowWidth, windowHeight) / newRadius;
+			Settings::settings.SetMiniPlayerVisualizerRatio(miniPlayerVisualizerRatio);
+		}
+
 		SetRadius(newRadius);
 
-		Vector2i delta = {
-			std::lround((newRadius * ratio - windowWidth) / 2),
-			std::lround((newRadius * ratio - windowHeight) / 2)
-		};
+		if (platform->AllowsWindowMovement()) {
+			Vector2i delta = {
+				std::lround((newRadius * ratio - windowWidth) / 2),
+				std::lround((newRadius * ratio - windowHeight) / 2)
+			};
 
-		// If deltas don't match, we likely hit the edge of the
-		// screen. Let us _shrink_ in this case, but not _grow_
-		if (delta.x == delta.y || (delta.x < 0 && delta.y < 0)) {
-			windowX -= delta.x;
-			windowY -= delta.y;
+			// If deltas don't match, we likely hit the edge of the
+			// screen. Let us _shrink_ in this case, but not _grow_
+			if (delta.x == delta.y || (delta.x < 0 && delta.y < 0)) {
+				windowX -= delta.x;
+				windowY -= delta.y;
 
-			platform->SetWindowPos(
-				windowX,
-				windowY,
-				std::lround(newRadius * ratio),
-				std::lround(newRadius * ratio)
+				platform->SetWindowPos(
+					windowX,
+					windowY,
+					std::lround(newRadius * ratio),
+					std::lround(newRadius * ratio)
+				);
+
+				if (!vulkan)
+					OnResize(std::lround(newRadius * ratio), std::lround(newRadius * ratio), true);
+
+				miniPlayerVisualizerRatio = ratio;
+			} else { // If we hit the edge of the screen, revert the change
+				Settings::settings.SetMiniPlayerVisualizerRatio(miniPlayerVisualizerRatio, true);
+
+				// FIXME: Make this a proactive approach instead of a reactive one
+				SetRadius(oldRadius);
+
+				Settings::settings.SetMiniPlayerFontSize(controls.UpdateFontSize() / scale, true);
+			}
+		} else {
+			controls.OnResize(
+				windowWidth,
+				windowHeight,
+				*context,
+				scale,
+				platform->GetDefaultFramebuffer(),
+				miniPlayer
 			);
 
-			if (!vulkan)
-				OnResize(std::lround(newRadius * ratio), std::lround(newRadius * ratio), true);
-
-			miniPlayerVisualizerRatio = ratio;
-		} else { // If we hit the edge of the screen, revert the change
-			Settings::settings.SetMiniPlayerVisualizerRatio(miniPlayerVisualizerRatio, true);
-
-			// FIXME: Make this a proactive approach instead of a reactive one
-			SetRadius(oldRadius);
-
-			Settings::settings.SetMiniPlayerFontSize(controls.UpdateFontSize() / scale, true);
+			close.OnResize(controls.GetIconSize());
 		}
 
 		// Rescale the album art every second while scaling

@@ -9,6 +9,8 @@
 template<typename T>
 class PRNG {
 public:
+	virtual ~PRNG() = default;
+	
 	virtual T Next() = 0;
 	virtual std::pair<T, T> NextTwo() = 0;
 	virtual T Max() = 0;

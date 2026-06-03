@@ -42,6 +42,7 @@
 #include "DoubleClick.hpp"
 #include "DynamicGain.hpp"
 #include "FPSCounter.hpp"
+#include "Integrations/Integration.hpp"
 #include "LightPack.hpp"
 #include "Mappings.h"
 #include "Menu.hpp"
@@ -135,7 +136,8 @@ public:
 	Controls &GetControls() { return controls; }
 	void FadeControls(bool in);
 	void TogglePlaying();
-	void SetPlaying(bool playing) { this->playing = playing; }
+	void SetPlaying(bool playing);
+	bool IsPlaying() const { return playing; }
 
 	void ToggleFullscreen();
 
@@ -145,7 +147,12 @@ public:
 	void PreviousTrack();
 
 	bool OnMouseClicked(const Vector2i &mousePos);
-	bool OnMouseDown(const Vector2i &mousePos);
+	enum class MouseDownState {
+		None,
+		Dragging,
+		Resizing
+	};
+	bool OnMouseDown(const Vector2i &mousePos, MouseDownState *state = nullptr);
 	void OnMouseUp(const Vector2i &mousePos);
 	void OnMouseMoved(const Vector2i &mousePos);
 	bool OnMouseDragged(const Vector2i &mousePos);
@@ -228,6 +235,9 @@ public:
 	void SetDestFactor(GLenum factor) { this->destFactor = factor; }
 	void SetSourceAlphaFactor(GLenum factor) { this->sourceAlphaFactor = factor; }
 	void SetDestAlphaFactor(GLenum factor) { this->destAlphaFactor = factor; }
+
+	void AddIntegration(Integration *integration) { integrations.emplace(integration); }
+	void RemoveIntegration(Integration *integration) { integrations.erase(integration); }
 
 private:
 	void AddCommands();
@@ -461,4 +471,6 @@ private:
 	bool vulkan = Settings::settings.GetVulkan();
 
 	std::optional<std::chrono::system_clock::time_point> scaleTimer = std::nullopt;
+
+	std::set<Integration*> integrations;
 };

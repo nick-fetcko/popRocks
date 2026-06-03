@@ -55,6 +55,8 @@ public:
 
 	const State GetState() const;
 
+	const uint64_t &GetHash() const { return hash; }
+
 private:
 	inline void _OnLoad(
 		const std::filesystem::path &path,
@@ -82,4 +84,6 @@ private:
 	std::mutex mutex;
 
 	State state = State::Idle;
+
+	uint64_t hash = 0;
 };

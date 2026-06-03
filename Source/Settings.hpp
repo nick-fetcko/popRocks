@@ -452,7 +452,7 @@ private:
 	std::string lightPackFocusArea = "bassandmid";
 
 	bool playlistOnScreen = true;
-	bool currentSongVisible = false;
+	bool currentSongVisible = true;
 	bool playlistFade = true;
 
 	int fftSize = 8192;

@@ -109,6 +109,7 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 	auto mouseTimer = std::chrono::system_clock::now();
 	bool mouseButtonDown = false;
 	bool mouseDragged = false;
+	float wheelAccum = 0.0f;
 
 	uint16_t skipEvents = 0;
 
@@ -191,16 +192,12 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 						app.ToggleFullscreen();
 					else if (event.key.key == SDLK_ESCAPE)
 						running = false;
-					else if (event.key.key == SDLK_V)
-						app.SetVulkan(!app.GetVulkan());
 					else if (event.key.key >= SDLK_F1 && event.key.key <= SDLK_F12)
 						app.LoadPreset(event.key.key - SDLK_F1);
 					else if (event.key.key == SDLK_S)
 						app.SyncToNearestBeat();
 					else if (event.key.key == SDLK_R)
 						app.ResetWindow();
-					else if (event.key.key == SDLK_M)
-						app.SetMiniPlayer(!app.GetMiniPlayer());
 					else if (event.key.key == SDLK_PAGEDOWN)
 						app.GetControls().PageDown();
 					else if (event.key.key == SDLK_PAGEUP)
@@ -213,6 +210,17 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 						app.GetControls().AddToScrollOffset(-1);
 					else if (event.key.key == SDLK_DOWN)
 						app.GetControls().AddToScrollOffset(1);
+					break;
+				case SDL_EVENT_KEY_UP:
+					// As we can potentially have multiple windows open
+					// while toggling these settings, we explicitly listen
+					// for key _up_ events. Key _down_ events may fire
+					// for each window individually, causing an infinite
+					// loop of toggling.
+					if (event.key.key == SDLK_V)
+						app.SetVulkan(!app.GetVulkan());
+					else if (event.key.key == SDLK_M)
+						app.SetMiniPlayer(!app.GetMiniPlayer());
 					break;
 				case SDL_EVENT_MOUSE_MOTION:
 					mousePos.x = static_cast<int32_t>(event.motion.x);
@@ -252,7 +260,8 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 								running = false;
 						} else app.OnMouseUp(mousePos);
 
-						app.GetAlbumArt().OnMouseUp(mousePos);
+						if (!app.GetPlatform()->IsResizing())
+							app.GetAlbumArt().OnMouseUp(mousePos);
 
 						mouseButtonDown = false;
 						mouseDragged = false;
@@ -277,9 +286,21 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 					app.UpdateDisplayBoundingBox();
 					break;
 				case SDL_EVENT_MOUSE_WHEEL:
-					app.GetControls().AddToScrollOffset(
-						event.wheel.y * (event.wheel.direction == SDL_MOUSEWHEEL_NORMAL ? -1 : 1)
-					);
+					// If we changed directions, reset to 0
+					if ((wheelAccum > 0 && event.wheel.y < 0) ||
+						(wheelAccum < 0 && event.wheel.y > 0))
+						wheelAccum = event.wheel.y;
+					else
+						wheelAccum += event.wheel.y;
+
+					if (wheelAccum + event.wheel.y >= 1) {
+						app.GetControls().AddToScrollOffset((event.wheel.direction == SDL_MOUSEWHEEL_NORMAL ? -1 : 1));
+						wheelAccum -= 1.0f;
+					} else if (wheelAccum + event.wheel.y <= -1) {
+						app.GetControls().AddToScrollOffset((event.wheel.direction == SDL_MOUSEWHEEL_NORMAL ? 1 : -1));
+						wheelAccum += 1.0f;
+					}
+					
 					break;
 				default:
 					break;

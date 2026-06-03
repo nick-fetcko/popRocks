@@ -99,6 +99,31 @@ bool Platform::PlayAfterLoad() {
 	return true; 
 }
 
+// Mouse pointer
+bool Platform::IsPointerInWindow() const {
+	return true;
+}
+
+// Window management
+bool Platform::IsMoving() const {
+	return false;
+}
+
+bool Platform::IsResizing() const {
+	return false;
+}
+
+void Platform::UpdateWindowShape() {
+}
+
+void Platform::DestroyWindow(SDL_Window *window) {
+	SDL_DestroyWindow(window);
+}
+
+void Platform::HookWindow(bool miniPlayer) {
+
+}
+
 // =====================================================
 // ================ Getters / Setters ==================
 // =====================================================

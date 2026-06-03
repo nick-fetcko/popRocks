@@ -82,6 +82,9 @@ public:
 	void SetTitle(const std::string &title) override;
 	const std::string &GetTitle() const { return titleText.GetText(); }
 
+	const std::string &GetArtist() const { return artistText.GetText(); }
+	const std::string &GetAlbum() const { return albumText.GetText(); }
+
 	double GetCurrentPosition() const { return currentPos; }
 
 	FPSCounter &GetFpsCounter() { return fpsCounter; }

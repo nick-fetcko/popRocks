@@ -164,7 +164,7 @@ void AlbumArt::UpdateVertexCoords() {
 
 void AlbumArt::DrawPlaceholder(GLfloat x, GLfloat y, float alpha, Context &context) const {
 	context.Use("basic"_hash);
-	context.Color(tintedBlackColor.r, tintedBlackColor.g, tintedBlackColor.b, (!albumLoaded ? 1.0f : (alpha * 0.667f)));
+	context.Color(tintedBlackColor.r, tintedBlackColor.g, tintedBlackColor.b, (!albumLoaded ? 0.86667f : (alpha * 0.667f)));
 
 	placeholder.OnLoop(x, y, context);
 
@@ -1446,7 +1446,7 @@ bool AlbumArt::OnMouseClicked(const Vector2i &mousePos) {
 inline void AlbumArt::UpdateCursor(const Vector2i &mousePos) {
 	const auto angle = atan2(windowWidth / 2.0f - mousePos.x, windowHeight / 2.0f - mousePos.y) / Maths::DEG2RAD<float>;
 
-	SDL_SystemCursor cursor = SDL_SYSTEM_CURSOR_CROSSHAIR;
+	cursor = SDL_SYSTEM_CURSOR_CROSSHAIR;
 
 	if (abs(angle) >= 0.0f && abs(angle) <= 22.5f)
 		cursor = SDL_SYSTEM_CURSOR_N_RESIZE;
@@ -1499,9 +1499,10 @@ void AlbumArt::OnMouseLeave() {
 			SDL_DestroyCursor(resizeCursor);
 			resizeCursor = nullptr;
 			SDL_SetCursor(SDL_GetDefaultCursor());
-;		}
+		}
 		hovered = false;
 		hoverTimer = std::nullopt;
+		cursor = SDL_SYSTEM_CURSOR_DEFAULT;
 
 		targetOutlineAlpha = 0.0f;
 	}

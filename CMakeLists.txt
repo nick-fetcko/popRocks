@@ -41,6 +41,11 @@ else ()
 	pkg_search_module(Freetype REQUIRED freetype2 IMPORTED_TARGET)
 	include_directories(PkgConfig::Freetype)
 	link_libraries(PkgConfig::Freetype)
+	pkg_search_module(Wayland REQUIRED wayland-client IMPORTED_TARGET)
+	link_libraries(PkgConfig::Wayland)
+	pkg_search_module(dbus REQUIRED dbus-1 IMPORTED_TARGET)
+	include_directories(PkgConfig::dbus)
+	link_libraries(PkgConfig::dbus)
 endif()
 
 add_subdirectory(Serial/src)
@@ -106,6 +111,7 @@ set(_poprocks_cpp_headers
 	Source/Text.hpp
 	Source/Volume.hpp
 	Source/WV.hpp
+	Source/Integrations/Integration.hpp
 	Source/Platforms/Platform.hpp
 	Source/Platforms/Desktop.hpp
 	)
@@ -135,6 +141,7 @@ set(_poprocks_cpp_sources
 	Source/Settings.cpp
 	Source/Text.cpp
 	Source/Volume.cpp
+	Source/Integrations/Integration.cpp
 	Source/Platforms/Platform.cpp
 	Source/Platforms/Desktop.cpp
 	)
@@ -143,6 +150,8 @@ if (WIN32)
 	list(APPEND _poprocks_cpp_headers Source/Platforms/Windows.hpp)
 	list(APPEND _poprocks_cpp_sources Source/Platforms/Windows.cpp)
 else()
+	list(APPEND _poprocks_cpp_headers Source/Integrations/MPRIS.hpp)
+	list(APPEND _poprocks_cpp_sources Source/Integrations/MPRIS.cpp)
 	list(APPEND _poprocks_cpp_headers Source/Platforms/Linux.hpp)
 	list(APPEND _poprocks_cpp_sources Source/Platforms/Linux.cpp)
 	list(APPEND _poprocks_cpp_headers Source/Platforms/Flatpak.hpp)
@@ -241,6 +250,15 @@ if (WIN32)
 		PRIVATE 		
 		${APP_ICON_RESOURCE_WINDOWS}
 		${VERSION_RESOURCE_WINDOWS}
+		)
+else()
+	target_sources(popRocks
+		PRIVATE
+		third_party/xdg/xdg-shell-client-protocol.h
+		third_party/xdg/xdg-shell-protocol.c
+		)
+	target_include_directories(popRocks PRIVATE
+		third_party/xdg
 		)
 endif()
 

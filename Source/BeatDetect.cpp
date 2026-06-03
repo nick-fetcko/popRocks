@@ -117,7 +117,7 @@ inline void BeatDetect::_OnLoad(
 			auto start = std::chrono::system_clock::now();
 
 			auto data = Utils::GetStringFromFile(path);
-			auto hash = hash_64_fnv1a_const(data.data(), data.size());
+			hash = hash_64_fnv1a_const(data.data(), data.size());
 			std::stringstream stream;
 			stream << std::setw(sizeof(hash) * 2) << std::setfill('0') << std::uppercase << std::hex << hash;
 			if (index) stream << std::dec << "-" << static_cast<int>(*index);

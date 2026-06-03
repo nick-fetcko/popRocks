@@ -523,6 +523,10 @@ HSTREAM Windows::OpenWithFlags(const std::filesystem::path &path, const std::str
 	return ret;
 }
 
+std::filesystem::path Windows::GetTemporaryFile(const std::string &pattern) {
+	return "";
+}
+
 // -----------------------------------------------------
 // ---------------------- BASS -------------------------
 // -----------------------------------------------------
@@ -655,6 +659,10 @@ bool Windows::SetTransparent(bool transparent) {
 
 	this->transparent = transparent;
 
+	return true;
+}
+
+bool Windows::AllowsWindowMovement() const {
 	return true;
 }
 

@@ -58,6 +58,12 @@ public:
 		virtual void OnBlackChanged(const float &black) = 0;
 	};
 
+	enum class Outline {
+		None,
+		Art,
+		Visualizer
+	};
+
 	constexpr static inline float BaseRadius = 200.0f;
 
 	AlbumArt(Controls *const controls, std::unique_ptr<Context> &context, std::unique_ptr<Platform> &platform);
@@ -172,12 +178,18 @@ public:
 	const bool HasChromaChanged() { auto ret = chromaChanged.load(); chromaChanged = false; return ret; }
 
 	const bool IsResizing() const { return activeOutline != Outline::None; }
+	const Outline GetActiveOutline() const { return activeOutline; }
 
 	void DrawPlaceholder(GLfloat x, GLfloat y, float alpha, Context &context) const;
 
 	void OverrideOutlineAlpha(float overrideOutlineAlpha) { this->overrideOutlineAlpha = overrideOutlineAlpha; }
 
 	const Fetcko::Polyline &GetOutline() const { return outline; }
+	const Fetcko::Polyline &GetVisualizerOutline() const { return visualizerOutline; }
+
+	const SDL_SystemCursor GetCursor() const { return cursor; }
+
+	std::pair<uint8_t *, std::size_t> GetEmbedded() { return { embeddedData, embeddedDataLength };}
 
 private:
 	constexpr inline static std::array<std::string_view, 3> SupportedExtensions = { ".jpg", ".png", ".webp" };
@@ -198,11 +210,6 @@ private:
 
 	inline void UpdateCursor(const Vector2i &mousePos);
 
-	enum class Outline {
-		None,
-		Art,
-		Visualizer
-	};
 	Outline IsCursorOnOutline(const Vector2i &mousePos);
 
 	inline void UpdateFontSize();
@@ -335,4 +342,6 @@ private:
 	Vector2i mousePos = { 0, 0 };
 
 	Controls * const controls = nullptr;
+
+	SDL_SystemCursor cursor = SDL_SYSTEM_CURSOR_DEFAULT;
 };

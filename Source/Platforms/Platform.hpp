@@ -73,7 +73,8 @@ public:
 	
 	// File opening
 	virtual HSTREAM OpenWithFlags(const std::filesystem::path &path, const std::string &extension, DWORD flags) = 0;
-	
+	virtual std::filesystem::path GetTemporaryFile(const std::string &pattern) = 0;
+
 	// BASS
 	virtual void LoadBassPlugins() = 0;
 
@@ -87,6 +88,7 @@ public:
 	virtual void SetBgr(bool enabled, Context &context) = 0;
 
 	// Window management
+	virtual bool AllowsWindowMovement() const = 0;
 	virtual std::optional<Vector2i> SetWindowPos(int x, int y, int width, int height) = 0;
 
 	// =====================================================
@@ -133,6 +135,16 @@ public:
 	// Audio
 	virtual void Unmute();
 	virtual bool PlayAfterLoad();
+
+	// Mouse pointer
+	virtual bool IsPointerInWindow() const;
+
+	// Window management
+	virtual bool IsMoving() const;
+	virtual bool IsResizing() const;
+	virtual void UpdateWindowShape();
+	virtual void DestroyWindow(SDL_Window *window);
+	virtual void HookWindow(bool miniPlayer);
 
 	// =====================================================
 	// ================ Getters / Setters ==================

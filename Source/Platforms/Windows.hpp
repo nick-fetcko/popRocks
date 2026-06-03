@@ -61,6 +61,7 @@ public:
 
 	// File opening
 	HSTREAM OpenWithFlags(const std::filesystem::path &path, const std::string &extension, DWORD flags) override;
+	std::filesystem::path GetTemporaryFile(const std::string &pattern) override;
 
 	// BASS
 	void LoadBassPlugins() override;
@@ -74,6 +75,7 @@ public:
 	bool SetTransparent(bool transparent) override;
 
 	// Window management
+	bool AllowsWindowMovement() const override;
 	std::optional<Vector2i> SetWindowPos(int x, int y, int width, int height) override;
 
 	// =====================================================
