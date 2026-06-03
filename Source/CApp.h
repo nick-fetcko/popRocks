@@ -51,7 +51,6 @@
 #include "Preset.hpp"
 #include "Renderer.hpp"
 #include "SampleRNG.hpp"
-#include "TestRNG.hpp"
 #include "Text.hpp"
 #include "Volume.hpp"
 
