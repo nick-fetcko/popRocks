@@ -304,7 +304,7 @@ public:
 	const GLenum &GetDestFactor() const { return destFactor; }
 	void SetDestFactor(GLenum destFactor, bool delayed = false);
 
-	const GLenum &GetSourceAlphaFactor() const { return sourceFactor; }
+	const GLenum &GetSourceAlphaFactor() const { return sourceAlphaFactor; }
 	void SetSourceAlphaFactor(GLenum sourceAlphaFactor, bool delayed = false);
 
 	const GLenum &GetDestAlphaFactor() const { return destAlphaFactor; }

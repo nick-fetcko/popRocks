@@ -249,7 +249,11 @@ Node &operator<<(Node &node, const Preset &preset) {
 	node["rotationSpeed"]->set(preset.rotationSpeed);
 	node["blur"]->set(preset.blur);
 	node["sourceFactor"]->set(preset.sourceFactor);
+	if (preset.sourceAlphaFactor != preset.sourceFactor)
+		node["sourceAlphaFactor"]->set(preset.sourceAlphaFactor);
 	node["destFactor"]->set(preset.destFactor);
+	if (preset.destAlphaFactor != preset.destFactor)
+		node["destAlphaFactor"]->set(preset.destAlphaFactor);
 	node["blurIntensity"]->set(preset.blurIntensity);
 	node["blurOpacity"]->set(preset.blurOpacity);
 	node["effect"]->set(preset.effect);
