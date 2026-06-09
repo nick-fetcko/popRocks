@@ -381,7 +381,7 @@ void MiniPlayerList::OnRadiusChanged() {
 
 	scrollBarOutline.SetPoints<Polyline::Join::Miter>(points.data(), ArcWidth);
 
-	const auto end = (ArcWidth - 1) * (static_cast<double>(numberOfVisibleItems) / items.size());
+	const auto end = std::max((ArcWidth - 1) * (static_cast<double>(numberOfVisibleItems) / items.size()), 3.0);
 	const auto start = ((ArcWidth - 1) - end) / (items.size() - numberOfVisibleItems) * scrollOffset;
 
 	for (auto i = 1; i < end; ++i) {
@@ -391,7 +391,10 @@ void MiniPlayerList::OnRadiusChanged() {
 		points[i - 1].y = cos(degInRad) * (radius - inset);
 	}
 
-	scrollBar.SetPoints<Polyline::Join::Miter>(points.data(), (ArcWidth - 1) * (static_cast<double>(numberOfVisibleItems) / items.size()) - 1);
+	scrollBar.SetPoints<Polyline::Join::Miter>(
+		points.data(),
+		end - 1
+	);
 }
 
 void MiniPlayerList::OnColorChanged(const Colour<float> &color, bool silent) {
