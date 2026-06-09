@@ -230,14 +230,14 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 
 					if (mouseButtonDown) {
 						if (!skipEvents) {
-							if (app.OnMouseDragged(mousePos)) {
+							if (mouseDragged && app.OnMouseDragged(mousePos)) {
 								skipEvents = 1;
 							}
 						} else --skipEvents;
 
 						// Only consider our mouse dragged if we've held the
 						// button for more than 500ms
-						if (!mouseDragged && std::chrono::system_clock::now() - mouseTimer > 500ms)
+						if (!mouseDragged && std::chrono::system_clock::now() - mouseTimer > 250ms)
 							mouseDragged = true;
 					} else app.OnMouseMoved(mousePos);
 					break;
