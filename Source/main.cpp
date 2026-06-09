@@ -122,9 +122,11 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 	while(running) {
 		while(SDL_PollEvent(&event)) {
 #if GUI
-			ImGui_ImplSDL3_ProcessEvent(&event);
-			if (io.WantCaptureKeyboard || io.WantCaptureMouse)
-				app.UpdateUi();
+			if (!app.GetMiniPlayer()) {
+				ImGui_ImplSDL3_ProcessEvent(&event);
+				if (io.WantCaptureKeyboard || io.WantCaptureMouse)
+					app.UpdateUi();
+			}
 #endif
 
 			switch(event.type) {
