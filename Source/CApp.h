@@ -312,7 +312,7 @@ private:
 	float hStep = 0.0f;
 	SDL_Window *sdlWindow = nullptr;
 	SDL_Window *openGlWindow = nullptr;
-	Colour<float> visColor{ 0.0f, 0.5f, 1.0f };
+	Colour<float> visColor{ 1.0f, 1.0f, 1.0f };
 	Colour<float> brightColor{ 0.0f, 0.0f, 0.0f };
 	Colour<float> darkColor{ 0.0f, 0.0f, 0.0f };
 	float fadeTime = 0.0f;

@@ -2760,10 +2760,6 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 			);
 		}
 
-		// Once we have our final art,
-		// scale it down
-		albumArt.Scale();
-
 		// If we have any tags from the cue
 		// sheet, load them _after_ everything
 		// else

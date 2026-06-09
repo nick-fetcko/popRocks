@@ -85,10 +85,13 @@ public:
 		std::string mimeType; // does NOT use textEncoding
 		Type type = Type::Other;
 		std::string description; // DOES use textEncoding
-		uint8_t *data = nullptr;
-		std::size_t dataLength = 0;
+		std::vector<uint8_t> data;
 
 		bool Read(const char **tag);
+
+		std::vector<uint8_t> &&TakeData() {
+			return std::move(data);
+		}
 
 	private:
 		Frame &parent;

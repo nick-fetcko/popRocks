@@ -16,12 +16,10 @@ MP4::Atom::Atom(Atom &&other) noexcept : file(std::move(other.file)) {
 	memset(&other.flags, 0, sizeof(flags));
 	dataSize = std::move(other.dataSize);
 	data = std::move(other.data);
-	other.data = nullptr; // null out to prevent deletion on destruction
 	mimeType = std::move(other.mimeType);
 }
 
 MP4::Atom::~Atom() {
-	delete[] data;
 }
 
 void MP4::Atom::Read() {
@@ -89,10 +87,8 @@ bool MP4::Atom::ReadData(bool textOnly) {
 	//		4 bytes reserved
 	dataSize = size - 16;
 
-	delete[] data;
-
-	data = new uint8_t[dataSize];
-	file->read(reinterpret_cast<char *>(data), dataSize);
+	data.resize(dataSize);
+	file->read(reinterpret_cast<char *>(data.data()), dataSize);
 
 	return ret;
 }
@@ -193,7 +189,7 @@ std::map<std::string, std::string> MP4::GetTags(bool textOnly) {
 			if (atom->ReadData(textOnly)) {
 				artAtom.emplace(std::move(*atom));
 			} else if (atom->flags[2] == 1) { // text/plain
-				ret[iter->second] = std::string(atom->data, atom->data + atom->dataSize);
+				ret[iter->second] = std::string(atom->data.begin(), atom->data.end());
 			} else if (atom->flags[2] == 0) { // application/octet-stream
 				for (uint32_t i = 0; i < atom->dataSize; ++i) {
 					if (atom->data[i] != 0) {

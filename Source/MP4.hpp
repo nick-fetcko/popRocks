@@ -36,7 +36,7 @@ public:
 		uint8_t flags[3] = { 0 };
 
 		uint32_t dataSize = 0;
-		uint8_t *data = nullptr;
+		std::vector<uint8_t> data;
 		std::string mimeType;
 
 		void Read();
@@ -64,6 +64,7 @@ public:
 	std::map<std::string, std::string> GetTags(bool textOnly = true);
 
 	const std::optional<Atom> &GetArt() const { return artAtom; }
+	std::optional<Atom> &&TakeArt() { return std::move(artAtom); }
 
 private:
 	static inline const std::map<std::string, std::string> RelevantAtoms = {

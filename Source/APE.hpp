@@ -35,7 +35,7 @@ protected:
 		std::string key;
 		std::string value;
 
-		uint8_t *data = nullptr;
+		std::vector<uint8_t> data;
 		std::string mimeType;
 
 		ApeTagItem() = default;
@@ -46,12 +46,10 @@ protected:
 			key = std::move(other.key);
 			value = std::move(other.value);
 			data = std::move(other.data);
-			other.data = nullptr;
 			mimeType = std::move(other.mimeType);
 		}
 
 		~ApeTagItem() {
-			delete[] data;
 		}
 	};
 
@@ -106,9 +104,9 @@ public:
 						// Filename is null terminated, just like keys
 						GetKey(item.mimeType);
 						item.size -= item.mimeType.length();
-						item.data = new uint8_t[item.size];
+						item.data.resize(item.size);
 
-						inFile.read(reinterpret_cast<char *>(item.data), item.size);
+						inFile.read(reinterpret_cast<char *>(item.data.data()), item.size);
 
 						auto extension = item.mimeType.substr(item.mimeType.find_last_of('.'));
 						std::transform(extension.begin(), extension.end(), extension.begin(), tolower);
@@ -136,4 +134,5 @@ public:
 	}
 
 	const std::map<std::string, ApeTagItem> &GetItems() const { return items; }
+	std::vector<uint8_t> &&TakeArt() { return std::move(items["art"].data); }
 };

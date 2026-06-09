@@ -195,6 +195,38 @@ void AlbumArt::OnLoop(const Delta &time, GLfloat x, GLfloat y, float frameCount,
 		scalingMutex.unlock();
 	}
 
+	if (embeddedLoadingMutex.try_lock()) {
+		if (embeddedArtToLoad) {
+			if (embeddedLoadThread.joinable())
+				embeddedLoadThread.join();
+
+			LoadFromSurface(embeddedArtToLoad);
+			embeddedArtToLoad = nullptr;
+
+			loadingEmbedded = false;
+
+			Scale();
+		}
+		embeddedLoadingMutex.unlock();
+	}
+
+	if (externalLoadingMutex.try_lock()) {
+		if (externalArtToLoad) {
+			if (externalLoadThread.joinable())
+				externalLoadThread.join();
+
+			LoadFromSurface(externalArtToLoad, externalArtFile, externalFileExtension);
+			externalArtToLoad = nullptr;
+			externalArtFile = "";
+			externalFileExtension = "";
+
+			loadingExternal = false;
+
+			Scale();
+		}
+		externalLoadingMutex.unlock();
+	}
+
 	if (albumLoaded && !hidden) {
 		context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, 1.0f);
 
@@ -338,6 +370,15 @@ void AlbumArt::OnDestroy() {
 	}
 	if (colorProcessingThread.joinable())
 		colorProcessingThread.join();
+
+	loadingEmbedded = false;
+	loadingExternal = false;
+
+	if (embeddedLoadThread.joinable())
+		embeddedLoadThread.join();
+
+	if (externalLoadThread.joinable())
+		externalLoadThread.join();
 
 	Circle::OnDestroy();
 
@@ -1008,57 +1049,79 @@ void AlbumArt::UpdateParentPath(const std::filesystem::path &parentPath) {
 }
 
 bool AlbumArt::Load(const std::filesystem::path &fileName, const std::filesystem::path &parentPath, bool force) {
-	auto extension = fileName.extension().u8string();
-	std::transform(extension.begin(), extension.end(), extension.begin(), tolower);
+	if (loadingExternal)
+		loadingExternal = false;
 
-	// Do we have cover art?
-	if (IsSupported(extension))
-		currentFile = fileName;
-	else if (!parentPath.empty()) {
-		// If we're in a different path than the last file,
-		// reset the hashes
-		currentFile = FindArt(parentPath, fileName);
-	}
-	else
-		currentFile = FindArt(fileName.parent_path());
+	if (externalLoadThread.joinable())
+		externalLoadThread.join();
 
-	if (!currentFile.empty()) {
-		auto contents = Fetcko::Utils::GetStringFromFile(currentFile);
-		auto hash = hash_32_fnv1a_const(contents.c_str(), contents.size());
-		if (hash == lastHash && !force) {
-			LogDebug("External art has already been loaded for this album");
-			albumLoaded = true;
-			albumWidth = lastWidth;
-			albumHeight = lastHeight;
-			std::unique_lock lock(histogramMutex);
-			UpdateBin(true);
-			return true;
+	loadingExternal = true;
+
+	externalLoadThread = std::thread([this, fileName, parentPath, force] {
+		// Wait for embedded to finish loading
+		while (loadingEmbedded)
+			std::this_thread::sleep_for(1ms);
+
+		auto extension = fileName.extension().u8string();
+		std::transform(extension.begin(), extension.end(), extension.begin(), tolower);
+
+		// Do we have cover art?
+		if (IsSupported(extension))
+			currentFile = fileName;
+		else if (!parentPath.empty()) {
+			// If we're in a different path than the last file,
+			// reset the hashes
+			currentFile = FindArt(parentPath, fileName);
+		} else
+			currentFile = FindArt(fileName.parent_path());
+
+		if (!currentFile.empty()) {
+			auto contents = Fetcko::Utils::GetStringFromFile(currentFile);
+			auto hash = hash_32_fnv1a_const(contents.c_str(), contents.size());
+			if (hash == lastHash && !force) {
+				LogDebug("External art has already been loaded for this album");
+				albumLoaded = true;
+				albumWidth = lastWidth;
+				albumHeight = lastHeight;
+				std::unique_lock lock(histogramMutex);
+				UpdateBin(true);
+
+				return true;
+			}
+
+			lastHash = hash;
+
+			auto utf8 = currentFile.u8string();
+			auto surface = IMG_Load(utf8.c_str());
+
+			if (!surface) {
+				LogError("Could not load external album art from file " + utf8, " error: ", SDL_GetError());
+				return false;
+			} else if (!force && surface->w < albumWidth && surface->h < albumHeight) {
+				LogWarning("External album art is smaller than what's already loaded");
+				SDL_DestroySurface(surface);
+				return false;
+			} else if (albumWidth != 0 && albumHeight != 0) {
+				LogDebug("External album art is larger than embedded. Using it instead.");
+			}
+
+			auto imageExtension = currentFile.extension().u8string();
+			std::transform(imageExtension.begin(), imageExtension.end(), imageExtension.begin(), tolower);
+
+			{
+				std::unique_lock lock(externalLoadingMutex);
+
+				externalArtToLoad = surface;
+				externalArtFile = currentFile;
+				externalFileExtension = imageExtension;
+			}
+		} else {
+			LogWarning("Could not load external album art for " + fileName.u8string());
+			return false;
 		}
 
-		lastHash = hash;
-
-		auto utf8 = currentFile.u8string();
-		auto surface = IMG_Load(utf8.c_str());
-
-		if (!surface) {
-			LogError("Could not load external album art from file " + utf8, " error: ", SDL_GetError());
-			return false;
-		} else if (!force && surface->w < albumWidth && surface->h < albumHeight) {
-			LogWarning("External album art is smaller than what's already loaded");
-			SDL_DestroySurface(surface);
-			return false;
-		} else if (albumWidth != 0 && albumHeight != 0) {
-			LogDebug("External album art is larger than embedded. Using it instead.");
-		}
-
-		auto imageExtension = currentFile.extension().u8string();
-		std::transform(imageExtension.begin(), imageExtension.end(), imageExtension.begin(), tolower);
-
-		LoadFromSurface(surface, currentFile, imageExtension);
-	} else {
-		LogWarning("Could not load external album art for " + fileName.u8string());
-		return false;
-	}
+		return true;
+	});
 
 	return true;
 }
@@ -1074,8 +1137,26 @@ bool AlbumArt::LoadEmbedded() {
 	return Load(embeddedDataMimeType, embeddedData, embeddedDataLength, true);
 }
 
+bool AlbumArt::Load(const std::string mimeType, std::vector<uint8_t> &&data) {
+	if (loadingEmbedded)
+		loadingEmbedded = false;
+
+	if (embeddedLoadThread.joinable())
+		embeddedLoadThread.join();
+
+	loadingEmbedded = true;
+
+	embeddedDataToLoad = std::move(data);
+
+	embeddedLoadThread = std::thread([this, mimeType] {
+		Load(mimeType, embeddedDataToLoad.data(), embeddedDataToLoad.size());
+	});
+
+	return true;
+}
+
 bool AlbumArt::Load(const std::string &mimeType, const void *data, std::size_t length, bool force) {
-	const auto load = [this, &mimeType, &data, &length](std::uint32_t hash) {
+	const auto load = [this, mimeType, data, length](std::uint32_t hash) {
 		auto temp = embeddedData;
 		embeddedData = new uint8_t[length];
 		memcpy(embeddedData, data, length);
@@ -1086,16 +1167,14 @@ bool AlbumArt::Load(const std::string &mimeType, const void *data, std::size_t l
 		lastEmbeddedLength = length;
 	};
 
-
 	// Check if our lengths differ first
 	if (force || length != lastEmbeddedLength) {
 		load(hash_32_fnv1a_const(reinterpret_cast<const char *>(data), length));
-	} 
+	}
 	// Then check if our hashes differ
 	else if (auto hash = hash_32_fnv1a_const(reinterpret_cast<const char *>(data), length); hash != lastEmbeddedHash) {
 		load(hash);
-	} 
-	else {
+	} else {
 		LogDebug("Embedded art has already been loaded for this album");
 		albumLoaded = true;
 		albumWidth = lastWidth;
@@ -1103,11 +1182,13 @@ bool AlbumArt::Load(const std::string &mimeType, const void *data, std::size_t l
 		std::unique_lock lock(histogramMutex);
 		UpdateBin(true);
 
+		loadingEmbedded = false;
+
 		return true;
 	}
 
 	auto file = SDL_IOFromMem(
-		reinterpret_cast<void*>(embeddedData),
+		reinterpret_cast<void *>(embeddedData),
 		static_cast<int>(embeddedDataLength)
 	);
 
@@ -1117,14 +1198,22 @@ bool AlbumArt::Load(const std::string &mimeType, const void *data, std::size_t l
 	auto surface = IMG_LoadTyped_IO(file, 1, embeddedDataMimeType.c_str());
 	if (!surface) {
 		LogError("Could not load embedded album art! ", SDL_GetError());
+		loadingEmbedded = false;
 		return false;
 	} else if (surface->w < albumWidth && surface->h < albumHeight) {
 		LogWarning("Embedded album art is smaller than what's already loaded");
 		SDL_DestroySurface(surface);
+		loadingEmbedded = false;
 		return false;
 	}
 
-	LoadFromSurface(surface);
+	if (!embeddedDataToLoad.empty())
+		embeddedDataToLoad.clear();
+
+	{
+		std::unique_lock lock(embeddedLoadingMutex);
+		embeddedArtToLoad = surface;
+	}
 
 	currentFile.clear();
 
@@ -1132,8 +1221,6 @@ bool AlbumArt::Load(const std::string &mimeType, const void *data, std::size_t l
 }
 
 void AlbumArt::Reset(const Colour<float> &color, bool fromPlaylist) {
-	albumLoaded = false;
-
 	/*
 	glDeleteTextures(1, &album);
 	album = 0;
@@ -1143,12 +1230,14 @@ void AlbumArt::Reset(const Colour<float> &color, bool fromPlaylist) {
 
 	albumWidth = 0;
 	albumHeight = 0;
-	averageColor = color;
 	hidden = false;
 
 	// Clear colors / album art if
 	// we're switching albums
 	if (!fromPlaylist) {
+		albumLoaded = false;
+		averageColor = color;
+
 		std::unique_lock lock(histogramMutex);
 		histogram.clear();
 		selectedColors.clear();

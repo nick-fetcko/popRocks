@@ -199,4 +199,8 @@ public:
 	std::pair<std::string&, std::vector<uint8_t>&> GetArt() {
 		return { artMimeType, artData };
 	}
+
+	std::vector<uint8_t> &&TakeArt() {
+		return std::move(artData);
+	}
 };

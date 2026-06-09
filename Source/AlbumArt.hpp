@@ -98,6 +98,7 @@ public:
 	bool Load(const std::filesystem::path &fileName, const std::filesystem::path &parentPath = "", bool force = false);
 
 	bool Load(const std::string &mimeType, const void *data, std::size_t length, bool force = false);
+	bool Load(const std::string mimeType, std::vector<uint8_t> &&data);
 	bool LoadEmbedded(const std::string &mimeType, const void *data, std::size_t length, bool force = false) {
 		return Load(mimeType, data, length, force);
 	}
@@ -344,4 +345,17 @@ private:
 	Controls * const controls = nullptr;
 
 	SDL_SystemCursor cursor = SDL_SYSTEM_CURSOR_DEFAULT;
+
+	std::thread embeddedLoadThread;
+	bool loadingEmbedded = false;
+	std::mutex embeddedLoadingMutex;
+	std::vector<uint8_t> embeddedDataToLoad;
+	SDL_Surface *embeddedArtToLoad = nullptr;
+
+	std::thread externalLoadThread;
+	bool loadingExternal = false;
+	std::mutex externalLoadingMutex;
+	SDL_Surface *externalArtToLoad = nullptr;
+	std::filesystem::path externalArtFile;
+	std::string externalFileExtension;
 };

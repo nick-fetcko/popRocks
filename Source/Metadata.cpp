@@ -16,12 +16,9 @@ void Metadata::OnLoad(
 
 		auto tags = flac.GetTags(false);
 		tagLoader->LoadFromTags(tags);
-		if (const auto &[mimeType, data] = flac.GetArt(); data.size()) {
-			albumArt->Load(
-				mimeType,
-				data.data(),
-				data.size()
-			);
+		if (auto &&data = flac.TakeArt(); data.size()) {
+			const auto mimeType = flac.GetArt().first;
+			albumArt->Load(mimeType, std::move(data));
 		} else albumArt->ClearEmbedded();
 
 		return;
@@ -31,7 +28,7 @@ void Metadata::OnLoad(
 
 		auto tags = mp4.GetTags(false);
 		tagLoader->LoadFromTags(tags);
-		if (auto &art = mp4.GetArt(); art && albumArt->Load(art->mimeType, art->data, art->dataSize))
+		if (auto &&art = mp4.TakeArt(); art && albumArt->Load(art->mimeType, std::move(art->data)))
 			LogDebug("Found iTunes-style embedded album art");
 
 		return;
@@ -40,11 +37,10 @@ void Metadata::OnLoad(
 
 		auto tags = ape.GetTags(false);
 		tagLoader->LoadFromTags(tags);
-		if (auto art = ape.GetItems().find("art"); art != ape.GetItems().end()) {
+		if (auto &&art = ape.GetItems().find("art"); art != ape.GetItems().end()) {
 			albumArt->Load(
 				art->second.mimeType,
-				art->second.data,
-				art->second.size
+				std::move(ape.TakeArt())
 			);
 		} else albumArt->ClearEmbedded();
 
@@ -64,8 +60,7 @@ void Metadata::OnLoad(
 		if (auto art = wv.GetItems().find("art"); art != wv.GetItems().end()) {
 			albumArt->Load(
 				art->second.mimeType,
-				art->second.data,
-				art->second.size
+				std::move(wv.TakeArt())
 			);
 		} else albumArt->ClearEmbedded();
 
@@ -76,12 +71,11 @@ void Metadata::OnLoad(
 		auto tags = ogg.GetTags(false);
 		tagLoader->LoadFromTags(tags);
 		if (auto art = tags.find("art"); art != tags.end()) {
-			auto [mimeType, data] = ogg.GetArt(art->second);
+			auto &&[mimeType, data] = ogg.GetArt(art->second);
 
 			albumArt->Load(
 				mimeType,
-				data.data(),
-				data.size()
+				std::move(data)
 			);
 		} else albumArt->ClearEmbedded();
 
@@ -100,8 +94,7 @@ void Metadata::OnLoad(
 		if (auto art = frames.find("art"); art != frames.end() && art->second.artData) {
 			albumArt->Load(
 				art->second.artData->mimeType,
-				art->second.artData->data,
-				art->second.artData->dataLength
+				std::move(art->second.artData->TakeData())
 			);
 		}
 	}

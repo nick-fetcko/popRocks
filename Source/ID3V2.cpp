@@ -66,7 +66,6 @@ ID3V2::Art::Art(ID3V2::Frame &parent) : parent(parent) {
 }
 
 ID3V2::Art::~Art() {
-	delete[] data;
 }
 
 bool ID3V2::Art::Read(const char **tag) {
@@ -114,20 +113,26 @@ bool ID3V2::Art::Read(const char **tag) {
 	// This one's also null terminated
 	description = *tag;
 
+	// Description has no defined length,
+	// so we just have to find the null
+	// terminator
+	while ((*tag)[0] != '\0')
+		*tag += 1;
+
 	// Even when the encoding is Latin, there's
 	// sometimes a double terminator
 	while ((*tag)[0] == '\0')
 		*tag += 1;
 
 	auto offset = static_cast<uint32_t>(*tag - start);
-	dataLength = parent.size - offset;
+	auto dataLength = parent.size - offset;
 
 	if (syncDataLength)
 		syncDataLength -= offset - sizeof(uint32_t); // Need the 4 data length bytes
 
 	bool skipped = false;
 	if (unsync) {
-		data = new uint8_t[syncDataLength];
+		data.resize(syncDataLength);
 
 		std::size_t j = 0;
 		for (std::size_t i = 0; i < dataLength && j < syncDataLength; ++i) {
@@ -150,8 +155,8 @@ bool ID3V2::Art::Read(const char **tag) {
 
 		dataLength = syncDataLength;
 	} else {
-		data = new uint8_t[dataLength];
-		memcpy(data, *tag, dataLength);
+		data.resize(dataLength);
+		memcpy(data.data(), *tag, dataLength);
 	}
 	
 	parent.size -= offset;
