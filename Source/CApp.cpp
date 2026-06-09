@@ -1044,7 +1044,7 @@ void CApp::OnInit() {
 				for (auto &detector : beatDetectors)
 					detector.Cancel();
 
-				auto stream = platform->OpenWithFlags(loadedFile, loadedFileExtension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+				auto stream = platform->OpenWithFlags(loadedFile, loadedFileExtension, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
 
 				// Disassociate the stream from a device,
 				// so it doesn't get freed on BASS_Free()
@@ -2506,7 +2506,7 @@ void CApp::LoadBeats(
 	if (const auto &next = controls.GetPlaylist().GetNext()) {
 		auto nextExtension = next->path.extension().u8string();
 		std::transform(nextExtension.begin(), nextExtension.end(), nextExtension.begin(), tolower);
-		auto nextHandle = platform->OpenWithFlags(next->path, nextExtension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+		auto nextHandle = platform->OpenWithFlags(next->path, nextExtension, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
 
 		BASS_CHANNELINFO nextChannelInfo;
 		BASS_ChannelGetInfo(nextHandle, &nextChannelInfo);
@@ -2576,7 +2576,7 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 		for (auto &detector : beatDetectors)
 			detector.Cancel();
 
-		auto stream = platform->OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+		auto stream = platform->OpenWithFlags(path, extension, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
 
 		// Disassociate the stream from a device,
 		// so it doesn't get freed on BASS_Free()
@@ -2659,7 +2659,7 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 	}
 
 	// We want this as a local variable, as it's handed off to BeatDetect
-	auto streamHandle = platform->OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+	auto streamHandle = platform->OpenWithFlags(path, extension, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
 
 	// Disassociate the stream from a device,
 	// so it doesn't get freed on BASS_Free()

@@ -315,7 +315,7 @@ bool Windows::OpenExclusive(const std::filesystem::path &path, const std::string
 		if (BASS_WASAPI_Init(outputDevice, channelInfo.freq, channelInfo.chans, BASS_WASAPI_BUFFER | BASS_WASAPI_EXCLUSIVE, exclusiveBufferSize, 0, OutputWasapiProc, data) == TRUE) {
 			// Only swap out the handle _after_ we've stopped
 			// as StopExclusive(TRUE) frees the handle
-			target = OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+			target = OpenWithFlags(path, extension, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
 
 			BASS_WASAPI_GetInfo(&wasapiInfo);
 			if (wasapiInfo.freq == channelInfo.freq) {
@@ -332,7 +332,7 @@ bool Windows::OpenExclusive(const std::filesystem::path &path, const std::string
 			exclusive = false;
 		}
 	} else {
-		target = OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+		target = OpenWithFlags(path, extension, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
 		return exclusive;
 	}
 

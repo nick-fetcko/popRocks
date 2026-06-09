@@ -476,7 +476,7 @@ void CApp::AddCommands() {
 					for (auto &detector : beatDetectors)
 						detector.Cancel();
 
-					auto stream = platform->OpenWithFlags(loadedFile, loadedFileExtension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+					auto stream = platform->OpenWithFlags(loadedFile, loadedFileExtension, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
 
 					// Disassociate the stream from a device,
 					// so it doesn't get freed on BASS_Free()
