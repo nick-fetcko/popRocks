@@ -18,6 +18,8 @@
 #include "Source/HDR.hpp"
 #include "Source/Renderer.hpp"
 
+#include <SDL3/SDL.h>
+
 using namespace Fetcko;
 
 // Forward declarations

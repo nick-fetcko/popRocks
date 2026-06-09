@@ -587,7 +587,7 @@ void Windows::SetChromaKey(bool enabled) {
 		SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);
 
 		// Value of R = 1, G = 2, B = 3 chosen completely arbitrarily
-		SetLayeredWindowAttributes(hwnd, RGB(1, 2, 3), (app->IsFileLoaded() || !enabled) ? 0xFF : 0xDD, flags);
+		SetLayeredWindowAttributes(hwnd, RGB(1, 2, 3), 0xFF, flags);
 	} else {
 		SetWindowLongPtr(hwnd, GWL_EXSTYLE, GetWindowLongPtr(hwnd, GWL_EXSTYLE) & (~WS_EX_LAYERED));
 
@@ -610,7 +610,7 @@ void Windows::SetChromaKey(bool enabled) {
 
 		SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);
 
-		SetLayeredWindowAttributes(hwnd, 0, (app->IsFileLoaded()) ? 0xFF : 0xDD, flags);
+		SetLayeredWindowAttributes(hwnd, 0, 0xFF, flags);
 	}
 
 	LogDebug("ColorKey ", enabled ? "Enabled" : "Disabled");
@@ -630,7 +630,7 @@ void Windows::SetMiniPlayer(bool miniPlayer, uint8_t chromaKey) {
 		SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) & (~WS_EX_LAYERED));
 		auto style = SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);
 
-		auto ret = SetLayeredWindowAttributes(hwnd, RGB(chromaKey, chromaKey, chromaKey), app->IsFileLoaded() ? 0xFF : 0xDD, app->IsFileLoaded() ? 0 : LWA_ALPHA);
+		auto ret = SetLayeredWindowAttributes(hwnd, RGB(chromaKey, chromaKey, chromaKey), 0xFF, 0);
 
 		if (auto error = GetLastError())
 			LogError("Chroma key could not be set! ret = ", ret, " error = ", error);
