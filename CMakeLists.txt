@@ -124,16 +124,20 @@ set(_poprocks_cpp_sources
 	Source/CApp_Commands.cpp
 	Source/Controls.cpp
 	Source/Cue.cpp
+	Source/FFTLineRenderer.cpp
 	Source/FFTRenderer.cpp
 	Source/Gaussian.cpp
 	Source/ID3V2.cpp
 	Source/LightPack.cpp
+	Source/LineRenderer.cpp
 	Source/Mappings.cpp
 	Source/Metadata.cpp
 	Source/MiniPlayerList.cpp
 	Source/MP4.cpp
 	Source/MT19937.cpp
+	Source/OscilloscopeRenderer.cpp
 	Source/RecordAudioStream.cpp
+	Source/Renderer.cpp
 	Source/Playlist.cpp
 	Source/Preset.cpp
 	Source/SampleRNG.cpp

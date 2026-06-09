@@ -7,26 +7,18 @@ public:
 	OscilloscopeRenderer(
 		const DynamicGain<float> *dynamicGain,
 		const AlbumArt *albumArt
-	) : LineRenderer(dynamicGain, albumArt) {
-	}
+	);
 
-	OscilloscopeRenderer(Renderer &&right) : LineRenderer(std::move(right)) {
-		SetBuffer(buffer, fullBufferLength);
-		SetBufferLength(bufferLength, true);
-	}
+	OscilloscopeRenderer(Renderer &&right);
+	OscilloscopeRenderer(LineRenderer &&right);
 
-	OscilloscopeRenderer(LineRenderer &&right) : LineRenderer(std::move(right)) {
-		SetBuffer(buffer, fullBufferLength);
-	}
+	~OscilloscopeRenderer() override;
 
-	bool IsFloatingPoint() const override { return false; }
+	bool IsFloatingPoint() const override;
 
-	bool SetBuffer(const uint8_t *const buffer, std::size_t len, bool force = false) override {
-		auto ret = Renderer::SetBuffer(buffer, len, force);
-		shortBuffer = reinterpret_cast<const short *>(buffer);
+	bool SetBuffer(const uint8_t *const buffer, std::size_t len, bool force = false) override;
 
-		return ret;
-	}
+	void SetNumberOfChannels(uint8_t numberOfChannels) override;
 
 	void OnLoop(
 		const Delta &time,
@@ -39,26 +31,7 @@ public:
 		float maxHeardSample = 0.0f,
 		bool resetGain = false,
 		bool miniPlayer = false
-	) override {
-		minPoint = std::numeric_limits<float>::max();
-		maxPoint = std::numeric_limits<float>::lowest();
-
-		for (int i = 0; i < bufferLength; i++) {
-			for (auto channel = 0; channel < numberOfChannels; ++channel) {
-				auto &point = points[channel * (bufferLength / numberOfChannels) + (i / numberOfChannels)];
-
-				point.x = hStep * channel * (bufferLength / numberOfChannels) + i * (hStep / numberOfChannels);
-				point.y = shortBuffer[i * numberOfChannels + channel];
-
-				if (point.y > maxPoint)
-					maxPoint = point.y;
-				if (point.y < minPoint)
-					minPoint = point.y;
-			}
-		}
-
-		CenterPoints(miniPlayer);
-	}
+	) override;
 
 	void Draw(
 		const Delta &time,
@@ -66,35 +39,14 @@ public:
 		const Colour<float> &color,
 		const Vector<int, 2> &blurOffset,
 		Context &context
-	) override {
-		context.Use("basic"_hash);
+	) override;
 
-		SetColor(color, 1.0f, context);
-
-		context.Translate(-blurOffset.x / 2.0f - (maxDimension - windowWidth) / 2.0f, -blurOffset.y / 2.0f + windowHeight / 2.0f, 0);
-
-		context.Translate(maxDimension / 2.0f, 0, 0);
-		context.Rotate(frameCount, 0.0f, 0.0f, 1.0f);
-		context.Translate(-maxDimension / 2.0f, 0, 0);
-
-		context.Apply();
-
-		if (newPoints) {
-			line.SetPoints<Polyline::Join::None>(points, bufferLength);
-			newPoints = false;
-		}
-
-		line.Draw<true>(context);
-
-		context.Use("texture"_hash);
-	}
-
-	void Reset() override {
-
-	}
+	void Reset() override;
 
 private:
 	const short *shortBuffer = nullptr;
+
+	Fetcko::Polyline *channelLines = nullptr;
 
 	static inline bool Register() {
 		RendererFactory::Register("osc", [](

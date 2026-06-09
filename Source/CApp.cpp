@@ -1063,6 +1063,18 @@ void CApp::OnInit() {
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
+		menu.SetOnLineRendererStyleChanged([this](int lineRendererStyle) {
+			const auto style = static_cast<LineRenderer::Style>(lineRendererStyle);
+
+			if (auto lineRenderer = dynamic_cast<LineRenderer *>(renderer)) {
+				lineRenderer->SetStyle(style);
+			}
+
+			Settings::settings.SetLineRendererStyle(style);
+
+			// We deviated from a preset
+			LoadPreset(std::nullopt);
+		});
 		menu.SetOnLightPackVisualizationTypeChanged([this](const std::string &lightPackVisualizationType) {
 			lightPack.SetLightType(
 				lightPackVisualizationType == "intensity" ?
@@ -3392,8 +3404,14 @@ void CApp::LoadPreset(const Preset &preset) {
 		Settings::settings.SetPresetIndex(presetIndex, true);
 	}
 
-	if (auto renderer = preset.GetRenderer())
+	if (auto renderer = preset.GetRenderer()) {
 		LoadRenderer(*renderer);
+
+		if (auto lineRendererStyle = preset.GetLineRendererStyle()) {
+			if (auto lineRenderer = dynamic_cast<LineRenderer *>(this->renderer))
+				lineRenderer->SetStyle(*lineRendererStyle);
+		}
+	}
 
 	if (auto scale = preset.GetScale(); scale && !miniPlayer)
 		SetVisualizerScale(*scale);

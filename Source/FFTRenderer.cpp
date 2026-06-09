@@ -2,6 +2,7 @@
 
 #include "Utils/Hash.hpp"
 
+#include "AlbumArt.hpp"
 #include "Settings.hpp"
 
 FFTRenderer::FFTRenderer(
@@ -127,15 +128,10 @@ void FFTRenderer::OnLoop(
 	bool resetGain,
 	bool miniPlayer
 ) {
-	const float thickness = std::ceil(std::max((albumArt->GetRadius(miniPlayer) * Maths::PI<float>) / bufferLength, 1.0f));
-
-	// FIXME: cache this value
-	const auto effectOffset = std::max(Settings::settings.GetEffectRadiation() * 2.0f, 0.0f) + std::max(Settings::settings.GetEffectIntensity() * 2.0f, 0.0f);
+	const float thickness = GetThickness(miniPlayer);
 
 	// TODO: Make setting for "constrained to window size" mode
-	const auto height = std::max(miniPlayer ?
-		(std::min(windowWidth, windowHeight) / 2.0f - albumArt->GetRadius(miniPlayer)) * scale - thickness * 2 - effectOffset : // Min
-		(std::max(windowWidth, windowHeight) / 2.0f - albumArt->GetRadius(miniPlayer)) * scale, 0.0f); // Max
+	const auto height = GetHeight(0, miniPlayer);
 
 	for (std::size_t i = 0; i < fullBufferLength; i++) {
 		auto rawValue = floatBuffer[i];

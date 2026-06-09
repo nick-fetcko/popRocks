@@ -10,6 +10,7 @@
 #include "Utils/Logger.hpp"
 
 #include "DynamicGain.hpp"
+#include "LineRenderer.hpp"
 
 using namespace Fetcko;
 using namespace MathsCPP;
@@ -56,6 +57,7 @@ public:
 		float effectRotation,
 		const DynamicGain<float> &dynamicGain,
 		std::optional<std::string> renderer = std::nullopt,
+		std::optional<LineRenderer::Style> lineRendererStyle = std::nullopt,
 		std::optional<float> scale = std::nullopt,
 		std::optional<int> rendererOffset = std::nullopt,
 		bool availableInMiniPlayer = false,
@@ -88,6 +90,7 @@ public:
 		effectRotation(effectRotation),
 		dynamicGain(dynamicGain),
 		renderer(renderer),
+		lineRendererStyle(lineRendererStyle),
 		scale(scale),
 		rendererOffset(rendererOffset),
 		availableInMiniPlayer(availableInMiniPlayer) {
@@ -135,6 +138,7 @@ public:
 	const float GetEffectVerticalSpread() const { return effectVerticalSpread; }
 	const float GetEffectRotation() const { return effectRotation; }
 	const std::optional<std::string> &GetRenderer() const { return renderer; }
+	const std::optional<LineRenderer::Style> &GetLineRendererStyle() const { return lineRendererStyle; }
 	const std::optional<float> &GetScale() const { return scale; }
 	const std::optional<int> &GetRendererOffset() const { return rendererOffset; }
 	const int &GetFftSize() const { return fftSize; }
@@ -188,6 +192,7 @@ private:
 	float effectRotation = 0.0f;
 
 	std::optional<std::string> renderer = std::nullopt;
+	std::optional<LineRenderer::Style> lineRendererStyle = std::nullopt;
 	std::optional<float> scale = std::nullopt;
 	std::optional<int> rendererOffset = std::nullopt;
 

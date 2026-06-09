@@ -3,73 +3,42 @@
 #include "OpenGL/Polyline.hpp"
 
 #include "Renderer.hpp"
-#include "Settings.hpp"
 
 class LineRenderer : public Renderer {
 public:
+	enum class Style {
+		Line,
+		Circle
+	};
+
 	LineRenderer(
 		const DynamicGain<float> *dynamicGain,
 		const AlbumArt *albumArt
-	) : Renderer(dynamicGain, albumArt) {
-	}
+	);
 
-	LineRenderer(Renderer &&other) : Renderer(std::move(other)) {
+	LineRenderer(Renderer &&other);
+	LineRenderer(LineRenderer &&other) noexcept;
 
-	}
+	void OnDestroy() override;
 
-	LineRenderer(LineRenderer &&other) noexcept :
-		Renderer(std::move(other)) {
-		points = std::move(other.points);
-		other.points = nullptr;
-		line = std::move(other.line);
-	}
+	virtual ~LineRenderer();
 
-	void OnDestroy() override {
-		line.OnDestroy();
-	}
+	void SetBufferLength(std::size_t bufferLength, bool changed) override;
 
-	virtual ~LineRenderer() {
-		delete[] points;
-	}
+	void SetWidth(float width);
 
-	void SetBufferLength(std::size_t bufferLength, bool changed) override {
-		Renderer::SetBufferLength(bufferLength, changed);
-
-		if (changed) {
-			delete[] points;
-			points = new Vector2f[bufferLength];
-		}
-	}
-
-	void SetWidth(float width) {
-		line.SetWidth(width);
-		Settings::settings.SetWidth(width);
-	}
+	void SetStyle(Style style);
 
 protected:
-	inline std::pair<float, float> CenterPoints(bool miniPlayer) {
-		std::pair<float, float> ret{ std::numeric_limits<float>::max(), std::numeric_limits<float>::lowest() };
-
-		// Center / scale points within our album art circle
-		for (auto i = 0; i < bufferLength; ++i) {
-			points[i].y = (((points[i].y - minPoint) / (maxPoint - minPoint)) * (albumArt->GetRadius(miniPlayer) * 2) + albumArt->GetRadius(miniPlayer) * -1) * scale;
-
-			if (points[i].y < ret.first)
-				ret.first = points[i].y;
-			if (points[i].y > ret.second)
-				ret.second = points[i].y;
-		}
-
-		newPoints = true;
-
-		return ret;
-	}
+	std::pair<float, float> CenterPoints(bool miniPlayer);
 
 	Vector2f *points = nullptr;
-	Fetcko::Polyline line = Fetcko::Polyline(Settings::settings.GetWidth());
+	Fetcko::Polyline line;
 
 	float minPoint = std::numeric_limits<float>::max();
 	float maxPoint = std::numeric_limits<float>::lowest();
 
 	bool newPoints = true;
+
+	Style style;
 };

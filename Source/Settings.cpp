@@ -279,6 +279,13 @@ void Settings::SetRenderer(const std::string &renderer, bool delayed) {
 	}
 }
 
+void Settings::SetLineRendererStyle(LineRenderer::Style lineRendererStyle, bool delayed) {
+	if (lineRendererStyle != this->lineRendererStyle) {
+		this->lineRendererStyle = lineRendererStyle;
+		if (!delayed) Save();
+	}
+}
+
 void Settings::SetLightPackVisualizationType(const std::string &lightPackVisualizationType, bool delayed) {
 	if (lightPackVisualizationType != this->lightPackVisualizationType) {
 		this->lightPackVisualizationType = lightPackVisualizationType;
@@ -928,6 +935,8 @@ const Node &operator>>(const Node &node, Settings &settings) {
 
 	if (node.has("renderer"))
 		node["renderer"]->get(settings.renderer);
+	if (node.has("lineRendererStyle"))
+		node["lineRendererStyle"]->get(settings.lineRendererStyle);
 	if (node.has("lightPackVisualizationType"))
 		node["lightPackVisualizationType"]->get(settings.lightPackVisualizationType);
 	if (node.has("lightPackMapping"))
@@ -1151,6 +1160,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["halveBpm"]->set(settings.halveBpm);
 	node["width"]->set(settings.width);
 	node["renderer"]->set(settings.renderer);
+	node["lineRendererStyle"]->set(settings.lineRendererStyle);
 	node["presetIndex"]->set(settings.presetIndex);
 	node["miniPlayerPresetIndex"]->set(settings.miniPlayerPresetIndex);
 	node["smooth"]->set(settings.smooth);

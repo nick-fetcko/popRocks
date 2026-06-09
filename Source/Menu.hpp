@@ -20,6 +20,7 @@
 #include "Utils/Utils.hpp"
 
 #include "Controls.hpp"
+#include "FFTLineRenderer.hpp"
 #include "HDR.hpp"
 #include "LightPack.hpp"
 #include "Playlist.hpp"
@@ -243,11 +244,28 @@ public:
 				ImGui::EndMenu();
 			}
 
-			if (fftLine) {
-				rendererOffset = Settings::settings.GetRendererOffset();
-				if (ImGui::SliderInt("Visualization offset (%)", &rendererOffset, -100, 100)) {
-					if (onRendererOffsetChanged)
-						onRendererOffsetChanged(rendererOffset);
+			if (fftLine || oscilloscope) {
+				lineRendererStyle = Settings::settings.GetLineRendererStyle();
+				if (ImGui::BeginMenu("Line style")) {
+					bool line = lineRendererStyle == LineRenderer::Style::Line;
+					bool circle = lineRendererStyle == LineRenderer::Style::Circle;
+
+					if (ImGui::MenuItem("Line", nullptr, &line)) {
+						if (onLineRendererStyleChanged)
+							onLineRendererStyleChanged(static_cast<int>(LineRenderer::Style::Line));
+					} else if (ImGui::MenuItem("Circle", nullptr, &circle)) {
+						if (onLineRendererStyleChanged)
+							onLineRendererStyleChanged(static_cast<int>(LineRenderer::Style::Circle));
+					}
+					ImGui::EndMenu();
+				}
+
+				if (fftLine && lineRendererStyle == LineRenderer::Style::Line) {
+					rendererOffset = Settings::settings.GetRendererOffset();
+					if (ImGui::SliderInt("Visualization offset (%)", &rendererOffset, -100, 100)) {
+						if (onRendererOffsetChanged)
+							onRendererOffsetChanged(rendererOffset);
+					}
 				}
 			}
 
@@ -860,6 +878,7 @@ public:
 						Settings::settings.GetEffectRotation(),
 						dynamicGain,
 						saveRenderer ? Settings::settings.GetRenderer() : static_cast<std::optional<std::string>>(std::nullopt),
+						fftLine || oscilloscope ? Settings::settings.GetLineRendererStyle() : static_cast<std::optional<LineRenderer::Style>>(std::nullopt),
 						saveScale ? Settings::settings.GetScale() : static_cast<std::optional<float>>(std::nullopt),
 						fftLine ? Settings::settings.GetRendererOffset() : static_cast<std::optional<int>>(std::nullopt),
 						availableInMiniPlayer,
@@ -1422,6 +1441,7 @@ public:
 	void SetOnOpen(std::function<void(const std::filesystem::path &)> f) { onOpen = f; }
 
 	void SetOnVisualizationTypeChanged(std::function<void(const std::string &)> f) { onVisualizationTypeChanged = f; }
+	void SetOnLineRendererStyleChanged(std::function<void(int)> f) { onLineRendererStyleChanged = f; }
 	void SetOnLightPackVisualizationTypeChanged(std::function<void(const std::string &)> f) { onLightPackVisualizationTypeChanged = f; }
 	void SetOnLightPackMappingChanged(std::function<void(const std::string &)> f) { onLightPackMappingChanged = f; }
 	void SetOnLightPackFocusAreaChanged(std::function<void(const std::string &)> f) { onLightPackFocusAreaChanged = f; }
@@ -1554,6 +1574,8 @@ private:
 	bool fftLine = Settings::settings.GetRenderer() == "fftline";
 	bool oscilloscope = Settings::settings.GetRenderer() == "osc";
 
+	LineRenderer::Style lineRendererStyle = Settings::settings.GetLineRendererStyle();
+
 	bool intensity = Settings::settings.GetLightPackVisualizationType() == "intensity";
 	bool color = Settings::settings.GetLightPackVisualizationType() == "color";
 	bool colorAndIntensity = Settings::settings.GetLightPackVisualizationType() == "colorintensity";
@@ -1682,6 +1704,7 @@ private:
 	std::function<void(bool)> onDetectBpmChanged;
 	std::function<void(bool)> onHalveBpmChanged;
 	std::function<void(const std::string &)> onVisualizationTypeChanged;
+	std::function<void(int)> onLineRendererStyleChanged;
 	std::function<void(const std::string &)> onLightPackVisualizationTypeChanged;
 	std::function<void(const std::string &)> onLightPackMappingChanged;
 	std::function<void(const std::string &)> onLightPackFocusAreaChanged;

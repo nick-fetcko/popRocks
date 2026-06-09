@@ -8,6 +8,9 @@
 #include "MathCPP/Maths.hpp"
 #include "MathCPP/Duration.hpp"
 
+#include "OpenGL/Buffer.hpp"
+#include "OpenGL/VertexArray.hpp"
+
 #include "Utils/Logger.hpp"
 
 #include "Buffer.hpp"

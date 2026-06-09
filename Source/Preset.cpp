@@ -215,6 +215,10 @@ const Node &operator>>(const Node &node, Preset &preset) {
 
 	if (node.has("renderer"))
 		node["renderer"]->get(preset.renderer);
+	if (node.has("lineRendererStyle"))
+		node["lineRendererStyle"]->get(preset.lineRendererStyle);
+	else if (*preset.renderer == "fftline" || *preset.renderer == "osc")
+		preset.lineRendererStyle = LineRenderer::Style::Line;
 	
 	if (node.has("scale"))
 		node["scale"]->get(preset.scale);
@@ -266,8 +270,11 @@ Node &operator<<(Node &node, const Preset &preset) {
 	node["effectRotation"]->set(preset.effectRotation);
 	node["availableInMiniPlayer"]->set(preset.availableInMiniPlayer);
 	node["dynamicGain"]->set(preset.dynamicGain);
-	if (preset.renderer)
+	if (preset.renderer) {
 		node["renderer"]->set(preset.renderer);
+		if (*preset.renderer == "fftline" || *preset.renderer == "osc")
+			node["lineRendererStyle"]->set(preset.lineRendererStyle);
+	} 
 	if (preset.scale)
 		node["scale"]->set(preset.scale);
 	if (preset.rendererOffset)

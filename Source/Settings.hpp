@@ -13,6 +13,7 @@
 #include "Utils/Logger.hpp"
 
 #include "DynamicGain.hpp"
+#include "FFTLineRenderer.hpp"
 
 using namespace std::chrono_literals;
 
@@ -168,6 +169,9 @@ public:
 
 	const std::string &GetRenderer() const { return renderer; }
 	void SetRenderer(const std::string &renderer, bool delayed = false);
+
+	const LineRenderer::Style &GetLineRendererStyle() const { return lineRendererStyle; }
+	void SetLineRendererStyle(LineRenderer::Style style, bool delayed = false);
 
 	const std::string &GetLightPackVisualizationType() const { return lightPackVisualizationType; }
 	void SetLightPackVisualizationType(const std::string &lightPackVisualizationType, bool delayed = false);
@@ -433,6 +437,7 @@ private:
 	float width = 4.0f;
 
 	std::string renderer = "fft";
+	LineRenderer::Style lineRendererStyle = LineRenderer::Style::Line;
 
 	std::optional<std::size_t> presetIndex = std::nullopt;
 
