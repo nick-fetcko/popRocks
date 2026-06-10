@@ -2655,6 +2655,8 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 			detector.Cancel();
 	}
 
+	const auto wasPlaying = playing;
+
 	if (fileLoaded && !controls.GetExclusiveIndicator().IsExclusive()) {
 		Stop();
 		
@@ -2777,14 +2779,16 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 		// else
 		controls.LoadFromCue();
 
-		if (!platform->StartPlayingExclusive(fromPlaylist, fileLoaded, advanceOnNextLoop)) {
-			if (platform->PlayAfterLoad())
-				BASS_ChannelPlay(this->streamHandle, false);
-		}
+		if (!fileLoaded || wasPlaying) {
+			if (!platform->StartPlayingExclusive(fromPlaylist, fileLoaded, advanceOnNextLoop)) {
+				if (platform->PlayAfterLoad())
+					BASS_ChannelPlay(this->streamHandle, false);
+			}
 
-		if (platform->PlayAfterLoad())
-			SetPlaying(true);
-		else SetPlaying(false);
+			if (platform->PlayAfterLoad())
+				SetPlaying(true);
+			else SetPlaying(false);
+		}
 
 		bool lastFileLoaded = fileLoaded;
 
