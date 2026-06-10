@@ -520,7 +520,7 @@ std::optional<Playlist::Track> Playlist::OnMouseClicked(const Vector2i &mousePos
 			return currentFile == files.end() ? Track{ *(--currentFile) } : Track{ *currentFile };
 		}
 		else if (cue) {
-			const auto &track = cue->TrackAtOffset(hoveredOffset + scrollOffset);
+			const auto &track = cue->TrackAtIndex(hoveredOffset + scrollOffset);
 
 			LogInfo("Click captured! Mini-player playlist, .cue route");
 
