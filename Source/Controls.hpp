@@ -48,7 +48,8 @@ public:
 		PlayPause,
 		Previous,
 		Next,
-		CaptureCheckbox
+		CaptureCheckbox,
+		RotateCheckbox
 	};
 
 	Controls(AlbumArt *const albumArt, const bool &vulkan);
@@ -190,6 +191,7 @@ private:
 	Next next;
 	Previous previous;
 	Checkbox captureCheckbox;
+	Checkbox rotateCheckbox;
 
 	Help help;
 

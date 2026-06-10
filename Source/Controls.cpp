@@ -16,6 +16,7 @@ Controls::Controls(AlbumArt *const albumArt, const bool &vulkan) :
 	next(albumArt),
 	previous(albumArt),
 	captureCheckbox(albumArt),
+	rotateCheckbox(albumArt),
 	FontRoot("KurintoSans"),
 	artistText(vulkan),
 	artistOutline(vulkan),
@@ -126,6 +127,7 @@ void Controls::OnRadiusChanged(Context &context, bool miniPlayer) {
 	next.OnResize(size);
 	previous.OnResize(size);
 	captureCheckbox.OnResize(size);
+	rotateCheckbox.OnResize(size);
 
 	if (exclusiveIndicator.IsExclusive())
 		volume.SetRadius(radius / scale);
@@ -213,6 +215,7 @@ void Controls::OnInit(int windowWidth, int windowHeight, Context &context, float
 	albumArt->AddColorChangeListener(&next);
 	albumArt->AddColorChangeListener(&previous);
 	albumArt->AddColorChangeListener(&captureCheckbox);
+	albumArt->AddColorChangeListener(&rotateCheckbox);
 
 	const auto size = GetIconSize();
 
@@ -224,6 +227,11 @@ void Controls::OnInit(int windowWidth, int windowHeight, Context &context, float
 	captureCheckbox.SetChecked(Settings::settings.GetCaptureKeyboardMediaKeys());
 
 	captureCheckbox.SetTooltip("Capture keyboard media keys?");
+
+	rotateCheckbox.OnInit(font, outlineFont, size, context);
+	rotateCheckbox.SetChecked(Settings::settings.GetRotating());
+
+	rotateCheckbox.SetTooltip("Rotate album art?");
 
 	OnRadiusChanged(context);
 	OnBlackChanged(albumArt->GetBlackColor());
@@ -251,6 +259,7 @@ void Controls::SetMiniPlayer(Context &context, bool miniPlayer) {
 	next.OnResize(size);
 	previous.OnResize(size);
 	captureCheckbox.OnResize(size);
+	rotateCheckbox.OnResize(size);
 
 	OnRadiusChanged(context);
 }
@@ -322,8 +331,8 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 	);
 
 	help.AddArrow(
-		{ windowWidth / 2 - radius, windowHeight / 2 + radius + font->GetEm().height },
-		{ windowWidth / 2 - presetText.GetBounds().width / 2 - font->GetEm().width / 2, windowHeight / 2 + radius - font->GetEm().height * 2},
+		{ windowWidth / 2, windowHeight / 2 + radius + font->GetEm().height * 2 },
+		{ windowWidth / 2, windowHeight / 2 + radius / 7 * 5 + font->GetEm().height },
 		"presetList",
 		{ "Hover for visualizer styles" },
 		radius / AlbumArt::BaseRadius
@@ -373,15 +382,29 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 
 	help.AddArrow(
 		{
-			windowWidth / 2 + cos(0.5) * radius * 2.1f,
-			windowHeight / 2
+			windowWidth / 2 - cos(0.5) * radius * 1.6f,
+			windowHeight / 2 + radius / 1.75f
+		},
+		{
+			windowWidth / 2.0f - albumArt->GetRadius(miniPlayer) * MiniPlayerIconRatio * 3.75f - captureCheckbox.GetSize().x * 1.25f,
+			windowHeight / 2.0f + (SeekbarSize + albumArt->GetRadius(miniPlayer) * MiniPlayerIconRatio * 2.0f) + captureCheckbox.GetSize().y / 2 + albumArt->GetRadius(miniPlayer) * MiniPlayerIconRatio / 4 - captureCheckbox.GetSize().y,
+		},
+		"capture",
+		{ "Click to toggle capturing", "of keyboard media keys" },
+		radius / AlbumArt::BaseRadius
+	);
+
+	help.AddArrow(
+		{ 
+			windowWidth / 2 + cos(0.5) * radius * 1.75f,
+			windowHeight / 2 
 		},
 		{
 			windowWidth / 2 + (radius * MiniPlayerSeekbarRatio) / 2.0f + captureCheckbox.GetSize().x * 2,
 			windowHeight / 2 + font->GetEm().height
 		},
-		"capture",
-		{ "Click to toggle capturing", "of keyboard media keys" },
+		"rotate",
+		{ "Click to toggle rotation", "of album art" },
 		radius / AlbumArt::BaseRadius
 	);
 
@@ -923,6 +946,14 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 
 			if (miniPlayer) {
 				captureCheckbox.OnLoop(
+					windowWidth / 2.0f - albumArt->GetRadius(miniPlayer) * MiniPlayerIconRatio * 3.75f,
+					iconY - captureCheckbox.GetSize().y / 2 + albumArt->GetRadius(miniPlayer) * MiniPlayerIconRatio / 4,
+					time,
+					context,
+					miniPlayer ? &alpha : nullptr
+				);
+
+				rotateCheckbox.OnLoop(
 					windowWidth / 2 + (albumArt->GetRadius(miniPlayer) * MiniPlayerSeekbarRatio) / 2.0f + captureCheckbox.GetSize().x,
 					windowHeight / 2 + font->GetEm().height,
 					time,
@@ -1049,6 +1080,7 @@ void Controls::OnDestroy() {
 	next.OnDestroy();
 	previous.OnDestroy();
 	captureCheckbox.OnDestroy();
+	rotateCheckbox.OnDestroy();
 
 	elapsedText.OnDestroy();
 	elapsedOutline.OnDestroy();
@@ -1110,13 +1142,18 @@ Controls::ControlButton Controls::GetButtonAtPos(const Vector2i &pos) {
 			pos.x >= playPauseX - iconSize / 2 &&
 			pos.x <= playPauseX + iconSize / 2) {
 			return ControlButton::PlayPause;
+		} else if (auto captureCheckboxX = windowWidth / 2.0f - albumArt->GetRadius(miniPlayer) * MiniPlayerIconRatio * 3.75f;
+			pos.x >= captureCheckboxX - captureCheckbox.GetSize().x / 2 &&
+			pos.x <= captureCheckboxX + captureCheckbox.GetSize().x / 2) {
+			return ControlButton::CaptureCheckbox;
 		}
 	} else if (
 		pos.y >= windowHeight / 2 + font->GetEm().height - captureCheckbox.GetSize().y / 2 &&
 		pos.y <= windowHeight / 2 + font->GetEm().height + captureCheckbox.GetSize().y / 2 &&
 		pos.x >= windowWidth / 2 + (albumArt->GetRadius(miniPlayer) * MiniPlayerSeekbarRatio) / 2.0f + captureCheckbox.GetSize().x / 2 &&
-		pos.x <= windowWidth / 2 + (albumArt->GetRadius(miniPlayer) * MiniPlayerSeekbarRatio) / 2.0f + captureCheckbox.GetSize().x * 1.5f)
-		return ControlButton::CaptureCheckbox;
+		pos.x <= windowWidth / 2 + (albumArt->GetRadius(miniPlayer) * MiniPlayerSeekbarRatio) / 2.0f + captureCheckbox.GetSize().x * 1.5f) {
+		return ControlButton::RotateCheckbox;
+	}
 
 	return ControlButton::None;
 }
@@ -1146,6 +1183,8 @@ void Controls::OnMouseMoved(const Vector2i &mousePos) {
 	pause.SetHovered(button == ControlButton::PlayPause);
 	captureCheckbox.SetHovered(button == ControlButton::CaptureCheckbox);
 	captureCheckbox.SetMousePos(mousePos);
+	rotateCheckbox.SetHovered(button == ControlButton::RotateCheckbox);
+	rotateCheckbox.SetMousePos(mousePos);
 }
 
 const bool Controls::IsScrolling() const {
@@ -1223,6 +1262,16 @@ Controls::ControlButton Controls::OnMouseClicked(const Vector2i &mousePos, std::
 
 					Settings::settings.SetCaptureKeyboardMediaKeys(capture);
 					captureCheckbox.SetChecked(capture);
+				}
+			} else if (ret == ControlButton::RotateCheckbox) {
+				LogInfo("Click captured! Rotate checkbox.");
+				if (canTakeAction) {
+					rotateCheckbox.SetClicked(true);
+
+					const auto rotate = !rotateCheckbox.GetChecked();
+
+					Settings::settings.SetRotating(rotate);
+					rotateCheckbox.SetChecked(rotate);
 				}
 			}
 

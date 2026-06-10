@@ -3131,10 +3131,13 @@ bool CApp::OnMouseClicked(const Vector2i &mousePos) {
 			PreviousTrack();
 		else if (button == Controls::ControlButton::Next)
 			NextTrack();
-		else if (button != Controls::ControlButton::CaptureCheckbox)
-			TogglePlaying();
-		else
+		else if (button == Controls::ControlButton::CaptureCheckbox)
 			platform->HookKeyboard();
+		else if (button == Controls::ControlButton::RotateCheckbox) {
+			rotating = !rotating;
+			if (!rotating) frameCount = 0;
+		} else
+			TogglePlaying();
 
 	} else if (!miniPlayer && !platform->OnMouseClicked(mousePos) && albumArt.OnMouseClicked(mousePos)) {
 		TogglePlaying();
@@ -3452,8 +3455,8 @@ void CApp::LoadPreset(const Preset &preset) {
 
 	auto rotating = preset.GetRotating();
 
-	if (rotating)
-		SetRotating(*rotating);
+	//if (rotating)
+	//	SetRotating(*rotating);
 
 	if (rotating && *rotating) {
 		SetRotationSpeed(preset.GetRotationSpeed());
