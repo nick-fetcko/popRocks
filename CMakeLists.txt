@@ -83,6 +83,7 @@ set(_poprocks_cpp_headers
 	Source/JPEG.hpp
 	Source/LightPack.hpp
 	Source/LineRenderer.hpp
+	Source/Loading.hpp
 	Source/Mappings.h
 	Source/Menu.hpp
 	Source/Metadata.hpp

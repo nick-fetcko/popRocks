@@ -44,6 +44,7 @@
 #include "FPSCounter.hpp"
 #include "Integrations/Integration.hpp"
 #include "LightPack.hpp"
+#include "Loading.hpp"
 #include "Mappings.h"
 #include "Menu.hpp"
 #include "Metadata.hpp"
@@ -240,6 +241,7 @@ public:
 	void RemoveIntegration(Integration *integration) { integrations.erase(integration); }
 
 private:
+	void PlaylistLoaded(std::filesystem::path path, std::string extension, std::filesystem::path originalPath, bool fromPlaylist = false);
 	void AddCommands();
 
 	const Colour<float> &GetColor() const;
@@ -473,4 +475,15 @@ private:
 	std::optional<std::chrono::system_clock::time_point> scaleTimer = std::nullopt;
 
 	std::set<Integration*> integrations;
+
+	bool playlistLoading = false;
+	bool playlistLoaded = false;
+	std::thread playlistThread;
+
+	std::filesystem::path loadFilePath;
+	std::filesystem::path loadFileOriginalPath;
+	std::string loadFileExtension;
+	bool loadFileFromPlaylist = false;
+
+	Loading loadingIndicator;
 };

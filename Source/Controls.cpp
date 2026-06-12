@@ -963,7 +963,7 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 
 				context.EndBlend();
 
-				if (presetList.GetAlpha() != 1.0f && volume.GetAlpha() != 1.0f) {
+				if (presetList.GetAlpha() != 1.0f && volume.GetAlpha() != 1.0f && playlist.IsLoaded()) {
 					playlist.OnLoop(
 						time,
 						{ windowWidth / 2, windowHeight / 2 - albumArt->GetRadius(miniPlayer) / 2 },

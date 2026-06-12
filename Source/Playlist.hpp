@@ -98,6 +98,10 @@ public:
 
 	const ScrollingText &GetOutline() const { return outline; }
 
+	void LoadTitles();
+
+	const bool IsLoaded() const { return loaded; }
+
 	static constexpr bool IsCue(const std::string_view &lowercaseExtension) {
 		return lowercaseExtension == ".cue";
 	}
@@ -188,6 +192,8 @@ private:
 		}
 
 		UpdateSize();
+
+		loaded = true;
 	}
 
 	template<typename T>
@@ -202,6 +208,9 @@ private:
 		bool miniPlayer = false,
 		bool hidden = false
 	) {
+		if (tracks.empty())
+			return;
+
 		// Mini-player playlist has no backing rectangle
 		if (miniPlayer) {
 			this->pos = pos;
@@ -401,8 +410,11 @@ private:
 		}
 	}
 
+	bool loaded = false;
+
 	std::filesystem::path path;
 	std::vector<std::filesystem::path> files;
+	std::vector<Title> titles;
 	std::vector<std::filesystem::path>::iterator currentFile = files.end();
 
 	int windowWidth = 0, windowHeight = 0;

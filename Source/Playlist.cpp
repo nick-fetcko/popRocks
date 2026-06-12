@@ -53,10 +53,12 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 	const std::string_view &extension,
 	std::function<HSTREAM(const std::filesystem::path &, const std::string &, DWORD)> openWithFlags
 ) {
+	loaded = false;
+
 	Clear();
 
 	if (auto files = FindCue(path); !files.empty() || IsCue(extension)) {
-		cue = std::make_unique<Cue>();
+		auto cue = std::make_unique<Cue>();
 
 		bool loaded = true;
 		if (!files.empty()) {
@@ -68,15 +70,15 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 		}
 
 		if (loaded) {
-			LoadTitles(cue->GetTracks());
+			this->cue = std::move(cue);
 			this->path = path;
 
-			if (cue->GetTracks().empty())
-				return Track{ cue->GetFilePath(), cue->GetFilePath().stem().u8string(), 0.0};
+			if (this->cue->GetTracks().empty())
+				return Track{ this->cue->GetFilePath(), this->cue->GetFilePath().stem().u8string(), 0.0};
 			else
-				return Track{ cue->GetTracks().begin()->filePath, cue->GetTracks().begin()->title, cue->GetTracks().begin()->startTime };
+				return Track{ this->cue->GetTracks().begin()->filePath, this->cue->GetTracks().begin()->title, this->cue->GetTracks().begin()->startTime };
 		} else {
-			cue.reset();
+			this->cue.reset();
 		}
 	}
 
@@ -148,7 +150,7 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 		std::optional<std::size_t> index = std::nullopt;
 	};
 
-	std::vector<Title> titles;
+	titles.clear();
 
 	Sorter sorter;
 	for (const auto &iter : std::filesystem::recursive_directory_iterator(path)) {
@@ -246,8 +248,6 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 			files.emplace_back(std::move(track.second.second));
 		}
 	}
-
-	LoadTitles(titles);
 
 	currentFile = files.end();
 
@@ -398,6 +398,7 @@ void Playlist::OnDestroy() {
 void Playlist::Clear() {
 	path.clear();
 	files.clear();
+	titles.clear();
 	currentFile = files.end();
 
 	MiniPlayerList::Clear();
@@ -587,4 +588,13 @@ void Playlist::OnBlackChanged(const float &black) {
 	outline.SetText(outline.GetText(), true);
 
 	MiniPlayerList::OnBlackChanged(black);
+}
+
+void Playlist::LoadTitles() {
+	if (cue) {
+		LoadTitles(cue->GetTracks());
+	} else {
+		LoadTitles(titles);
+		titles.clear();
+	}
 }

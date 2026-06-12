@@ -1648,6 +1648,15 @@ void CApp::OnResize(int width, int height, float scale, bool force) {
 
 	close.OnResize(controls.GetIconSize());
 
+	loadingIndicator.OnInit(
+		3.0f * albumArt.GetRadius(miniPlayer) / AlbumArt::BaseRadius,
+		controls.GetIconSize() / 1.5f,
+		controls.GetFont(),
+		controls.GetOutlineFont(),
+		*context,
+		"Loading"
+	);
+
 	if (blur) {
 		maxDimension = std::sqrt(std::pow(windowWidth, 2) + std::pow(windowHeight, 2));
 		//maxDimension = windowHeight;
@@ -1793,6 +1802,18 @@ void CApp::OnLoop(const Delta &time) {
 		return;
 	}
 
+	if (!playlistLoading && playlistLoaded) {
+		playlistLoaded = false;
+
+		PlaylistLoaded(loadFilePath, loadFileExtension, loadFileOriginalPath, loadFileFromPlaylist);
+
+		LogDebug("Playlist loaded!");
+
+		// Clear the blur FBO when we load a new file / playlist
+		if (blur)
+			ClearBlurFbo();
+	}
+
 	Logger::ProcessCommands();
 
 	if (auto looped = platform->OnLoop(); looped && !(*looped)) {
@@ -1909,6 +1930,9 @@ void CApp::OnLoop(const Delta &time) {
 		);
 
 		DrawCloseButton(time);
+
+		if (playlistLoading)
+			loadingIndicator.OnLoop(time, windowWidth / 2, windowHeight / 2 + albumArt.GetRadius(miniPlayer) / 2.0f, *context);
 
 		SwapBuffers(time);
 
@@ -2142,6 +2166,9 @@ void CApp::OnLoop(const Delta &time) {
 		playing
 	);
 
+	if (playlistLoading)
+		loadingIndicator.OnLoop(time, windowWidth / 2, windowHeight / 2 - albumArt.GetRadius(miniPlayer) / 2.0f - loadingIndicator.GetRadius() / 2.0f, *context);
+
 	for (auto integration : integrations) {
 		integration->SetPosition(
 			std::chrono::duration_cast<std::chrono::microseconds>(
@@ -2373,6 +2400,12 @@ void CApp::SyncToNearestBeat() {
 void CApp::OnDestroy(bool includingLog) {
 	LogDebug("Shutting down...");
 
+	playlistLoaded = false;
+	playlistLoading = false;
+
+	if (playlistThread.joinable())
+		playlistThread.join();
+
 	shuttingDown = true;
 
 	platform->OnDestroy();
@@ -2385,6 +2418,7 @@ void CApp::OnDestroy(bool includingLog) {
 
 	albumArt.RemoveColorChangeListener(this);
 
+	loadingIndicator.OnDestroy();
 	controls.OnDestroy();
 
 	renderer->OnDestroy();
@@ -2570,96 +2604,14 @@ inline void CApp::ClearBlurFbo() {
 	lastFrame->Unbind();
 }
 
-void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
-	std::ifstream inFile(path);
-
-	auto extension = path.extension().u8string();
-	std::transform(extension.begin(), extension.end(), extension.begin(), tolower);
-
-	auto originalPath = std::filesystem::is_directory(path) ? path : "";
-
-	// If we're still in the same file,
-	// just try to get updated tags from
-	// the cue sheet and run beat detection
-	// on the new song
-	if (path == loadedFile && controls.GetPlaylist().GetCue()) {
-		controls.LoadFromCue();
-
-		for (auto &detector : beatDetectors)
-			detector.Cancel();
-
-		auto stream = platform->OpenWithFlags(path, extension, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
-
-		// Disassociate the stream from a device,
-		// so it doesn't get freed on BASS_Free()
-		BASS_ChannelSetDevice(stream, BASS_NODEVICE);
-
-		LoadBeats(
-			stream,
-			path
-		);
-
-		return;
-	}
-
-	albumArt.Reset(visColor, fromPlaylist);
-
-	overrideColor = false;
-
-	// If we try to load an image directly,
-	// use that as the album art
-	if (AlbumArt::IsSupported(extension)) {
-		albumArt.Load(path, originalPath, true);
-		return;
-	}
-
-	if (!fromPlaylist) {
-		// If we're not in a playlist, _reset_
-		// any current beat detectors.
-		for (auto &detector : beatDetectors)
-			detector.Reset();
-
-		if (std::filesystem::is_directory(path) || controls.GetPlaylist().IsCue(extension)) {
-			if (auto ret = controls.GetPlaylist().OnLoad(
-					path,
-					extension,
-					[this](const std::filesystem::path &path, const std::string &extension, DWORD flags) {
-						return platform->OpenWithFlags(path, extension, flags);
-					}
-				)
-			) {
-				path = ret->path;
-			} else {
-				LogError("Could not load playlist ", path);
-				return;
-			}
-
-			extension = path.extension().u8string();
-			std::transform(extension.begin(), extension.end(), extension.begin(), tolower);
-		} else {
-			controls.GetPlaylist().Clear();
-		}
-
-		// Clear the blur FBO when we load a new file / playlist
-		if (blur)
-			ClearBlurFbo();
-	} else {
-		// If we're in a playlist, we want the
-		// folder that was originally scanned
-		// for songs
-		originalPath = controls.GetPlaylist().GetPath();
-
-		// If we're in a playlist, cancel any
-		// current beat detectors
-		for (auto &detector : beatDetectors)
-			detector.Cancel();
-	}
+void CApp::PlaylistLoaded(std::filesystem::path path, std::string extension, std::filesystem::path originalPath, bool fromPlaylist) {
+	controls.GetPlaylist().LoadTitles();
 
 	const auto wasPlaying = playing;
 
 	if (fileLoaded && !controls.GetExclusiveIndicator().IsExclusive()) {
 		Stop();
-		
+
 		Open(path, extension, controls.GetExclusiveIndicator().IsExclusive(), streamHandle);
 
 		// Don't reset gain if we're changing songs
@@ -2809,6 +2761,104 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 
 		loadedFile = path;
 		loadedFileExtension = extension;
+	}
+}
+
+void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
+	loadFilePath = path;
+
+	loadFileExtension = path.extension().u8string();
+	std::transform(loadFileExtension.begin(), loadFileExtension.end(), loadFileExtension.begin(), tolower);
+
+	loadFileOriginalPath = std::filesystem::is_directory(path) ? path : "";
+
+	loadFileFromPlaylist = fromPlaylist;
+
+	// If we're still in the same file,
+	// just try to get updated tags from
+	// the cue sheet and run beat detection
+	// on the new song
+	if (path == loadedFile && controls.GetPlaylist().GetCue()) {
+		controls.LoadFromCue();
+
+		for (auto &detector : beatDetectors)
+			detector.Cancel();
+
+		auto stream = platform->OpenWithFlags(path, loadFileExtension, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+
+		// Disassociate the stream from a device,
+		// so it doesn't get freed on BASS_Free()
+		BASS_ChannelSetDevice(stream, BASS_NODEVICE);
+
+		LoadBeats(
+			stream,
+			path
+		);
+
+		return;
+	}
+
+	albumArt.ResetState();
+
+	overrideColor = false;
+
+	// If we try to load an image directly,
+	// use that as the album art
+	if (AlbumArt::IsSupported(loadFileExtension)) {
+		albumArt.Load(path, loadFileOriginalPath, true);
+		return;
+	}
+
+	if (!loadFileFromPlaylist) {
+		playlistLoaded = false;
+		playlistLoading = false;
+
+		if (playlistThread.joinable())
+			playlistThread.join();
+
+		playlistThread = std::thread([this] {
+			playlistLoading = true;
+			// If we're not in a playlist, _reset_
+			// any current beat detectors.
+			for (auto &detector : beatDetectors)
+				detector.Reset();
+
+			if (std::filesystem::is_directory(loadFilePath) || controls.GetPlaylist().IsCue(loadFileExtension)) {
+				if (auto ret = controls.GetPlaylist().OnLoad(
+					loadFilePath,
+					loadFileExtension,
+					[this](const std::filesystem::path &path, const std::string &extension, DWORD flags) {
+						return platform->OpenWithFlags(path, extension, flags);
+					}
+				)
+					) {
+					loadFilePath = ret->path;
+				} else {
+					LogError("Could not load playlist ", loadFilePath);
+					return;
+				}
+
+				loadFileExtension = loadFilePath.extension().u8string();
+				std::transform(loadFileExtension.begin(), loadFileExtension.end(), loadFileExtension.begin(), tolower);
+			} else {
+				controls.GetPlaylist().Clear();
+			}
+
+			playlistLoading = false;
+			playlistLoaded = true;
+		});
+	} else {
+		// If we're in a playlist, we want the
+		// folder that was originally scanned
+		// for songs
+		loadFileOriginalPath = controls.GetPlaylist().GetPath();
+
+		// If we're in a playlist, cancel any
+		// current beat detectors
+		for (auto &detector : beatDetectors)
+			detector.Cancel();
+
+		PlaylistLoaded(loadFilePath, loadFileExtension, loadFileOriginalPath, loadFileFromPlaylist);
 	}
 }
 
