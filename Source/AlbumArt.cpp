@@ -1081,6 +1081,15 @@ bool AlbumArt::Load(const std::filesystem::path &fileName, const std::filesystem
 		} else
 			currentFile = FindArt(fileName.parent_path());
 
+		// If we're loading a single file, only allow art that's 1 subdirectory down
+		if (!currentFile.empty() && !std::filesystem::is_directory(fileName)) {
+			const auto fileDistance = std::distance(fileName.begin(), fileName.end());
+			const auto artDistance = std::distance(currentFile.begin(), currentFile.end());
+
+			if (std::abs(artDistance - fileDistance) > 1)
+				currentFile.clear();
+		}
+
 		if (!currentFile.empty()) {
 			auto contents = Fetcko::Utils::GetStringFromFile(currentFile);
 			auto hash = hash_32_fnv1a_const(contents.c_str(), contents.size());

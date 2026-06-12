@@ -153,57 +153,58 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 	titles.clear();
 
 	Sorter sorter;
-	for (const auto &iter : std::filesystem::recursive_directory_iterator(path)) {
-		auto extension = iter.path().extension().u8string();
+
+	const auto loadFile = [this, &openWithFlags, &metadata, &sorter] (const std::filesystem::path &path) {
+		auto extension = path.extension().u8string();
 		std::transform(extension.begin(), extension.end(), extension.begin(), tolower);
 
-		if (auto filename = iter.path().filename().u8string();
+		if (auto filename = path.filename().u8string();
 			IsSupported(extension) &&
 			// Ignore HFS attribute files (filenames that start with "._")
 			(filename.size() <= 1 || filename[0] != '.' || filename[1] != '_')
-		) {
+			) {
 			Loader loader;
 
 			if (extension == ".flac") {
-				FLAC flac(iter.path());
+				FLAC flac(path);
 
 				loader.LoadFromTags(flac.GetTags());
 			} else if (extension == ".mp3") {
-				MP3 mp3(iter.path());
+				MP3 mp3(path);
 
 				loader.LoadFromTags(mp3.GetTags());
 			} else if (extension == ".mp4" || extension == ".m4a") {
-				MP4 mp4(iter.path());
+				MP4 mp4(path);
 
 				loader.LoadFromTags(mp4.GetTags());
 			} else if (extension == ".ape" || extension == ".tta" /* TTA files can use APE tags */) {
-				APE ape(iter.path());
+				APE ape(path);
 
 				loader.LoadFromTags(ape.GetTags());
 
 				// TTA files can use ID3 tags, too
 				if (extension == ".tta" && loader.AreThereEmptyTags()) {
-					MP3 tta(iter.path());
+					MP3 tta(path);
 
 					loader.LoadFromTags(tta.GetTags());
 				}
 			} else if (extension == ".wv") {
-				WV wv(iter.path());
+				WV wv(path);
 
 				loader.LoadFromTags(wv.GetTags());
 			} else if (extension == ".ogg") {
-				OGG ogg(iter.path());
+				OGG ogg(path);
 
 				loader.LoadFromTags(ogg.GetTags());
 			} else {
-				auto streamHandle = openWithFlags(iter.path(), extension, 0);
-				metadata.OnLoad(iter.path(), extension, streamHandle, &loader);
+				auto streamHandle = openWithFlags(path, extension, 0);
+				metadata.OnLoad(path, extension, streamHandle, &loader);
 				BASS_StreamFree(streamHandle);
 			}
 
 			// If title is STILL empty, use the filename
 			if (!loader.HasTitle())
-				loader.SetTitle(iter.path().stem().u8string());
+				loader.SetTitle(path.stem().u8string());
 
 			Sorter::iterator discSorter = sorter.end();
 
@@ -224,7 +225,7 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 					}
 				} else discSorter = GuessDisc(sorter, index);
 			} else {
-				if (auto [success, number] = Utils::ExtractDigitsFromString(iter.path().stem().u8string(), true); success)
+				if (auto [success, number] = Utils::ExtractDigitsFromString(path.stem().u8string(), true); success)
 					index = number;
 
 				discSorter = GuessDisc(sorter, index);
@@ -235,12 +236,17 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 					*index,
 					std::make_pair(
 						loader.GetTitle(),
-						iter.path()
+						path
 					)
 				)
 			);
 		}
-	}
+	};
+
+	if (std::filesystem::is_directory(path)) {
+		for (const auto &iter : std::filesystem::recursive_directory_iterator(path))
+			loadFile(iter.path());
+	} else loadFile(path);
 
 	for (auto &&[number, disc] : sorter) {
 		for (auto &&track : disc) {

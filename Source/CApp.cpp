@@ -2825,26 +2825,22 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 			for (auto &detector : beatDetectors)
 				detector.Reset();
 
-			if (std::filesystem::is_directory(loadFilePath) || controls.GetPlaylist().IsCue(loadFileExtension)) {
-				if (auto ret = controls.GetPlaylist().OnLoad(
-					loadFilePath,
-					loadFileExtension,
-					[this](const std::filesystem::path &path, const std::string &extension, DWORD flags) {
-						return platform->OpenWithFlags(path, extension, flags);
-					}
-				)
-					) {
-					loadFilePath = ret->path;
-				} else {
-					LogError("Could not load playlist ", loadFilePath);
-					return;
+			if (auto ret = controls.GetPlaylist().OnLoad(
+				loadFilePath,
+				loadFileExtension,
+				[this](const std::filesystem::path &path, const std::string &extension, DWORD flags) {
+					return platform->OpenWithFlags(path, extension, flags);
 				}
-
-				loadFileExtension = loadFilePath.extension().u8string();
-				std::transform(loadFileExtension.begin(), loadFileExtension.end(), loadFileExtension.begin(), tolower);
+			)
+				) {
+				loadFilePath = ret->path;
 			} else {
-				controls.GetPlaylist().Clear();
+				LogError("Could not load playlist ", loadFilePath);
+				return;
 			}
+
+			loadFileExtension = loadFilePath.extension().u8string();
+			std::transform(loadFileExtension.begin(), loadFileExtension.end(), loadFileExtension.begin(), tolower);
 
 			playlistLoading = false;
 			playlistLoaded = true;
