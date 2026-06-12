@@ -1924,6 +1924,7 @@ void CApp::OnLoop(const Delta &time) {
 			windowWidth / 2.0f,
 			windowHeight / 2.0f,
 			frameCount,
+			visColor,
 			1.0f,
 			*context,
 			fileLoaded || platform->IsListening()
@@ -2138,6 +2139,7 @@ void CApp::OnLoop(const Delta &time) {
 		windowWidth / 2.0f,
 		windowHeight / 2.0f,
 		frameCount,
+		visColor,
 		controls.GetAlpha(),
 		*context,
 		fileLoaded || platform->IsListening(),

@@ -49,6 +49,13 @@ public:
 
 	enum class ColorMethod { Average, Dominant };
 
+	enum class LoadState {
+		Loading,
+		Embedded,
+		External,
+		None
+	};
+
 	class BlackChangedListener {
 	public:
 		virtual ~BlackChangedListener() {
@@ -71,7 +78,7 @@ public:
 
 	void OnInit(int windowWidth, int windowHeight, float scale = 1.0f);
 	void OnResize(int windowWidth, int windowHeight, float scale = 1.0f);
-	void OnLoop(const Delta &time, GLfloat x, GLfloat y, float frameCount, float alpha, Context &context, bool playing, bool resizable = true);
+	void OnLoop(const Delta &time, GLfloat x, GLfloat y, float frameCount, const Colour<float> &visColor, float alpha, Context &context, bool playing, bool resizable = true);
 	void OnDestroy() override;
 
 	// fileName is the path to the _song_
@@ -105,7 +112,9 @@ public:
 
 	void UpdateParentPath(const std::filesystem::path &parentPath);
 
+	void ResetState() { loadState = LoadState::Loading; }
 	void Reset(const Colour<float> &color, bool fromPlaylist = false);
+	LoadState GetLoadState() const { return loadState; }
 
 	void NextBin(bool silent = false);
 	void PreviousBin();
@@ -345,6 +354,8 @@ private:
 	Controls * const controls = nullptr;
 
 	SDL_SystemCursor cursor = SDL_SYSTEM_CURSOR_DEFAULT;
+
+	LoadState loadState = LoadState::None;
 
 	std::thread embeddedLoadThread;
 	bool loadingEmbedded = false;

@@ -171,7 +171,7 @@ void AlbumArt::DrawPlaceholder(GLfloat x, GLfloat y, float alpha, Context &conte
 	context.Use("texture"_hash);
 }
 
-void AlbumArt::OnLoop(const Delta &time, GLfloat x, GLfloat y, float frameCount, float alpha, Context &context, bool playing, bool resizable) {
+void AlbumArt::OnLoop(const Delta &time, GLfloat x, GLfloat y, float frameCount, const Colour<float> &visColor, float alpha, Context &context, bool playing, bool resizable) {
 	cube->OnLoop();
 
 	// try_lock so we don't miss a frame or two
@@ -224,6 +224,10 @@ void AlbumArt::OnLoop(const Delta &time, GLfloat x, GLfloat y, float frameCount,
 
 			Scale();
 		}
+
+		if (loadState == LoadState::None && albumLoaded)
+			Reset(visColor);
+
 		externalLoadingMutex.unlock();
 	}
 
@@ -735,11 +739,13 @@ void AlbumArt::ProcessColors(Histogram *destination, SDL_Surface *surface, const
 		}
 
 		// Only calculate chroma key on original album load
+		/*
 		if (Settings::settings.GetMiniPlayer() && initial) {
 			CalculateChroma(surface, pixels);
 		} else if (!Settings::settings.GetMiniPlayer()) {
 			ResetChroma();
 		}
+		*/
 
 		destination->clear();
 
@@ -1086,6 +1092,8 @@ bool AlbumArt::Load(const std::filesystem::path &fileName, const std::filesystem
 				std::unique_lock lock(histogramMutex);
 				UpdateBin(true);
 
+				loadState = LoadState::External;
+
 				return true;
 			}
 
@@ -1096,10 +1104,18 @@ bool AlbumArt::Load(const std::filesystem::path &fileName, const std::filesystem
 
 			if (!surface) {
 				LogError("Could not load external album art from file " + utf8, " error: ", SDL_GetError());
+
+				if (loadState == LoadState::Loading)
+					loadState = LoadState::None;
+
 				return false;
 			} else if (!force && surface->w < albumWidth && surface->h < albumHeight) {
 				LogWarning("External album art is smaller than what's already loaded");
 				SDL_DestroySurface(surface);
+
+				if (loadState == LoadState::Loading)
+					loadState = LoadState::None;
+
 				return false;
 			} else if (albumWidth != 0 && albumHeight != 0) {
 				LogDebug("External album art is larger than embedded. Using it instead.");
@@ -1115,8 +1131,14 @@ bool AlbumArt::Load(const std::filesystem::path &fileName, const std::filesystem
 				externalArtFile = currentFile;
 				externalFileExtension = imageExtension;
 			}
+
+			loadState = LoadState::External;
 		} else {
 			LogWarning("Could not load external album art for " + fileName.u8string());
+
+			if (loadState == LoadState::Loading)
+				loadState = LoadState::None;
+
 			return false;
 		}
 
@@ -1184,6 +1206,8 @@ bool AlbumArt::Load(const std::string &mimeType, const void *data, std::size_t l
 
 		loadingEmbedded = false;
 
+		loadState = LoadState::Embedded;
+
 		return true;
 	}
 
@@ -1215,6 +1239,8 @@ bool AlbumArt::Load(const std::string &mimeType, const void *data, std::size_t l
 		embeddedArtToLoad = surface;
 	}
 
+	loadState = LoadState::Embedded;
+
 	currentFile.clear();
 
 	return true;
@@ -1237,6 +1263,10 @@ void AlbumArt::Reset(const Colour<float> &color, bool fromPlaylist) {
 	if (!fromPlaylist) {
 		albumLoaded = false;
 		averageColor = color;
+
+		tintedBlackColor = {
+			0.0f, 0.0f, 0.0f
+		};
 
 		std::unique_lock lock(histogramMutex);
 		histogram.clear();
