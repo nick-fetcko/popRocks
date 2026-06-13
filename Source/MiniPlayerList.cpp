@@ -77,10 +77,13 @@ const OpenGLFont::Bounds &MiniPlayerList::AddItem(const std::string &text, std::
 
 	this->outlines.emplace_back(std::move(outline));
 
-	if (index)
+	if (index) {
 		indices.emplace(std::make_pair(items.size(), *index));
-	else
+		reverseIndices.emplace(std::make_pair(*index, items.size()));
+	} else {
 		indices.emplace(std::make_pair(items.size(), items.size()));
+		reverseIndices.emplace(std::make_pair(items.size(), items.size()));
+	}
 
 	return items.emplace_back(std::move(item)).GetBounds();
 }
@@ -122,8 +125,14 @@ void MiniPlayerList::SetHovered(bool hovered, bool sticky, bool ignoreNextTimeDe
 	this->afterFade = afterFade;
 }
 
-void MiniPlayerList::PreLoop() {
+void MiniPlayerList::PreLoop(std::optional<std::size_t> currentIndex) {
 	if (!isHoverSticky && hoverTimer && (std::chrono::system_clock::now() - *hoverTimer) >= Settings::settings.GetHoverTime()) {
+		// Scroll to currently selected item
+		if (!hovered && currentIndex) {
+			scrollOffset = std::clamp(reverseIndices[*currentIndex] - numberOfVisibleItems / 2, 0ll, static_cast<int64_t>(items.size()) - numberOfVisibleItems);
+			OnRadiusChanged();
+		}
+
 		hovered = true;
 		targetAlpha = 1.0f;
 		hoverTimer = std::nullopt;
@@ -155,7 +164,7 @@ void MiniPlayerList::PostLoop(const Delta &time) {
 }
 
 void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::size_t> currentIndex) {
-	PreLoop();
+	PreLoop(currentIndex);
 	OnLoop(time, pos, currentIndex, alpha);
 	PostLoop(time);
 }

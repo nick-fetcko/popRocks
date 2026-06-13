@@ -984,13 +984,15 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 
 				context.Use("scrolling"_hash);
 
-				presetList.PreLoop();
+				const auto preset = Settings::settings.GetMiniPlayerPresetIndex();
+
+				presetList.PreLoop(preset);
 
 				if (presetList.GetAlpha() > 0.0f) {
 					presetList.OnLoop(
 						time,
 						{ windowWidth / 2, windowHeight / 2 - albumArt->GetRadius(miniPlayer) / 2 },
-						*Settings::settings.GetMiniPlayerPresetIndex(),
+						preset,
 						volume.GetAlpha() == 0.0f ? presetList.GetAlpha() : inverseAlpha
 					);
 				}

@@ -29,7 +29,7 @@ public:
 	void OnInit(OpenGLFont *font, OpenGLFont *boldFont, OpenGLFont *outlineFont, OpenGLFont *boldOutlineFont, Context *context);
 	virtual void OnResize(int windowWidth, int windowHeight);
 
-	void PreLoop();
+	void PreLoop(std::optional<std::size_t> currentIndex = std::nullopt);
 	void OnLoop(const Delta &time, Vector2i pos, std::optional<std::size_t> currentIndex);
 	void OnLoop(const Delta &time, Vector2i pos, std::optional<std::size_t> currentIndex, const float &alpha);
 	void PostLoop(const Delta &time);
@@ -111,6 +111,7 @@ protected:
 	Fetcko::Polyline scrollBarOutline;
 
 	std::map<std::size_t, std::size_t> indices;
+	std::map<std::size_t, int64_t> reverseIndices;
 
 	std::function<void()> afterFade;
 

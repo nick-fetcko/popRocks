@@ -240,7 +240,7 @@ private:
 
 			currentTitle.OnLoop(pos.x - bounds.width / 2, pos.y - bounds.height / 2, time);
 
-			MiniPlayerList::PreLoop();
+			MiniPlayerList::PreLoop(currentIndex);
 			MiniPlayerList::OnLoop(time, pos, currentIndex, std::min(GetAlpha(), alpha));
 			MiniPlayerList::PostLoop(time);
 
