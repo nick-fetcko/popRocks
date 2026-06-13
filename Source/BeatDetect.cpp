@@ -118,7 +118,7 @@ inline void BeatDetect::_OnLoad(
 		if (cache) {
 			auto start = std::chrono::system_clock::now();
 
-			auto data = Utils::GetStringFromFile(path);
+			auto data = Utils::GetStringFromFile(path, 50 * 1024 * 1024); // Limit to 50MB
 			hash = hash_64_fnv1a_const(data.data(), data.size());
 			std::stringstream stream;
 			stream << std::setw(sizeof(hash) * 2) << std::setfill('0') << std::uppercase << std::hex << hash;
