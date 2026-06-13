@@ -486,4 +486,5 @@ private:
 	bool loadFileFromPlaylist = false;
 
 	Loading loadingIndicator;
+	Loading beatLoadingIndicator;
 };

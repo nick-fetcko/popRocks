@@ -1657,6 +1657,15 @@ void CApp::OnResize(int width, int height, float scale, bool force) {
 		"Loading"
 	);
 
+	beatLoadingIndicator.OnInit(
+		3.0f * albumArt.GetRadius(miniPlayer) / AlbumArt::BaseRadius,
+		controls.GetIconSize() / 1.5f,
+		controls.GetFont(),
+		controls.GetOutlineFont(),
+		*context,
+		"Loading Beats"
+	);
+
 	if (blur) {
 		maxDimension = std::sqrt(std::pow(windowWidth, 2) + std::pow(windowHeight, 2));
 		//maxDimension = windowHeight;
@@ -2170,6 +2179,8 @@ void CApp::OnLoop(const Delta &time) {
 
 	if (playlistLoading)
 		loadingIndicator.OnLoop(time, windowWidth / 2, windowHeight / 2 - albumArt.GetRadius(miniPlayer) / 2.0f - loadingIndicator.GetRadius() / 2.0f, *context);
+	else if (beatDetect && beatDetect->GetState() == BeatDetect::State::Loading)
+		beatLoadingIndicator.OnLoop(time, windowWidth / 2, windowHeight / 2 - albumArt.GetRadius(miniPlayer) + beatLoadingIndicator.GetRadius() * 2.0f, *context);
 
 	for (auto integration : integrations) {
 		integration->SetPosition(
@@ -2421,6 +2432,7 @@ void CApp::OnDestroy(bool includingLog) {
 	albumArt.RemoveColorChangeListener(this);
 
 	loadingIndicator.OnDestroy();
+	beatLoadingIndicator.OnDestroy();
 	controls.OnDestroy();
 
 	renderer->OnDestroy();

@@ -112,6 +112,8 @@ inline void BeatDetect::_OnLoad(
 	if (detectBpm) {
 		std::unique_lock lock(mutex);
 
+		state = State::Loading;
+
 		// Do we have cached results?
 		if (cache) {
 			auto start = std::chrono::system_clock::now();
@@ -181,8 +183,6 @@ inline void BeatDetect::_OnLoad(
 				}
 			}
 		}
-
-		state = State::Loading;
 
 		BeatRootProcessor beatRootProcessor(
 			static_cast<float>(freq),
