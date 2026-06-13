@@ -230,6 +230,13 @@ void Settings::SetRotating(bool rotating, bool delayed) {
 	}
 }
 
+void Settings::SetMiniPlayerRotating(bool miniPlayerRotating, bool delayed) {
+	if (miniPlayerRotating != this->miniPlayerRotating) {
+		this->miniPlayerRotating = miniPlayerRotating;
+		if (!delayed) Save();
+	}
+}
+
 void Settings::SetRotationSpeed(float rotationSpeed, bool delayed) {
 	if (rotationSpeed != this->rotationSpeed) {
 		this->rotationSpeed = rotationSpeed;
@@ -917,6 +924,8 @@ const Node &operator>>(const Node &node, Settings &settings) {
 
 	if (node.has("rotating"))
 		node["rotating"]->get(settings.rotating);
+	if (node.has("miniPlayerRotating"))
+		node["miniPlayerRotating"]->get(settings.miniPlayerRotating);
 	if (node.has("rotationSpeed"))
 		node["rotationSpeed"]->get(settings.rotationSpeed);
 
@@ -1153,6 +1162,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["strobe"]->set(settings.strobe);
 	node["strobeIntensity"]->set(settings.strobeIntensity);
 	node["rotating"]->set(settings.rotating);
+	node["miniPlayerRotating"]->set(settings.miniPlayerRotating);
 	node["rotationSpeed"]->set(settings.rotationSpeed);
 	node["radius"]->set(settings.radius);
 	node["detectBpm"]->set(settings.detectBpm);

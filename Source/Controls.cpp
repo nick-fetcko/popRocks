@@ -229,7 +229,7 @@ void Controls::OnInit(int windowWidth, int windowHeight, Context &context, float
 	captureCheckbox.SetTooltip("Capture keyboard media keys?");
 
 	rotateCheckbox.OnInit(font, outlineFont, size, context);
-	rotateCheckbox.SetChecked(Settings::settings.GetRotating());
+	rotateCheckbox.SetChecked(Settings::settings.GetMiniPlayerRotating());
 
 	rotateCheckbox.SetTooltip("Rotate album art?");
 
@@ -1270,7 +1270,7 @@ Controls::ControlButton Controls::OnMouseClicked(const Vector2i &mousePos, std::
 
 					const auto rotate = !rotateCheckbox.GetChecked();
 
-					Settings::settings.SetRotating(rotate);
+					Settings::settings.SetMiniPlayerRotating(rotate);
 					rotateCheckbox.SetChecked(rotate);
 				}
 			}

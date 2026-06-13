@@ -149,6 +149,9 @@ public:
 	const bool &GetRotating() const { return rotating; }
 	void SetRotating(bool rotating, bool delayed = false);
 
+	const bool &GetMiniPlayerRotating() const { return miniPlayerRotating; }
+	void SetMiniPlayerRotating(bool miniPlayerRotating, bool delayed = false);
+
 	const float &GetRotationSpeed() const { return rotationSpeed; }
 	void SetRotationSpeed(float rotationSpeed, bool delayed = false);
 
@@ -426,6 +429,7 @@ private:
 	Duration<Microseconds> pulseTime = 0.1s;
 
 	bool rotating = false;
+	bool miniPlayerRotating = true;
 	float rotationSpeed = 6.0f;
 
 	float radius = 200;

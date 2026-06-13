@@ -3503,14 +3503,16 @@ void CApp::LoadPreset(const Preset &preset) {
 
 	auto rotating = preset.GetRotating();
 
-	//if (rotating)
-	//	SetRotating(*rotating);
+	if (miniPlayer) rotating = Settings::settings.GetMiniPlayerRotating();
+
+	if (rotating)
+		SetRotating(*rotating);
 
 	if (rotating && *rotating) {
 		SetRotationSpeed(preset.GetRotationSpeed());
 	} else {
 		frameCount = 0; // Reset rotation
-		SetRotationSpeed(6.0f /* default */);
+		//SetRotationSpeed(6.0f /* default */);
 	}
 
 	auto blur = preset.GetBlur();

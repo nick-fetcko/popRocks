@@ -323,7 +323,6 @@ private:
 	std::wstring savedFile;
 
 	float frameCount = 0.0f;
-	bool rotating = Settings::settings.GetRotating();
 
 	std::size_t fftLength = 0;
 	uint32_t fftFlag = BASS_DATA_FFT8192;
@@ -452,6 +451,7 @@ private:
 	bool pulseMaxBrightness = HDR::Enabled && Settings::settings.GetPulseMaxBrightness();
 
 	bool miniPlayer = Settings::settings.GetMiniPlayer();
+	bool rotating = miniPlayer ? Settings::settings.GetMiniPlayerRotating() : Settings::settings.GetRotating();
 	std::optional<Vector2i> lastMousePos = std::nullopt;
 
 	float backgroundAlpha = Settings::settings.GetMiniPlayer() ? 0.0f : 1.0f;
