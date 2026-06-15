@@ -403,6 +403,11 @@ void CApp::LoadShaders() {
 
 			shader.program.CacheUniformLocation("bgr");
 			shader.program.Uniform1i("bgr"_hash, 0);
+
+			shader.program.CacheUniformLocation("vignette");
+			shader.program.Uniform1i("vignette"_hash, 0);
+
+			shader.program.CacheUniformLocation("windowSize");
 		}
 
 		if (hash == "texture"_hash) {
@@ -1689,8 +1694,9 @@ void CApp::OnResize(int width, int height, float scale, bool force) {
 		context->With("rotate"_hash, [this](Context::Shader &shader) {
 			shader.program.Uniform2f("screenSize"_hash, maxDimension, maxDimension);
 		});
-		context->With("blit"_hash, [this](Context::Shader &shader) {
+		context->With("blit"_hash, [this, width, height](Context::Shader &shader) {
 			shader.program.Uniform2f("screenSize"_hash, maxDimension, maxDimension);
+			shader.program.Uniform2f("windowSize"_hash, width, height);
 		});
 	} else {
 		maxDimension = windowWidth;
@@ -1700,6 +1706,7 @@ void CApp::OnResize(int width, int height, float scale, bool force) {
 		});
 		context->With("blit"_hash, [width, height](Context::Shader &shader) {
 			shader.program.Uniform2f("screenSize"_hash, width, height);
+			shader.program.Uniform2f("windowSize"_hash, width, height);
 		});
 	}
 
@@ -2117,7 +2124,15 @@ void CApp::OnLoop(const Delta &time) {
 
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+		context->With("blit"_hash, [this](Context::Shader &shader) {
+			shader.program.Uniform1i("vignette"_hash, miniPlayer);
+		});
+
 		platform->BlitBlurFbo();
+
+		context->With("blit"_hash, [this](Context::Shader &shader) {
+			shader.program.Uniform1i("vignette"_hash, 0);
+		});
 
 		context->Color(1.0f, 1.0f, 1.0f, blurOpacity - (strobe ? lerp * (strobeIntensity) : 0.0));
 		context->SetIdentity(std::move(identity));
