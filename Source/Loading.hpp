@@ -26,7 +26,7 @@ public:
 		promptOutline.SetText(promptText);
 	}
 
-	void OnLoop(const Delta &time, int x, int y, Context &context) {
+	void OnLoop(const Delta &time, int x, int y, Context &context, float alpha) {
 		context.Use("basic"_hash);
 
 		context.Translate(x, y, 0.0f);
@@ -66,10 +66,10 @@ public:
 			outline.SetPoints<Polyline::Join::Miter>(points.data(), points.size());
 			line.SetPoints<Polyline::Join::Miter>(points.data(), points.size());
 
-			context.Color(0.0f, 0.0f, 0.0f, 1.0f);
+			context.Color(0.0f, 0.0f, 0.0f, alpha);
 			outline.Draw<false>(context);
 
-			context.Color(1.0f, 1.0f, 1.0f, 1.0f);
+			context.Color(1.0f, 1.0f, 1.0f, alpha);
 			line.Draw<true>(context);
 		} else {
 			context.LoadIdentity();
@@ -77,7 +77,7 @@ public:
 
 		context.Use("texture"_hash);
 
-		context.Color(1.0f, 1.0f, 1.0f, 0.5f);
+		context.Color(1.0f, 1.0f, 1.0f, 0.5f * alpha);
 		context.Blend(true, [this, &x, &y] {
 			promptOutline.OnLoop(x - prompt.GetBounds().width / 2, y - prompt.GetBounds().height / 2 + radius / 4);
 			prompt.OnLoop(x - prompt.GetBounds().width / 2, y - prompt.GetBounds().height / 2 + radius / 4);

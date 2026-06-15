@@ -1942,7 +1942,7 @@ void CApp::OnLoop(const Delta &time) {
 		DrawCloseButton(time);
 
 		if (playlistLoading)
-			loadingIndicator.OnLoop(time, windowWidth / 2, windowHeight / 2 + albumArt.GetRadius(miniPlayer) / 2.0f, *context);
+			loadingIndicator.OnLoop(time, windowWidth / 2, windowHeight / 2 + albumArt.GetRadius(miniPlayer) / 2.0f, *context, std::max(controls.GetAlpha(), 0.5f));
 
 		SwapBuffers(time);
 
@@ -2178,9 +2178,9 @@ void CApp::OnLoop(const Delta &time) {
 	);
 
 	if (playlistLoading)
-		loadingIndicator.OnLoop(time, windowWidth / 2, windowHeight / 2 - albumArt.GetRadius(miniPlayer) / 2.0f - loadingIndicator.GetRadius() / 2.0f, *context);
+		loadingIndicator.OnLoop(time, windowWidth / 2, windowHeight / 2 - albumArt.GetRadius(miniPlayer) / 2.0f - loadingIndicator.GetRadius() / 2.0f, *context, std::max(controls.GetAlpha(), 0.5f));
 	else if (beatDetect && beatDetect->GetState() == BeatDetect::State::Loading)
-		beatLoadingIndicator.OnLoop(time, windowWidth / 2, windowHeight / 2 - albumArt.GetRadius(miniPlayer) + beatLoadingIndicator.GetRadius() * 2.0f, *context);
+		beatLoadingIndicator.OnLoop(time, windowWidth / 2, windowHeight / 2 - albumArt.GetRadius(miniPlayer) + beatLoadingIndicator.GetRadius() * 2.0f, *context, std::max(controls.GetAlpha(), 0.5f));
 
 	for (auto integration : integrations) {
 		integration->SetPosition(
