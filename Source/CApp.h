@@ -240,6 +240,8 @@ public:
 	void AddIntegration(Integration *integration) { integrations.emplace(integration); }
 	void RemoveIntegration(Integration *integration) { integrations.erase(integration); }
 
+	bool AddToScrollOffset(int offset);
+
 private:
 	void PlaylistLoaded(std::filesystem::path path, std::string extension, std::filesystem::path originalPath, bool fromPlaylist = false);
 	void AddCommands();

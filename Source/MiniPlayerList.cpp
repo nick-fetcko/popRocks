@@ -100,8 +100,8 @@ void MiniPlayerList::Clear() {
 	outlines.clear();
 }
 
-void MiniPlayerList::AddToScrollOffset(int offset) {
-	if (!miniPlayer || alpha == 0.0f) return;
+bool MiniPlayerList::AddToScrollOffset(int offset) {
+	if (!miniPlayer || alpha == 0.0f) return false;
 
 	scrollOffset += offset;
 
@@ -113,6 +113,8 @@ void MiniPlayerList::AddToScrollOffset(int offset) {
 		scrollOffset = items.size() - numberOfVisibleItems;
 
 	OnRadiusChanged();
+
+	return true;
 }
 
 void MiniPlayerList::SetHovered(bool hovered, bool sticky, bool ignoreNextTimeDelta, std::function<void()> afterFade) {

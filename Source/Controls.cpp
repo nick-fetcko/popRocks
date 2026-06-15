@@ -94,6 +94,9 @@ void Controls::OpenFont(Context *context, GLuint defaultFramebuffer) {
 		volume.OnInit(FontRoot, context);
 		presetText.OnInit(font, context);
 		presetOutline.OnInit(outlineFont, context);
+		message.OnInit(font, context);
+		messageOutline.OnInit(outlineFont, context);
+		messageOutline.SetColor({ black, black, black });
 	} else {
 		LogError("Could not open font!");
 	}
@@ -1020,6 +1023,38 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 				volume.OnLoop(windowWidth / 2, windowHeight / 2, time, albumArt, miniPlayer, context);
 			}
 #endif
+
+			if (messageAlpha > 0.0f) {
+				context.Color(1.0f, 1.0f, 1.0f, messageAlpha * alpha);
+				messageOutline.OnLoop(
+					windowWidth / 2 - message.GetBounds().width / 2,
+					windowHeight / 2.0f - albumArt->GetRadius(miniPlayer) + message.GetBounds().height * 2.0f
+				);
+				message.OnLoop(
+					windowWidth / 2 - message.GetBounds().width / 2,
+					windowHeight / 2.0f - albumArt->GetRadius(miniPlayer) + message.GetBounds().height * 2.0f
+				);
+
+				// Wait for half a second
+				if (messageTimer && std::chrono::system_clock::now() - *messageTimer >= 500ms) {
+					messageTargetAlpha = 0.0f;
+					messageTimer = std::nullopt;
+				}
+			}
+
+			if (messageTargetAlpha > messageAlpha) {
+				// Fade in in half a second
+				messageAlpha += time.change.AsSeconds() * 2.0;
+				if (messageAlpha >= messageTargetAlpha) {
+					messageAlpha = messageTargetAlpha;
+					messageTimer = std::chrono::system_clock::now();
+				}
+			} else if (messageTargetAlpha < messageAlpha) {
+				// Fade out in half a second
+				messageAlpha -= time.change.AsSeconds() * 2.0;
+				if (messageAlpha <= messageTargetAlpha)
+					messageAlpha = messageTargetAlpha;
+			}
 		}
 
 		return currentPos;
@@ -1099,6 +1134,8 @@ void Controls::OnDestroy() {
 	exclusiveIndicator.OnDestroy();
 	presetText.OnDestroy();
 	presetOutline.OnDestroy();
+	message.OnDestroy();
+	messageOutline.OnDestroy();
 
 	font->OnDestroy();
 	outlineFont->OnDestroy();
@@ -1295,10 +1332,22 @@ Controls::ControlButton Controls::OnMouseClicked(const Vector2i &mousePos, std::
 	return ControlButton::None;
 }
 
-void Controls::AddToScrollOffset(int offset) {
-	playlist.AddToScrollOffset(offset);
-	presetList.AddToScrollOffset(offset);
-	help.AddToScrollOffset(offset);
+bool Controls::AddToScrollOffset(int offset) {
+	if (playlist.AddToScrollOffset(offset))
+		return true;
+	else if (presetList.AddToScrollOffset(offset))
+		return true;
+	else if (help.AddToScrollOffset(offset))
+		return true;
+
+	return false;
+}
+
+void Controls::ShowMessage(const std::string &text) {
+	message.SetText(text);
+	messageOutline.SetText(text);
+
+	messageTargetAlpha = 1.0f;
 }
 
 void Controls::OnBlackChanged(const float &black) {

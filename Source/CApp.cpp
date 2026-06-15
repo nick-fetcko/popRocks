@@ -1948,8 +1948,8 @@ void CApp::OnLoop(const Delta &time) {
 
 		DrawCloseButton(time);
 
-		if (playlistLoading)
-			loadingIndicator.OnLoop(time, windowWidth / 2, windowHeight / 2 + albumArt.GetRadius(miniPlayer) / 2.0f, *context, std::max(controls.GetAlpha(), 0.5f));
+		if (playlistLoading && !controls.IsMessageVisible())
+			loadingIndicator.OnLoop(time, windowWidth / 2, windowHeight / 2 + albumArt.GetRadius(miniPlayer) / 2.0f, *context, 1.0f);
 
 		SwapBuffers(time);
 
@@ -2192,10 +2192,12 @@ void CApp::OnLoop(const Delta &time) {
 		playing
 	);
 
-	if (playlistLoading)
-		loadingIndicator.OnLoop(time, windowWidth / 2, windowHeight / 2 - albumArt.GetRadius(miniPlayer) / 2.0f - loadingIndicator.GetRadius() / 2.0f, *context, std::max(controls.GetAlpha(), 0.5f));
-	else if (beatDetect && beatDetect->GetState() == BeatDetect::State::Loading)
-		beatLoadingIndicator.OnLoop(time, windowWidth / 2, windowHeight / 2 - albumArt.GetRadius(miniPlayer) + beatLoadingIndicator.GetRadius() * 2.0f, *context, std::max(controls.GetAlpha(), 0.5f));
+	if (!controls.IsMessageVisible()) {
+		if (playlistLoading)
+			loadingIndicator.OnLoop(time, windowWidth / 2, windowHeight / 2 - albumArt.GetRadius(miniPlayer) / 2.0f - loadingIndicator.GetRadius() / 2.0f, *context, std::max(controls.GetAlpha(), 0.5f));
+		else if (beatDetect && beatDetect->GetState() == BeatDetect::State::Loading)
+			beatLoadingIndicator.OnLoop(time, windowWidth / 2, windowHeight / 2 - albumArt.GetRadius(miniPlayer) + beatLoadingIndicator.GetRadius() * 2.0f, *context, std::max(controls.GetAlpha(), 0.5f));
+	}
 
 	for (auto integration : integrations) {
 		integration->SetPosition(
@@ -3615,6 +3617,26 @@ void CApp::UpdateDisplayBoundingBox() {
 		if (bounds.y + bounds.h > displayBoundingBox.h)
 			displayBoundingBox.h = bounds.y + bounds.h;
 	}
+}
+
+bool CApp::AddToScrollOffset(int offset) {
+	if (!controls.AddToScrollOffset(offset)) {
+		if (auto lineRenderer = dynamic_cast<LineRenderer *>(renderer)) {
+			const auto lineWidth = std::clamp(Settings::settings.GetWidth() + offset, 1.0f, 10.0f);
+			lineRenderer->SetWidth(lineWidth);
+			Settings::settings.SetWidth(lineWidth);
+
+			LogDebug("Line width set to ", lineWidth);
+
+			controls.ShowMessage("Line width set to " + std::to_string(static_cast<int>(lineWidth)));
+
+			return true;
+		}
+
+		return false;
+	}
+
+	return true;
 }
 
 void CApp::OnColorChanged(const MathsCPP::Colour<float> &color, bool silent) {

@@ -52,7 +52,7 @@ public:
 	const OpenGLFont::Bounds &AddItem(const std::string &text, std::optional<std::size_t> index = std::nullopt, std::string altText = "");
 	void Clear();
 
-	void AddToScrollOffset(int offset);
+	bool AddToScrollOffset(int offset);
 
 	void OnColorChanged(const Colour<float> &color, bool silent = false) override;
 	void OnBlackChanged(const float &black) override;

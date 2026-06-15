@@ -111,7 +111,7 @@ public:
 	ControlButton OnMouseClicked(const Vector2i &mousePos, std::function<void(float)> seekCallback, bool playing, bool canTakeAction = true);
 	void OnMouseUp(const Vector2i &mousePos);
 
-	void AddToScrollOffset(int offset);
+	bool AddToScrollOffset(int offset);
 
 	void OnBlackChanged(const float &black) override;
 
@@ -135,6 +135,9 @@ public:
 	void PageDown();
 	void Home();
 	void End();
+
+	void ShowMessage(const std::string &text);
+	const bool IsMessageVisible() const { return messageAlpha > 0.0f; }
 
 private:
 	inline void OpenFont(Context *context, GLuint defaultFramebuffer);
@@ -194,6 +197,13 @@ private:
 	Checkbox rotateCheckbox;
 
 	Help help;
+
+	Text message;
+	Text messageOutline;
+
+	float messageAlpha = 0.0f;
+	float messageTargetAlpha = 0.0f;
+	std::optional<std::chrono::system_clock::time_point> messageTimer = std::nullopt;
 
 	std::unique_ptr<VertexArray> vao;
 	std::unique_ptr<ArrayBuffer> vbo;

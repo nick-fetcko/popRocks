@@ -25,7 +25,7 @@ public:
 
 	void SetBufferLength(std::size_t bufferLength, bool changed) override;
 
-	void SetWidth(float width);
+	virtual void SetWidth(float width);
 
 	void SetStyle(Style style);
 

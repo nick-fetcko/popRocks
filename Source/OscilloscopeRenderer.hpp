@@ -20,6 +20,8 @@ public:
 
 	void SetNumberOfChannels(uint8_t numberOfChannels) override;
 
+	void SetWidth(float width) override;
+
 	void OnLoop(
 		const Delta &time,
 		bool fileLoaded,

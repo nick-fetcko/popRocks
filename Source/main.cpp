@@ -296,10 +296,10 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 						wheelAccum += event.wheel.y;
 
 					if (wheelAccum + event.wheel.y >= 1) {
-						app.GetControls().AddToScrollOffset((event.wheel.direction == SDL_MOUSEWHEEL_NORMAL ? -1 : 1));
+						app.AddToScrollOffset((event.wheel.direction == SDL_MOUSEWHEEL_NORMAL ? -1 : 1));
 						wheelAccum -= 1.0f;
 					} else if (wheelAccum + event.wheel.y <= -1) {
-						app.GetControls().AddToScrollOffset((event.wheel.direction == SDL_MOUSEWHEEL_NORMAL ? 1 : -1));
+						app.AddToScrollOffset((event.wheel.direction == SDL_MOUSEWHEEL_NORMAL ? 1 : -1));
 						wheelAccum += 1.0f;
 					}
 					
