@@ -1714,7 +1714,7 @@ void CApp::OnResize(int width, int height, float scale, bool force) {
 
 	loadingIndicator.OnInit(
 		3.0f * albumArt.GetRadius(miniPlayer) / AlbumArt::BaseRadius,
-		controls.GetIconSize() / 1.5f,
+		miniPlayer ? controls.GetIconSize() / 1.5f : albumArt.GetRadius(miniPlayer) * Controls::MiniPlayerIconRatio,
 		controls.GetFont(),
 		controls.GetOutlineFont(),
 		*context,
@@ -1723,7 +1723,7 @@ void CApp::OnResize(int width, int height, float scale, bool force) {
 
 	beatLoadingIndicator.OnInit(
 		3.0f * albumArt.GetRadius(miniPlayer) / AlbumArt::BaseRadius,
-		controls.GetIconSize() / 1.5f,
+		miniPlayer ? controls.GetIconSize() / 1.5f : albumArt.GetRadius(miniPlayer) * Controls::MiniPlayerIconRatio,
 		controls.GetFont(),
 		controls.GetOutlineFont(),
 		*context,
