@@ -3274,7 +3274,16 @@ bool CApp::OnMouseClicked(const Vector2i &mousePos) {
 	} else if (auto button = 
 		controls.OnMouseClicked(
 			mousePos,
-			[this](float pos) { if (fileLoaded && !miniPlayer) SeekTo(pos * controls.GetCurrentSongLength()); },
+			[this](float pos) { 
+				if (fileLoaded && !miniPlayer) {
+					auto time = pos * controls.GetCurrentSongLength();
+
+					if (auto &cue = controls.GetPlaylist().GetCue())
+						time += cue->GetCurrentTrack()->startTime;
+
+					SeekTo(time);
+				}
+			},
 			playing
 		);
 		button != Controls::ControlButton::None
@@ -3323,7 +3332,13 @@ bool CApp::OnMouseDown(const Vector2i &mousePos, MouseDownState *state) {
 			if (fileLoaded) {
 				// Did we click the mini player's seekbar?
 				controls.OnMouseClicked(mousePos, [this](float pos) {
-					SeekTo(pos * controls.GetCurrentSongLength());
+					auto time = pos * controls.GetCurrentSongLength();
+
+					if (auto &cue = controls.GetPlaylist().GetCue())
+						time += cue->GetCurrentTrack()->startTime;
+
+					SeekTo(time);
+
 					lastMousePos = std::nullopt;
 				}, playing, false);
 			}
