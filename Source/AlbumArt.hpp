@@ -37,6 +37,15 @@ class Controls;
 class AlbumArt : public Circle<Circles::Textured> {
 private:
 	constexpr static std::size_t OutlinePoints = 100;
+	
+	constexpr inline static float SkinHueMax = 334.0f;
+	constexpr inline static float SkinHueMin = 52.0f;
+
+	// Increasing beyond 0.5f filters out
+	// "Shut Up, Get Happy"'s primary (and only) color
+	constexpr inline static float SkinSaturation = 0.5f;
+
+	constexpr inline static float SkinValue = 0.25f;
 
 public:
 	static constexpr bool IsSupported(const std::string_view &lowercaseExtension) {
@@ -226,6 +235,8 @@ private:
 
 	void CalculateChroma(SDL_Surface *surface, const uint8_t *pixels);
 
+	inline bool IsSkinTone(const Colour<float>::Hsv &hsv) const;
+
 	GLuint album = 0;
 	int albumWidth = 0, albumHeight = 0;
 	float squareHeight = 0;
@@ -238,19 +249,17 @@ private:
 	ColorMethod colorMethod = ColorMethod::Dominant;
 	Colour<float> averageColor{ 1.0f, 1.0f, 1.0f };
 	struct Bin {
-		Bin(std::size_t count, float h, float s, float v) : count(count), h(h), s(s), v(v) {}
+		Bin(std::size_t count, float h, float s, float v) : count(count), hsv{ h, s, v } {}
 
 		std::size_t count;
-		float h = 0.0f;
-		float s = 0.0;
-		float v = 0.0f;
+		Colour<float>::Hsv hsv = { 0.0f, 0.0f, 0.0f };
 	};
 
 	struct CompareBins {
 		bool operator()(const Bin &lhs, const Bin &rhs) const {
 			return 
 				lhs.count < rhs.count ||
-				(lhs.count == rhs.count && lhs.h < rhs.h);
+				(lhs.count == rhs.count && lhs.hsv.h < rhs.hsv.h);
 
 			// The original container is sorted by hue,
 			// so we'll never have two bins with the same

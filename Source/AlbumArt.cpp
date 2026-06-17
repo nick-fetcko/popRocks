@@ -538,7 +538,7 @@ void AlbumArt::ReprocessColors() {
 
 					selectedColors.clear();
 					for (auto iter = histogram.rbegin(); iter != histogram.rend(); ++iter)
-						selectedColors.emplace_back(Colour<float>::FromHsv(iter->h, iter->s, iter->v));
+						selectedColors.emplace_back(Colour<float>::FromHsv(iter->hsv));
 
 					ResetBin(true);
 				}
@@ -624,6 +624,13 @@ void AlbumArt::ResetChroma() {
 		;// listener->OnBlackChanged(this->blackColor);
 
 	LogDebug("Chroma key and black color reset!");
+}
+
+inline bool AlbumArt::IsSkinTone(const Colour<float>::Hsv &hsv) const {
+	return (
+		(hsv.h <= SkinHueMin || hsv.h >= SkinHueMax) &&
+		((hsv.s < SkinSaturation && hsv.v > SkinValue) /* || (hsv.v > hsv.s) */ /* || (std::abs(hsv.v - hsv.s) <= 0.1f)*/)
+	);
 }
 
 void AlbumArt::ProcessColors(Histogram *destination, SDL_Surface *surface, const uint8_t *pixels, bool initial) {
@@ -713,16 +720,20 @@ void AlbumArt::ProcessColors(Histogram *destination, SDL_Surface *surface, const
 
 					// Exclude dark / low contrast colors
 					if (hsv.s >= minSaturation && hsv.v >= minValue) {
+						// Discourage selection of skin tones
+						if (IsSkinTone(hsv))
+							continue;
+
 						if (auto iter = histogram.find(hsv.h); iter != histogram.end()) {
 							++iter->second.count;
-							iter->second.s += hsv.s;
+							iter->second.hsv.s += hsv.s;
 
 							/*
 							if (hsv.s > iter->second.s)
 								iter->second.s = hsv.s;
 							*/
 
-							iter->second.v += hsv.v;
+							iter->second.hsv.v += hsv.v;
 						} else
 							histogram.emplace(std::make_pair(hsv.h, Bin(1, hsv.h, hsv.s, hsv.v)));
 					}
@@ -797,9 +808,9 @@ void AlbumArt::ProcessColors(Histogram *destination, SDL_Surface *surface, const
 				destination->emplace(
 					Bin(
 						bin.count,
-						bin.h,
-						bin.s / bin.count,
-						bin.v / bin.count
+						bin.hsv.h,
+						bin.hsv.s / bin.count,
+						bin.hsv.v / bin.count
 					)
 				);
 			}
@@ -855,13 +866,17 @@ void AlbumArt::ProcessColors(Histogram *destination, SDL_Surface *surface, const
 		auto tempHistogram = *destination;
 		destination->clear();
 		for (auto iter = tempHistogram.rbegin(); iter != tempHistogram.rend() && processingColors; ++iter) {
+			// Discourage selection of skin tones
+			if (IsSkinTone(iter->hsv))
+				continue;
+
 			if (destination->empty()) {
 				destination->emplace(*iter);
 			} else {
 				bool found = true;
 				for (auto compare = destination->begin(); compare != destination->end(); ++compare) {
-					auto rgb = Colour<float>::FromHsv(iter->h, iter->s, iter->v);
-					auto rgbComp = Colour<float>::FromHsv(compare->h, compare->s, compare->v);
+					auto rgb = Colour<float>::FromHsv(iter->hsv);
+					auto rgbComp = Colour<float>::FromHsv(compare->hsv);
 
 					auto distance =
 						std::sqrt(
@@ -872,9 +887,9 @@ void AlbumArt::ProcessColors(Histogram *destination, SDL_Surface *surface, const
 
 					// https://gamedev.stackexchange.com/a/4472
 					// 360 - 0 (in degrees) needs to be 0, not 360
-					if ((180 - std::abs(std::abs(iter->h - compare->h) - 180) < Settings::settings.GetColorSelection().minHueSeparation &&
+					if ((180 - std::abs(std::abs(iter->hsv.h - compare->hsv.h) - 180) < Settings::settings.GetColorSelection().minHueSeparation &&
 						distance < Settings::settings.GetColorSelection().minRgbSeparation) ||
-						(minSaturation <= DBL_EPSILON && std::abs(compare->v - iter->v) < Settings::settings.GetColorSelection().minValueSeparation))
+						(minSaturation <= DBL_EPSILON && std::abs(compare->hsv.v - iter->hsv.v) < Settings::settings.GetColorSelection().minValueSeparation))
 						found = false;
 
 					/*
@@ -901,10 +916,10 @@ void AlbumArt::ProcessColors(Histogram *destination, SDL_Surface *surface, const
 		if (destination->size() == 1 && processingColors) {
 			auto deeperColor = *destination->begin();
 
-			if (deeperColor.v >= 0.5)
-				deeperColor.v = std::clamp(deeperColor.v / 1.75f, 0.0f, 1.0f);
+			if (deeperColor.hsv.v >= 0.5)
+				deeperColor.hsv.v = std::clamp(deeperColor.hsv.v / 1.75f, 0.0f, 1.0f);
 			else
-				deeperColor.v = std::clamp(deeperColor.v * 1.75f, 0.0f, 1.0f);
+				deeperColor.hsv.v = std::clamp(deeperColor.hsv.v * 1.75f, 0.0f, 1.0f);
 
 			deeperColor.count -= 1;
 
@@ -1022,7 +1037,7 @@ void AlbumArt::LoadFromSurface(SDL_Surface *surface, std::filesystem::path path,
 
 	selectedColors.clear();
 	for (auto iter = histogram.rbegin(); iter != histogram.rend(); ++iter)
-		selectedColors.emplace_back(Colour<float>::FromHsv(iter->h, iter->s, iter->v));
+		selectedColors.emplace_back(Colour<float>::FromHsv(iter->hsv));
 
 	if (pixels != surface->pixels)
 		delete[] pixels;
@@ -1363,9 +1378,7 @@ void AlbumArt::UpdateBin(bool silent) {
 	*/
 
 	averageColor = Colour<float>::FromHsv(
-		binIter->h,
-		binIter->s,
-		binIter->v
+		binIter->hsv
 	);
 
 	// Add 20% of the selected color to the
@@ -1390,7 +1403,7 @@ void AlbumArt::UpdateBin(bool silent) {
 }
 
 void AlbumArt::PrintBin() {
-	LogDebug("Setting bin to hue ", binIter->h, ", saturation ", binIter->s, ", value ", binIter->v, " with count of ", binIter->count);
+	LogDebug("Setting bin to hue ", binIter->hsv.h, ", saturation ", binIter->hsv.s, ", value ", binIter->hsv.v, " with count of ", binIter->count);
 }
 
 void AlbumArt::AddColorChangeListener(ColorChangeListener *listener) { 
