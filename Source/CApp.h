@@ -84,6 +84,9 @@ using namespace Fetcko;
 class MyAudioSink;
 
 class CApp : public ColorChangeListener, public AlbumArt::BlackChangedListener, public LoggableClass {
+private:
+	static std::map<int, std::string> BassErrorCodes;
+
 public:
 	CApp();
 	~CApp();
@@ -241,6 +244,8 @@ public:
 	void RemoveIntegration(Integration *integration) { integrations.erase(integration); }
 
 	bool AddToScrollOffset(int offset);
+
+	static const std::string &GetBassError(int errorCode) { return BassErrorCodes.at(errorCode); }
 
 private:
 	void PlaylistLoaded(std::filesystem::path path, std::string extension, std::filesystem::path originalPath, bool fromPlaylist = false);

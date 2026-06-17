@@ -10,6 +10,7 @@
 #include <Windows.h>
 #include <shlobj.h>
 #include <Mmdeviceapi.h>
+#include <dwmapi.h>
 
 #include <basswasapi.h>
 
@@ -77,6 +78,7 @@ public:
 	// Window management
 	bool AllowsWindowMovement() const override;
 	std::optional<Vector2i> SetWindowPos(int x, int y, int width, int height) override;
+	void ShowDialogBox(const std::string &title, const std::string &message) override;
 
 	// =====================================================
 	// ===================== Virtuals ======================
@@ -135,6 +137,8 @@ LRESULT CALLBACK LowLevelKeyboardProc(
 	_In_ WPARAM wParam,
 	_In_ LPARAM lParam
 );
+
+LRESULT CALLBACK MessageBoxCbtHookProc(int nCode, WPARAM wParam, LPARAM lParam);
 
 // WASAPI input processing function
 DWORD CALLBACK InWasapiProc(void *buffer, DWORD length, void *user);

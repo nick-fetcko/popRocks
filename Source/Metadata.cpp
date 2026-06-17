@@ -111,7 +111,7 @@ void Metadata::OnLoad(
 
 				tagLoader->LoadFromTags(tags);
 			} else {
-				LogError("Could not fully populate tags!");
+				LogWarning("Could not fully populate tags!");
 			}
 		}
 	}

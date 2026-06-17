@@ -7,8 +7,11 @@
 #include "HDR.hpp"
 #include "Preset.hpp"
 
-Controls::Controls(AlbumArt *const albumArt, const bool &vulkan) :
+#include "Platforms/Platform.hpp"
+
+Controls::Controls(AlbumArt *const albumArt, std::unique_ptr<Platform> &platform, const bool &vulkan) :
 	albumArt(albumArt),
+	platform(platform),
 	playlist(albumArt, vulkan),
 	presetList(albumArt, vulkan),
 	play(albumArt),
@@ -45,36 +48,48 @@ void Controls::OpenFont(Context *context, GLuint defaultFramebuffer) {
 	} else {
 		font = new OpenGLFont();
 		font->SetDefaultFramebuffer(defaultFramebuffer);
-		font->OnInit(
+		if (!font->OnInit(
 			FontRoot,
 			static_cast<FT_UInt>(18 * scale)
-		);
+		)) {
+			delete font;
+			font = nullptr;
+		}
 
 		boldFont = new OpenGLFont(true);
 		boldFont->SetDefaultFramebuffer(defaultFramebuffer);
-		boldFont->OnInit(
+		if (!boldFont->OnInit(
 			FontRoot,
 			static_cast<FT_UInt>(18 * scale)
-		);
+		)) {
+			delete boldFont;
+			boldFont = nullptr;
+		}
 
 		outlineFont = new OpenGLFont();
 		outlineFont->SetDefaultFramebuffer(defaultFramebuffer);
-		outlineFont->OnInit(
+		if (!outlineFont->OnInit(
 			FontRoot,
 			static_cast<FT_UInt>(18 * scale),
 			3.75f
-		);
+		)) {
+			delete outlineFont;
+			outlineFont = nullptr;
+		}
 
 		boldOutlineFont = new OpenGLFont(true);
 		boldOutlineFont->SetDefaultFramebuffer(defaultFramebuffer);
-		boldOutlineFont->OnInit(
+		if (!boldOutlineFont->OnInit(
 			FontRoot,
 			static_cast<FT_UInt>(18 * scale),
 			3.75f
-		);
+		)) {
+			delete boldOutlineFont;
+			boldOutlineFont = nullptr;
+		}
 	}
 
-	if (font) {
+	if (font && boldFont && outlineFont && boldOutlineFont) {
 		const auto &black = albumArt->GetBlackColor();
 
 		elapsedText.OnInit(font, context);
@@ -99,6 +114,8 @@ void Controls::OpenFont(Context *context, GLuint defaultFramebuffer) {
 		messageOutline.SetColor({ black, black, black });
 	} else {
 		LogError("Could not open font!");
+
+		platform->ShowDialogBox("Could not open font!", FontRoot + " could not be loaded from the \"Data\" folder.");
 	}
 }
 

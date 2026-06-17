@@ -10,10 +10,24 @@
 
 #include "Source/CApp.h"
 
+#pragma comment(lib, "dwmapi.lib")
+#pragma comment(lib, "Comctl32.lib")
+
+#if defined _M_IX86
+#pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='x86' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#elif defined _M_IA64
+#pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='ia64' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#elif defined _M_X64
+#pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='amd64' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#else
+#pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#endif
+
 // From wingdi.h
 #define RGB(r,g,b)          ((COLORREF)(((BYTE)(r)|((WORD)((BYTE)(g))<<8))|(((DWORD)(BYTE)(b))<<16)))
 
 HHOOK keyboardHook = nullptr;
+HHOOK msgBoxHook = nullptr;
 
 enum class KeyboardHookMode {
 	None,
@@ -324,11 +338,15 @@ bool Windows::OpenExclusive(const std::filesystem::path &path, const std::string
 
 				return exclusive;
 			} else {
-				LogError("Could not initialize exclusive mode! Error code ", BASS_ErrorGetCode());
+				const auto error = app->GetBassError(BASS_ErrorGetCode());
+				LogError("Could not initialize exclusive mode! Error: ", error);
+				ShowDialogBox("Could not initialize exclusive mode!", "Error: " + error);
 				exclusive = false;
 			}
 		} else {
-			LogError("Could not initialize exclusive mode! Error code ", BASS_ErrorGetCode());
+			const auto error = app->GetBassError(BASS_ErrorGetCode());
+			LogError("Could not initialize exclusive mode! Error: ", error);
+			ShowDialogBox("Could not initialize exclusive mode!", "Error: " + error);
 			exclusive = false;
 		}
 	} else {
@@ -459,6 +477,8 @@ void Windows::UpdateHdrProperties(bool force) {
 			"SDL_DXGIGetOutputInfo() failed: ",
 			SDL_GetError()
 		);
+
+		ShowDialogBox("SDL_DXGIGetOutputInfo() failed!", SDL_GetError());
 	}
 	Desktop::UpdateHdrProperties(outputIndex, force);
 }
@@ -531,14 +551,26 @@ std::filesystem::path Windows::GetTemporaryFile(const std::string &pattern) {
 // ---------------------- BASS -------------------------
 // -----------------------------------------------------
 void Windows::LoadBassPlugins() {
-	if (!BASS_PluginLoad("bassflac.dll", 0))
+	if (!BASS_PluginLoad("bassflac.dll", 0)) {
 		LogError("Could not load FLAC plugin! Error code ", BASS_ErrorGetCode());
-	if (!BASS_PluginLoad("bassape.dll", 0))
+
+		ShowDialogBox("Could not load FLAC plugin!", "Error: " + app->GetBassError(BASS_ErrorGetCode()));
+	}
+	if (!BASS_PluginLoad("bassape.dll", 0)) {
 		LogError("Could not load APE plugin! Error code ", BASS_ErrorGetCode());
-	if (!BASS_PluginLoad("basswv.dll", 0))
+
+		ShowDialogBox("Could not load APE plugin!", "Error: " + app->GetBassError(BASS_ErrorGetCode()));
+	}
+	if (!BASS_PluginLoad("basswv.dll", 0)) {
 		LogError("Could not load WavPack plugin! Error code ", BASS_ErrorGetCode());
-	if (!BASS_PluginLoad("bass_tta.dll", 0))
+
+		ShowDialogBox("Could not load WavPack plugin!", "Error: " + app->GetBassError(BASS_ErrorGetCode()));
+	}
+	if (!BASS_PluginLoad("bass_tta.dll", 0)) {
 		LogError("Could not load TTA plugin! Error code ", BASS_ErrorGetCode());
+
+		ShowDialogBox("Could not load TTA plugin!", "Error: " + app->GetBassError(BASS_ErrorGetCode()));
+	}
 }
 
 // -----------------------------------------------------
@@ -704,6 +736,43 @@ std::optional<Vector2i> Windows::SetWindowPos(int x, int y, int width, int heigh
 	return ret;
 }
 
+void Windows::ShowDialogBox(const std::string &title, const std::string &message) {
+	const auto hwnd = reinterpret_cast<HWND>(
+		SDL_GetPointerProperty(
+			SDL_GetWindowProperties(app->GetSdlWindow()),
+			SDL_PROP_WINDOW_WIN32_HWND_POINTER,
+			NULL
+		)
+	);
+
+	const auto instance = reinterpret_cast<HINSTANCE>(
+		SDL_GetPointerProperty(
+			SDL_GetWindowProperties(app->GetSdlWindow()),
+			SDL_PROP_WINDOW_WIN32_INSTANCE_POINTER,
+			NULL
+		)
+	);
+
+	const auto wideTitle = Utils::ToUTF16(title);
+	const auto wideMessage = Utils::ToUTF16(message);
+
+	msgBoxHook = SetWindowsHookEx(WH_CBT, MessageBoxCbtHookProc, nullptr, GetCurrentThreadId());
+
+	TASKDIALOGCONFIG config = { 0 };
+	config.cbSize = sizeof(config);
+	config.hInstance = instance;
+	config.dwCommonButtons = TDCBF_OK_BUTTON;
+	config.pszMainIcon = TD_ERROR_ICON;
+	config.pszMainInstruction = wideTitle.c_str();
+	config.pszContent = wideMessage.c_str();
+	config.pButtons = NULL;
+	config.cButtons = 0;
+	config.hwndParent = hwnd;
+	config.dwFlags = TDF_POSITION_RELATIVE_TO_WINDOW | TDF_SIZE_TO_CONTENT;
+
+	TaskDialogIndirect(&config, NULL, NULL, NULL);
+}
+
 // =====================================================
 // ===================== Virtuals ======================
 // =====================================================
@@ -739,6 +808,8 @@ int Windows::GetAdapterIndex() {
 			"SDL_DXGIGetOutputInfo() failed: ",
 			SDL_GetError()
 		);
+
+		ShowDialogBox("SDL_DXGIGetOutputInfo() failed!", SDL_GetError());
 	}
 
 	return adapterIndex;
@@ -961,6 +1032,21 @@ LRESULT CALLBACK LowLevelKeyboardProc(
 	}
 
 	return CallNextHookEx(keyboardHook, nCode, wParam, lParam);
+}
+
+LRESULT CALLBACK MessageBoxCbtHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
+	if (nCode == HCBT_ACTIVATE) {
+		const auto hwndMsgBox = reinterpret_cast<HWND>(wParam);
+
+		BOOL useDarkMode = TRUE;
+		DWORD dwmAttribute = DWMWA_USE_IMMERSIVE_DARK_MODE;
+
+		DwmSetWindowAttribute(hwndMsgBox, dwmAttribute, &useDarkMode, sizeof(useDarkMode));
+
+		UnhookWindowsHookEx(msgBoxHook);
+		msgBoxHook = nullptr;
+	}
+	return CallNextHookEx(nullptr, nCode, wParam, lParam);
 }
 
 // WASAPI input processing function

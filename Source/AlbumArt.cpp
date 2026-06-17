@@ -1127,7 +1127,13 @@ bool AlbumArt::Load(const std::filesystem::path &fileName, const std::filesystem
 			auto surface = IMG_Load(utf8.c_str());
 
 			if (!surface) {
-				LogError("Could not load external album art from file " + utf8, " error: ", SDL_GetError());
+				std::stringstream stream;
+
+				stream << "\"" << utf8 << "\" failed to load. Error: " << SDL_GetError();
+
+				LogError("Could not open external album art! ", stream.str());
+
+				platform->ShowDialogBox("Could not open external album art!", stream.str());
 
 				if (loadState == LoadState::Loading)
 					loadState = LoadState::None;
@@ -1246,6 +1252,7 @@ bool AlbumArt::Load(const std::string &mimeType, const void *data, std::size_t l
 	auto surface = IMG_LoadTyped_IO(file, 1, embeddedDataMimeType.c_str());
 	if (!surface) {
 		LogError("Could not load embedded album art! ", SDL_GetError());
+		platform->ShowDialogBox("Could not load embedded album art!", SDL_GetError());
 		loadingEmbedded = false;
 		return false;
 	} else if (surface->w < albumWidth && surface->h < albumHeight) {

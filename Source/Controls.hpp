@@ -52,7 +52,7 @@ public:
 		RotateCheckbox
 	};
 
-	Controls(AlbumArt *const albumArt, const bool &vulkan);
+	Controls(AlbumArt *const albumArt, std::unique_ptr<Platform> &platform, const bool &vulkan);
 	~Controls();
 
 	void OnInit(int windowWidth, int windowHeight, Context &context, float scale = 1.0f, GLuint defaultFramebuffer = 0, bool miniPlayer = false);
@@ -145,6 +145,7 @@ private:
 	ControlButton GetButtonAtPos(const Vector2i &pos);
 
 	AlbumArt * const albumArt = nullptr;
+	std::unique_ptr<Platform> &platform;
 
 	int windowWidth = 0, windowHeight = 0;
 

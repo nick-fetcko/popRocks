@@ -33,9 +33,58 @@ using namespace MathsCPP;
 // =====================================================
 // ======================= CApp ========================
 // =====================================================
+std::map<int, std::string> CApp::BassErrorCodes = {
+	{ 0, "BASS_OK" },
+	{ 1, "BASS_ERROR_MEM" },
+	{ 2, "BASS_ERROR_FILEOPEN" },
+	{ 3, "BASS_ERROR_DRIVER" },
+	{ 4, "BASS_ERROR_BUFLOST" },
+	{ 5, "BASS_ERROR_HANDLE" },
+	{ 6, "BASS_ERROR_FORMAT" },
+	{ 7, "BASS_ERROR_POSITION" },
+	{ 8, "BASS_ERROR_INIT" },
+	{ 9, "BASS_ERROR_START" },
+	{ 10, "BASS_ERROR_SSL" },
+	{ 11, "BASS_ERROR_REINIT" },
+	{ 13, "BASS_ERROR_TRACK" },
+	{ 14, "BASS_ERROR_ALREADY" },
+	{ 17, "BASS_ERROR_NOTAUDIO" },
+	{ 18, "BASS_ERROR_NOCHAN" },
+	{ 19, "BASS_ERROR_ILLTYPE" },
+	{ 20, "BASS_ERROR_ILLPARAM" },
+	{ 21, "BASS_ERROR_NO3D" },
+	{ 22, "BASS_ERROR_NOEAX" },
+	{ 23, "BASS_ERROR_DEVICE" },
+	{ 24, "BASS_ERROR_NOPLAY" },
+	{ 25, "BASS_ERROR_FREQ" },
+	{ 27, "BASS_ERROR_NOTFILE" },
+	{ 29, "BASS_ERROR_NOHW" },
+	{ 31, "BASS_ERROR_EMPTY" },
+	{ 32, "BASS_ERROR_NONET" },
+	{ 33, "BASS_ERROR_CREATE" },
+	{ 34, "BASS_ERROR_NOFX" },
+	{ 37, "BASS_ERROR_NOTAVAIL" },
+	{ 38, "BASS_ERROR_DECODE" },
+	{ 39, "BASS_ERROR_DX" },
+	{ 40, "BASS_ERROR_TIMEOUT" },
+	{ 41, "BASS_ERROR_FILEFORM" },
+	{ 42, "BASS_ERROR_SPEAKER" },
+	{ 43, "BASS_ERROR_VERSION" },
+	{ 44, "BASS_ERROR_CODEC" },
+	{ 45, "BASS_ERROR_ENDED" },
+	{ 46, "BASS_ERROR_BUSY" },
+	{ 47, "BASS_ERROR_UNSTREAMABLE" },
+	{ 48, "BASS_ERROR_PROTOCOL" },
+	{ 49, "BASS_ERROR_DENIED" },
+	{ 50, "BASS_ERROR_FREEING" },
+	{ 51, "BASS_ERROR_CANCEL" },
+	{ 500, "BASS_ERROR_JAVA_CLASS" },
+	{ -1, "BASS_ERROR_UNKNOWN" }
+};
+
 CApp::CApp() : 
 	albumArt(&controls, context, platform), 
-	controls(&albumArt, vulkan),
+	controls(&albumArt, platform, vulkan),
 	close(&albumArt),
 	circleLine(12.0f), 
 	prng(
@@ -611,8 +660,11 @@ Interop::InitArgs CApp::GetInteropArgs() {
 	args.surfaceCallback = [&](void *instance) {
 		VkSurfaceKHR surface;
 
-		if (!SDL_Vulkan_CreateSurface(sdlWindow, reinterpret_cast<VkInstance>(instance), nullptr, &surface))
+		if (!SDL_Vulkan_CreateSurface(sdlWindow, reinterpret_cast<VkInstance>(instance), nullptr, &surface)) {
 			LogError("Could not create Vulkan surface: ", SDL_GetError());
+
+			platform->ShowDialogBox("Could not create Vulkan surface!", SDL_GetError());
+		}
 
 		return reinterpret_cast<void *>(surface);
 	};
@@ -1526,7 +1578,11 @@ void CApp::OnInit() {
 
 		menu.OnColorChanged(visColor);
 #endif
-	} else LogError("Could not create OpenGL context: ", platform->GetOpenGlContextError());
+	} else {
+		LogError("Could not create OpenGL context: ", platform->GetOpenGlContextError());
+
+		platform->ShowDialogBox("Could not create OpenGL context!", platform->GetOpenGlContextError());
+	}
 
 	LogDebug("OpenGL Version: ", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
 
@@ -1548,8 +1604,11 @@ void CApp::OnInit() {
 
 	platform->LoadBassPlugins();
 
-	if (BASS_Init(platform->GetDeviceIndex<true>(Settings::settings.GetOutputDevice()), freq, 0, 0, nullptr) != TRUE)
+	if (BASS_Init(platform->GetDeviceIndex<true>(Settings::settings.GetOutputDevice()), freq, 0, 0, nullptr) != TRUE) {
 		LogError("Could not initialize audio device!");
+
+		platform->ShowDialogBox("Could not initialize audio device!", "Error: " + GetBassError(BASS_ErrorGetCode()));
+	}
 
 	lightPack.OnInit();
 
@@ -2792,6 +2851,15 @@ void CApp::PlaylistLoaded(std::filesystem::path path, std::string extension, std
 
 		loadedFile = path;
 		loadedFileExtension = extension;
+	} else {
+		fileLoaded = false;
+		albumArt.Reset(visColor);
+
+		std::stringstream stream;
+		
+		stream << "\"" << path.u8string() << "\" failed to load. Error: " << GetBassError(BASS_ErrorGetCode());
+		LogError("Could not open file! ", stream.str());
+		platform->ShowDialogBox("Could not open file!", stream.str());
 	}
 }
 
@@ -2865,6 +2933,9 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 				loadFilePath = ret->path;
 			} else {
 				LogError("Could not load playlist ", loadFilePath);
+
+				platform->ShowDialogBox("Could not load files! ", "\"" + loadFilePath.u8string() + "\" could not be loaded.");
+
 				return;
 			}
 
@@ -3011,8 +3082,10 @@ void CApp::Seek(double seconds) {
 	);
 
 	if (BASS_ChannelSetPosition(streamHandle, pos + bytes, BASS_POS_BYTE) == FALSE) {
-		auto code = BASS_ErrorGetCode();
-		LogError("Seek failed! Error code ", code);
+		const auto error = GetBassError(BASS_ErrorGetCode());
+		LogError("Seek failed! Error: ", error);
+
+		platform->ShowDialogBox("Seek failed!", "Error: " + error);
 	} else {
 		// Refresh our times
 		controls.SetElapsedSeconds(-1);
@@ -3032,8 +3105,10 @@ void CApp::SeekTo(double seconds) {
 			),
 			BASS_POS_BYTE
 	) == FALSE) {
-		auto code = BASS_ErrorGetCode();
-		LogError("Seek failed! Error code ", code);
+		const auto error = GetBassError(BASS_ErrorGetCode());
+		LogError("Seek failed! Error: ", error);
+
+		platform->ShowDialogBox("Seek failed!", "Error: " + error);
 	} else {
 		// Refresh our times
 		controls.SetElapsedSeconds(-1);

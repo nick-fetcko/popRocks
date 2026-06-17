@@ -92,6 +92,7 @@ public:
 	// Window management
 	virtual bool AllowsWindowMovement() const = 0;
 	virtual std::optional<Vector2i> SetWindowPos(int x, int y, int width, int height) = 0;
+	virtual void ShowDialogBox(const std::string &title, const std::string &message) = 0;
 
 	// =====================================================
 	// ===================== Virtuals ======================
