@@ -208,7 +208,7 @@ private:
 		bool miniPlayer = false,
 		bool hidden = false
 	) {
-		if (tracks.empty())
+		if (tracks.empty() || items.empty())
 			return;
 
 		// Mini-player playlist has no backing rectangle
