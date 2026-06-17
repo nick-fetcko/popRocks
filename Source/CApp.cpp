@@ -3567,8 +3567,10 @@ void CApp::LoadPreset(const Preset &preset) {
 		LoadRenderer(*renderer);
 
 		if (auto lineRendererStyle = preset.GetLineRendererStyle()) {
-			if (auto lineRenderer = dynamic_cast<LineRenderer *>(this->renderer))
+			if (auto lineRenderer = dynamic_cast<LineRenderer *>(this->renderer)) {
 				lineRenderer->SetStyle(*lineRendererStyle);
+				Settings::settings.SetLineRendererStyle(*lineRendererStyle);
+			}
 		}
 	}
 
