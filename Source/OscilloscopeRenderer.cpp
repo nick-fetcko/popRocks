@@ -99,7 +99,7 @@ void OscilloscopeRenderer::OnLoop(
 
 		for (int i = 0; i < bufferLength; i++) {
 			for (auto channel = 0; channel < numberOfChannels; ++channel) {
-				const auto index = channel * (bufferLength / numberOfChannels) + (i / numberOfChannels);
+				const auto index = (numberOfChannels - 1 - channel) * (bufferLength / numberOfChannels) + (i / numberOfChannels);
 				const auto deg2rad = (index / static_cast<float>(bufferLength)) * 360.0f * Maths::DEG2RAD<float>;
 				auto &point = points[index];
 				const auto rawValue = shortBuffer[i * numberOfChannels + channel];
