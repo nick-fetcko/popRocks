@@ -218,7 +218,7 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 	if (miniPlayer && alpha > 0.0f && items.size() > numberOfVisibleItems) {
 		context->Use("basic"_hash);
 		context->LoadIdentity();
-		context->Translate(windowWidth / 2, windowHeight / 2, 0);
+		context->Translate(windowWidth / 2 - (scrollBarHovered ? baseWidth : 0), windowHeight / 2, 0);
 		context->Apply();
 
 		context->Color(albumArt->GetBlackColor(), albumArt->GetBlackColor(), albumArt->GetBlackColor(), 0.6f * alpha);
@@ -227,13 +227,25 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 			scrollBarOutline.Draw<false>(*context);
 		});
 
-		context->Color(hoveredColor.r, hoveredColor.g, hoveredColor.b, alpha);
+		if (scrollBarHovered)
+			context->Color(darkColor.r, darkColor.g, darkColor.b, alpha);
+		else
+			context->Color(hoveredColor.r, hoveredColor.g, hoveredColor.b, alpha);
+
 		scrollBar.Draw<true>(*context);
 	}
 }
 
 bool MiniPlayerList::OnMouseMoved(const Vector2i &mousePos, Rectanglei bounds, bool justBounds) {
 	if (!miniPlayer) return false;
+
+	bool wasScrollBarHovered = scrollBarHovered;
+
+	if (alpha > 0.0f)
+		scrollBarHovered = IsMouseOnScrollbar(mousePos);
+
+	if (scrollBarHovered != wasScrollBarHovered)
+		OnRadiusChanged();
 
 	const auto inTriggerX =
 		mousePos.x > bounds.x &&
@@ -291,22 +303,26 @@ inline float MiniPlayerList::GetAngle(const Vector2i &mousePos) const {
 	return angle + 90;
 }
 
-bool MiniPlayerList::OnMouseDown(const Vector2i &mousePos) {
-	if (!miniPlayer || alpha == 0.0f) return false;
-
+inline bool MiniPlayerList::IsMouseOnScrollbar(const Vector2i &mousePos) const {
 	const auto angle = GetAngle(mousePos);
 
 	const auto distance = Vector2i{ windowWidth / 2, windowHeight / 2 }.Distance(mousePos);
 
 	const auto radius = albumArt->GetRadius(miniPlayer);
-	const auto inset = (radius / AlbumArt::BaseRadius) * 12.0f + scrollBar.GetWidth();
+	const auto inset = (radius / AlbumArt::BaseRadius) * 12.0f + scrollBarOutline.GetWidth();
 
-	if (angle >= ArcStartAngles[static_cast<uint8_t>(direction)] &&
+	return (angle >= ArcStartAngles[static_cast<uint8_t>(direction)] &&
 		angle <= ArcStartAngles[static_cast<uint8_t>(direction)] + ArcWidth &&
 		distance >= radius - inset &&
-		distance <= radius) {
+		distance <= radius);
+}
+
+bool MiniPlayerList::OnMouseDown(const Vector2i &mousePos) {
+	if (!miniPlayer || alpha == 0.0f) return false;
+
+	if (IsMouseOnScrollbar(mousePos)) {
 		scrolling = true;
-		startAngle = angle;
+		startAngle = GetAngle(mousePos);
 		return true;
 	}
 
@@ -371,8 +387,10 @@ void MiniPlayerList::OnRadiusChanged() {
 
 	numberOfVisibleItems = std::lround(radius / font->GetEm().height);
 
-	scrollBar.SetWidth((radius / AlbumArt::BaseRadius) * 8.0f);
-	scrollBarOutline.SetWidth((radius / AlbumArt::BaseRadius) * 16.0f);
+	baseWidth = (radius / AlbumArt::BaseRadius) * 8.0f;
+
+	scrollBar.SetWidth(baseWidth * (scrollBarHovered ? 2 : 1));
+	scrollBarOutline.SetWidth(baseWidth * (scrollBarHovered ? 4 : 2));
 
 	if (items.empty() || numberOfVisibleItems >= items.size()) {
 		numberOfVisibleItems = items.size();
@@ -436,6 +454,10 @@ void MiniPlayerList::OnColorChanged(const Colour<float> &color, bool silent) {
 		this->hoveredColor = hoveredColor;
 	}
 	else this->hoveredColor = { 0.5f, 0.5f, 0.5f };
+
+	hsv = this->hoveredColor.ToHsv();
+	hsv.v = 0.5f;
+	darkColor = Colour<float>::FromHsv(hsv.h, hsv.s, hsv.v);
 }
 
 void MiniPlayerList::OnBlackChanged(const float &black) {

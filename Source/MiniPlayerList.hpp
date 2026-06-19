@@ -63,6 +63,7 @@ public:
 	const bool Empty() const { return items.empty(); }
 
 	const bool &IsScrolling() const { return scrolling; }
+	const bool &IsScrollBarHovered() const { return scrollBarHovered; }
 
 	void PageUp();
 	void PageDown();
@@ -71,6 +72,7 @@ public:
 
 protected:
 	inline float GetAngle(const Vector2i &mousePos) const;
+	inline bool IsMouseOnScrollbar(const Vector2i &mousePos) const;
 
 	Direction direction = Direction::Down;
 
@@ -100,6 +102,7 @@ protected:
 	std::optional<std::chrono::system_clock::time_point> hoverTimer = std::nullopt;
 	int hoveredOffset = -1;
 	Colourf hoveredColor;
+	Colourf darkColor;
 
 	float alpha = 0.0f;
 	float targetAlpha = 0.0f;
@@ -117,6 +120,9 @@ protected:
 
 	bool scrolling = false;
 	float startAngle = 0.0f;
+	bool scrollBarHovered = false;
+
+	float baseWidth = 8.0f;
 
 	const bool &vulkan;
 };

@@ -3439,6 +3439,8 @@ void CApp::OnMouseMoved(const Vector2i &mousePos) {
 
 	controls.OnMouseMoved(mousePos);
 
+	if (controls.IsScrollBarHovered()) return;
+
 	if (miniPlayer && !controls.GetHelp().IsHovered())
 		albumArt.OnMouseMoved(mousePos);
 }

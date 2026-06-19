@@ -1247,6 +1247,10 @@ const bool Controls::IsScrolling() const {
 	return playlist.IsScrolling() || presetList.IsScrolling();
 }
 
+const bool Controls::IsScrollBarHovered() const {
+	return playlist.IsScrollBarHovered() || presetList.IsScrollBarHovered();
+}
+
 bool Controls::OnMouseDown(const Vector2i &mousePos) {
 	return playlist.OnMouseDown(mousePos) || presetList.OnMouseDown(mousePos);
 }

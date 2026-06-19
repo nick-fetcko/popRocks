@@ -130,6 +130,7 @@ public:
 	float UpdateFontSize(std::optional<float> radius = std::nullopt);
 
 	const bool IsScrolling() const;
+	const bool IsScrollBarHovered() const;
 
 	void PageUp();
 	void PageDown();
