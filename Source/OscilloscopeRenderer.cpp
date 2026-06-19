@@ -58,8 +58,11 @@ void OscilloscopeRenderer::SetNumberOfChannels(uint8_t numberOfChannels) {
 
 void OscilloscopeRenderer::SetWidth(float width) {
 	LineRenderer::SetWidth(width);
-	for (uint8_t channel = 1; channel < numberOfChannels; ++channel)
-		channelLines[channel - 1].SetWidth(line.GetWidth());
+
+	if (channelLines) {
+		for (uint8_t channel = 1; channel < numberOfChannels; ++channel)
+			channelLines[channel - 1].SetWidth(line.GetWidth());
+	}
 }
 
 void OscilloscopeRenderer::OnLoop(

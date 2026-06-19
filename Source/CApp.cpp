@@ -3715,7 +3715,7 @@ void CApp::UpdateDisplayBoundingBox() {
 
 bool CApp::AddToScrollOffset(int offset) {
 	if (!controls.AddToScrollOffset(offset)) {
-		if (auto lineRenderer = dynamic_cast<LineRenderer *>(renderer); lineRenderer && miniPlayer) {
+		if (auto lineRenderer = dynamic_cast<LineRenderer *>(renderer); lineRenderer && miniPlayer && fileLoaded) {
 			const auto lineWidth = std::clamp(Settings::settings.GetWidth() + offset, 1.0f, 10.0f);
 			lineRenderer->SetWidth(lineWidth);
 			Settings::settings.SetWidth(lineWidth);
