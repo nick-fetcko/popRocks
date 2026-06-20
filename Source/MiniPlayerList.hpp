@@ -73,6 +73,7 @@ public:
 protected:
 	inline float GetAngle(const Vector2i &mousePos) const;
 	inline bool IsMouseOnScrollbar(const Vector2i &mousePos) const;
+	inline std::pair<double, double> GetScrollBarRange() const;
 
 	Direction direction = Direction::Down;
 

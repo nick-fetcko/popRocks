@@ -317,12 +317,39 @@ inline bool MiniPlayerList::IsMouseOnScrollbar(const Vector2i &mousePos) const {
 		distance <= radius);
 }
 
+inline std::pair<double, double> MiniPlayerList::GetScrollBarRange() const {
+	const auto end = std::max((ArcWidth - 1) * (static_cast<double>(numberOfVisibleItems) / items.size()), 3.0);
+
+	return {
+		((ArcWidth - 1) - end) / (items.size() - numberOfVisibleItems) * scrollOffset,
+		end
+	};
+}
+
 bool MiniPlayerList::OnMouseDown(const Vector2i &mousePos) {
 	if (!miniPlayer || alpha == 0.0f) return false;
 
 	if (IsMouseOnScrollbar(mousePos)) {
-		scrolling = true;
-		startAngle = GetAngle(mousePos);
+		const auto [start, end] = GetScrollBarRange();
+
+		const auto angle = GetAngle(mousePos);
+
+		if (angle >= ArcStartAngles[static_cast<uint8_t>(direction)] + start && angle <= ArcStartAngles[static_cast<uint8_t>(direction)] + start + end) {
+			scrolling = true;
+			startAngle = angle;
+		} else {
+			scrollOffset =
+				std::clamp(
+					static_cast<int>(((angle - ArcStartAngles[static_cast<uint8_t>(direction)]) / ArcWidth) * items.size() - (numberOfVisibleItems / 2 - 1)),
+					0,
+					static_cast<int>(items.size() - numberOfVisibleItems)
+				);
+
+			scrolling = true;
+			startAngle = angle;
+
+			OnRadiusChanged();
+		}
 		return true;
 	}
 
@@ -410,8 +437,7 @@ void MiniPlayerList::OnRadiusChanged() {
 
 	scrollBarOutline.SetPoints<Polyline::Join::Miter>(points.data(), ArcWidth);
 
-	const auto end = std::max((ArcWidth - 1) * (static_cast<double>(numberOfVisibleItems) / items.size()), 3.0);
-	const auto start = ((ArcWidth - 1) - end) / (items.size() - numberOfVisibleItems) * scrollOffset;
+	const auto [start, end] = GetScrollBarRange();
 
 	for (auto i = 1; i < end; ++i) {
 		auto degInRad = (i + start + ArcStartAngles[static_cast<uint8_t>(direction)]) * Maths::DEG2RAD<float>;
