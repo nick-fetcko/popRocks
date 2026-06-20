@@ -3435,11 +3435,17 @@ void CApp::OnMouseUp(const Vector2i &mousePos) {
 }
 
 void CApp::OnMouseMoved(const Vector2i &mousePos) {
-	if (controls.IsScrolling()) return;
+	if (controls.IsScrolling()) {
+		albumArt.OnMouseLeave();
+		return;
+	}
 
 	controls.OnMouseMoved(mousePos);
 
-	if (controls.IsScrollBarHovered()) return;
+	if (controls.IsScrollBarHovered()) {
+		albumArt.OnMouseLeave();
+		return;
+	}
 
 	if (miniPlayer && !controls.GetHelp().IsHovered())
 		albumArt.OnMouseMoved(mousePos);

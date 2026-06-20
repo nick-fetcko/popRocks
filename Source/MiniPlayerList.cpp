@@ -227,7 +227,7 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 			scrollBarOutline.Draw<false>(*context);
 		});
 
-		if (scrollBarHovered)
+		if (scrollBarHandleHovered)
 			context->Color(darkColor.r, darkColor.g, darkColor.b, alpha);
 		else
 			context->Color(hoveredColor.r, hoveredColor.g, hoveredColor.b, alpha);
@@ -241,8 +241,13 @@ bool MiniPlayerList::OnMouseMoved(const Vector2i &mousePos, Rectanglei bounds, b
 
 	bool wasScrollBarHovered = scrollBarHovered;
 
-	if (alpha > 0.0f)
+	if (alpha > 0.0f) {
 		scrollBarHovered = IsMouseOnScrollbar(mousePos);
+		scrollBarHandleHovered = scrollBarHovered && IsMouseOnScrollbarHandle(mousePos);
+	} else {
+		scrollBarHovered = false;
+		scrollBarHandleHovered = false;
+	}
 
 	if (scrollBarHovered != wasScrollBarHovered)
 		OnRadiusChanged();
@@ -269,7 +274,7 @@ bool MiniPlayerList::OnMouseMoved(const Vector2i &mousePos, Rectanglei bounds, b
 		hoverTimer = std::chrono::system_clock::now();
 
 		return true;
-	} else if (hovered && inX && inY) {
+	} else if (hovered && !scrollBarHovered && inX && inY) {
 		float yOffset = pos.y + (font->GetEm().height * (direction == Direction::Up ? UpwardsBias : 1));
 
 		for (long i = 0; i < numberOfVisibleItems; ++i) {
@@ -285,7 +290,7 @@ bool MiniPlayerList::OnMouseMoved(const Vector2i &mousePos, Rectanglei bounds, b
 		}
 
 		return true;
-	} else if (!isHoverSticky) {
+	} else if (!isHoverSticky && !scrollBarHovered) {
 		hovered = false;
 		hoverTimer = std::nullopt;
 		targetAlpha = 0.0f;
@@ -317,6 +322,13 @@ inline bool MiniPlayerList::IsMouseOnScrollbar(const Vector2i &mousePos) const {
 		distance <= radius);
 }
 
+inline bool MiniPlayerList::IsMouseOnScrollbarHandle(const Vector2i &mousePos) const {
+	const auto [start, end] = GetScrollBarRange();
+	const auto angle = GetAngle(mousePos);
+
+	return angle >= ArcStartAngles[static_cast<uint8_t>(direction)] + start && angle <= ArcStartAngles[static_cast<uint8_t>(direction)] + start + end;
+}
+
 inline std::pair<double, double> MiniPlayerList::GetScrollBarRange() const {
 	const auto end = std::max((ArcWidth - 1) * (static_cast<double>(numberOfVisibleItems) / items.size()), 3.0);
 
@@ -330,11 +342,9 @@ bool MiniPlayerList::OnMouseDown(const Vector2i &mousePos) {
 	if (!miniPlayer || alpha == 0.0f) return false;
 
 	if (IsMouseOnScrollbar(mousePos)) {
-		const auto [start, end] = GetScrollBarRange();
-
 		const auto angle = GetAngle(mousePos);
 
-		if (angle >= ArcStartAngles[static_cast<uint8_t>(direction)] + start && angle <= ArcStartAngles[static_cast<uint8_t>(direction)] + start + end) {
+		if (IsMouseOnScrollbarHandle(mousePos)) {
 			scrolling = true;
 			startAngle = angle;
 		} else {
@@ -347,9 +357,11 @@ bool MiniPlayerList::OnMouseDown(const Vector2i &mousePos) {
 
 			scrolling = true;
 			startAngle = angle;
+			scrollBarHandleHovered = true;
 
 			OnRadiusChanged();
 		}
+
 		return true;
 	}
 
