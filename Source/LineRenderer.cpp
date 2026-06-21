@@ -34,7 +34,7 @@ void LineRenderer::SetBufferLength(std::size_t bufferLength, bool changed) {
 
 	if (changed) {
 		delete[] points;
-		points = new Vector2f[bufferLength];
+		points = new Vector2f[bufferLength + 1];
 	}
 }
 

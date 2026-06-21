@@ -134,6 +134,9 @@ void FFTLineRenderer::OnLoop(
 			points[i].y = sample * cos(deg2rad);
 		}
 
+		points[bufferLength].x = points[0].x;
+		points[bufferLength].y = points[0].y;
+
 		newPoints = true;
 	}
 }
@@ -184,8 +187,7 @@ void FFTLineRenderer::Draw(
 
 		context.Apply();
 		if (newPoints) {
-			line.SetPoints<Polyline::Join::None>(points, bufferLength);
-			line.Loop<Polyline::Join::None>();
+			line.SetPoints<Polyline::Join::None>(points, bufferLength + 1);
 			newPoints = false;
 		}
 		line.Draw<true>(context);
