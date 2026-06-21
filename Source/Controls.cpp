@@ -346,7 +346,7 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 		{ windowWidth / 2, windowHeight / 2 - radius - font->GetEm().height },
 		{ windowWidth / 2, windowHeight / 2 - radius / 2 - font->GetEm().height },
 		"playlist",
-		{ "Hover for playlist" },
+		{ "Hover OR click for playlist" },
 		radius / AlbumArt::BaseRadius
 	);
 
@@ -354,7 +354,7 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 		{ windowWidth / 2, windowHeight / 2 + radius + font->GetEm().height * 2 },
 		{ windowWidth / 2, windowHeight / 2 + radius / 7 * 5 + font->GetEm().height },
 		"presetList",
-		{ "Hover for visualizer styles" },
+		{ "Hover OR click for visualizer styles" },
 		radius / AlbumArt::BaseRadius
 	);
 
@@ -1297,6 +1297,13 @@ Controls::ControlButton Controls::OnMouseClicked(const Vector2i &mousePos, std::
 
 		return ControlButton::None;
 	}
+
+	if (dynamic_cast<MiniPlayerList *>(&presetList)->OnMouseClicked(mousePos, {
+		windowWidth / 2 - presetText.GetBounds().width / 2,
+		static_cast<int>(iconY + albumArt->GetRadius(miniPlayer) * MiniPlayerIconRatio * 1.5f - presetText.GetBounds().height / 2.0f),
+		windowWidth / 2 + presetText.GetBounds().width / 2,
+		static_cast<int>(iconY + albumArt->GetRadius(miniPlayer) * MiniPlayerIconRatio * 1.5f + presetText.GetBounds().height / 2.0f)
+	})) return ControlButton::None;
 
 	const auto SeekbarSize = Controls::SeekbarSize * (miniPlayer ? (albumArt->GetRadius(miniPlayer) / AlbumArt::BaseRadius) : 1.0f);
 	const auto seekbarPos = windowHeight / 2 + font->GetEm().height - SeekbarSize / 2 * scale;

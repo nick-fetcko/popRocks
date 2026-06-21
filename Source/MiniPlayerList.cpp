@@ -299,6 +299,18 @@ bool MiniPlayerList::OnMouseMoved(const Vector2i &mousePos, Rectanglei bounds, b
 	return false;
 }
 
+bool MiniPlayerList::OnMouseClicked(const Vector2i &mousePos, Rectanglei bounds) {
+	if (!hovered && mousePos.x >= bounds.x && mousePos.x <= bounds.w && mousePos.y >= bounds.y && mousePos.y <= bounds.h) {
+		hovered = true;
+		targetAlpha = 1.0f;
+		hoverTimer = std::nullopt;
+
+		return true;
+	}
+
+	return false;
+}
+
 inline float MiniPlayerList::GetAngle(const Vector2i &mousePos) const {
 	const auto diff = Vector2i{ windowWidth / 2, windowHeight / 2 } - mousePos;
 	auto angle = std::atan2(diff.y, diff.x) / Maths::DEG2RAD<float>;

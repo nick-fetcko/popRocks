@@ -518,20 +518,28 @@ bool Playlist::OnMouseMoved(const Vector2i &mousePos) {
 }
 
 std::optional<Playlist::Track> Playlist::OnMouseClicked(const Vector2i &mousePos) {
-	if (miniPlayer && hovered && hoveredOffset != -1) {
-		if (!files.empty()) {
-			currentFile = files.begin() + (hoveredOffset + scrollOffset);
+	if (miniPlayer) {
+		if (hovered && hoveredOffset != -1) {
+			if (!files.empty()) {
+				currentFile = files.begin() + (hoveredOffset + scrollOffset);
 
-			LogInfo("Click captured! Mini-player playlist, files route");
+				LogInfo("Click captured! Mini-player playlist, files route");
 
-			return currentFile == files.end() ? Track{ *(--currentFile) } : Track{ *currentFile };
-		}
-		else if (cue) {
-			const auto &track = cue->TrackAtIndex(hoveredOffset + scrollOffset);
+				return currentFile == files.end() ? Track{ *(--currentFile) } : Track{ *currentFile };
+			} else if (cue) {
+				const auto &track = cue->TrackAtIndex(hoveredOffset + scrollOffset);
 
-			LogInfo("Click captured! Mini-player playlist, .cue route");
+				LogInfo("Click captured! Mini-player playlist, .cue route");
 
-			return Track{ track.filePath, track.title, track.startTime };
+				return Track{ track.filePath, track.title, track.startTime };
+			}
+		} else if (MiniPlayerList::OnMouseClicked(mousePos, {
+			pos.x - outline.GetBounds().width / 2,
+			pos.y - outline.GetBounds().height / 2,
+			pos.x + outline.GetBounds().width / 2,
+			pos.y + outline.GetBounds().height / 2
+		})) {
+			return std::nullopt;
 		}
 	} else if (!miniPlayer && visible && !items.empty() && mousePos.y >= pos.y && mousePos.y <= maxHeight) {
 		const auto offset = 
