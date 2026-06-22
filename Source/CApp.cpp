@@ -2258,6 +2258,13 @@ void CApp::OnLoop(const Delta &time) {
 			beatLoadingIndicator.OnLoop(time, windowWidth / 2, windowHeight / 2 - albumArt.GetRadius(miniPlayer) + beatLoadingIndicator.GetRadius() * 2.0f, *context, std::max(controls.GetAlpha(), 0.5f));
 	}
 
+	platform->SetStatus(
+		playing ? Platform::Status::Playing : Platform::Status::Paused,
+		// Windows treats a progress of 0 as if the state was changed
+		// to TBPF_NOPROGRESS, so we clamp the bottom end at 1%
+		std::max(static_cast<int>((elapsed / controls.GetCurrentSongLength()) * 100), 1)
+	);
+
 	for (auto integration : integrations) {
 		integration->SetPosition(
 			std::chrono::duration_cast<std::chrono::microseconds>(
@@ -3130,8 +3137,13 @@ void CApp::SetPlaying(bool playing) {
 	this->playing = playing;
 
 	for (auto integration : integrations) {
-		if (playing) integration->OnPlay();
-		else         integration->OnPause();
+		if (playing) {
+			integration->OnPlay();
+			platform->SetStatus(Platform::Status::Playing, controls.GetCurrentPosition() / controls.GetCurrentSongLength());
+		} else {
+			integration->OnPause();
+			platform->SetStatus(Platform::Status::Paused, controls.GetCurrentPosition() / controls.GetCurrentSongLength());
+		}
 	}
 }
 

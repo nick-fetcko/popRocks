@@ -74,6 +74,11 @@ Windows::~Windows() {
 // ------------------- CApp Helpers --------------------
 // -----------------------------------------------------
 void Windows::OnInit(Interop::InitArgs args, Context &context) {
+	if (auto ret = CoInitialize(NULL); ret == S_OK || ret == S_FALSE) {
+		CoCreateInstance(CLSID_TaskbarList, NULL, CLSCTX_INPROC_SERVER,
+			IID_ITaskbarList3, reinterpret_cast<void**>(&taskbar));
+	}
+
 	dxgi.OnInit(args);
 
 	HookKeyboard();
@@ -83,6 +88,13 @@ void Windows::OnInit(Interop::InitArgs args, Context &context) {
 }
 
 void Windows::OnDestroy() {
+	if (taskbar) {
+		taskbar->Release();
+		taskbar = nullptr;
+	}
+
+	CoUninitialize();
+
 	if (keyboardHook) {
 		UnhookWindowsHookEx(keyboardHook);
 		keyboardHook = nullptr;
@@ -946,6 +958,44 @@ bool Windows::GetDeviceIndex(int &index, const std::string &device) {
 	}
 
 	return false;
+}
+
+// -----------------------------------------------------
+// ---------------------- Bling ------------------------
+// -----------------------------------------------------
+void Windows::SetStatus(Status status, int progress) {
+	if (taskbar && (status != lastStatus || progress != lastProgress)) {
+		const auto hwnd = reinterpret_cast<HWND>(
+			SDL_GetPointerProperty(
+				SDL_GetWindowProperties(app->GetSdlWindow()),
+				SDL_PROP_WINDOW_WIN32_HWND_POINTER,
+				NULL
+			)
+		);
+
+		if (status != lastStatus) {
+			TBPFLAG flag;
+			switch (status) {
+			case Status::Paused:
+				flag = TBPF_PAUSED;
+				break;
+			case Status::Playing:
+				flag = TBPF_NORMAL;
+				break;
+			default:
+				flag = TBPF_NOPROGRESS;
+				break;
+			}
+		
+			taskbar->SetProgressState(hwnd, flag);
+			lastStatus = status;
+		}
+
+		if (progress != lastProgress && progress != 0) {
+			taskbar->SetProgressValue(hwnd, progress, 100);
+			lastProgress = progress;
+		}
+	}
 }
 
 // =====================================================

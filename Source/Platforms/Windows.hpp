@@ -105,6 +105,9 @@ public:
 	// Audio
 	void Unmute() override;
 
+	// Bling
+	void SetStatus(Status status, int progress) override;
+
 protected:
 	// Polymorphic helper for GetDeviceIndex<Output>
 	bool GetDeviceIndex(int &index, const std::string &device) override;
@@ -127,6 +130,11 @@ private:
 
 	bool transparent = false;
 	bool colorKeyEnabled = false;
+
+	ITaskbarList3 *taskbar = nullptr;
+
+	Status lastStatus = Status::Stopped;
+	int lastProgress = 0;
 };
 
 // =====================================================

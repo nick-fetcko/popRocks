@@ -124,6 +124,11 @@ void Platform::HookWindow(bool miniPlayer) {
 
 }
 
+// Bling
+void Platform::SetStatus(Status status, int progress) {
+
+}
+
 // =====================================================
 // ================ Getters / Setters ==================
 // =====================================================

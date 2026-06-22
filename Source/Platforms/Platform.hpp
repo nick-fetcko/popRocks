@@ -149,6 +149,14 @@ public:
 	virtual void DestroyWindow(SDL_Window *window);
 	virtual void HookWindow(bool miniPlayer);
 
+	// Bling
+	enum class Status {
+		Stopped,
+		Paused,
+		Playing
+	};
+	virtual void SetStatus(Status status, int progress);
+
 	// =====================================================
 	// ================ Getters / Setters ==================
 	// =====================================================
