@@ -2057,7 +2057,7 @@ void CApp::OnLoop(const Delta &time) {
 		}
 	}
 
-	if (playing || platform->IsListening() || updateRenderer) {
+	if (playing || platform->IsListening() || updateRenderer || beatDetected) {
 		static const Delta zero;
 
 		auto hsv = color.ToHsv();
@@ -2346,7 +2346,9 @@ void CApp::OnLoop(const Delta &time) {
 				resyncBeats = false;
 			}
 		}
-	}
+
+		beatDetected = true;
+	} else if (beatDetected) beatDetected = false;
 
 	SwapBuffers(time);
 }

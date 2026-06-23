@@ -494,4 +494,6 @@ private:
 
 	Loading loadingIndicator;
 	Loading beatLoadingIndicator;
+
+	bool beatDetected = false;
 };
