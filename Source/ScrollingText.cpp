@@ -4,7 +4,7 @@
 
 float ScrollingText::bleedEdgeRatio = 1.0f;
 
-ScrollingText::ScrollingText(const bool &vulkan) : vulkan(vulkan) {
+ScrollingText::ScrollingText(const bool &vulkan, bool delayedCacheUpdate) : Text(delayedCacheUpdate), vulkan(vulkan) {
 
 }
 

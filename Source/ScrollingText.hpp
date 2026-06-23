@@ -17,7 +17,7 @@ private:
 public:
 	constexpr static int BleedEdge = 20;
 
-	ScrollingText(const bool &vulkan);
+	ScrollingText(const bool &vulkan, bool delayedCacheUpdate = false);
 
 	void OnResize(int windowWidth, int windowHeight);
 

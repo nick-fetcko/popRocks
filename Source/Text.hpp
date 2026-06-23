@@ -17,7 +17,7 @@ using namespace Fetcko;
 
 class Text : public OpenGLFont::SizeChangedListener, public LoggableClass {
 public:
-	Text() = default;
+	Text(bool delayedCacheUpdate = false);
 	Text(Text &&other) noexcept {
 		context = other.context;
 		font = other.font;
@@ -33,6 +33,8 @@ public:
 		other.destroyed = true;
 		destroyed = false;
 #endif
+
+		delayedCacheUpdate = other.delayedCacheUpdate;
 
 		font->RemoveSizeChangedListener(&other);
 		font->AddSizeChangedListener(this);
@@ -84,6 +86,8 @@ protected:
 	Colour<float> color = { 1.0f, 1.0f, 1.0f, 1.0f };
 
 	float *buffer = nullptr;
+
+	bool delayedCacheUpdate = false;
 
 #ifdef _DEBUG
 	bool destroyed = false;

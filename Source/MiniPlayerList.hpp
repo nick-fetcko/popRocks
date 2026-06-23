@@ -40,7 +40,7 @@ public:
 	bool OnMouseClicked(const Vector2i &mousePos, Rectanglei bounds);
 	bool OnMouseDown(const Vector2i &mousePos);
 	bool OnMouseDragged(const Vector2i &mousePos);
-	void OnMouseUp(const Vector2i &mousePos);
+	void OnMouseUp(const Vector2i &mousePos, bool updateCache);
 
 	void OnRadiusChanged();
 

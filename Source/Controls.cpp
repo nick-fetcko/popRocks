@@ -1260,8 +1260,8 @@ bool Controls::OnMouseDragged(const Vector2i &mousePos) {
 }
 
 void Controls::OnMouseUp(const Vector2i &mousePos) {
-	playlist.OnMouseUp(mousePos);
-	presetList.OnMouseUp(mousePos);
+	playlist.OnMouseUp(mousePos, albumArt->GetActiveOutline() != AlbumArt::Outline::None);
+	presetList.OnMouseUp(mousePos, albumArt->GetActiveOutline() != AlbumArt::Outline::None);
 }
 
 void Controls::PageUp() {

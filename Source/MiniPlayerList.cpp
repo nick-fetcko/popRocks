@@ -61,14 +61,14 @@ void MiniPlayerList::SetAlpha(float alpha) {
 const OpenGLFont::Bounds &MiniPlayerList::AddItem(const std::string &text, std::optional<std::size_t> index, std::string altText) {
 	const auto &black = albumArt->GetBlackColor();
 
-	ScrollingText item(vulkan);
+	ScrollingText item(vulkan, true);
 	item.OnInit(font, context);
 	item.OnResize(windowWidth, windowHeight);
 	item.SetText(text);
 	item.SetAltText(altText);
 	item.SetMaxWidth(miniPlayer ? maxWidth : windowWidth);
 
-	ScrollingText outline(vulkan);
+	ScrollingText outline(vulkan, true);
 	outline.OnInit(outlineFont, context);
 	outline.OnResize(windowWidth, windowHeight);
 	outline.SetColor({ black, black, black });
@@ -403,8 +403,16 @@ bool MiniPlayerList::OnMouseDragged(const Vector2i &mousePos) {
 	return false;
 }
 
-void MiniPlayerList::OnMouseUp(const Vector2i &mouse) {
+void MiniPlayerList::OnMouseUp(const Vector2i &mouse, bool updateCache) {
 	scrolling = false;
+
+	if (updateCache) {
+		for (auto &item : items)
+			item.SetText(item.GetText(), true);
+
+		for (auto &outline : outlines)
+			outline.SetText(outline.GetText(), true);
+	}
 }
 
 void MiniPlayerList::PageUp() {

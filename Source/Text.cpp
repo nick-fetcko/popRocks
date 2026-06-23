@@ -2,6 +2,10 @@
 
 #include "Buffer.hpp"
 
+Text::Text(bool delayedCacheUpdate) : delayedCacheUpdate(delayedCacheUpdate) {
+
+}
+
 #ifdef _DEBUG
 Text::~Text() {
 	if (!destroyed)
@@ -98,7 +102,8 @@ void Text::OnLoop(int x, int y) const {
 
 void Text::OnSizeChanged(FT_UInt size) {
 	// Force a cache refresh
-	SetText(text, true);
+	if (!delayedCacheUpdate)
+		SetText(text, true);
 }
 
 void Text::SetAltText(const std::string &altText) {
