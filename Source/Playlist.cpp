@@ -51,6 +51,7 @@ void Playlist::AddFile(const std::filesystem::path &path) {
 std::optional<Playlist::Track> Playlist::OnLoad(
 	const std::filesystem::path &path,
 	const std::string_view &extension,
+	const bool &loading,
 	std::function<HSTREAM(const std::filesystem::path &, const std::string &, DWORD)> openWithFlags
 ) {
 	loaded = false;
@@ -63,6 +64,8 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 		bool loaded = true;
 		if (!files.empty()) {
 			for (const auto &[i, file] : Utils::Enumerate(files)) {
+				if (!loading) return std::nullopt;
+
 				loaded = loaded && cue->OnLoad(file, i != 0);
 			}
 		} else {
@@ -244,12 +247,17 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 	};
 
 	if (std::filesystem::is_directory(path)) {
-		for (const auto &iter : std::filesystem::recursive_directory_iterator(path))
+		for (const auto &iter : std::filesystem::recursive_directory_iterator(path)) {
+			if (!loading) return std::nullopt;
+
 			loadFile(iter.path());
+		}
 	} else loadFile(path);
 
 	for (auto &&[number, disc] : sorter) {
 		for (auto &&track : disc) {
+			if (!loading) return std::nullopt;
+
 			titles.emplace_back(Title{ number, track.first, std::move(track.second.first) });
 			files.emplace_back(std::move(track.second.second));
 		}

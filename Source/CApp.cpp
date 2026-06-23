@@ -2918,14 +2918,23 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 	}
 
 	if (!loadFileFromPlaylist) {
-		playlistLoaded = false;
-		playlistLoading = false;
+		{
+			std::unique_lock lock(playlistMutex);
+			playlistLoaded = false;
+
+			if (playlistLoading) LogWarning("Interrupting playlist load!");
+
+			playlistLoading = false;
+		}
 
 		if (playlistThread.joinable())
 			playlistThread.join();
 
 		playlistThread = std::thread([this] {
-			playlistLoading = true;
+			{
+				std::unique_lock lock(playlistMutex);
+				playlistLoading = true;
+			}
 			// If we're not in a playlist, _reset_
 			// any current beat detectors.
 			for (auto &detector : beatDetectors)
@@ -2934,13 +2943,14 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 			if (auto ret = controls.GetPlaylist().OnLoad(
 				loadFilePath,
 				loadFileExtension,
+				playlistLoading,
 				[this](const std::filesystem::path &path, const std::string &extension, DWORD flags) {
 					return platform->OpenWithFlags(path, extension, flags);
 				}
 			)
 				) {
 				loadFilePath = ret->path;
-			} else {
+			} else if (playlistLoading) {
 				LogError("Could not load playlist ", loadFilePath);
 
 				platform->ShowDialogBox("Could not load files! ", "\"" + loadFilePath.u8string() + "\" could not be loaded.");
@@ -2951,8 +2961,13 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 			loadFileExtension = loadFilePath.extension().u8string();
 			std::transform(loadFileExtension.begin(), loadFileExtension.end(), loadFileExtension.begin(), tolower);
 
-			playlistLoading = false;
-			playlistLoaded = true;
+			{
+				std::unique_lock lock(playlistMutex);
+				if (playlistLoading) {
+					playlistLoaded = true;
+					playlistLoading = false;
+				}
+			}
 		});
 	} else {
 		// If we're in a playlist, we want the

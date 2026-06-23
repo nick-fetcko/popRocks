@@ -486,6 +486,7 @@ private:
 	bool playlistLoading = false;
 	bool playlistLoaded = false;
 	std::thread playlistThread;
+	std::mutex playlistMutex;
 
 	std::filesystem::path loadFilePath;
 	std::filesystem::path loadFileOriginalPath;

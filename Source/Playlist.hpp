@@ -46,6 +46,7 @@ public:
 	std::optional<Track> OnLoad(
 		const std::filesystem::path &path,
 		const std::string_view &extension,
+		const bool &loading,
 		std::function<HSTREAM(const std::filesystem::path &, const std::string &, DWORD)> openWithFlags
 	);
 
