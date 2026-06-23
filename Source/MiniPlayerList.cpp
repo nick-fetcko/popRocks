@@ -389,12 +389,11 @@ bool MiniPlayerList::OnMouseDragged(const Vector2i &mousePos) {
 
 		const auto delta = angle - startAngle;
 
-		if (delta >= itemWidth) {
-			startAngle += itemWidth;
-			AddToScrollOffset(1);
-		} else if (delta <= -itemWidth) {
-			startAngle -= itemWidth;
-			AddToScrollOffset(-1);
+		if (delta >= itemWidth || delta <= -itemWidth) {
+			const int offset = delta / itemWidth;
+
+			startAngle += itemWidth * offset;
+			AddToScrollOffset(offset);
 		}
 
 		return true;
