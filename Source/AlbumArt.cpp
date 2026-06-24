@@ -77,7 +77,7 @@ void AlbumArt::OnInit(int windowWidth, int windowHeight, float scale) {
 	placeholder.OnInit(Circle::radius);
 
 	dragAndDropPrompt.OnInit(font, context.get());
-	dragAndDropPrompt.SetText("Drag-and-drop music here");
+	dragAndDropPrompt.SetText("Drop a song or album folder here");
 
 	squareVao = std::make_unique<VertexArray>();
 	squareVbo = std::make_unique<ArrayBuffer>();
