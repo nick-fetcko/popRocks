@@ -51,7 +51,7 @@ public:
 	);
 
 	void OnInit(int windowWidth, int windowHeight, OpenGLFont *font, OpenGLFont *boldFont, OpenGLFont *outlineFont, OpenGLFont *boldOutlineFont, Context *context, float scale = 1.0f);
-	void OnResize(int windowWidth, int windowHeight, float scale = 1.0f, bool miniPlayer = false, float maxWidth = 0.0f);
+	bool OnResize(int windowWidth, int windowHeight, float scale = 1.0f, bool miniPlayer = false, float maxWidth = 0.0f) override;
 	void OnDestroy() override;
 
 	void AddFile(const std::filesystem::path &path);
@@ -418,7 +418,6 @@ private:
 	std::vector<Title> titles;
 	std::vector<std::filesystem::path>::iterator currentFile = files.end();
 
-	int windowWidth = 0, windowHeight = 0;
 	OpenGLFont *font = nullptr;
 	OpenGLFont *boldFont = nullptr;
 	OpenGLFont *outlineFont = nullptr;
@@ -430,10 +429,6 @@ private:
 	Vector2i size{ 0, 0 };
 
 	std::unique_ptr<Cue> cue;
-
-	float scale = 1.0f;
-	bool miniPlayer = Settings::settings.GetMiniPlayer();
-	float maxWidth = 0.0f;
 
 	std::unique_ptr<VertexArray> vao;
 	std::unique_ptr<ArrayBuffer> vbo;

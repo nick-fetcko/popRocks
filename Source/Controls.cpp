@@ -327,11 +327,11 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 	playlist.OnResize(windowWidth, windowHeight, scale, miniPlayer, maxWidth);
 
 	presetList.SetMiniPlayer(miniPlayer);
-	presetList.OnResize(windowWidth, windowHeight);
+	presetList.OnResize(windowWidth, windowHeight, scale, miniPlayer, maxWidth);
 	presetList.SetMaxWidth(maxWidth);
 
 	help.SetMiniPlayer(miniPlayer);
-	help.OnResize(windowWidth, windowHeight);
+	help.OnResize(windowWidth, windowHeight, scale, miniPlayer, maxWidth);
 	help.SetMaxWidth(maxWidth);
 
 	artistText.OnResize(windowWidth, windowHeight);

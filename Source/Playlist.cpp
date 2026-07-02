@@ -368,30 +368,21 @@ void Playlist::OnInit(int windowWidth, int windowHeight, OpenGLFont *font, OpenG
 	eab->Unbind();
 }
 
-void Playlist::OnResize(int windowWidth, int windowHeight, float scale, bool miniPlayer, float maxWidth) {
-	this->windowWidth = windowWidth;
-	this->windowHeight = windowHeight;
-	this->maxWidth = maxWidth;
+bool Playlist::OnResize(int windowWidth, int windowHeight, float scale, bool miniPlayer, float maxWidth) {
+	const auto ret = MiniPlayerList::OnResize(windowWidth, windowHeight, scale, miniPlayer, maxWidth);
 
-	MiniPlayerList::OnResize(windowWidth, windowHeight);
-	MiniPlayerList::SetMaxWidth(maxWidth);
-
-	if ((this->scale != scale || this->miniPlayer != miniPlayer)) {
+	if (ret) {
 		size = { 0, 0 };
-		for (auto &title : items) {
-			title.OnInit(font, context);
 
+		for (auto &title : items) {
 			size.y += title.GetBounds().height;
 			if (title.GetBounds().width > size.x)
 				size.x = title.GetBounds().width;
 		}
+
 		outline.OnInit(outlineFont, context);
-
-		this->scale = scale;
-		this->miniPlayer = miniPlayer;
-
-		MiniPlayerList::SetMiniPlayer(miniPlayer);
 	}
+	MiniPlayerList::SetMaxWidth(maxWidth);
 
 	currentTitle.SetMaxWidth(miniPlayer ? maxWidth : windowWidth);
 	currentTitle.OnResize(windowWidth, windowHeight);
@@ -399,6 +390,8 @@ void Playlist::OnResize(int windowWidth, int windowHeight, float scale, bool min
 	outline.OnResize(windowWidth, windowHeight);
 
 	UpdateSize();
+
+	return ret;
 }
 
 void Playlist::OnDestroy() {

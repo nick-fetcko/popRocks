@@ -648,8 +648,8 @@ void Windows::SetChromaKey(bool enabled) {
 		SetWindowPos(
 			Settings::settings.GetMiniPlayerX() - 1,
 			Settings::settings.GetMiniPlayerY() - 1,
-			Settings::settings.GetMiniPlayerWidth() + 2,
-			Settings::settings.GetMiniPlayerHeight() + 2
+			Settings::settings.GetMiniPlayerWidth() * app->GetScale() + 2,
+			Settings::settings.GetMiniPlayerHeight() * app->GetScale() + 2
 		);
 
 		SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);

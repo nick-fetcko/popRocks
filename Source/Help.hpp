@@ -181,8 +181,8 @@ public:
 		backdrop.OnInit(albumArt->GetRadius(true) * Settings::settings.GetMiniPlayerVisualizerRatio() / 2 - albumArt->GetOutline().GetWidth());
 	}
 
-	void OnResize(int windowWidth, int windowHeight) override {
-		MiniPlayerList::OnResize(windowWidth, windowHeight);
+	bool OnResize(int windowWidth, int windowHeight, float scale, bool miniPlayer, float maxWidth) override {
+		const auto ret = MiniPlayerList::OnResize(windowWidth, windowHeight, scale, miniPlayer, maxWidth);
 
 		backdrop.SetRadius(albumArt->GetRadius(true) * Settings::settings.GetMiniPlayerVisualizerRatio() / 2 - albumArt->GetOutline().GetWidth());
 
@@ -190,6 +190,8 @@ public:
 			shader.program.Uniform2f("screenSize"_hash, windowWidth, windowHeight);
 			shader.program.Uniform1f("radius"_hash, albumArt->GetRadius(true) + albumArt->GetOutline().GetWidth() / 2);
 		});
+
+		return ret;
 	}
 
 	void OnLoop(const Delta &time, Vector2i pos, Context &context) {

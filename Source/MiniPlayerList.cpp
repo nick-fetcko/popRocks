@@ -19,7 +19,7 @@ void MiniPlayerList::OnInit(OpenGLFont *font, OpenGLFont *boldFont, OpenGLFont *
 	this->context = context;
 }
 
-void MiniPlayerList::OnResize(int windowWidth, int windowHeight) {
+bool MiniPlayerList::OnResize(int windowWidth, int windowHeight, float scale, bool miniPlayer, float maxWidth) {
 	this->windowWidth = windowWidth;
 	this->windowHeight = windowHeight;
 
@@ -28,6 +28,23 @@ void MiniPlayerList::OnResize(int windowWidth, int windowHeight) {
 
 	for (auto &outline : outlines)
 		outline.OnResize(windowWidth, windowHeight);
+
+	if ((this->scale != scale || this->miniPlayer != miniPlayer)) {
+		for (auto &title : items)
+			title.OnInit(font, context);
+
+		for (auto &outline : outlines)
+			outline.OnInit(outlineFont, context);
+
+		this->scale = scale;
+		this->miniPlayer = miniPlayer;
+
+		MiniPlayerList::SetMiniPlayer(miniPlayer);
+
+		return true;
+	}
+
+	return false;
 }
 
 void MiniPlayerList::OnDestroy() {

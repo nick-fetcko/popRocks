@@ -27,7 +27,7 @@ public:
 	virtual ~MiniPlayerList();
 
 	void OnInit(OpenGLFont *font, OpenGLFont *boldFont, OpenGLFont *outlineFont, OpenGLFont *boldOutlineFont, Context *context);
-	virtual void OnResize(int windowWidth, int windowHeight);
+	virtual bool OnResize(int windowWidth, int windowHeight, float scale = 1.0f, bool miniPlayer = false, float maxWidth = 0.0f);
 
 	void PreLoop(std::optional<std::size_t> currentIndex = std::nullopt);
 	void OnLoop(const Delta &time, Vector2i pos, std::optional<std::size_t> currentIndex);
@@ -91,9 +91,9 @@ protected:
 
 	Vector2i pos{ 0, 0 };
 
-	float maxWidth = 0.0f;
-
+	float scale = 1.0f;
 	bool miniPlayer = Settings::settings.GetMiniPlayer();
+	float maxWidth = 0.0f;
 
 	long numberOfVisibleItems = 0;
 

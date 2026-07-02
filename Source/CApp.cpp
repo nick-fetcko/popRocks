@@ -1753,19 +1753,19 @@ void CApp::OnResize(int width, int height, float scale, bool force) {
 		context->With("rotate"_hash, [this](Context::Shader &shader) {
 			shader.program.Uniform2f("screenSize"_hash, maxDimension, maxDimension);
 		});
-		context->With("blit"_hash, [this, width, height](Context::Shader &shader) {
+		context->With("blit"_hash, [this](Context::Shader &shader) {
 			shader.program.Uniform2f("screenSize"_hash, maxDimension, maxDimension);
-			shader.program.Uniform2f("windowSize"_hash, width, height);
+			shader.program.Uniform2f("windowSize"_hash, windowWidth, windowHeight);
 		});
 	} else {
 		maxDimension = windowWidth;
 		hStep = static_cast<float>(windowWidth) / bufferLength;
-		context->With("rotate"_hash, [width, height](Context::Shader &shader) {
-			shader.program.Uniform2f("screenSize"_hash, width, height);
+		context->With("rotate"_hash, [this](Context::Shader &shader) {
+			shader.program.Uniform2f("screenSize"_hash, windowWidth, windowHeight);
 		});
-		context->With("blit"_hash, [width, height](Context::Shader &shader) {
-			shader.program.Uniform2f("screenSize"_hash, width, height);
-			shader.program.Uniform2f("windowSize"_hash, width, height);
+		context->With("blit"_hash, [this](Context::Shader &shader) {
+			shader.program.Uniform2f("screenSize"_hash, windowWidth, windowHeight);
+			shader.program.Uniform2f("windowSize"_hash, windowWidth, windowHeight);
 		});
 	}
 
@@ -3547,7 +3547,7 @@ bool CApp::OnMouseDragged(const Vector2i &mousePos) {
 				);
 
 				if (!vulkan)
-					OnResize(std::lround(newRadius * ratio), std::lround(newRadius * ratio), true);
+					OnResize(std::lround(newRadius * ratio), std::lround(newRadius * ratio), scale, true);
 
 				miniPlayerVisualizerRatio = ratio;
 			} else { // If we hit the edge of the screen, revert the change
