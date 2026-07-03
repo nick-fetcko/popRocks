@@ -1043,14 +1043,17 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 
 			if (messageAlpha > 0.0f) {
 				context.Color(1.0f, 1.0f, 1.0f, messageAlpha * alpha);
-				messageOutline.OnLoop(
-					windowWidth / 2 - message.GetBounds().width / 2,
-					windowHeight / 2.0f - albumArt->GetRadius(miniPlayer) + message.GetBounds().height * 2.0f
-				);
-				message.OnLoop(
-					windowWidth / 2 - message.GetBounds().width / 2,
-					windowHeight / 2.0f - albumArt->GetRadius(miniPlayer) + message.GetBounds().height * 2.0f
-				);
+
+				context.Blend(true, [this] {
+					messageOutline.OnLoop(
+						windowWidth / 2 - message.GetBounds().width / 2,
+						windowHeight / 2.0f - albumArt->GetRadius(miniPlayer) + message.GetBounds().height * 2.0f
+					);
+					message.OnLoop(
+						windowWidth / 2 - message.GetBounds().width / 2,
+						windowHeight / 2.0f - albumArt->GetRadius(miniPlayer) + message.GetBounds().height * 2.0f
+					);
+				});
 
 				// Wait for half a second
 				if (messageTimer && std::chrono::system_clock::now() - *messageTimer >= 500ms) {
