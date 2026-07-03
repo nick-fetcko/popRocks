@@ -151,7 +151,6 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 					}
 
 					app.UpdateHdrProperties();
-					app.UpdateVsync();
 					break;
 				case SDL_EVENT_WINDOW_HDR_STATE_CHANGED:
 					app.UpdateHdrProperties(true);

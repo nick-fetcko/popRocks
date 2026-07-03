@@ -691,6 +691,8 @@ void CApp::UpdateMiniPlayer() {
 		}
 		platform->UpdateWindowShape();
 	}
+
+	UpdateVsync();
 }
 
 void CApp::SetMiniPlayer(bool miniPlayer, bool inLoop) {
