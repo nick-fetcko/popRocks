@@ -257,7 +257,8 @@ private:
 		// Limit our background rectangle to our
 		// max height, rounding down to the nearest
 		// line height
-		if (auto height = static_cast<int>((maxHeight - pos.y) / font->GetEm().height) * font->GetEm().height; this->height > height || trackHeight > lastTrackHeight) {
+		if (auto height = std::min(static_cast<int>((maxHeight - pos.y) / font->GetEm().height) * font->GetEm().height, size.y + font->GetEm().height / 2);
+			this->height > height || trackHeight > lastTrackHeight) {
 			this->height = height;
 
 			const auto heightMinusOne = static_cast<float>(height - font->GetEm().height);
