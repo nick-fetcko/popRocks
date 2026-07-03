@@ -91,7 +91,7 @@ public:
 	FPSCounter &GetFpsCounter() { return fpsCounter; }
 	const Playlist &GetPlaylist() const { return playlist; }
 	Playlist &GetPlaylist() { return playlist; }
-	const PresetList &GetPresetList() const { return presetList; }
+	PresetList &GetPresetList() { return presetList; }
 	Volume &GetVolume() { return volume; }
 	ExclusiveIndicator &GetExclusiveIndicator() { return exclusiveIndicator; }
 

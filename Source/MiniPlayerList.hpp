@@ -73,6 +73,8 @@ public:
 
 	void DeselectCurrent(std::optional<std::size_t> currentIndex);
 
+	void SetFadeSpeed(float fadeSpeed) { this->fadeSpeed = fadeSpeed; }
+
 protected:
 	inline float GetAngle(const Vector2i &mousePos) const;
 	inline bool IsMouseOnScrollbar(const Vector2i &mousePos) const;
@@ -101,6 +103,7 @@ protected:
 
 	int scrollOffset = 0;
 
+	float fadeSpeed = 2.0f;
 	bool hovered = false;
 	bool isHoverSticky = false;
 	bool ignoreNextTimeDelta = false;

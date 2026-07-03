@@ -166,12 +166,12 @@ void MiniPlayerList::PostLoop(const Delta &time) {
 
 	if (targetAlpha != this->alpha) {
 		if (targetAlpha > this->alpha) {
-			this->alpha += time.change.AsSeconds() * targetAlpha * 2;
+			this->alpha += time.change.AsSeconds() * targetAlpha * fadeSpeed;
 
 			if (this->alpha > targetAlpha)
 				this->alpha = targetAlpha;
 		} else {
-			this->alpha += time.change.AsSeconds() * (targetAlpha - 1.0) * 2;
+			this->alpha += time.change.AsSeconds() * (targetAlpha - 1.0) * fadeSpeed;
 
 			if (this->alpha < targetAlpha)
 				this->alpha = targetAlpha;

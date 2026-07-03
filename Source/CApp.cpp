@@ -3413,6 +3413,16 @@ bool CApp::OnMouseDown(const Vector2i &mousePos, MouseDownState *state) {
 				}
 			}
 
+			// Make sure to hide any MiniPlayerLists
+			controls.GetPlaylist().SetFadeSpeed(4.0f);
+			controls.GetPlaylist().SetHovered(false, false, false, [this] {
+				controls.GetPlaylist().SetFadeSpeed(2.0f);
+			});
+			controls.GetPresetList().SetFadeSpeed(4.0f);
+			controls.GetPresetList().SetHovered(false, false, false, [this] {
+				controls.GetPresetList().SetFadeSpeed(2.0f);
+			});
+
 			platform->SetChromaKey(true);
 
 			scaleTimer = std::chrono::system_clock::now();
