@@ -58,8 +58,16 @@ bool WindowsMessageHook(void *userdata, MSG *msg) {
 bool EventFilter(void *pThis, SDL_Event *event) {
 	auto *app = reinterpret_cast<CApp *>(pThis);
 	const auto id = SDL_GetWindowID(app->GetSdlWindow());
-	if ((event->type == SDL_EVENT_WINDOW_EXPOSED && !Settings::settings.GetMiniPlayer() && !pauseFilter))
-		app->OnLoop(timer.Update());
+	if ((!Settings::settings.GetMiniPlayer() && !pauseFilter)) {
+		if (event->type == SDL_EVENT_WINDOW_EXPOSED) {
+			app->OnLoop(timer.Update());
+		} else if (event->type == SDL_EVENT_WINDOW_SAFE_AREA_CHANGED || event->type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
+			int w = 0, h = 0;
+			auto scale = app->GetScale(app->GetSdlWindow(), &w, &h);
+
+			app->OnResize(w, h, scale);
+		}
+	}
 
 	return true;
 }
