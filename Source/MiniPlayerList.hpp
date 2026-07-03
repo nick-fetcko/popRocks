@@ -40,7 +40,7 @@ public:
 	bool OnMouseClicked(const Vector2i &mousePos, Rectanglei bounds);
 	bool OnMouseDown(const Vector2i &mousePos);
 	bool OnMouseDragged(const Vector2i &mousePos);
-	void OnMouseUp(const Vector2i &mousePos, bool updateCache);
+	virtual void OnMouseUp(const Vector2i &mousePos, bool updateCache);
 
 	void OnRadiusChanged();
 
@@ -70,6 +70,8 @@ public:
 	void PageDown();
 	void Home();
 	void End();
+
+	void DeselectCurrent(std::optional<std::size_t> currentIndex);
 
 protected:
 	inline float GetAngle(const Vector2i &mousePos) const;

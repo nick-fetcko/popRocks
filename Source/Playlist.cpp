@@ -494,6 +494,13 @@ const std::optional<Playlist::Track> Playlist::GetNext() const {
 	return Track{ *(currentFile + 1) };
 }
 
+void Playlist::DeselectCurrent() {
+	if (!files.empty())
+		MiniPlayerList::DeselectCurrent(std::distance(files.begin(), currentFile));
+	else if (cue)
+		MiniPlayerList::DeselectCurrent(std::distance(cue->GetTracks().begin(), cue->GetCurrentTrack()));
+}
+
 void Playlist::OnLoop(const Delta &time, Vector2i pos, float maxHeight, float alpha, Context &context, bool miniPlayer, bool hidden) {
 	if (!visible) return;
 
@@ -577,6 +584,22 @@ std::optional<Playlist::Track> Playlist::OnMouseClicked(const Vector2i &mousePos
 	}
 
 	return std::nullopt;
+}
+
+void Playlist::OnMouseUp(const Vector2i &mousePos, bool updateCache) {
+	MiniPlayerList::OnMouseUp(mousePos, updateCache);
+
+	if (font && updateCache) {
+		size = { 0, 0 };
+
+		for (auto &title : items) {
+			size.y += title.GetBounds().height;
+			if (title.GetBounds().width > size.x)
+				size.x = title.GetBounds().width;
+		}
+
+		UpdateSize();
+	}
 }
 
 const std::unique_ptr<Cue> &Playlist::GetCue() const { return cue; }

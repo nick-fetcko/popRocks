@@ -70,6 +70,7 @@ public:
 
 	std::optional<Track> OnMouseClicked(const Vector2i &mousePos);
 	bool OnMouseMoved(const Vector2i &mousePos);
+	void OnMouseUp(const Vector2i &mousePos, bool updateCache) override;
 
 	void SetVisible(bool visible) {
 		this->visible = visible;
@@ -102,6 +103,8 @@ public:
 	void LoadTitles();
 
 	const bool IsLoaded() const { return loaded; }
+
+	void DeselectCurrent();
 
 	static constexpr bool IsCue(const std::string_view &lowercaseExtension) {
 		return lowercaseExtension == ".cue";

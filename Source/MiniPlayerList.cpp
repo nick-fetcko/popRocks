@@ -188,6 +188,13 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 	PostLoop(time);
 }
 
+void MiniPlayerList::DeselectCurrent(std::optional<std::size_t> currentIndex) {
+	if (currentIndex) {
+		items[reverseIndices[*currentIndex]].SetFont(font);
+		outlines[reverseIndices[*currentIndex]].SetFont(outlineFont);
+	}
+}
+
 void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::size_t> currentIndex, const float &alpha) {
 	if (!hovered && this->alpha == targetAlpha) return;
 
@@ -419,7 +426,7 @@ bool MiniPlayerList::OnMouseDragged(const Vector2i &mousePos) {
 	return false;
 }
 
-void MiniPlayerList::OnMouseUp(const Vector2i &mouse, bool updateCache) {
+void MiniPlayerList::OnMouseUp(const Vector2i &mousePos, bool updateCache) {
 	scrolling = false;
 
 	if (updateCache) {

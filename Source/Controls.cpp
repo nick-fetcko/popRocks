@@ -1418,6 +1418,12 @@ float Controls::UpdateFontSize(std::optional<float> radius) {
 		boldOutlineFont->SetOutlineRadius(newOutlineSize);
 		boldOutlineFont->SetFontSize(newFontSize);
 
+		// Force update of Playlist caches
+		playlist.OnMouseUp({ 0, 0 }, true);
+
+		// Remove bold highlight
+		playlist.DeselectCurrent();
+
 		if (miniPlayer)
 			Settings::settings.SetMiniPlayerFontSize(newFontSize / scale, true);
 
