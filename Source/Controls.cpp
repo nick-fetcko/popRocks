@@ -1399,7 +1399,7 @@ void Controls::OnBlackChanged(const float &black) {
 	presetOutline.SetText(presetOutline.GetText(), true, false /* don't update scrolling */);
 }
 
-float Controls::UpdateFontSize(std::optional<float> radius) {
+float Controls::UpdateFontSize(std::optional<float> radius, bool miniPlayerToggled) {
 	if (!radius)
 		radius = miniPlayer ? Settings::settings.GetMiniPlayerRadius() : Settings::settings.GetRadius();
 
@@ -1418,11 +1418,13 @@ float Controls::UpdateFontSize(std::optional<float> radius) {
 		boldOutlineFont->SetOutlineRadius(newOutlineSize);
 		boldOutlineFont->SetFontSize(newFontSize);
 
-		// Force update of Playlist caches
-		playlist.OnMouseUp({ 0, 0 }, true);
+		if (miniPlayerToggled) {
+			// Force update of Playlist caches
+			playlist.OnMouseUp({ 0, 0 }, true);
 
-		// Remove bold highlight
-		playlist.DeselectCurrent();
+			// Remove bold highlight
+			playlist.DeselectCurrent();
+		}
 
 		if (miniPlayer)
 			Settings::settings.SetMiniPlayerFontSize(newFontSize / scale, true);

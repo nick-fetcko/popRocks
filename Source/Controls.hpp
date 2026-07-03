@@ -127,7 +127,7 @@ public:
 		return albumArt->GetRadius(miniPlayer) * (miniPlayer ? Controls::MiniPlayerIconRatio : 1.0f);
 	}
 
-	float UpdateFontSize(std::optional<float> radius = std::nullopt);
+	float UpdateFontSize(std::optional<float> radius = std::nullopt, bool miniPlayerToggled = false);
 
 	const bool IsScrolling() const;
 	const bool IsScrollBarHovered() const;

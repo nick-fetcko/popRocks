@@ -705,7 +705,7 @@ void CApp::SetMiniPlayer(bool miniPlayer, bool inLoop) {
 	// Update our font size first, as everything
 	// downstream depends on it
 	controls.SetMiniPlayer(*context, miniPlayer);
-	controls.UpdateFontSize();
+	controls.UpdateFontSize(std::nullopt, true);
 
 	SetRadius(albumArt.GetRadius(miniPlayer));
 
