@@ -17,6 +17,8 @@
 
 #ifdef __ANDROID__
 #include "Platforms/Android.hpp"
+#elif defined WIN32
+#include <shellapi.h>
 #endif
 
 using namespace MathsCPP;
@@ -82,6 +84,15 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 	Utils::SetResourceFolder("/app/bin");
 #endif
 
+#if defined(WIN32) && !defined(_DEBUG)
+	{
+		wchar_t path[MAX_PATH] = { 0 };
+		if (GetModuleFileNameW(NULL, path, MAX_PATH) > 0) {
+			std::filesystem::current_path(std::filesystem::path(path).parent_path());
+		}
+	}
+#endif
+
 	SDL_Event event;
 	bool running = true;
 
@@ -105,9 +116,15 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 
 #ifndef __ANDROID__
 	if(argc > 1) {
+#ifdef WIN32
+		int wargc;
+		if (LPWSTR *wargv = CommandLineToArgvW(GetCommandLineW(), &wargc); wargv && wargc > 1)
+			app.LoadFile(wargv[1]);
+#else
 		logger.LogDebug("File prepared: ", argv[1]);
 		auto ascii = std::string(argv[1]);
 		app.LoadFile(std::wstring(ascii.begin(), ascii.end()));
+#endif
 	}
 #else
 	dynamic_cast<Android*>(app.GetPlatform().get())->LoadFileNextLoop(Filesystem::GetPath("../../current"), false);

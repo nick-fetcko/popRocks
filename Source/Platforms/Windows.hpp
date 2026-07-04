@@ -135,6 +135,10 @@ private:
 
 	Status lastStatus = Status::Stopped;
 	int lastProgress = 0;
+
+#ifndef _DEBUG
+	HKEY registryKey = nullptr;
+#endif
 };
 
 // =====================================================

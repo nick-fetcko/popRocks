@@ -3,6 +3,7 @@
 #include "Source/Platforms/Windows.hpp"
 
 #include <winuser.h>
+#include <shellapi.h>
 
 #include <imgui.h>
 #include <backends/imgui_impl_sdl3.h>
@@ -74,6 +75,37 @@ Windows::~Windows() {
 // ------------------- CApp Helpers --------------------
 // -----------------------------------------------------
 void Windows::OnInit(Interop::InitArgs args, Context &context) {
+#ifndef _DEBUG
+	if (RegOpenKey(HKEY_CURRENT_USER, L"Software\\Classes\\Directory\\shell", &registryKey) != ERROR_SUCCESS) {
+		if (RegCreateKey(HKEY_CURRENT_USER, L"Software\\Classes\\Directory\\shell", &registryKey) == ERROR_SUCCESS)
+			RegCloseKey(registryKey);
+	}
+
+	registryKey = nullptr;
+
+	if (RegOpenKey(HKEY_CURRENT_USER, L"Software\\Classes\\Directory\\shell\\Visualize with popRocks", &registryKey) != ERROR_SUCCESS) {
+		if (RegCreateKey(HKEY_CURRENT_USER, L"Software\\Classes\\Directory\\shell\\Visualize with popRocks", &registryKey) != ERROR_SUCCESS) {
+			registryKey = nullptr;
+		}
+	}
+
+	if (registryKey) {
+		if (RegSetValue(registryKey, L"", REG_SZ, L"Visualize with popRocks", 0) == ERROR_SUCCESS) {
+			int wargc;
+			if (LPWSTR *wargv = CommandLineToArgvW(GetCommandLineW(), &wargc); wargv) {
+				std::wstring path(wargv[0]);
+				path.insert(path.begin(), L'\"');
+				path += L"\"";
+				RegSetKeyValue(registryKey, NULL, L"Icon", REG_SZ, path.c_str(), path.length() * sizeof(wchar_t));
+				path += L" \"%1\"";
+				RegSetValue(registryKey, L"command", REG_SZ, path.c_str(), 0);
+			}
+		}
+
+		RegCloseKey(registryKey);
+	}
+#endif
+
 	if (auto ret = CoInitialize(NULL); ret == S_OK || ret == S_FALSE) {
 		CoCreateInstance(CLSID_TaskbarList, NULL, CLSCTX_INPROC_SERVER,
 			IID_ITaskbarList3, reinterpret_cast<void**>(&taskbar));
