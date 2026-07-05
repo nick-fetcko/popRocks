@@ -118,11 +118,14 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 	if(argc > 1) {
 #ifdef WIN32
 		int wargc;
-		if (LPWSTR *wargv = CommandLineToArgvW(GetCommandLineW(), &wargc); wargv && wargc > 1)
+		if (LPWSTR *wargv = CommandLineToArgvW(GetCommandLineW(), &wargc); wargv && wargc > 1) {
+			app.SetPreLoaded(true);
 			app.LoadFile(wargv[1]);
+		}
 #else
 		logger.LogDebug("File prepared: ", argv[1]);
 		auto ascii = std::string(argv[1]);
+		app.SetPreLoaded(true);
 		app.LoadFile(std::wstring(ascii.begin(), ascii.end()));
 #endif
 	}

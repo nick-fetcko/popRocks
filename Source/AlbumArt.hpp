@@ -87,7 +87,18 @@ public:
 
 	void OnInit(int windowWidth, int windowHeight, float scale = 1.0f);
 	void OnResize(int windowWidth, int windowHeight, float scale = 1.0f);
-	void OnLoop(const Delta &time, GLfloat x, GLfloat y, float frameCount, const Colour<float> &visColor, float alpha, Context &context, bool playing, bool resizable = true);
+	void OnLoop(
+		const Delta &time,
+		GLfloat x,
+		GLfloat y,
+		float frameCount,
+		const Colour<float> &visColor,
+		float alpha,
+		Context &context,
+		bool playing,
+		bool preLoaded,
+		bool resizable = true
+	);
 	void OnDestroy() override;
 
 	// fileName is the path to the _song_

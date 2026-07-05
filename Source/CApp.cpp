@@ -2004,13 +2004,14 @@ void CApp::OnLoop(const Delta &time) {
 			visColor,
 			1.0f,
 			*context,
-			fileLoaded || platform->IsListening()
+			fileLoaded || platform->IsListening(),
+			preLoaded
 		);
 
 		DrawCloseButton(time);
 
 		if (playlistLoading && !controls.IsMessageVisible())
-			loadingIndicator.OnLoop(time, windowWidth / 2, windowHeight / 2 + albumArt.GetRadius(miniPlayer) / 2.0f, *context, 1.0f);
+			loadingIndicator.OnLoop(time, windowWidth / 2, windowHeight / 2 + (preLoaded ? 0.0f : albumArt.GetRadius(miniPlayer) / 2.0f), *context, 1.0f);
 
 		SwapBuffers(time);
 
@@ -2228,6 +2229,7 @@ void CApp::OnLoop(const Delta &time) {
 		controls.GetAlpha(),
 		*context,
 		fileLoaded || platform->IsListening(),
+		preLoaded,
 		!controls.GetHelp().IsHovered()
 	);
 

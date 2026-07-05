@@ -99,6 +99,7 @@ public:
 	void OnLoop(const Delta &time); 
 	void OnDestroy(bool includingLog = true);
 
+	void SetPreLoaded(bool preLoaded) { this->preLoaded = preLoaded; }
 	void LoadFile(std::filesystem::path path, bool fromPlaylist = false);
 	void PrepareFile(std::wstring fileName);
 	void PlayPreparedFile();
@@ -497,4 +498,6 @@ private:
 	Loading beatLoadingIndicator;
 
 	bool beatDetected = false;
+
+	bool preLoaded = false;
 };

@@ -171,7 +171,18 @@ void AlbumArt::DrawPlaceholder(GLfloat x, GLfloat y, float alpha, Context &conte
 	context.Use("texture"_hash);
 }
 
-void AlbumArt::OnLoop(const Delta &time, GLfloat x, GLfloat y, float frameCount, const Colour<float> &visColor, float alpha, Context &context, bool playing, bool resizable) {
+void AlbumArt::OnLoop(
+	const Delta &time,
+	GLfloat x,
+	GLfloat y,
+	float frameCount,
+	const Colour<float> &visColor,
+	float alpha,
+	Context &context,
+	bool playing,
+	bool preLoaded,
+	bool resizable
+) {
 	cube->OnLoop();
 
 	// try_lock so we don't miss a frame or two
@@ -271,7 +282,7 @@ void AlbumArt::OnLoop(const Delta &time, GLfloat x, GLfloat y, float frameCount,
 			DrawPlaceholder(x, y, alpha, context);
 		});
 
-		if (!albumLoaded && !playing) {
+		if (!albumLoaded && !playing && !preLoaded) {
 			dragAndDropPrompt.OnLoop(
 				x - dragAndDropPrompt.GetBounds().width / 2,
 				y - dragAndDropPrompt.GetBounds().height / 2
