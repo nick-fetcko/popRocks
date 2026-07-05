@@ -606,17 +606,26 @@ const std::unique_ptr<Cue> &Playlist::GetCue() const { return cue; }
 const std::filesystem::path &Playlist::GetPath() const { return path; }
 
 std::vector<std::filesystem::path> Playlist::FindCue(const std::filesystem::path &path) {
+	const auto start = std::chrono::system_clock::now();
+
 	std::vector<std::filesystem::path> ret;
 
-	if (!std::filesystem::is_directory(path))
-		return ret;
-
-	for (const auto &iter : std::filesystem::recursive_directory_iterator(path)) {
+	const auto checkIter = [&ret](const std::filesystem::directory_entry &iter) {
 		auto extension = iter.path().extension().u8string();
 		std::transform(extension.begin(), extension.end(), extension.begin(), tolower);
 		if (IsCue(extension))
 			ret.emplace_back(iter.path());
+	};
+
+	if (!std::filesystem::is_directory(path)) {
+		for (const auto &iter : std::filesystem::directory_iterator(path.parent_path()))
+			checkIter(iter);
+	} else {
+		for (const auto &iter : std::filesystem::recursive_directory_iterator(path))
+			checkIter(iter);
 	}
+
+	LogDebug("Searching for .cue files took ", Duration<Microseconds>(std::chrono::system_clock::now() - start).AsSeconds(), " seconds");
 
 	return ret;
 }
