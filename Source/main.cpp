@@ -32,19 +32,6 @@ extern "C" { FILE __iob_func[3] = { *stdin,*stdout,*stderr }; }
 
 Delta timer;
 
-bool pauseFilter = true;
-
-#ifdef WIN32
-bool WindowsMessageHook(void *userdata, MSG *msg) {
-	if (msg->message == WM_ENTERSIZEMOVE)
-		pauseFilter = false;
-	else if (msg->message == WM_EXITSIZEMOVE)
-		pauseFilter = true;
-
-	return true;
-}
-#endif
-
 // See https://stackoverflow.com/a/27195881
 // 
 // This allows the window to continue rendering
@@ -60,7 +47,7 @@ bool WindowsMessageHook(void *userdata, MSG *msg) {
 bool EventFilter(void *pThis, SDL_Event *event) {
 	auto *app = reinterpret_cast<CApp *>(pThis);
 	const auto id = SDL_GetWindowID(app->GetSdlWindow());
-	if ((!Settings::settings.GetMiniPlayer() && !pauseFilter)) {
+	if ((!Settings::settings.GetMiniPlayer() && !app->GetPlatform()->IsFilterPaused())) {
 		if (event->type == SDL_EVENT_WINDOW_EXPOSED) {
 			app->OnLoop(timer.Update());
 		} else if (event->type == SDL_EVENT_WINDOW_SAFE_AREA_CHANGED || event->type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
@@ -84,19 +71,14 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 	Utils::SetResourceFolder("/app/bin");
 #endif
 
-#if defined(WIN32) && !defined(_DEBUG)
-	{
-		wchar_t path[MAX_PATH] = { 0 };
-		if (GetModuleFileNameW(NULL, path, MAX_PATH) > 0) {
-			std::filesystem::current_path(std::filesystem::path(path).parent_path());
-		}
-	}
-#endif
-
 	SDL_Event event;
 	bool running = true;
 
 	CApp app;
+
+	if (app.GetPlatform()->HandleExistingWindow())
+		return 1;
+
 #ifdef __ANDROID__
 	*pApp = &app;
 	pAppSet();
@@ -111,8 +93,9 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 
 #ifdef WIN32
 	SDL_SetEventFilter(EventFilter, &app);
-	SDL_SetWindowsMessageHook(WindowsMessageHook, nullptr);
 #endif
+
+	app.GetPlatform()->HookWindow(app.GetMiniPlayer());
 
 #ifndef __ANDROID__
 	if(argc > 1) {

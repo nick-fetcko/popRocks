@@ -35,6 +35,10 @@ public:
 
 	}
 
+	CApp *GetApp() { return app; }
+	const bool &IsFilterPaused() const { return pauseFilter; }
+	void SetFilterPaused(bool pauseFilter) { this->pauseFilter = pauseFilter; }
+
 	// =====================================================
 	// =================== Pure Virtuals ===================
 	// =====================================================
@@ -93,6 +97,7 @@ public:
 	virtual bool AllowsWindowMovement() const = 0;
 	virtual std::optional<Vector2i> SetWindowPos(int x, int y, int width, int height) = 0;
 	virtual void ShowDialogBox(const std::string &title, const std::string &message) = 0;
+	virtual bool HandleExistingWindow() = 0;
 
 	// =====================================================
 	// ===================== Virtuals ======================
@@ -231,6 +236,8 @@ protected:
 	float maxHeardSample = 0.0f;
 
 	float gain = 20.0f;
+
+	bool pauseFilter = true;
 };
 
 // =====================================================

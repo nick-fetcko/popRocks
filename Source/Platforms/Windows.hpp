@@ -20,9 +20,15 @@
 using namespace Fetcko;
 
 class Windows : public Desktop {
+private:
+	constexpr static std::string_view GUID = "51572059-45cd-41a5-bc30-7b16419a66d2";
+	constexpr static std::wstring_view WindowClassName = L"popRocksWindowClass";
+
 public:
 	Windows(CApp *app);
 	~Windows() override;
+
+	WNDPROC GetSdlWndProc() { return sdlWndProc; }
 
 	// =====================================================
 	// =================== Pure Virtuals ===================
@@ -79,6 +85,7 @@ public:
 	bool AllowsWindowMovement() const override;
 	std::optional<Vector2i> SetWindowPos(int x, int y, int width, int height) override;
 	void ShowDialogBox(const std::string &title, const std::string &message) override;
+	bool HandleExistingWindow() override;
 
 	// =====================================================
 	// ===================== Virtuals ======================
@@ -104,6 +111,9 @@ public:
 	
 	// Audio
 	void Unmute() override;
+
+	// Window Management
+	void HookWindow(bool miniPlayer) override;
 
 	// Bling
 	void SetStatus(Status status, int progress) override;
@@ -136,8 +146,11 @@ private:
 	Status lastStatus = Status::Stopped;
 	int lastProgress = 0;
 
+	WNDPROC sdlWndProc = nullptr;
+
 #ifndef _DEBUG
 	HKEY registryKey = nullptr;
+	HANDLE mutex = nullptr;
 #endif
 };
 
@@ -155,5 +168,7 @@ LRESULT CALLBACK MessageBoxCbtHookProc(int nCode, WPARAM wParam, LPARAM lParam);
 // WASAPI input processing function
 DWORD CALLBACK InWasapiProc(void *buffer, DWORD length, void *user);
 DWORD CALLBACK OutputWasapiProc(void *buffer, DWORD length, void *user);
+
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 #endif

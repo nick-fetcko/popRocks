@@ -5,6 +5,9 @@
 #include <winuser.h>
 #include <shellapi.h>
 
+#define SDL_MAIN_HANDLED
+#include <SDL3/SDL_main.h>
+
 #include <imgui.h>
 #include <backends/imgui_impl_sdl3.h>
 #include <backends/imgui_impl_opengl3.h>
@@ -142,6 +145,15 @@ void Windows::OnDestroy() {
 	}
 
 	BASS_WASAPI_Free();
+
+#ifndef _DEBUG
+	if (mutex) {
+		ReleaseMutex(mutex);
+		mutex = nullptr;
+	}
+
+	SDL_UnregisterApp();
+#endif
 }
 
 void Windows::OnResize(int windowWidth, int windowHeight) {
@@ -817,6 +829,47 @@ void Windows::ShowDialogBox(const std::string &title, const std::string &message
 	TaskDialogIndirect(&config, NULL, NULL, NULL);
 }
 
+bool Windows::HandleExistingWindow() {
+#ifndef _DEBUG
+	std::stringstream mutexNameStream;
+	mutexNameStream << "Local\\" << GUID;
+
+	mutex = CreateMutexA(0, FALSE, mutexNameStream.str().c_str());
+	if (GetLastError() == ERROR_ALREADY_EXISTS) {
+		if (mutex) {
+			ReleaseMutex(mutex);
+			mutex = nullptr;
+		}
+
+		// Find existing window
+		if (auto existing = FindWindow(WindowClassName.data(), L"popRocks"); existing) {
+			int wargc;
+			if (LPWSTR *wargv = CommandLineToArgvW(GetCommandLineW(), &wargc); wargv && wargc > 1) {
+				COPYDATASTRUCT cds;
+				cds.dwData = 1;
+				cds.cbData = (lstrlenW(wargv[1])) * sizeof(WCHAR);
+				cds.lpData = reinterpret_cast<PVOID>(wargv[1]);
+
+				SendMessage(existing, WM_COPYDATA, static_cast<WPARAM>(NULL), reinterpret_cast<LPARAM>(&cds));
+			}
+		}
+
+		return true;
+	}
+
+	{
+		wchar_t path[MAX_PATH] = { 0 };
+		if (GetModuleFileNameW(NULL, path, MAX_PATH) > 0) {
+			std::filesystem::current_path(std::filesystem::path(path).parent_path());
+		}
+	}
+
+	SDL_RegisterApp(Utils::ToUTF8(WindowClassName.data()).c_str(), CS_BYTEALIGNCLIENT | CS_OWNDC, nullptr);
+#endif
+
+	return false;
+}
+
 // =====================================================
 // ===================== Virtuals ======================
 // =====================================================
@@ -990,6 +1043,24 @@ bool Windows::GetDeviceIndex(int &index, const std::string &device) {
 	}
 
 	return false;
+}
+
+// -----------------------------------------------------
+// ---------------- Window Management ------------------
+// -----------------------------------------------------
+void Windows::HookWindow(bool miniPlayer) {
+	const auto hwnd = reinterpret_cast<HWND>(
+		SDL_GetPointerProperty(
+			SDL_GetWindowProperties(app->GetSdlWindow()),
+			SDL_PROP_WINDOW_WIN32_HWND_POINTER,
+			NULL
+		)
+	);
+
+	SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
+
+	sdlWndProc = reinterpret_cast<WNDPROC>(GetWindowLongPtr(hwnd, GWLP_WNDPROC));
+	SetWindowLongPtr(hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(WndProc));
 }
 
 // -----------------------------------------------------
@@ -1180,6 +1251,27 @@ DWORD CALLBACK OutputWasapiProc(void *buffer, DWORD length, void *user) {
 	}
 
 	return c;
+}
+
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+	Windows *const platform = reinterpret_cast<Windows *>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+
+	if (msg == WM_COPYDATA) {
+		COPYDATASTRUCT *pcds = reinterpret_cast<COPYDATASTRUCT *>(lParam);
+
+		platform->GetApp()->LoadFile(
+			std::wstring(
+				reinterpret_cast<wchar_t *>(pcds->lpData),
+				reinterpret_cast<wchar_t *>(pcds->lpData) + pcds->cbData / sizeof(WCHAR)
+			)
+		);
+		return TRUE;
+	} else if (msg == WM_ENTERSIZEMOVE)
+		platform->SetFilterPaused(false);
+	else if (msg == WM_EXITSIZEMOVE)
+		platform->SetFilterPaused(true);
+
+	return platform->GetSdlWndProc()(hwnd, msg, wParam, lParam);
 }
 
 #endif
