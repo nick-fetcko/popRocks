@@ -2874,6 +2874,8 @@ void CApp::PlaylistLoaded(std::filesystem::path path, std::string extension, std
 		LogError("Could not open file! ", stream.str());
 		platform->ShowDialogBox("Could not open file!", stream.str());
 	}
+
+	preLoaded = false;
 }
 
 void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
