@@ -129,6 +129,7 @@ public:
 	bool LoadEmbedded(const std::string &mimeType, const void *data, std::size_t length, bool force = false) {
 		return Load(mimeType, data, length, force);
 	}
+	void LoadCube();
 
 	void UpdateParentPath(const std::filesystem::path &parentPath);
 

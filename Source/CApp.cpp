@@ -520,6 +520,7 @@ void CApp::LoadShaders() {
 
 void CApp::UpdateHdrProperties(bool force) {
 	platform->UpdateHdrProperties(force);
+	albumArt.LoadCube();
 
 	pulseMaxBrightness = HDR::Enabled && Settings::settings.GetPulseMaxBrightness();
 

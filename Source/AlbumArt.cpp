@@ -102,12 +102,18 @@ void AlbumArt::OnInit(int windowWidth, int windowHeight, float scale) {
 	squareEab->BufferData<std::size(Buffers::SquareBuffer)>(Buffers::SquareBuffer);
 	squareEab->Unbind();
 
-	cube = std::make_unique<Cube>(Utils::GetResource(
-		std::filesystem::path("LUTs") / Settings::settings.GetLut()
-	));
+	LoadCube();
 
 	UpdateOutline();
 	UpdateFontSize();
+}
+
+void AlbumArt::LoadCube() {
+	if (HDR::Enabled) {
+		cube = std::make_unique<Cube>(Utils::GetResource(
+			std::filesystem::path("LUTs") / Settings::settings.GetLut()
+		));
+	} else cube.reset();
 }
 
 void AlbumArt::OnResize(int windowWidth, int windowHeight, float scale) {
@@ -183,7 +189,7 @@ void AlbumArt::OnLoop(
 	bool preLoaded,
 	bool resizable
 ) {
-	cube->OnLoop();
+	if (cube) cube->OnLoop();
 
 	// try_lock so we don't miss a frame or two
 	if (scalingMutex.try_lock()) {
@@ -263,14 +269,17 @@ void AlbumArt::OnLoop(
 		glActiveTexture(GL_TEXTURE0 + 0);
 		glBindTexture(GL_TEXTURE_2D, album);
 
-		glActiveTexture(GL_TEXTURE0 + 1);
-		cube->Bind();
+		if (cube) {
+			glActiveTexture(GL_TEXTURE0 + 1);
+			cube->Bind();
+		}
 
 		Circle::OnLoop(0, 0, context);
 
-		cube->Unbind();
-
-		glActiveTexture(GL_TEXTURE0 + 0);
+		if (cube) {
+			cube->Unbind();
+			glActiveTexture(GL_TEXTURE0 + 0);
+		}
 
 		context.GetShaderProgram().Uniform1i("hdr"_hash, 0);
 
@@ -347,8 +356,10 @@ int AlbumArt::DrawSquare(int x, int y, int height, GLfloat alpha, Context &conte
 		context.Apply();
 		glBindTexture(GL_TEXTURE_2D, album);
 
-		glActiveTexture(GL_TEXTURE0 + 1);
-		cube->Bind();
+		if (cube) {
+			glActiveTexture(GL_TEXTURE0 + 1);
+			cube->Bind();
+		}
 
 		squareVao->Bind();
 		squareEab->Bind();
@@ -356,9 +367,10 @@ int AlbumArt::DrawSquare(int x, int y, int height, GLfloat alpha, Context &conte
 		squareEab->Unbind();
 		squareVao->Unbind();
 
-		cube->Unbind();
-
-		glActiveTexture(GL_TEXTURE0 + 0);
+		if (cube) {
+			cube->Unbind();
+			glActiveTexture(GL_TEXTURE0 + 0);
+		}
 
 		context.GetShaderProgram().Uniform1i("hdr"_hash, 0);
 
