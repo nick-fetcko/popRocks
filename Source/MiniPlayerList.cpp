@@ -219,7 +219,11 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 
 		context->Color(1.0f, 1.0f, 1.0f, alpha);
 
-		outlines[index].OnLoop(pos.x - outlines[index].GetBounds().width / 2.0f + outlineFont->GetOutlineRadius(), yOffset, time);
+		outlines[index].OnLoop(
+			pos.x - outlines[index].GetBounds().width / 2.0f + outlineFont->GetOutlineRadius(),
+			yOffset - std::floor(outlines[index].GetBounds().overhang / 3.0f),
+			time
+		);
 
 		if (isCurrent) {
 			if (items[index].GetFont() != boldFont)
@@ -234,7 +238,11 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 		else
 			context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 
-		items[index].OnLoop(pos.x - items[index].GetBounds().width / 2.0f, yOffset, time);
+		items[index].OnLoop(
+			pos.x - items[index].GetBounds().width / 2.0f,
+			yOffset - std::floor(items[index].GetBounds().overhang / 3.0f),
+			time
+		);
 
 		yOffset += items[index].GetBounds().height;
 	}
