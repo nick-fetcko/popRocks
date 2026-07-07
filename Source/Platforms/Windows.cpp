@@ -94,6 +94,7 @@ void Windows::OnInit(Interop::InitArgs args, Context &context) {
 
 	if (registryKey) {
 		if (RegSetValue(registryKey, L"", REG_SZ, L"Visualize with popRocks", 0) == ERROR_SUCCESS) {
+			// FIXME: Make this DRY
 			int wargc;
 			if (LPWSTR *wargv = CommandLineToArgvW(GetCommandLineW(), &wargc); wargv) {
 				std::wstring path(wargv[0]);
@@ -106,6 +107,24 @@ void Windows::OnInit(Interop::InitArgs args, Context &context) {
 		}
 
 		RegCloseKey(registryKey);
+		registryKey = nullptr;
+	}
+
+	if (RegOpenKey(HKEY_CURRENT_USER, L"Software\\Classes\\Applications\\popRocks.exe", &registryKey) == ERROR_SUCCESS) {
+		// FIXME: Make this DRY
+		int wargc;
+		if (LPWSTR *wargv = CommandLineToArgvW(GetCommandLineW(), &wargc); wargv) {
+			std::filesystem::path path(wargv[0]);
+			std::wstring string;
+			string.insert(string.begin(), L'\"');
+			string += path.parent_path().wstring();
+			string += L"\\Data\\popRocks-document-tall.ico\"";
+
+			RegSetValue(registryKey, L"DefaultIcon", REG_SZ, string.c_str(), 0);
+		}
+
+		RegCloseKey(registryKey);
+		registryKey = nullptr;
 	}
 #endif
 
@@ -843,6 +862,7 @@ bool Windows::HandleExistingWindow() {
 
 		// Find existing window
 		if (auto existing = FindWindow(WindowClassName.data(), L"popRocks"); existing) {
+			// FIXME: Make this DRY
 			int wargc;
 			if (LPWSTR *wargv = CommandLineToArgvW(GetCommandLineW(), &wargc); wargv && wargc > 1) {
 				COPYDATASTRUCT cds;
