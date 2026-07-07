@@ -19,6 +19,7 @@ inline std::string Cue::Parse(const std::string &string) {
 std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &path, bool append) {
 	if (!append) {
 		tracks.clear();
+		files.clear();
 		currentTrack = tracks.end();
 	} else {
 		filePath.clear();
@@ -125,6 +126,15 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 				LogWarning("Could not find audio file ", originalFilePath, " referenced in .cue file! Ignoring...");
 				return std::nullopt;
 			}
+
+			// If we've already loaded a .cue for
+			// this file, assume we're a duplicate
+			if (auto iter = files.find(filePath); iter != files.end()) {
+				LogWarning("Found multiple .cue files referring to \"", filePath, "\"! Assuming one is a duplicate and ignoring...");
+				return filePath;
+			}
+
+			files.emplace(filePath);
 
 			inFileSection = true;
 		} else if (inFileSection) {

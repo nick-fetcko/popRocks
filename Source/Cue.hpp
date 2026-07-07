@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <fstream>
 #include <locale>
+#include <set>
 #include <string>
 
 #include "Utils/Logger.hpp"
@@ -37,6 +38,7 @@ private:
 	};
 
 	std::vector<Track> tracks;
+	std::set<std::filesystem::path> files;
 	std::vector<Track>::const_iterator currentTrack = tracks.end();
 
 public:
