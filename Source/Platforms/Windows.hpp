@@ -137,6 +137,7 @@ private:
 	MyAudioSink *audioSink = nullptr;
 
 	BASS_WASAPI_INFO wasapiInfo{ 0 };
+	QWORD pausePos = 0;
 
 	bool transparent = false;
 	bool colorKeyEnabled = false;

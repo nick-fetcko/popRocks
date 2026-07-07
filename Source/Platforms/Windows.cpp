@@ -411,6 +411,8 @@ bool Windows::OpenExclusive(const std::filesystem::path &path, const std::string
 				HookKeyboard();
 				LogDebug("Channel and device frequencies (", wasapiInfo.freq, ") match!");
 
+				exclusiveBufferSize = BASS_ChannelBytes2Seconds(target, wasapiInfo.buflen);
+
 				return exclusive;
 			} else {
 				const auto error = app->GetBassError(BASS_ErrorGetCode());
@@ -953,6 +955,12 @@ bool Windows::LoadExclusive(double pos) {
 
 bool Windows::ScaleExclusive(Renderer *renderer, uint8_t *buffer, float *floatBuffer, short *shortBuffer) {
 	if (app->GetControls().GetExclusiveIndicator().IsExclusive()) {
+		if (pausePos) {
+			if (const auto pos = BASS_ChannelGetPosition(app->GetStreamHandle(), BASS_POS_BYTE); pos < pausePos)
+				return true;
+			else pausePos = 0;
+		}
+
 		if (renderer->IsFloatingPoint()) {
 
 			BASS_WASAPI_GetData(buffer, app->GetFftFlag());
@@ -1012,7 +1020,21 @@ bool Windows::StartExclusive() {
 bool Windows::StopPlayingExclusive() {
 	if (app->GetControls().GetExclusiveIndicator().IsExclusive()) {
 		if (BASS_WASAPI_IsStarted()) {
-			BASS_WASAPI_Stop(FALSE);
+			BASS_ChannelPause(app->GetStreamHandle());
+			BASS_WASAPI_Stop(TRUE);
+
+			const auto bytes = BASS_ChannelSeconds2Bytes(
+				app->GetStreamHandle(),
+				exclusiveBufferSize
+			);
+
+			if (pausePos = BASS_ChannelGetPosition(app->GetStreamHandle(), BASS_POS_BYTE); pausePos > bytes) {
+				if (BASS_ChannelSetPosition(app->GetStreamHandle(), pausePos - bytes, BASS_POS_BYTE) == FALSE) {
+					LogWarning("Could not step stream handle back after pausing!");
+					pausePos = 0;
+				}
+			} else pausePos = 0;
+
 			app->SetPlaying(false);
 		} else {
 			BASS_WASAPI_Start();
