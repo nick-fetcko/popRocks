@@ -99,14 +99,14 @@ public:
 
     /** Constructor: note that streams are not opened until the input
      *  file is set (see <code>setInputFile()</code>). */
-    BeatRootProcessor(float sr, AgentParameters parameters) :
+    BeatRootProcessor(float sr, AgentParameters parameters, double hopRatio = 2.0) : // Added 08Jul2026 by Nick Fetcko
         sampleRate(sr),
         fftTime(0.04644),
         hopSize(0),
         fftSize(0),
         agentParameters(parameters)
     {
-		hopTime = fftTime / 2.0; // Added 27Jun2025 by Nick Fetcko
+		hopTime = fftTime / hopRatio; // Added 27Jun2025 by Nick Fetcko
         hopSize = lrint(sampleRate * hopTime);
         fftSize = lrint(pow(2, lrint( log(fftTime * sampleRate) / log(2))));
         init();

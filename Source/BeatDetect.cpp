@@ -184,13 +184,26 @@ inline void BeatDetect::_OnLoad(
 			}
 		}
 
+		// Are we an APE file (and thus hate seeking backwards)?
+		bool likesSeekingBackwards = true;
+
+		auto extension = path.extension().u8string();
+		std::transform(extension.begin(), extension.end(), extension.begin(), tolower);
+		if (extension == ".ape")
+			likesSeekingBackwards = false;
+
 		BeatRootProcessor beatRootProcessor(
 			static_cast<float>(freq),
-			parameters ? *parameters : AgentParameters()
+			parameters ? *parameters : AgentParameters(),
+			// Change the hop ratio to prevent overlap
+			// if we don't like seeking backwards
+			likesSeekingBackwards ? 2.0f : 1.0f
 		);
 
 		if (hopTime)
 			beatRootProcessor.setHopTime(*hopTime);
+
+		LogDebug("fftTime = ", beatRootProcessor.getFFTTime(), " hopTime = ", beatRootProcessor.getHopTime());
 
 		const auto hopBytes = BASS_ChannelSeconds2Bytes(
 			streamHandle,
@@ -250,7 +263,8 @@ inline void BeatDetect::_OnLoad(
 			beatRootProcessor.processFrame(bufferWrapper);
 
 			totalBytes += hopBytes;
-			BASS_ChannelSetPosition(streamHandle, offset + totalBytes, BASS_POS_BYTE);
+			if (likesSeekingBackwards)
+				BASS_ChannelSetPosition(streamHandle, offset + totalBytes, BASS_POS_BYTE);
 
 			bytes = BASS_ChannelGetData(streamHandle, bufferWrapper[0], flags);
 		}
