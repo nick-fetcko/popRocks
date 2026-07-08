@@ -36,7 +36,7 @@ SDL_Surface *Gaussian::Blur(SDL_Surface *surface, bool *running) {
 	const auto pixels = reinterpret_cast<uint8_t *>(ret->pixels);
 
 #if MULTITHREADED
-	const auto numThreads = std::max(1u, std::thread::hardware_concurrency() - 1);
+	const auto numThreads = std::max(1, static_cast<int>(std::thread::hardware_concurrency()) - 4);
 	std::vector<std::thread> threads(numThreads);
 
 	for (unsigned int t = 0; t < numThreads; ++t) {
