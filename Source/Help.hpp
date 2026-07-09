@@ -209,14 +209,16 @@ public:
 			return;
 		}
 
-		context.Blend(true, [&] {
-			albumArt->DrawPlaceholder(
-				windowWidth / 2,
-				windowHeight / 2,
-				alpha / 1.5f,
-				context
-			);
-		});
+		if (albumArt->Loaded()) {
+			context.Blend(true, [&] {
+				albumArt->DrawPlaceholder(
+					windowWidth / 2,
+					windowHeight / 2,
+					alpha / 1.5f,
+					context
+				);
+			});
+		}
 		
 		context.Use("ring"_hash);
 		context.Color(0.0f, 0.0f, 0.0f, alpha * 0.75f);

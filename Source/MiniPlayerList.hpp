@@ -109,8 +109,8 @@ protected:
 	bool ignoreNextTimeDelta = false;
 	std::optional<std::chrono::system_clock::time_point> hoverTimer = std::nullopt;
 	int hoveredOffset = -1;
-	Colourf hoveredColor;
-	Colourf darkColor;
+	Colourf hoveredColor = { 0.5f, 0.5f, 0.5f };
+	Colourf darkColor = { 0.25f, 0.25f, 0.25f };
 
 	float alpha = 0.0f;
 	float targetAlpha = 0.0f;
