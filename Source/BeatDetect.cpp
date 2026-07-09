@@ -263,7 +263,7 @@ inline void BeatDetect::_OnLoad(
 			beatRootProcessor.processFrame(bufferWrapper);
 
 			totalBytes += hopBytes;
-			if (likesSeekingBackwards)
+			if (likesSeekingBackwards || hopTime)
 				BASS_ChannelSetPosition(streamHandle, offset + totalBytes, BASS_POS_BYTE);
 
 			bytes = BASS_ChannelGetData(streamHandle, bufferWrapper[0], flags);
