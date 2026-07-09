@@ -1419,8 +1419,9 @@ float Controls::UpdateFontSize(std::optional<float> radius, bool miniPlayerToggl
 		boldOutlineFont->SetFontSize(newFontSize);
 
 		if (miniPlayerToggled) {
-			// Force update of Playlist caches
+			// Force update of MiniPlayerList caches
 			playlist.OnMouseUp({ 0, 0 }, true);
+			presetList.OnMouseUp({ 0, 0 }, true);
 
 			// Remove bold highlight
 			playlist.DeselectCurrent();
