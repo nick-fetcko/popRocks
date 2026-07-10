@@ -68,7 +68,7 @@ public:
 	virtual const float &GetAlpha() const { return alpha; }
 
 	bool Stick() { if (paused) return false; paused = true; return true; }
-	bool Unstick() { if (!paused) return false; paused = false; return true; }
+	virtual bool Unstick() { if (!paused) return false; paused = false; return true; }
 
 	const bool &IsPaused() const { return paused; }
 

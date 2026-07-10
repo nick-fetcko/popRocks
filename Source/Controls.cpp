@@ -1381,6 +1381,14 @@ void Controls::ShowMessage(const std::string &text) {
 	messageTargetAlpha = 1.0f;
 }
 
+bool Controls::Unstick() {
+	// Make sure to hide any MiniPlayerLists
+	playlist.SetHovered(false, false, false);
+	presetList.SetHovered(false, false, false);
+
+	return AutoFader::Unstick();
+}
+
 void Controls::OnBlackChanged(const float &black) {
 	const Colourf color = { 
 		black,

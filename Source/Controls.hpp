@@ -140,6 +140,8 @@ public:
 	void ShowMessage(const std::string &text);
 	const bool IsMessageVisible() const { return messageAlpha > 0.0f; }
 
+	bool Unstick() override;
+
 private:
 	inline void OpenFont(Context *context, GLuint defaultFramebuffer);
 	std::string FormatSeconds(int seconds) const;
