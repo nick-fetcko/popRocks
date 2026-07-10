@@ -704,8 +704,8 @@ void AlbumArt::ProcessColors(Histogram *destination, SDL_Surface *surface, const
 		//
 		// Until proven otherwise, color selection is
 		// wrapped in "if (!scaled)"
-		const auto hstep = std::max(1, static_cast<int>(surface->w / (Circle::radius * 2)));
-		const auto vstep = std::max(1, static_cast<int>(surface->h / (Circle::radius * 2)));
+		const auto hstep = std::max(1, static_cast<int>(surface->w / (BaseRadius * 2)));
+		const auto vstep = std::max(1, static_cast<int>(surface->h / (BaseRadius * 2)));
 
 		double minSaturation = Settings::settings.GetColorSelection().minSaturation;
 		double minValue = Settings::settings.GetColorSelection().minValue;
