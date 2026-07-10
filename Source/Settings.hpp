@@ -30,12 +30,12 @@ public:
 	static std::map<std::string, GLenum> Colorspaces;
 
 	struct ColorSelection {
-		double minPercentage = 0.02;
+		double minPercentage = 0.01;
 		double minSaturation = 0.1;
 		double minValue = 0.25;
-		double minHueSeparation = 25.0;
+		double minHueSeparation = 30.0f;
 		double minValueSeparation = 0.1;
-		double minRgbSeparation = 0.70;
+		double minRgbSeparation = 0.353;
 		double maxAverageColorVariance = 2.34;
 		double maxPerPixelColorVariance = 1.0;
 
