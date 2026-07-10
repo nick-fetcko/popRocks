@@ -242,8 +242,10 @@ void AlbumArt::OnLoop(
 			Scale();
 		}
 
-		if (loadState == LoadState::None && albumLoaded)
+		if (loadState == LoadState::None && albumLoaded) {
+			loadingExternal = false;
 			Reset(visColor);
+		}
 
 		externalLoadingMutex.unlock();
 	}
@@ -472,6 +474,23 @@ std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder, std
 					}
 
 					preferred.emplace(std::make_pair(number, entry.path()));
+
+					// FIXME: This probably shouldn't be inside this lambda
+					if (fileName && fileName->parent_path() == entry.path().parent_path()) {
+						if (auto parent = fileName->parent_path(); parent != externalArtParentPath) {
+							lastWidth = albumWidth;
+							lastHeight = albumHeight;
+							
+							lastHash = 0;
+
+							albumWidth = 0;
+							albumHeight = 0;
+
+							LogDebug("External art parent path has changed from \"", externalArtParentPath.u8string(), "\" to \"", parent.u8string(), "\"");
+
+							externalArtParentPath = parent;
+						}
+					}
 
 					// Optionally break when we find a preferred file
 					//
@@ -1315,6 +1334,7 @@ void AlbumArt::Reset(const Colour<float> &color, bool fromPlaylist) {
 	// Clear colors / album art if
 	// we're switching albums
 	if (!fromPlaylist) {
+		externalArtParentPath.clear();
 		albumLoaded = false;
 		averageColor = color;
 

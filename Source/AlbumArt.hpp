@@ -333,6 +333,7 @@ private:
 	std::unique_ptr<Cube> cube;
 
 	std::filesystem::path lastParentPath;
+	std::filesystem::path externalArtParentPath;
 
 	int windowWidth = 0;
 	int windowHeight = 0;
