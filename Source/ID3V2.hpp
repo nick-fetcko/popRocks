@@ -108,7 +108,7 @@ public:
 		// but we only care about the numerator
 		// for now
 		static inline const auto TrackNumber = [](const std::string &str) {
-			return Fetcko::Utils::Split(str, '/')[0];
+			return str.empty() ? "1" : Fetcko::Utils::Split(str, '/')[0];
 		};
 
 	public:
