@@ -929,26 +929,44 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 				);
 			}
 
-			if (miniPlayer)
+			if (miniPlayer) {
 				context.StartBlend();
 
-			if ((playing || pause.IsClicked()) && !play.IsClicked()) {
+				// Mini-player renders play / pause using logic
+				// inverse from the full view: pause is visible
+				// while playing; play is visible while paused
+				if ((playing || pause.IsClicked()) && !play.IsClicked()) {
+					pause.OnLoop(
+						windowWidth / 2.0f,
+						iconY,
+						time,
+						context,
+						&alpha
+					);
+				} else {
+					play.OnLoop(
+						windowWidth / 2.0f,
+						iconY,
+						time,
+						context,
+						&alpha
+					);
+				}
+			} else {
 				pause.OnLoop(
 					windowWidth / 2.0f,
 					iconY,
 					time,
-					context,
-					miniPlayer ? &alpha : nullptr
+					context
 				);
-			} else {
 				play.OnLoop(
 					windowWidth / 2.0f,
 					iconY,
 					time,
-					context,
-					miniPlayer ? &alpha : nullptr
+					context
 				);
 			}
+
 			next.OnLoop(
 				(miniPlayer ? (windowWidth / 2.0f + albumArt->GetRadius(miniPlayer) * MiniPlayerIconRatio * 2) : (windowWidth - albumArt->GetRadius(miniPlayer))),
 				iconY,
