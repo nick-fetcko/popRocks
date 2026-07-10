@@ -37,7 +37,7 @@ public:
 		double minValueSeparation = 0.1;
 		double minRgbSeparation = 0.353;
 		double maxAverageColorVariance = 2.34;
-		double maxPerPixelColorVariance = 1.0;
+		double maxPerPixelColorVariance = 0.6;
 
 		bool operator !=(const ColorSelection &right) {
 			return right.minPercentage != minPercentage ||
