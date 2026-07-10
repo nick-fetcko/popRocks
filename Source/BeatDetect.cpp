@@ -189,7 +189,7 @@ inline void BeatDetect::_OnLoad(
 
 		auto extension = path.extension().u8string();
 		std::transform(extension.begin(), extension.end(), extension.begin(), tolower);
-		if (extension == ".ape")
+		if (extension == ".ape" || extension == ".wv")
 			likesSeekingBackwards = false;
 
 		BeatRootProcessor beatRootProcessor(
