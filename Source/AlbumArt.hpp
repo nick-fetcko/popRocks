@@ -298,6 +298,7 @@ private:
 	int lastWidth = 0, lastHeight = 0;
 
 	SDL_Surface *lastSurface = nullptr;
+	std::mutex lastSurfaceMutex;
 	std::atomic<bool> lastSurfaceUpdated = false;
 	SDL_Surface *surfaceToLoad = nullptr;
 

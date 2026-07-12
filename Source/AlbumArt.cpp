@@ -1050,7 +1050,7 @@ void AlbumArt::LoadFromSurface(SDL_Surface *surface, std::filesystem::path path,
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, previousUnpackAlignment);
 
-	if (!scaled) {
+	if (!scaled && lastSurfaceMutex.try_lock()) {
 		// lastSurface is the last surface
 		// _before_ scaling, so only update
 		// it when we aren't scaling
@@ -1058,6 +1058,8 @@ void AlbumArt::LoadFromSurface(SDL_Surface *surface, std::filesystem::path path,
 			SDL_DestroySurface(lastSurface);
 
 		lastSurface = surface;
+
+		lastSurfaceMutex.unlock();
 
 		lastSurfaceUpdated = true;
 
@@ -1500,6 +1502,7 @@ void AlbumArt::Scale(bool force) {
 	}
 
 	scaleThread = std::thread([&] {
+		std::unique_lock lastSurfaceLock(lastSurfaceMutex);
 		// Wrap pixels in a new surface. This way, we can
 		// free the surface without losing the original
 		// pixel data.
@@ -1517,6 +1520,9 @@ void AlbumArt::Scale(bool force) {
 		Bicubic bicubic(SDL_BYTESPERPIXEL(lastSurface->format));
 
 		auto w = lastSurface->w / 2;
+
+		lastSurfaceLock.unlock();
+
 		SDL_Surface *next = nullptr;
 		while (w > Circle::radius * 2 && scaling) {
 			auto blurred = gaussian.Blur(resized, &scaling);
