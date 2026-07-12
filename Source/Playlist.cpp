@@ -56,8 +56,6 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 ) {
 	loaded = false;
 
-	Clear();
-
 	if (auto files = FindCue(path); !files.empty() || IsCue(extension)) {
 		auto cue = std::make_unique<Cue>();
 
@@ -403,6 +401,8 @@ void Playlist::OnDestroy() {
 }
 
 void Playlist::Clear() {
+	loaded = false;
+
 	path.clear();
 	files.clear();
 	titles.clear();

@@ -2982,6 +2982,8 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 		if (playlistThread.joinable())
 			playlistThread.join();
 
+		controls.GetPlaylist().Clear();
+
 		playlistThread = std::thread([this] {
 			{
 				std::unique_lock lock(playlistMutex);
