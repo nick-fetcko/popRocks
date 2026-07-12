@@ -74,7 +74,7 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 
 		if (loaded) {
 			this->cue = std::move(cue);
-			this->path = path;
+			this->path = std::filesystem::is_directory(path) ? path : path.parent_path();
 
 			if (this->cue->GetTracks().empty())
 				return Track{ this->cue->GetFilePath(), this->cue->GetFilePath().stem().u8string(), 0.0};
@@ -266,7 +266,7 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 	currentFile = files.end();
 
 	if (auto next = Next()) {
-		this->path = path;
+		this->path = std::filesystem::is_directory(path) ? path : path.parent_path();
 		return next;
 	}
 
