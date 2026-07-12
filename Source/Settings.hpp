@@ -397,6 +397,9 @@ public:
 	const DynamicGain<float> &GetDynamicGain() const { return dynamicGain; }
 	void SetDynamicGain(const DynamicGain<float> &dynamicGain, bool delayed = false);
 
+	const std::optional<float> &GetAudioOffset() const { return audioOffset; }
+	void SetAudioOffset(std::optional<float> audioOffset, bool delayed = false);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -586,4 +589,6 @@ private:
 	bool helpDismissed = false;
 
 	DynamicGain<float> dynamicGain = BaseDynamicGain;
+
+	std::optional<float> audioOffset = std::nullopt;
 };

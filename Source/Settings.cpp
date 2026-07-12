@@ -813,6 +813,13 @@ void Settings::SetDynamicGain(const DynamicGain<float> &dynamicGain, bool delaye
 	}
 }
 
+void Settings::SetAudioOffset(std::optional<float> audioOffset, bool delayed) {
+	if (this->audioOffset != audioOffset) {
+		this->audioOffset = audioOffset;
+		if (!delayed) Save();
+	}
+}
+
 void Settings::Save() {
 	if (auto path = Filesystem::GetPath(); !path.empty()) {
 		LogInfo("Saving settings...");
@@ -1140,6 +1147,11 @@ const Node &operator>>(const Node &node, Settings &settings) {
 
 	if (node.has("dynamicGain"))
 		node["dynamicGain"]->get(settings.dynamicGain);
+
+	if (node.has("audioOffset"))
+		node["audioOffset"]->get(settings.audioOffset);
+	else
+		settings.audioOffset = std::nullopt;
 		
 	return node;
 }
@@ -1244,6 +1256,10 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["vulkan"]->set(settings.vulkan);
 	node["helpDismissed"]->set(settings.helpDismissed);
 	node["dynamicGain"]->set(settings.dynamicGain);
+	if (settings.audioOffset)
+		node["audioOffset"]->set(settings.audioOffset);
+	else
+		node.remove("audioOffset");
 
 	return node;
 }

@@ -168,7 +168,7 @@ public:
 
 	void AdvanceToNextTrack();
 
-	bool Open(const std::filesystem::path &path, const std::string &extension, bool exclusive, HSTREAM &target, bool force = false);
+	bool Open(const std::filesystem::path &path, const std::string &extension, bool exclusive, HSTREAM &target, HSTREAM &visualTarget, bool force = false);
 
 	void StopExclusive();
 
@@ -213,6 +213,7 @@ public:
 	const std::string &GetLoadedFileExtension() const { return loadedFileExtension; }
 
 	HSTREAM &GetStreamHandle() { return streamHandle; }
+	HSTREAM &GetVisualStreamHandle() { return visualStreamHandle; }
 
 	const BASS_CHANNELINFO &GetChannelInfo() const { return channelInfo; }
 
@@ -309,6 +310,9 @@ private:
 	int freq = 48000; // Sample rate (Hz)
 	HSTREAM streamHandle = 0; // Handle for open stream
 	HSTREAM nextStreamHandle = 0; // Handle for next track in playlist
+
+	HSTREAM visualStreamHandle = 0;
+	HSTREAM nextVisualStreamHandle = 0;
 
 	// We start assuming 2 channels
 	BASS_CHANNELINFO channelInfo = { 0, 2, 0, 0, 0, 0, 0 };
@@ -500,4 +504,6 @@ private:
 	bool beatDetected = false;
 
 	bool preLoaded = false;
+
+	std::optional<float> audioOffset = Settings::settings.GetAudioOffset();
 };

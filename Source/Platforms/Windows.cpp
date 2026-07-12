@@ -942,7 +942,7 @@ int Windows::GetDefaultFramebuffer() {
 // ----------------- Exclusive mode --------------------
 // -----------------------------------------------------
 bool Windows::LoadExclusive(double pos) {
-	if (app->GetControls().GetExclusiveIndicator().IsExclusive() && app->Open(app->GetLoadedFile(), app->GetLoadedFileExtension(), true, app->GetStreamHandle(), true)) {
+	if (app->GetControls().GetExclusiveIndicator().IsExclusive() && app->Open(app->GetLoadedFile(), app->GetLoadedFileExtension(), true, app->GetStreamHandle(), app->GetVisualStreamHandle(), true)) {
 		app->SeekTo(pos);
 		BASS_WASAPI_Start();
 		app->SetPlaying(true);

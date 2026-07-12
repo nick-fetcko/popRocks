@@ -1240,7 +1240,7 @@ void CApp::OnInit() {
 					// Initialize the new device
 					BASS_Init(platform->GetDeviceIndex<true>(outputDevice), freq, 0, 0, nullptr);
 
-					Open(loadedFile, loadedFileExtension, false, streamHandle, true);
+					Open(loadedFile, loadedFileExtension, false, streamHandle, visualStreamHandle, true);
 
 					SeekTo(pos);
 					TogglePlaying();
@@ -2029,11 +2029,41 @@ void CApp::OnLoop(const Delta &time) {
 
 	if(fileLoaded) {
 		if (renderer->IsFloatingPoint()) {
-			if (!platform->ScaleExclusive(renderer, buffer, floatBuffer, shortBuffer))
-				BASS_ChannelGetData(streamHandle, buffer, fftFlag);
+			if (!platform->ScaleExclusive(renderer, buffer, floatBuffer, shortBuffer)) {
+				if (audioOffset) {
+					auto pos =
+						static_cast<int64_t>(BASS_ChannelGetPosition(streamHandle, BASS_POS_BYTE)) +
+						static_cast<int64_t>(BASS_ChannelSeconds2Bytes(streamHandle, std::abs(*audioOffset))) * (*audioOffset < 0 ? -1 : 1);
+
+					if (pos < 0) pos = 0;
+
+					BASS_ChannelSetPosition(
+						visualStreamHandle,
+						pos,
+						BASS_POS_BYTE
+					);
+
+					BASS_ChannelGetData(visualStreamHandle, buffer, fftFlag);
+				} else BASS_ChannelGetData(streamHandle, buffer, fftFlag);
+			}
 		} else {
-			if (!platform->ScaleExclusive(renderer, buffer, floatBuffer, shortBuffer))
-				BASS_ChannelGetData(streamHandle, buffer, static_cast<DWORD>(bufferLength * sizeof(short) * channelInfo.chans));
+			if (!platform->ScaleExclusive(renderer, buffer, floatBuffer, shortBuffer)) {
+				if (audioOffset) {
+					auto pos = 
+						static_cast<int64_t>(BASS_ChannelGetPosition(streamHandle, BASS_POS_BYTE)) + 
+						static_cast<int64_t>(BASS_ChannelSeconds2Bytes(streamHandle, std::abs(*audioOffset))) * (*audioOffset < 0 ? -1 : 1);
+
+					if (pos < 0) pos = 0;
+
+					BASS_ChannelSetPosition(
+						visualStreamHandle,
+						pos,
+						BASS_POS_BYTE
+					);
+
+					BASS_ChannelGetData(visualStreamHandle, buffer, static_cast<DWORD>(bufferLength * sizeof(short) * channelInfo.chans));
+				} else BASS_ChannelGetData(streamHandle, buffer, static_cast<DWORD>(bufferLength * sizeof(short) * channelInfo.chans));
+			}
 		}
 	} else {
 		platform->LoadHeardSamples(renderer, floatBuffer, shortBuffer, bufferLength);
@@ -2289,7 +2319,7 @@ void CApp::OnLoop(const Delta &time) {
 			auto extension = next->path.extension().u8string();
 			std::transform(extension.begin(), extension.end(), extension.begin(), tolower);
 
-			Open(next->path, extension, true, nextStreamHandle);
+			Open(next->path, extension, true, nextStreamHandle, nextVisualStreamHandle);
 
 			LogDebug("Loaded next track: ", next->path);
 		}
@@ -2338,6 +2368,13 @@ void CApp::OnLoop(const Delta &time) {
 	}
 
 	beatDetectTime = elapsed - (controls.GetExclusiveIndicator().IsExclusive() ? platform->GetExclusiveBufferSize() : 0);
+
+	if (audioOffset && !controls.GetExclusiveIndicator().IsExclusive())
+		beatDetectTime += *audioOffset;
+
+	if (beatDetectTime < 0.0)
+		beatDetectTime = 0.0;
+
 	if (beatDetect->OnLoop(beatDetectTime)) {
 		albumArt.NextBin(true);
 
@@ -2556,7 +2593,7 @@ void CApp::OnDestroy(bool includingLog) {
 	destroyed = true;
 }
 
-bool CApp::Open(const std::filesystem::path &path, const std::string &extension, bool exclusive, HSTREAM &target, bool force) {
+bool CApp::Open(const std::filesystem::path &path, const std::string &extension, bool exclusive, HSTREAM &target, HSTREAM &visualTarget, bool force) {
 	if (exclusive)
 		exclusive = platform->OpenExclusive(path, extension, exclusive, target, force, channelInfo, reinterpret_cast<void*>(this));
 
@@ -2564,6 +2601,7 @@ bool CApp::Open(const std::filesystem::path &path, const std::string &extension,
 		controls.GetExclusiveIndicator().SetExclusive(false);
 		BASS_StreamFree(streamHandle);
 		target = platform->OpenWithFlags(path, extension, BASS_STREAM_PRESCAN);
+		visualTarget = platform->OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE);
 
 		// Update keyboard hook if we got
 		// forced out of exclusive mode
@@ -2716,7 +2754,7 @@ void CApp::PlaylistLoaded(std::filesystem::path path, std::string extension, std
 	if (fileLoaded && !controls.GetExclusiveIndicator().IsExclusive()) {
 		Stop();
 
-		Open(path, extension, controls.GetExclusiveIndicator().IsExclusive(), streamHandle);
+		Open(path, extension, controls.GetExclusiveIndicator().IsExclusive(), streamHandle, visualStreamHandle);
 
 		// Don't reset gain if we're changing songs
 		// in a playlist.
@@ -2729,7 +2767,7 @@ void CApp::PlaylistLoaded(std::filesystem::path path, std::string extension, std
 	}
 
 	// We want this as a local variable, as it's handed off to BeatDetect
-	auto streamHandle = platform->OpenWithFlags(path, extension, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+	auto streamHandle = platform->OpenWithFlags(path, extension, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT | BASS_STREAM_PRESCAN);
 
 	// Disassociate the stream from a device,
 	// so it doesn't get freed on BASS_Free()
@@ -2763,12 +2801,19 @@ void CApp::PlaylistLoaded(std::filesystem::path path, std::string extension, std
 				BASS_StreamFree(nextStreamHandle);
 				nextStreamHandle = 0;
 			}
+			if (nextVisualStreamHandle) {
+				BASS_StreamFree(nextVisualStreamHandle);
+				nextVisualStreamHandle = 0;
+			}
 
-			Open(path, extension, controls.GetExclusiveIndicator().IsExclusive(), this->streamHandle, !fromPlaylist);
+			Open(path, extension, controls.GetExclusiveIndicator().IsExclusive(), this->streamHandle, this->visualStreamHandle, !fromPlaylist);
 		} else if (advanceOnNextLoop) {
 			BASS_StreamFree(this->streamHandle);
+			BASS_StreamFree(this->visualStreamHandle);
 			this->streamHandle = nextStreamHandle;
 			nextStreamHandle = 0;
+			this->visualStreamHandle = nextVisualStreamHandle;
+			nextVisualStreamHandle = 0;
 		}
 
 		// Reset our tags before
@@ -3261,7 +3306,7 @@ void CApp::ToggleExclusive() {
 	if (!exclusive)
 		controls.GetVolume().SetRadius(albumArt.GetRadius(miniPlayer) / scale);
 
-	Open(loadedFile, loadedFileExtension, controls.GetExclusiveIndicator().IsExclusive(), streamHandle);
+	Open(loadedFile, loadedFileExtension, controls.GetExclusiveIndicator().IsExclusive(), streamHandle, visualStreamHandle);
 
 	// Restore our last position
 	BASS_ChannelSetPosition(
@@ -3767,16 +3812,36 @@ void CApp::UpdateDisplayBoundingBox() {
 
 bool CApp::AddToScrollOffset(int offset) {
 	if (!controls.AddToScrollOffset(offset)) {
-		if (auto lineRenderer = dynamic_cast<LineRenderer *>(renderer); lineRenderer && miniPlayer && fileLoaded) {
-			const auto lineWidth = std::clamp(Settings::settings.GetWidth() + offset, 1.0f, 10.0f);
-			lineRenderer->SetWidth(lineWidth);
-			Settings::settings.SetWidth(lineWidth);
+		const auto modState = SDL_GetModState();
 
-			LogDebug("Line width set to ", lineWidth);
+		if (modState & SDL_KMOD_CTRL) {
+			if (auto lineRenderer = dynamic_cast<LineRenderer *>(renderer); lineRenderer && miniPlayer && fileLoaded) {
+				const auto lineWidth = std::clamp(Settings::settings.GetWidth() + offset, 1.0f, 10.0f);
+				lineRenderer->SetWidth(lineWidth);
+				Settings::settings.SetWidth(lineWidth);
 
-			controls.ShowMessage("Line width set to " + std::to_string(static_cast<int>(lineWidth)));
+				LogDebug("Line width set to ", lineWidth);
 
-			return true;
+				controls.ShowMessage("Line width set to " + std::to_string(static_cast<int>(lineWidth)));
+
+				return true;
+			}
+		} else if (modState & SDL_KMOD_SHIFT) {
+			// If we don't have an offset, start it at 0
+			if (!audioOffset) audioOffset = 0.0f;
+
+			*audioOffset += offset / 10.0f;
+
+			// If we're back to 0, remove offset
+			if (*audioOffset < FLT_EPSILON && *audioOffset > -FLT_EPSILON)
+				audioOffset = std::nullopt;
+
+			std::stringstream stream;
+			stream << "Audio offset set to " << std::setprecision(1) << std::fixed << std::setfill('0') << (audioOffset ? *audioOffset : 0) << "s";
+
+			controls.ShowMessage(stream.str());
+
+			Settings::settings.SetAudioOffset(audioOffset);
 		}
 
 		return false;
