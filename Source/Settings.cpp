@@ -113,9 +113,15 @@ Settings Settings::Load() {
 		} else errorLog.LogWarning("Settings file does not yet exist!");
 	}
 
-	Preset::Presets = Preset::Load();
+#ifdef __ANDROID__
+	LoadPresets();
+#endif
 
 	return ret;
+}
+
+void Settings::LoadPresets() {
+	Preset::Presets = Preset::Load();
 }
 
 void Settings::SetVolume(float volume, bool delayed) {

@@ -408,6 +408,8 @@ public:
 
 	static const DynamicGain<float> &GetBaseDynamicGain() { return BaseDynamicGain; }
 
+	static void LoadPresets();
+
 private:
 	static Settings Load();
 

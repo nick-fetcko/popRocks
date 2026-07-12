@@ -82,6 +82,10 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 #ifdef __ANDROID__
 	*pApp = &app;
 	pAppSet();
+#else
+	// Default presets require our working directory,
+	// which is set in HandleExistingWindow()
+	Settings::LoadPresets();
 #endif
 
 	LoggableClass loggableClass;
