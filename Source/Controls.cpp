@@ -106,7 +106,7 @@ void Controls::OpenFont(Context *context, GLuint defaultFramebuffer) {
 		albumOutline.SetColor({ black, black, black });
 		fpsCounter.OnInit(font, outlineFont, context);
 		exclusiveIndicator.OnInit(font, outlineFont, context);
-		volume.OnInit(FontRoot, context);
+		volume.OnInit(FontRoot, font, outlineFont, context);
 		presetText.OnInit(font, context);
 		presetOutline.OnInit(outlineFont, context);
 		message.OnInit(font, context);

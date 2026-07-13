@@ -21,7 +21,7 @@ public:
 
 	virtual ~Volume() = default;
 
-	void OnInit(const std::string &fontRoot, Context *context);
+	void OnInit(const std::string &fontRoot, OpenGLFont *font, OpenGLFont *outlineFont, Context *context);
 
 	void OnLoop(int x, int y, const Delta &time, const AlbumArt *const albumArt, bool miniPlayer, Context &context);
 
@@ -55,6 +55,9 @@ private:
 
 	Text text;
 	Text outlineText;
+
+	Text labelOutline;
+	Text label;
 
 	//float rect[8] = { 0 };
 	Fetcko::Polyline outlineRing;

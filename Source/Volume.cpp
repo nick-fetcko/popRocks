@@ -8,17 +8,23 @@ Volume::Volume() {
 	radius = AlbumArt::BaseRadius;
 }
 
-void Volume::OnInit(const std::string &fontRoot, Context *context) {
+void Volume::OnInit(const std::string &fontRoot, OpenGLFont *font, OpenGLFont *outlineFont, Context *context) {
 	ring.SetWidth(radius / 10);
 	outlineRing.SetWidth(radius / 10 + (radius / 25) * 2);
-	font = new OpenGLFont();
-	font->OnInit(fontRoot, static_cast<int>(radius / 2));
-	outlineFont = new OpenGLFont();
-	outlineFont->OnInit(fontRoot, static_cast<int>(radius / 2), static_cast<int>(radius / 25));
+	this->font = new OpenGLFont();
+	this->font->OnInit(fontRoot, static_cast<int>(radius / 2));
+	this->outlineFont = new OpenGLFont();
+	this->outlineFont->OnInit(fontRoot, static_cast<int>(radius / 2), static_cast<int>(radius / 25));
 
-	text.OnInit(font, context);
-	outlineText.OnInit(outlineFont, context);
+	text.OnInit(this->font, context);
+	outlineText.OnInit(this->outlineFont, context);
 	outlineText.SetColor(Colour<float>::Black);
+
+	label.OnInit(font, context);
+	label.SetText("Volume:");
+	labelOutline.OnInit(outlineFont, context);
+	labelOutline.SetText("Volume:");
+
 	UpdateVolume(false);
 }
 
@@ -30,9 +36,9 @@ void Volume::OnLoop(int x, int y, const Delta &time, const AlbumArt *const album
 	const auto OutlineColor = miniPlayer ? albumArt->GetBlackColor() : 0.0f;
 
 	context.Color(OutlineColor, OutlineColor, OutlineColor, alpha);
-	outlineText.OnLoop(x - text.GetSize().x / 2, y - text.GetSize().y / 2);
+	outlineText.OnLoop(x - text.GetBounds().width / 2, y - text.GetSize().y / 2 + label.GetBounds().height);
 	context.Color(color.r, color.g, color.b, alpha);
-	text.OnLoop(x - text.GetSize().x / 2, y - text.GetSize().y / 2);
+	text.OnLoop(x - text.GetBounds().width / 2, y - text.GetSize().y / 2 + label.GetBounds().height);
 	/*
 	glColor4f(1.0f, 1.0f, 1.0f, alpha);
 
@@ -71,6 +77,11 @@ void Volume::OnLoop(int x, int y, const Delta &time, const AlbumArt *const album
 	ring.Draw<true>(context);
 
 	context.Use("texture"_hash);
+
+	context.Color(OutlineColor, OutlineColor, OutlineColor, alpha);
+	labelOutline.OnLoop(x - label.GetBounds().width / 2, y - text.GetBounds().height / 2 + label.GetBounds().height / 2);
+	context.Color(1.0f, 1.0f, 1.0f, alpha);
+	label.OnLoop(x - label.GetBounds().width / 2, y - text.GetBounds().height / 2 + label.GetBounds().height / 2);
 }
 
 void Volume::SetRadius(float radius) {
@@ -87,11 +98,11 @@ void Volume::ToggleVolumeControl() { volumeControl = !volumeControl; }
 const bool Volume::GetVolumeControl() const { return volumeControl; }
 
 void Volume::VolumeUp() {
-	Settings::settings.SetVolume(std::clamp(GetVolume() + 0.02f + FLT_EPSILON, 0.0f, 1.0f));
+	Settings::settings.SetVolume(std::clamp(GetVolume() + 0.01f + FLT_EPSILON, 0.0f, 1.0f));
 	UpdateVolume(true);
 }
 void Volume::VolumeDown() {
-	Settings::settings.SetVolume(std::clamp(GetVolume() - 0.02f - FLT_EPSILON, 0.0f, 1.0f));
+	Settings::settings.SetVolume(std::clamp(GetVolume() - 0.01f - FLT_EPSILON, 0.0f, 1.0f));
 	UpdateVolume(true);
 }
 
@@ -120,6 +131,9 @@ void Volume::OnDestroy() {
 	font = nullptr;
 	delete outlineFont;
 	font = nullptr;
+
+	labelOutline.OnDestroy();
+	label.OnDestroy();
 }
 
 void Volume::OnColorChanged(const Colour<float> &color, bool silent) {
