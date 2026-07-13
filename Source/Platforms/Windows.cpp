@@ -1257,30 +1257,33 @@ DWORD CALLBACK OutputWasapiProc(void *buffer, DWORD length, void *user) {
 
 	// Derived from https://forum.team-mediaportal.com/threads/music-gapless-playback.121377/post-1025539
 	DWORD c = 0;
-	if (BASS_ChannelIsActive(app->GetStreamHandle())) {
+	if (BASS_ChannelIsActive(app->GetStreamHandle()))
 		c = BASS_ChannelGetData(app->GetStreamHandle(), buffer, length);
-	} else if (auto next = app->GetNextStreamHandle(); next && BASS_ChannelIsActive(next)) {
-		// Immediately start adding new samples to the buffer
-		// for gapless playback
-		c = BASS_ChannelGetData(next, buffer, length);
+	
+	if (c < length) {
+		if (auto next = app->GetNextStreamHandle(); next && BASS_ChannelIsActive(next)) {
+			// Immediately start adding new samples to the buffer
+			// for gapless playback
+			c += BASS_ChannelGetData(next, &reinterpret_cast<uint8_t*>(buffer)[c], length - c - 1);
 
-		if (!BASS_ChannelIsActive(next)) {
-			c |= BASS_STREAMPROC_END;
+			if (!BASS_ChannelIsActive(next)) {
+				c |= BASS_STREAMPROC_END;
 
+				// Can't kill WASAPI from inside WASAPI,
+				// so we also have to do this on the next loop
+				app->StopExclusive();
+			} else {
+				// Update the UI on the next loop
+				app->AdvanceToNextTrack();
+			}
+
+		} else if (!c) {
 			// Can't kill WASAPI from inside WASAPI,
 			// so we also have to do this on the next loop
 			app->StopExclusive();
-		} else {
-			// Update the UI on the next loop
-			app->AdvanceToNextTrack();
+
+			return BASS_STREAMPROC_END;
 		}
-
-	} else {
-		// Can't kill WASAPI from inside WASAPI,
-		// so we also have to do this on the next loop
-		app->StopExclusive();
-
-		return BASS_STREAMPROC_END;
 	}
 
 	lock.unlock();
