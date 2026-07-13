@@ -95,6 +95,8 @@ public:
 		context.LoadIdentity();
 
 		if (hovered) {
+			context.EndBlend();
+
 			context.Color(OutlineColor, OutlineColor, OutlineColor, alpha ? *alpha : this->alpha);
 			tooltipOutline.OnLoop(mousePos.x - tooltip.GetBounds().width / 2.0f, mousePos.y - tooltip.GetBounds().height * 1.5f);
 			context.Color(1.0f, 1.0f, 1.0f, alpha ? *alpha : this->alpha);

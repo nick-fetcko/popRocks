@@ -991,6 +991,9 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 					miniPlayer ? &alpha : nullptr
 				);
 
+				if (captureCheckbox.IsHovered())
+					context.StartBlend();
+
 				rotateCheckbox.OnLoop(
 					windowWidth / 2 + (albumArt->GetRadius(miniPlayer) * MiniPlayerSeekbarRatio) / 2.0f + captureCheckbox.GetSize().x,
 					windowHeight / 2 + font->GetEm().height,
@@ -999,7 +1002,8 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 					miniPlayer ? &alpha : nullptr
 				);
 
-				context.EndBlend();
+				if (!rotateCheckbox.IsHovered())
+					context.EndBlend();
 
 				if (presetList.GetAlpha() != 1.0f && volume.GetAlpha() != 1.0f && playlist.IsLoaded()) {
 					playlist.OnLoop(

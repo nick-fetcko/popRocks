@@ -68,6 +68,8 @@ public:
 		this->hovered = hovered;
 	}
 
+	const bool &IsHovered() const { return hovered; }
+
 	void SetClicked(bool clicked) {
 		this->clicked = clicked;
 		clickTime = std::chrono::system_clock::now();
