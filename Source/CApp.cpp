@@ -604,6 +604,7 @@ void CApp::SetVulkan(bool vulkan) {
 	platform->DestroyWindow(oldWindow);
 
 	platform->OnInit(GetInteropArgs(), *context);
+	platform->HookWindow(miniPlayer);
 
 	ImGui_ImplSDL3_InitForOpenGL(sdlWindow, openGlContext);
 	ImGui_ImplOpenGL3_Init();
