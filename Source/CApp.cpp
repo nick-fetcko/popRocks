@@ -768,8 +768,8 @@ void CApp::SetMiniPlayer(bool miniPlayer, bool inLoop) {
 		// Either recalculate or reset our
 		// chroma value before sending it to
 		// the platform
-		if (miniPlayer) albumArt.CalculateChroma();
-		else albumArt.ResetChroma();
+//		if (miniPlayer) albumArt.CalculateChroma();
+//		else albumArt.ResetChroma();
 
 		platform->SetMiniPlayer(miniPlayer, static_cast<uint8_t>(albumArt.GetChromaColor() * 0xFF));
 
