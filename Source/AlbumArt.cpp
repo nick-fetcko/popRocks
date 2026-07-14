@@ -110,9 +110,11 @@ void AlbumArt::OnInit(int windowWidth, int windowHeight, float scale) {
 
 void AlbumArt::LoadCube() {
 	if (HDR::Enabled) {
-		cube = std::make_unique<Cube>(Utils::GetResource(
-			std::filesystem::path("LUTs") / Settings::settings.GetLut()
-		));
+		if (!cube) {
+			cube = std::make_unique<Cube>(Utils::GetResource(
+				std::filesystem::path("LUTs") / Settings::settings.GetLut()
+			));
+		}
 	} else cube.reset();
 }
 
