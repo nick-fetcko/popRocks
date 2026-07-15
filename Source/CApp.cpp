@@ -3852,14 +3852,14 @@ bool CApp::AddToScrollOffset(int offset) {
 			// If we don't have an offset, start it at 0
 			if (!audioOffset) audioOffset = 0.0f;
 
-			*audioOffset += offset / 10.0f;
+			*audioOffset += offset / 100.0f;
 
 			// If we're back to 0, remove offset
-			if (*audioOffset < 0.1f && *audioOffset > -0.1f)
+			if (*audioOffset < 0.01f && *audioOffset > -0.01f)
 				audioOffset = std::nullopt;
 
 			std::stringstream stream;
-			stream << "Audio offset set to " << std::setprecision(1) << std::fixed << std::setfill('0') << (audioOffset ? *audioOffset : 0) << "s";
+			stream << "Audio offset set to " << std::setprecision(2) << std::fixed << std::setfill('0') << (audioOffset ? *audioOffset : 0) << "s";
 
 			controls.ShowMessage(stream.str());
 
