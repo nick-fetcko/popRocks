@@ -2029,43 +2029,62 @@ void CApp::OnLoop(const Delta &time) {
 	}
 
 	if(fileLoaded) {
-		if (renderer->IsFloatingPoint()) {
-			if (!platform->ScaleExclusive(renderer, buffer, floatBuffer, shortBuffer)) {
-				if (audioOffset) {
-					auto pos =
-						static_cast<int64_t>(BASS_ChannelGetPosition(streamHandle, BASS_POS_BYTE)) +
-						static_cast<int64_t>(BASS_ChannelSeconds2Bytes(streamHandle, std::abs(*audioOffset))) * (*audioOffset < 0 ? -1 : 1);
+		int64_t available = 0;
 
-					if (pos < 0) pos = 0;
+		if (controls.GetExclusiveIndicator().IsExclusive())
+			available = BASS_WASAPI_GetData(nullptr, BASS_DATA_AVAILABLE);
 
-					BASS_ChannelSetPosition(
-						visualStreamHandle,
-						pos,
-						BASS_POS_BYTE
-					);
+		auto pos =
+			static_cast<int64_t>(BASS_ChannelGetPosition(streamHandle, BASS_POS_BYTE));
 
-					BASS_ChannelGetData(visualStreamHandle, buffer, fftFlag);
-				} else BASS_ChannelGetData(streamHandle, buffer, fftFlag);
-			}
+		double inSeconds = 0.0;
+			
+		if (audioOffset || controls.GetExclusiveIndicator().IsExclusive()) {
+			pos = pos -
+				(audioOffset ? static_cast<int64_t>(BASS_ChannelSeconds2Bytes(streamHandle, std::abs(*audioOffset))) * (*audioOffset < 0 ? -1 : 1) : 0)
+				- platform->GetExclusiveBufferSizeInBytes()
+				+ (platform->GetExclusiveBufferSizeInBytes() - available);
+
+			if (pos < 0) pos = 0;
+
+			inSeconds = BASS_ChannelBytes2Seconds(streamHandle, pos);
+
+			BASS_ChannelSetPosition(
+				visualStreamHandle,
+				BASS_ChannelSeconds2Bytes(visualStreamHandle, inSeconds),
+				BASS_POS_BYTE
+			);
+
+			if (renderer->IsFloatingPoint())
+				BASS_ChannelGetData(visualStreamHandle, buffer, fftFlag);
+			else
+				BASS_ChannelGetData(visualStreamHandle, buffer, static_cast<DWORD>(bufferLength * sizeof(short) * channelInfo.chans));
 		} else {
-			if (!platform->ScaleExclusive(renderer, buffer, floatBuffer, shortBuffer)) {
-				if (audioOffset) {
-					auto pos = 
-						static_cast<int64_t>(BASS_ChannelGetPosition(streamHandle, BASS_POS_BYTE)) + 
-						static_cast<int64_t>(BASS_ChannelSeconds2Bytes(streamHandle, std::abs(*audioOffset))) * (*audioOffset < 0 ? -1 : 1);
+			inSeconds = BASS_ChannelBytes2Seconds(streamHandle, pos);
 
-					if (pos < 0) pos = 0;
-
-					BASS_ChannelSetPosition(
-						visualStreamHandle,
-						pos,
-						BASS_POS_BYTE
-					);
-
-					BASS_ChannelGetData(visualStreamHandle, buffer, static_cast<DWORD>(bufferLength * sizeof(short) * channelInfo.chans));
-				} else BASS_ChannelGetData(streamHandle, buffer, static_cast<DWORD>(bufferLength * sizeof(short) * channelInfo.chans));
-			}
+			if (renderer->IsFloatingPoint())
+				BASS_ChannelGetData(streamHandle, buffer, fftFlag);
+			else
+				BASS_ChannelGetData(streamHandle, buffer, static_cast<DWORD>(bufferLength * sizeof(short) * channelInfo.chans));
 		}
+
+#ifdef _DEBUG
+		std::stringstream posStream;
+		posStream << std::fixed << std::setprecision(3) << std::setfill('0') << inSeconds;
+
+		const auto newPos = posStream.str();
+
+		if (lastPos != newPos && !lastPos.empty() && std::stod(newPos) > std::stod(lastPos))
+			++pps;
+
+		if (auto now = std::chrono::system_clock::now(); now - posTimer >= 1s) {
+			controls.SetStats("  " /* padding */ + std::to_string(pps) + "PPS"); // POSITIONS per second
+			pps = 0;
+			posTimer = now;
+		}
+
+		lastPos = newPos;
+#endif
 	} else {
 		platform->LoadHeardSamples(renderer, floatBuffer, shortBuffer, bufferLength);
 	}
@@ -2596,7 +2615,7 @@ void CApp::OnDestroy(bool includingLog) {
 
 bool CApp::Open(const std::filesystem::path &path, const std::string &extension, bool exclusive, HSTREAM &target, HSTREAM &visualTarget, bool force) {
 	if (exclusive)
-		exclusive = platform->OpenExclusive(path, extension, exclusive, target, force, channelInfo, reinterpret_cast<void*>(this));
+		exclusive = platform->OpenExclusive(path, extension, exclusive, target, visualTarget, force, channelInfo, reinterpret_cast<void*>(this));
 
 	if (!exclusive) {
 		controls.GetExclusiveIndicator().SetExclusive(false);
@@ -3836,7 +3855,7 @@ bool CApp::AddToScrollOffset(int offset) {
 			*audioOffset += offset / 10.0f;
 
 			// If we're back to 0, remove offset
-			if (*audioOffset < FLT_EPSILON && *audioOffset > -FLT_EPSILON)
+			if (*audioOffset < 0.1f && *audioOffset > -0.1f)
 				audioOffset = std::nullopt;
 
 			std::stringstream stream;

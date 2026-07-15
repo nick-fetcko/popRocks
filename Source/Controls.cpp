@@ -112,6 +112,9 @@ void Controls::OpenFont(Context *context, GLuint defaultFramebuffer) {
 		message.OnInit(font, context);
 		messageOutline.OnInit(outlineFont, context);
 		messageOutline.SetColor({ black, black, black });
+		stats.OnInit(font, context);
+		statsOutline.OnInit(outlineFont, context);
+		statsOutline.SetColor({ black, black, black });
 	} else {
 		LogError("Could not open font!");
 
@@ -786,6 +789,8 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 
 			iconY = windowHeight / 2.0f + (miniPlayer ? SeekbarSize + albumArt->GetRadius(miniPlayer) * MiniPlayerIconRatio * 2.0f : 0.0f);
 
+			int statsWidth = fpsCounter.GetText().GetBounds().width;
+
 			if (!miniPlayer) {
 				int xOffset = 0;
 
@@ -859,8 +864,6 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 					);
 				}
 
-				fpsCounter.Draw(alpha);
-
 				auto aboveMetadata = (context.GetSafeArea().h + context.GetSafeArea().y) - yOffset - albumHeight / 2 - exclusiveIndicator.GetHeight() / 2;
 
 				playlist.OnLoop(
@@ -926,6 +929,30 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 					alpha,
 					albumArt,
 					context
+				);
+
+				statsWidth += stats.GetBounds().width;
+				context.Color(0.0f, 0.0f, 0.0f, alpha);
+				statsOutline.OnLoop(
+					windowWidth / 2 - statsWidth / 2 + fpsCounter.GetText().GetBounds().width,
+					windowHeight / 2 + font->GetEm().height * 2
+				);
+				context.Color(1.0f, 1.0f, 1.0f, alpha);
+				stats.OnLoop(
+					windowWidth / 2 - statsWidth / 2 + fpsCounter.GetText().GetBounds().width,
+					windowHeight / 2 + font->GetEm().height * 2
+				);
+			}
+
+#ifdef _DEBUG
+			if (true) {
+#else
+			if (!miniPlayer) {
+#endif
+				fpsCounter.Draw(
+					miniPlayer ? windowWidth / 2 - statsWidth / 2 : 0,
+					miniPlayer ? windowHeight / 2 + font->GetEm().height * 2 : 0,
+					alpha
 				);
 			}
 
@@ -1178,6 +1205,8 @@ void Controls::OnDestroy() {
 	presetOutline.OnDestroy();
 	message.OnDestroy();
 	messageOutline.OnDestroy();
+	stats.OnDestroy();
+	statsOutline.OnDestroy();
 
 	font->OnDestroy();
 	outlineFont->OnDestroy();
@@ -1409,6 +1438,11 @@ bool Controls::Unstick() {
 	presetList.SetHovered(false, false, false);
 
 	return AutoFader::Unstick();
+}
+
+void Controls::SetStats(const std::string &stats) {
+	this->stats.SetText(stats);
+	statsOutline.SetText(stats);
 }
 
 void Controls::OnBlackChanged(const float &black) {

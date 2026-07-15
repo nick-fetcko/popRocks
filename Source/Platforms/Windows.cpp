@@ -379,7 +379,7 @@ void Windows::LoadHeardSamples(Renderer *renderer, float *floatBuffer, short *sh
 // -----------------------------------------------------
 // ----------------- Exclusive mode --------------------
 // -----------------------------------------------------
-bool Windows::OpenExclusive(const std::filesystem::path &path, const std::string &extension, bool exclusive, HSTREAM &target, bool force, const BASS_CHANNELINFO &channelInfo, void *data) {
+bool Windows::OpenExclusive(const std::filesystem::path &path, const std::string &extension, bool exclusive, HSTREAM &target, HSTREAM &visualTarget, bool force, const BASS_CHANNELINFO &channelInfo, void *data) {
 	if (wasapiInfo.freq != channelInfo.freq || force) {
 		if (wasapiInfo.freq != 0) StopExclusive(TRUE);
 
@@ -405,6 +405,11 @@ bool Windows::OpenExclusive(const std::filesystem::path &path, const std::string
 			// Only swap out the handle _after_ we've stopped
 			// as StopExclusive(TRUE) frees the handle
 			target = OpenWithFlags(path, extension, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+			visualTarget = OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE);
+
+			exclusiveBufferBytes = BASS_ChannelSeconds2Bytes(target, exclusiveBufferSize);
+
+			LogDebug("exclusiveBufferBytes = ", exclusiveBufferBytes);
 
 			BASS_WASAPI_GetInfo(&wasapiInfo);
 			if (wasapiInfo.freq == channelInfo.freq) {
@@ -428,6 +433,12 @@ bool Windows::OpenExclusive(const std::filesystem::path &path, const std::string
 		}
 	} else {
 		target = OpenWithFlags(path, extension, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+		visualTarget = OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE);
+
+		exclusiveBufferBytes = BASS_ChannelSeconds2Bytes(target, exclusiveBufferSize);
+
+		LogDebug("exclusiveBufferBytes = ", exclusiveBufferBytes);
+
 		return exclusive;
 	}
 
@@ -446,6 +457,10 @@ void Windows::StopExclusive(bool reset) {
 		BASS_WASAPI_Free();
 
 	wasapiInfo = { 0 };
+
+	exclusiveBufferBytes = 0;
+
+	LogDebug("exclusiveBufferBytes = ", exclusiveBufferBytes);
 }
 
 // -----------------------------------------------------
@@ -953,38 +968,6 @@ bool Windows::LoadExclusive(double pos) {
 	return false;
 }
 
-bool Windows::ScaleExclusive(Renderer *renderer, uint8_t *buffer, float *floatBuffer, short *shortBuffer) {
-	if (app->GetControls().GetExclusiveIndicator().IsExclusive()) {
-		if (pausePos) {
-			if (const auto pos = BASS_ChannelGetPosition(app->GetStreamHandle(), BASS_POS_BYTE); pos < pausePos)
-				return true;
-			else pausePos = 0;
-		}
-
-		if (renderer->IsFloatingPoint()) {
-
-			BASS_WASAPI_GetData(buffer, app->GetFftFlag());
-
-			// Scale back up to 100% volume
-			const auto inverseVolume = app->GetControls().GetVolume().GetInverseVolume();
-			for (auto i = 0; i < app->GetBufferLength(); ++i)
-				floatBuffer[i] *= inverseVolume;
-
-		} else {
-			BASS_WASAPI_GetData(buffer, static_cast<DWORD>(app->GetBufferLength() * sizeof(float) * app->GetChannelInfo().chans));
-
-			// Scale back up to 100% volume
-			const auto inverseVolume = app->GetControls().GetVolume().GetInverseVolume();
-			for (auto i = 0; i < app->GetBufferLength() * app->GetChannelInfo().chans; ++i)
-				shortBuffer[i] = static_cast<short>(floatBuffer[i] * inverseVolume * std::numeric_limits<short>::max());
-		}
-
-		return true;
-	}
-
-	return false;
-}
-
 bool Windows::StartPlayingExclusive(bool fromPlaylist, bool fileLoaded, bool advanceOnNextLoop) {
 	if (app->GetControls().GetExclusiveIndicator().IsExclusive()) {
 		// Only unmute if this is the first / only song
@@ -1175,7 +1158,7 @@ void Windows::UpdateKeyboardHookMode() {
 		break;
 	}
 
-	LogInfo("KeyboardHookMode = ", string);
+	LogDebug("KeyboardHookMode = ", string);
 }
 
 // =====================================================

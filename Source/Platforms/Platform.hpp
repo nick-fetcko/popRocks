@@ -69,7 +69,7 @@ public:
 	virtual void LoadHeardSamples(Renderer *renderer, float *floatBuffer, short *shortBuffer, const std::size_t bufferLength) = 0;
 	
 	// Exclusive mode
-	virtual bool OpenExclusive(const std::filesystem::path &path, const std::string &extension, bool exclusive, HSTREAM &target, bool force, const BASS_CHANNELINFO &channelInfo, void *data) = 0;
+	virtual bool OpenExclusive(const std::filesystem::path &path, const std::string &extension, bool exclusive, HSTREAM &target, HSTREAM &visualTarget, bool force, const BASS_CHANNELINFO &channelInfo, void *data) = 0;
 	virtual void StopExclusive(bool reset) = 0;
 	
 	// HDR
@@ -125,7 +125,6 @@ public:
 
 	// Exclusive mode
 	virtual bool LoadExclusive(double pos);
-	virtual bool ScaleExclusive(Renderer *renderer, uint8_t *buffer, float *floatBuffer, short *shortBuffer);
 	virtual bool StartPlayingExclusive(bool fromPlaylist, bool fileLoaded, bool advanceOnNextLoop);
 	virtual bool StartExclusive();
 	virtual bool StopPlayingExclusive();
@@ -179,6 +178,7 @@ public:
 
 	// Exclusive mode
 	const float &GetExclusiveBufferSize() const;
+	const int64_t &GetExclusiveBufferSizeInBytes() const;
 	
 	// Max buffer length
 	void SetMaxLength(std::size_t maxLength);
@@ -231,6 +231,7 @@ protected:
 	bool bgr = false;
 	bool listening = false;
 	float exclusiveBufferSize = 0.25f; // in seconds
+	int64_t exclusiveBufferBytes = 0;
 
 	std::size_t maxLength = 0;
 	float maxHeardSample = 0.0f;

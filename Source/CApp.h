@@ -506,4 +506,10 @@ private:
 	bool preLoaded = false;
 
 	std::optional<float> audioOffset = Settings::settings.GetAudioOffset();
+
+#ifdef _DEBUG
+	std::string lastPos;
+	std::chrono::system_clock::time_point posTimer = std::chrono::system_clock::now();
+	std::size_t pps = 0;
+#endif
 };

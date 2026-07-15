@@ -58,7 +58,7 @@ public:
 	void LoadHeardSamples(Renderer *renderer, float *floatBuffer, short *shortBuffer, const std::size_t bufferLength) override;
 	
 	// Exclusive mode
-	bool OpenExclusive(const std::filesystem::path &path, const std::string &extension, bool exclusive, HSTREAM &target, bool force, const BASS_CHANNELINFO &channelInfo, void *data) override;
+	bool OpenExclusive(const std::filesystem::path &path, const std::string &extension, bool exclusive, HSTREAM &target, HSTREAM &visualTarget, bool force, const BASS_CHANNELINFO &channelInfo, void *data) override;
 	void StopExclusive(bool reset) override;
 	
 	// HDR
@@ -100,7 +100,6 @@ public:
 
 	// Exclusive mode
 	bool LoadExclusive(double pos) override;
-	bool ScaleExclusive(Renderer *renderer, uint8_t *buffer, float *floatBuffer, short *shortBuffer) override;
 	bool StartPlayingExclusive(bool fromPlaylist, bool fileLoaded, bool advanceOnNextLoop) override;
 	bool StartExclusive() override;
 	bool StopPlayingExclusive() override;

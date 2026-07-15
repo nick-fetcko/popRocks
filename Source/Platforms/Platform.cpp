@@ -63,10 +63,6 @@ bool Platform::LoadExclusive(double pos) {
 	return false; 
 };
 
-bool Platform::ScaleExclusive(Renderer *renderer, uint8_t *buffer, float *floatBuffer, short *shortBuffer) { 
-	return false; 
-}
-
 bool Platform::StartPlayingExclusive(bool fromPlaylist, bool fileLoaded, bool advanceOnNextLoop) { 
 	return false; 
 }
@@ -159,6 +155,10 @@ void Platform::SetGain(float gain) {
 // Exclusive mode
 const float &Platform::GetExclusiveBufferSize() const {
 	return exclusiveBufferSize; 
+}
+
+const int64_t &Platform::GetExclusiveBufferSizeInBytes() const {
+	return exclusiveBufferBytes;
 }
 
 // Max buffer length

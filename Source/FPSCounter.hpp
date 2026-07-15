@@ -43,11 +43,14 @@ public:
 		lastFrame = std::move(now);
 	}
 
-	void Draw(float alpha) {
+	void Draw(int x, int y, float alpha) {
+		if (!x) x = Margin;
+		if (!y) y = Margin + context->GetYOffset();
+
 		context->Color(0.0f, 0.0f, 0.0f, alpha);
-		outline.OnLoop(Margin, Margin + context->GetYOffset());
+		outline.OnLoop(x, y);
 		context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
-		text.OnLoop(Margin, Margin + context->GetYOffset());
+		text.OnLoop(x, y);
 	}
 
 	void OnDestroy() {
@@ -62,6 +65,8 @@ public:
 
 		return ret;
 	}
+
+	const Text &GetText() { return text; }
 
 private:
 	constexpr static int Margin = 12;

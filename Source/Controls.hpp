@@ -142,6 +142,8 @@ public:
 
 	bool Unstick() override;
 
+	void SetStats(const std::string &stats);
+
 private:
 	inline void OpenFont(Context *context, GLuint defaultFramebuffer);
 	std::string FormatSeconds(int seconds) const;
@@ -208,6 +210,9 @@ private:
 	float messageAlpha = 0.0f;
 	float messageTargetAlpha = 0.0f;
 	std::optional<std::chrono::system_clock::time_point> messageTimer = std::nullopt;
+
+	Text stats;
+	Text statsOutline;
 
 	std::unique_ptr<VertexArray> vao;
 	std::unique_ptr<ArrayBuffer> vbo;
