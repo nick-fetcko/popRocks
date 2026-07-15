@@ -255,16 +255,16 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 
 		context->Color(albumArt->GetBlackColor(), albumArt->GetBlackColor(), albumArt->GetBlackColor(), 0.6f * alpha);
 
-		context->Blend(true, [this] {
+		context->Blend(true, [this, &alpha] {
 			scrollBarOutline.Draw<false>(*context);
+
+			if (scrollBarHandleHovered)
+				context->Color(darkColor.r, darkColor.g, darkColor.b, alpha);
+			else
+				context->Color(hoveredColor.r, hoveredColor.g, hoveredColor.b, alpha);
+
+			scrollBar.Draw<true>(*context);
 		});
-
-		if (scrollBarHandleHovered)
-			context->Color(darkColor.r, darkColor.g, darkColor.b, alpha);
-		else
-			context->Color(hoveredColor.r, hoveredColor.g, hoveredColor.b, alpha);
-
-		scrollBar.Draw<true>(*context);
 	}
 }
 
