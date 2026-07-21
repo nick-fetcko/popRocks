@@ -15,6 +15,9 @@
 #include <backends/imgui_impl_sdl3.h>
 #include <backends/imgui_impl_opengl3.h>
 
+#include <spa-0.2/spa/param/props.h>
+#include <spa-0.2/spa/pod/vararg.h>
+
 #include "Source/CApp.h"
 
 #define DEBUG_RASTERIZATION 0
@@ -71,7 +74,9 @@ void Linux::OnResize(int windowWidth, int windowHeight) {
 }
 
 void Linux::OnDestroy() {
-    DestroyInterop();
+	StopPipeWire();
+	
+	DestroyInterop();
 
 	if (listening) {
 		if (listenThread.joinable())
@@ -87,6 +92,9 @@ void Linux::OnDestroy() {
 
 std::optional<bool> Linux::OnLoop() {
 	mpris.OnLoop();
+
+	if (loop)
+		pw_loop_iterate(loop, 0);
 
 	if (app->GetVulkan())
 		return interop->OnLoop();
@@ -182,11 +190,162 @@ void Linux::CreateInterop() {
 // -----------------------------------------------------
 // ----------------- Exclusive mode --------------------
 // -----------------------------------------------------
-bool Linux::OpenExclusive(const std::filesystem::path &path, const std::string &extension, bool exclusive, HSTREAM &target, bool force, const BASS_CHANNELINFO &channelInfo, void *data) {
+bool Linux::OpenExclusive(const std::filesystem::path &path, const std::string &extension, bool exclusive, HSTREAM &target, HSTREAM &visualTarget, bool force, const BASS_CHANNELINFO &channelInfo, void *data) {
+	exclusiveBufferSize = 0.0f;
+	if (exclusiveChannelInfo.freq == 0 || channelInfo.freq != exclusiveChannelInfo.freq) {
+		if (exclusiveChannelInfo.freq != 0) StopExclusive(TRUE);
+
+		int argc = 0;
+
+		uint8_t buffer[1024];
+		struct spa_pod_builder b = SPA_POD_BUILDER_INIT(buffer, sizeof(buffer));
+		const struct spa_pod *params[1];
+
+		const auto audioInfo = SPA_AUDIO_INFO_RAW_INIT(
+			.format = SPA_AUDIO_FORMAT_F32,
+			.flags = 0,
+			.rate = channelInfo.freq,
+			.channels = channelInfo.chans
+		);
+
+		params[0] = spa_format_audio_raw_build(
+			&b,
+			SPA_PARAM_EnumFormat,
+			&audioInfo
+		);
+
+		exclusiveChannelInfo = channelInfo;
+
+		BASS_Free();
+		
+		GetDefaultDevice();
+		
+		pw_init(&argc, nullptr);
+
+		pwData.loop = pw_main_loop_new(NULL);
+		loop = pw_main_loop_get_loop(pwData.loop);
+
+		context = pw_context_new(
+			loop,
+			NULL,
+			0
+		);
+
+		core = pw_context_connect(
+			context,
+			NULL,
+			0
+		);
+
+		while(defaultSinkName.empty())
+			pw_loop_iterate(loop, 0);
+		
+		streamEvents.version = PW_VERSION_STREAM_EVENTS;
+		streamEvents.state_changed = &Linux::PipeWireStateChanged;
+		streamEvents.process = &Linux::PipeWireProcess;
+
+		pwData.stream = pw_stream_new_simple(
+			loop,
+			"popRocks Visualizer",
+			pw_properties_new(
+				PW_KEY_MEDIA_TYPE, "Audio",
+				PW_KEY_MEDIA_CATEGORY, "Playback",
+				PW_KEY_MEDIA_ROLE, "Music",
+				PW_KEY_NODE_EXCLUSIVE, "true",
+				PW_KEY_NODE_DONT_RECONNECT, "true",
+				PW_KEY_NODE_TARGET, defaultSinkName.c_str(),
+				NULL
+			),
+			&streamEvents,
+			this
+		);
+
+		auto ret = pw_stream_connect(
+			pwData.stream,
+			PW_DIRECTION_OUTPUT,
+			PW_ID_ANY,
+			static_cast<pw_stream_flags>(
+				PW_STREAM_FLAG_AUTOCONNECT |
+				PW_STREAM_FLAG_MAP_BUFFERS |
+				PW_STREAM_FLAG_EXCLUSIVE |
+				PW_STREAM_FLAG_RT_PROCESS
+			),
+			params,
+			1
+		);
+
+		if (ret >= 0) {
+			while (streamState != PW_STREAM_STATE_STREAMING &&
+				   streamState != PW_STREAM_STATE_UNCONNECTED)
+				pw_loop_iterate(loop, 0);
+
+			if (streamState != PW_STREAM_STATE_UNCONNECTED) {
+				BASS_Init(
+					0 /* no sound */,
+					app->GetFreq() /* technically doesn't matter */,
+					0,
+					0,
+					nullptr
+				);
+
+				target = OpenWithFlags(path, extension, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+				visualTarget = OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE);
+
+				return true;
+			} else {
+				StopPipeWire();
+
+				BASS_Init(
+					Platform::GetDeviceIndex<true>(Settings::settings.GetOutputDevice()),
+					app->GetFreq(),
+					0,
+					0,
+					nullptr
+				);
+
+				return false;
+			}
+		} else {
+			StopPipeWire();
+
+			BASS_Init(
+				Platform::GetDeviceIndex<true>(Settings::settings.GetOutputDevice()),
+				app->GetFreq(),
+				0,
+				0,
+				nullptr
+			);
+
+			return false;
+		}
+	} else {
+		target = OpenWithFlags(path, extension, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+		visualTarget = OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE);
+
+		return true;
+	}
+
 	return false;
 }
 
 void Linux::StopExclusive(bool reset) {
+	if (reset) {
+		StopPipeWire();
+
+		BASS_Free();
+		BASS_Init(
+			Platform::GetDeviceIndex<true>(Settings::settings.GetOutputDevice()),
+			app->GetFreq(),
+			0,
+			0,
+			nullptr
+		);
+	} else {
+		pw_stream_set_active(pwData.stream, false);
+	}
+
+	exclusiveChannelInfo = {0, 0, 0, 0, 0, 0, 0, nullptr};
+	exclusiveBufferBytes = 0;
 }
 
 // -----------------------------------------------------
@@ -380,6 +539,10 @@ std::optional<Vector2i> Linux::SetWindowPos(int x, int y, int width, int height)
 // ------------------ CApp Helpers ---------------------
 // -----------------------------------------------------
 bool Linux::OnMouseClicked(const Vector2i &mousePos) {
+	return false;
+}
+
+bool Linux::OnMouseDown(const Vector2i &mousePos) {
 	if (auto toggled = app->GetControls().GetExclusiveIndicator().OnMouseClicked(mousePos)) {
 		app->ToggleExclusive();
 		return true;
@@ -393,6 +556,38 @@ bool Linux::OnMouseClicked(const Vector2i &mousePos) {
 // -----------------------------------------------------
 int Linux::GetDefaultFramebuffer() {
 	return app->GetVulkan() ? GetInterop()->GetFramebuffer() : 0;
+}
+
+// -----------------------------------------------------
+// ------------------ Exclusive Mode -------------------
+// -----------------------------------------------------
+bool Linux::StopPlayingExclusive() {
+	if (app->GetControls().GetExclusiveIndicator().IsExclusive()) {
+		const auto active = streamState == PW_STREAM_STATE_PAUSED;
+
+		pw_stream_set_active(pwData.stream, active);
+		app->SetPlaying(active);
+
+		return true;
+	}
+
+	return false;
+}
+
+std::size_t Linux::GetAvailable() const {
+	pw_time time;
+	pw_stream_get_time_n(pwData.stream, &time, sizeof(pw_time));
+
+	const int64_t elapsed = 
+		(time.rate.denom * (pw_stream_get_nsec(pwData.stream) - time.now)) /
+		(time.rate.num * SPA_NSEC_PER_SEC);
+
+	const auto currentTime = (time.ticks + elapsed) * 1000 * time.rate.num / time.rate.denom;
+
+	return (queueSize - (currentTime - lastQueueTime)) * // Milliseconds
+		(exclusiveChannelInfo.freq / 1000.0) * // (mono) samples per millisecond
+		exclusiveChannelInfo.chans * // total channels
+		sizeof(float); // sample size
 }
 
 // -----------------------------------------------------
@@ -678,6 +873,19 @@ void Linux::DestroyWindow(SDL_Window *window) {
 	SDL_DestroyWindow(window);
 }
 
+void Linux::ShowDialogBox(const std::string &title, const std::string &message) {
+	SDL_ShowSimpleMessageBox(
+		SDL_MESSAGEBOX_ERROR,
+		title.c_str(),
+		message.c_str(),
+		app->GetSdlWindow()
+	);
+}
+
+bool Linux::HandleExistingWindow() {
+	return false;
+}
+
 // =====================================================
 // ===================== Wayland =======================
 // =====================================================
@@ -929,6 +1137,196 @@ void Linux::XdgTopLevelClose(void *data, struct xdg_toplevel *topLevel) {
 	SDL_Event quitEvent;
 	quitEvent.type = SDL_EVENT_QUIT;
 	SDL_PushEvent(&quitEvent);
+}
+
+// =====================================================
+// ==================== PipeWire =======================
+// =====================================================
+void Linux::PipeWireProcess(void *data) {
+	struct Linux *platform = reinterpret_cast<Linux*>(data);
+
+	struct pw_buffer *b;
+	struct spa_buffer *buf;
+
+	int frames, stride;
+	float *dst, val;
+
+	if ((b = pw_stream_dequeue_buffer(platform->GetPipeWireData().stream)) == NULL) {
+		pw_log_warn("out of buffers: %m");
+		return;
+	}
+
+	buf = b->buffer;
+	if ((dst = reinterpret_cast<float *>(buf->datas[0].data)) == NULL)
+		return;
+
+	stride = sizeof(float) * platform->GetExclusiveChannelInfo().chans;
+	frames = buf->datas[0].maxsize / stride;
+	if (b->requested)
+			frames = SPA_MIN(b->requested, frames);
+
+	const auto length = frames * stride;
+
+	DWORD c = 0;
+	bool done = false;
+	if (BASS_ChannelIsActive(platform->GetApp()->GetStreamHandle()))
+		c = BASS_ChannelGetData(platform->GetApp()->GetStreamHandle(), dst, length);
+
+	if (c < length) {
+		if (auto next = platform->GetApp()->GetNextStreamHandle(); next && BASS_ChannelIsActive(next)) {
+			c += BASS_ChannelGetData(next, &reinterpret_cast<uint8_t*>(dst)[c], length - c - 1);
+
+			if (!BASS_ChannelIsActive(next)) {
+				done = true;
+
+				platform->GetApp()->StopExclusive();
+			} else {
+				// Update the UI on the next loop
+				platform->GetApp()->AdvanceToNextTrack();
+			}
+		}
+	}
+
+	if (!done) {
+		buf->datas[0].chunk->offset = 0;
+		buf->datas[0].chunk->stride = stride;
+		buf->datas[0].chunk->size = frames * stride;
+
+		pw_time time;
+		pw_stream_get_time_n(platform->GetPipeWireData().stream, &time, sizeof(pw_time));
+
+		const int64_t elapsed = 
+			(time.rate.denom * (pw_stream_get_nsec(platform->GetPipeWireData().stream) - time.now)) /
+			(time.rate.num * SPA_NSEC_PER_SEC);
+
+		platform->SetLastQueueTime((time.ticks + elapsed) * 1000 * time.rate.num / time.rate.denom);
+		platform->SetQueueSize(frames * 1000.0 / platform->GetExclusiveChannelInfo().freq);
+
+		pw_stream_queue_buffer(platform->GetPipeWireData().stream, b);
+	}
+}
+
+void Linux::PipeWireStateChanged(
+	void *data,
+	pw_stream_state old,
+	pw_stream_state state,
+	const char *error
+) {
+	if (old != state) {
+		auto platform = reinterpret_cast<Linux*>(data);
+
+		std::stringstream stateStream;
+
+		stateStream << "State changed to ";
+
+		switch(state) {
+		case PW_STREAM_STATE_ERROR: {
+			const auto errorString = std::string(error, error + strlen(error));
+
+			stateStream << "PW_STREAM_STATE_ERROR: " << errorString;
+			platform->ShowDialogBox("Could not initialize exclusive mode!", "Error: " + errorString);
+			break;
+		} case PW_STREAM_STATE_UNCONNECTED:
+			stateStream << "PW_STREAM_STATE_UNCONNECTED";
+			break;
+		case PW_STREAM_STATE_CONNECTING:
+			stateStream << "PW_STREAM_STATE_CONNECTING";
+			break;
+		case PW_STREAM_STATE_PAUSED:
+			stateStream << "PW_STREAM_STATE_PAUSED";
+			break;
+		case PW_STREAM_STATE_STREAMING:
+			stateStream << "PW_STREAM_STATE_STREAMING";
+			break;
+		default:
+			break;
+		}
+
+		platform->LogDebug(stateStream.str());
+		platform->SetStreamState(state);
+	}
+}
+
+void Linux::PulseAudioContextStateCallback(pa_context *c, void *data) {
+    int *state = reinterpret_cast<int*>(data);
+    switch (pa_context_get_state(c)) {
+        case PA_CONTEXT_READY:
+            *state = 1;
+            break;
+        case PA_CONTEXT_FAILED:
+        case PA_CONTEXT_TERMINATED:
+            *state = -1;
+            break;
+        default:
+            break;
+    }
+}
+
+void Linux::PulseAudioGetServerInfoCallback(
+	pa_context *c,
+	const pa_server_info *i,
+	void *data
+) {
+	auto [platform, mainloop] = *reinterpret_cast<std::pair<Linux*, pa_mainloop*>*>(data);
+
+    if (i && i->default_sink_name) {
+		platform->GetDefaultSinkName() = 
+			std::string(
+				i->default_sink_name, 
+				i->default_sink_name + strlen(i->default_sink_name)
+			);
+    }
+    pa_mainloop_quit(mainloop, 0);
+}
+
+void Linux::GetDefaultDevice() {
+	pa_mainloop *mainloop = pa_mainloop_new();
+	pa_mainloop_api *api = pa_mainloop_get_api(mainloop);
+	
+	int contextState = 0;
+	pa_context *context = pa_context_new(api, "PipeWireDefaultSinkFinder");
+	pa_context_set_state_callback(context, PulseAudioContextStateCallback, &contextState);
+	
+	pa_context_connect(context, NULL, PA_CONTEXT_NOAUTOSPAWN, NULL);
+	
+	while (contextState == 0)
+		pa_mainloop_iterate(mainloop, 1, NULL);
+	
+	if (contextState == 1) {
+		std::pair<Linux*, pa_mainloop*> data(this, mainloop);
+		pa_context_get_server_info(
+			context,
+			PulseAudioGetServerInfoCallback,
+			&data
+		);
+
+		pa_mainloop_iterate(mainloop, 1, NULL);
+	}
+
+	while(defaultSinkName.empty())
+		pa_mainloop_iterate(mainloop, 1, NULL);
+	
+	pa_context_disconnect(context);
+	pa_context_unref(context);
+	pa_mainloop_free(mainloop);
+}
+
+void Linux::StopPipeWire() {
+	if (loop) {
+		loop = nullptr;
+
+		pw_core_disconnect(core);
+		pw_context_destroy(context);
+		pw_stream_destroy(pwData.stream);
+		pw_main_loop_destroy(pwData.loop);
+
+		pw_deinit();
+
+		context = nullptr;
+		core = nullptr;
+		
+		pwData = {0};
+	}
 }
 
 #endif

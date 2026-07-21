@@ -46,6 +46,21 @@ else ()
 	pkg_search_module(dbus REQUIRED dbus-1 IMPORTED_TARGET)
 	include_directories(PkgConfig::dbus)
 	link_libraries(PkgConfig::dbus)
+	pkg_search_module(Pipewire REQUIRED libpipewire-0.3 IMPORTED_TARGET)
+	include_directories(PkgConfig::Pipewire)
+	link_libraries(PkgConfig::Pipewire)
+	pkg_search_module(SPA REQUIRED libspa-0.2 IMPORTED_TARGET)
+	include_directories(PkgConfig::SPA)
+	link_libraries(PkgConfig::SPA)
+	find_path(PULSEAUDIO_INCLUDE_DIR
+        NAMES pulse/pulseaudio.h
+        DOC "The PulseAudio include directory"
+        )
+
+	find_library(PULSEAUDIO_LIBRARY
+        NAMES pulse
+        DOC "The PulseAudio library"
+        )
 endif()
 
 add_subdirectory(Serial/src)
@@ -457,7 +472,7 @@ else()
 	if (USING_FLATPAK)
 		target_link_libraries(popRocks PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassalac/lib/libbassalac.so" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassaac/lib/libbass_aac.so")
 	else()
-		target_link_libraries(popRocks PRIVATE bassalac bassaac)
+		target_link_libraries(popRocks PRIVATE bassalac bassaac pulse)
 	endif()
 
 	# Here lies wstring_convert

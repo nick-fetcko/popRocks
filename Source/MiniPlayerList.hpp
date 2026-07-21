@@ -99,7 +99,7 @@ protected:
 	bool miniPlayer = Settings::settings.GetMiniPlayer();
 	float maxWidth = 0.0f;
 
-	long numberOfVisibleItems = 0;
+	int64_t numberOfVisibleItems = 0;
 
 	int scrollOffset = 0;
 

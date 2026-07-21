@@ -106,6 +106,8 @@ public:
 
 	void SetColor(int r, int g, int b);
 
+	const int GetFreq() const { return freq; }
+
 	HSTREAM GetStreamHandle() const;
 	HSTREAM GetNextStreamHandle() const;
 

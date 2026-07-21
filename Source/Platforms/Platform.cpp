@@ -11,6 +11,10 @@ bool Platform::OnMouseClicked(const Vector2i &mousePos) {
 	return false; 
 }
 
+bool Platform::OnMouseDown(const Vector2i &mousePos) {
+	return false;
+}
+
 // Display properties
 void Platform::SetSafeArea(SDL_Window *window, Context &context, int w, int h) { 
 	context.SetSafeArea({ 0, 0, w, h }); 
@@ -73,6 +77,10 @@ bool Platform::StartExclusive() {
 
 bool Platform::StopPlayingExclusive() { 
 	return false; 
+}
+
+std::size_t Platform::GetAvailable() const {
+	return 0;
 }
 
 // Filepaths

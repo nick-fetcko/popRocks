@@ -2032,7 +2032,7 @@ void CApp::OnLoop(const Delta &time) {
 		int64_t available = 0;
 
 		if (controls.GetExclusiveIndicator().IsExclusive())
-			available = BASS_WASAPI_GetData(nullptr, BASS_DATA_AVAILABLE);
+			available = platform->GetAvailable();
 
 		auto pos =
 			static_cast<int64_t>(BASS_ChannelGetPosition(streamHandle, BASS_POS_BYTE));
@@ -2389,7 +2389,7 @@ void CApp::OnLoop(const Delta &time) {
 
 	beatDetectTime = elapsed - (controls.GetExclusiveIndicator().IsExclusive() ? platform->GetExclusiveBufferSize() : 0);
 
-	if (audioOffset && !controls.GetExclusiveIndicator().IsExclusive())
+	if (audioOffset)
 		beatDetectTime += *audioOffset;
 
 	if (beatDetectTime < 0.0)
@@ -2718,6 +2718,10 @@ void CApp::LoadBeats(
 
 		BASS_CHANNELINFO nextChannelInfo;
 		BASS_ChannelGetInfo(nextHandle, &nextChannelInfo);
+
+		// Disassociate the stream from a device,
+		// so it doesn't get freed on BASS_Free()
+		BASS_ChannelSetDevice(nextHandle, BASS_NODEVICE);
 
 		nextDetector->OnLoad(
 			next->path,
@@ -3429,7 +3433,7 @@ bool CApp::OnMouseDown(const Vector2i &mousePos, MouseDownState *state) {
 	auto ret = fileLoaded && !miniPlayer ? SeekToMousePos(mousePos) : false;
 
 	if (!ret && miniPlayer) {
-		if (!albumArt.OnMouseDown(mousePos)) {
+		if (!albumArt.OnMouseDown(mousePos) && !platform->OnMouseDown(mousePos)) {
 			lastMousePos = mousePos;
 
 			if (fileLoaded) {

@@ -19,6 +19,11 @@
 
 #include <dbus/dbus.h>
 
+#include <pipewire-0.3/pipewire/pipewire.h>
+#include <pipewire-0.3/pipewire/device.h>
+#include <pulse/pulseaudio.h>
+#include <spa-0.2/spa/param/audio/format-utils.h>
+
 class Linux : public Desktop {
 public:
 	Linux(CApp *app);
@@ -54,7 +59,7 @@ public:
 	void LoadHeardSamples(Renderer *renderer, float *floatBuffer, short *shortBuffer, const std::size_t bufferLength) override;
 	
 	// Exclusive mode
-	bool OpenExclusive(const std::filesystem::path &path, const std::string &extension, bool exclusive, HSTREAM &target, bool force, const BASS_CHANNELINFO &channelInfo, void *data) override;
+	bool OpenExclusive(const std::filesystem::path &path, const std::string &extension, bool exclusive, HSTREAM &target, HSTREAM &visualTarget, bool force, const BASS_CHANNELINFO &channelInfo, void *data) override;
 	void StopExclusive(bool reset) override;
 	
 	// HDR
@@ -86,9 +91,14 @@ public:
 
 	// CApp helpers
 	bool OnMouseClicked(const Vector2i &mousePos) override;
+	bool OnMouseDown(const Vector2i &mousePos) override;
 
 	// Display properties
 	int GetDefaultFramebuffer() override;
+	
+	// Exclusive mode
+	bool StopPlayingExclusive() override;
+	std::size_t GetAvailable() const override;
 
 	// Mouse pointer
 	bool IsPointerInWindow() const override;
@@ -99,6 +109,8 @@ public:
 	void UpdateWindowShape() override;
 	void DestroyWindow(SDL_Window *window) override;
 	void HookWindow(bool miniPlayer) override;
+	void ShowDialogBox(const std::string &title, const std::string &message) override;
+	bool HandleExistingWindow() override;
 
 	// =====================================================
 	// ===================== Wayland =======================
@@ -154,6 +166,31 @@ public:
 
 	void SetMoving(bool moving) { this->moving = moving; }
 	void SetResizing(bool resizing) { this->resizing = resizing; }
+
+	// =====================================================
+	// ==================== PipeWire =======================
+	// =====================================================
+	struct PipeWireData {
+		struct pw_main_loop *loop;
+		struct pw_stream *stream;
+	};
+
+	const PipeWireData &GetPipeWireData() { return pwData; }
+
+	std::string &GetDefaultSinkName() { return defaultSinkName; }
+
+	void SetStreamState(pw_stream_state state) { streamState = state; }
+
+	const BASS_CHANNELINFO &GetExclusiveChannelInfo() const { return exclusiveChannelInfo; }
+
+	void SetLastQueueTime(int64_t lastQueueTime) { this->lastQueueTime = lastQueueTime; }
+	void SetQueueSize(double queueSize) { this->queueSize = queueSize; }
+
+	static void PulseAudioContextStateCallback(pa_context *c, void *data);
+	static void PulseAudioGetServerInfoCallback(pa_context *c, const pa_server_info *i, void *data);
+
+	static void PipeWireProcess(void *data);
+	static void PipeWireStateChanged(void *data, pw_stream_state old, pw_stream_state state, const char *error);
 
 protected:
 	// Polymorphic helper for GetDeviceIndex<Output>
@@ -212,6 +249,29 @@ private:
 	// ====================== MPRIS ========================
 	// =====================================================
 	MPRIS mpris;
+
+	// =====================================================
+	// ==================== PipeWire =======================
+	// =====================================================
+	void GetDefaultDevice();
+	void StopPipeWire();
+
+	PipeWireData pwData = {0};
+
+	struct pw_stream_events streamEvents{0};
+
+	struct pw_context *context = nullptr;
+	struct pw_core *core = nullptr;
+	struct pw_loop *loop = nullptr;
+
+	std::string defaultSinkName;
+	
+	pw_stream_state streamState = PW_STREAM_STATE_UNCONNECTED;
+
+	BASS_CHANNELINFO exclusiveChannelInfo = {0, 0, 0, 0, 0, 0, 0, nullptr};
+
+	int64_t lastQueueTime = 0;
+	double queueSize = 0;
 };
 
 #endif

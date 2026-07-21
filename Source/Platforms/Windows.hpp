@@ -103,6 +103,7 @@ public:
 	bool StartPlayingExclusive(bool fromPlaylist, bool fileLoaded, bool advanceOnNextLoop) override;
 	bool StartExclusive() override;
 	bool StopPlayingExclusive() override;
+	std::size_t GetAvailable() const override;
 
 	// Filepaths
 	std::filesystem::path GetNativePath(const std::filesystem::path &path) override;

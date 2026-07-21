@@ -148,7 +148,7 @@ void MiniPlayerList::PreLoop(std::optional<std::size_t> currentIndex) {
 	if (!isHoverSticky && hoverTimer && (std::chrono::system_clock::now() - *hoverTimer) >= Settings::settings.GetHoverTime()) {
 		// Scroll to currently selected item
 		if (!hovered && currentIndex) {
-			scrollOffset = std::clamp(reverseIndices[*currentIndex] - numberOfVisibleItems / 2, 0ll, static_cast<int64_t>(items.size()) - numberOfVisibleItems);
+			scrollOffset = std::clamp(reverseIndices[*currentIndex] - numberOfVisibleItems / 2, static_cast<int64_t>(0), static_cast<int64_t>(items.size()) - numberOfVisibleItems);
 			OnRadiusChanged();
 		}
 

@@ -17,6 +17,7 @@
 
 #include "Source/HDR.hpp"
 #include "Source/Renderer.hpp"
+#include "Source/Settings.hpp"
 
 #include <SDL3/SDL.h>
 
@@ -105,6 +106,7 @@ public:
 
 	// CApp helpers
 	virtual bool OnMouseClicked(const Vector2i &mousePos);
+	virtual bool OnMouseDown(const Vector2i &mousePos);
 
 	// Display properties
 	virtual void SetSafeArea(SDL_Window *window, Context &context, int w, int h);
@@ -128,6 +130,7 @@ public:
 	virtual bool StartPlayingExclusive(bool fromPlaylist, bool fileLoaded, bool advanceOnNextLoop);
 	virtual bool StartExclusive();
 	virtual bool StopPlayingExclusive();
+	virtual std::size_t GetAvailable() const;
 
 	// Filepaths
 	virtual std::filesystem::path GetNativePath(const std::filesystem::path &path);

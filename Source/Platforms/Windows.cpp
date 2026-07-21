@@ -1030,6 +1030,10 @@ bool Windows::StopPlayingExclusive() {
 	return false;
 }
 
+std::size_t Windows::GetAvailable() const {
+	return BASS_WASAPI_GetData(nullptr, BASS_DATA_AVAILABLE);
+}
+
 // -----------------------------------------------------
 // -------------------- Filepaths ----------------------
 // -----------------------------------------------------
