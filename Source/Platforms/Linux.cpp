@@ -22,6 +22,35 @@
 
 #define DEBUG_RASTERIZATION 0
 
+constexpr std::string_view DesktopFileTemplate = 
+R"([Desktop Entry]
+Version=0.9
+Name=popRocks Visualizer
+GenericName=popRocks
+Comment=An audiovisual music player, with an emphasis on the visual
+MimeType=audio/mpeg
+Path=${POPROCKS_PATH}
+Exec=popRocks
+Type=Application
+Terminal=false
+Categories=AudioVideo;Audio
+Icon=${POPROCKS_ICON}
+MimeType=audio/flac;audio/ogg;audio/mpeg;audio/mp4)";
+
+constexpr std::string_view ServiceMenuTemplate = 
+R"([Desktop Entry]
+Type=Service
+MimeType=inode/directory
+Actions=visualizeWithPopRocks
+
+[Desktop Action visualizeWithPopRocks]
+Name=Visualize with popRocks
+Icon=${POPROCKS_ICON}
+Exec=bash -c 'cd ${POPROCKS_PATH} && ./popRocks "$1"' -- %f)";
+
+const std::string PathPlaceholder = "${POPROCKS_PATH}";
+const std::string IconPlaceholder = "${POPROCKS_ICON}";
+
 // =====================================================
 // ================ Factory Registration ===============
 // =====================================================
@@ -54,6 +83,96 @@ Linux::~Linux() {
 // ------------------- CApp Helpers --------------------
 // -----------------------------------------------------
 void Linux::OnInit(Interop::InitArgs args, Context &context) {
+	char path[PATH_MAX];
+	std::size_t count = readlink("/proc/self/exe", path, PATH_MAX);
+
+	if (count != -1) {
+		const auto pathPath = std::filesystem::path(path, path + count);
+		const auto iconPath = (pathPath.parent_path() / "Data" / "popRocks.png").u8string();
+		const auto basePath = pathPath.parent_path().u8string();
+
+		// Create .desktop file
+		auto desktopPath = std::filesystem::path(getenv("HOME")) / ".local" / "share" / "applications";
+		if (!std::filesystem::exists(desktopPath))
+			std::filesystem::create_directories(desktopPath);
+		
+		if (std::filesystem::exists(desktopPath)) {
+			desktopPath /= "popRocks.desktop";
+
+			const auto pathStart = DesktopFileTemplate.find(PathPlaceholder);
+			const auto iconStart = DesktopFileTemplate.find(IconPlaceholder);
+
+			std::string desktopFileContents =
+				std::string(
+					DesktopFileTemplate.begin(),
+					DesktopFileTemplate.begin() + pathStart
+				);
+
+			desktopFileContents += basePath;
+
+			desktopFileContents += 
+				std::string(
+					DesktopFileTemplate.begin() + pathStart + PathPlaceholder.length(),
+					DesktopFileTemplate.begin() + iconStart
+				);
+
+			desktopFileContents += iconPath;
+
+			desktopFileContents +=
+				std::string(
+					DesktopFileTemplate.begin() + iconStart + IconPlaceholder.length(),
+					DesktopFileTemplate.end()
+				);
+
+			std::ofstream outFile(desktopPath);
+			outFile << desktopFileContents << std::endl;
+		}
+
+		// Create servicemenu .desktop file
+		auto serviceMenuPath = std::filesystem::path(getenv("HOME")) / ".local" / "share" / "kio" / "servicemenus";
+		if (!std::filesystem::exists(serviceMenuPath))
+			std::filesystem::create_directories(serviceMenuPath);
+
+		if (std::filesystem::exists(serviceMenuPath)) {
+			serviceMenuPath /= "visualizeWithPopRocks.desktop";
+
+			const auto iconStart = ServiceMenuTemplate.find(IconPlaceholder);
+			const auto pathStart = ServiceMenuTemplate.find(PathPlaceholder);
+
+			std::string serviceMenuContents =
+				std::string(
+					ServiceMenuTemplate.begin(),
+					ServiceMenuTemplate.begin() + iconStart
+				);
+
+			serviceMenuContents += iconPath;
+
+			serviceMenuContents +=
+				std::string(
+					ServiceMenuTemplate.begin() + iconStart + IconPlaceholder.length(),
+					ServiceMenuTemplate.begin() + pathStart
+				);
+
+			serviceMenuContents += basePath;
+
+			serviceMenuContents +=
+				std::string(
+					ServiceMenuTemplate.begin() + pathStart + PathPlaceholder.length(),
+					ServiceMenuTemplate.end()
+				);
+
+			std::ofstream outFile(serviceMenuPath);
+			outFile << serviceMenuContents << std::endl;
+			outFile.close();
+
+			std::filesystem::permissions(
+				serviceMenuPath,
+				std::filesystem::perms::owner_exec | std::filesystem::perms::group_exec,
+				std::filesystem::perm_options::add
+			);
+		}
+	}
+
 	HookWindow(miniPlayer);
 
 	HookKeyboard();
