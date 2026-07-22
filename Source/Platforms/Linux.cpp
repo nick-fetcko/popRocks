@@ -1303,6 +1303,10 @@ void Linux::PipeWireProcess(void *data) {
 				// Update the UI on the next loop
 				platform->GetApp()->AdvanceToNextTrack();
 			}
+		} else if (!c) {
+			platform->GetApp()->StopExclusive();
+
+			done = true;
 		}
 	}
 
