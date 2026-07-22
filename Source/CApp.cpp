@@ -1627,6 +1627,35 @@ void CApp::OnInit() {
 		}
 	});
 
+	albumArt.SetOnLoaded([this] (bool embedded) {
+		for (auto integration : integrations) {
+			auto file = albumArt.GetCurrentFile();
+			if (embedded && albumArt.HasEmbedded()) {
+				if (auto tempFile = platform->GetTemporaryFile("/tmp/popRocks_embedded_art.XXXXXX"); !tempFile.empty()) {
+					const auto [bytes, size] = albumArt.GetEmbedded();
+
+					std::ofstream outFile(tempFile, std::ios::out | std::ios::binary);
+					outFile.write(reinterpret_cast<const char *>(bytes), size);
+
+					file = tempFile;
+				}
+			}
+
+			integration->OnSongChanged(
+				beatDetect->GetHash(),
+				controls.GetTitle(),
+				controls.GetArtist(),
+				controls.GetAlbum(),
+				file,
+				std::chrono::duration_cast<std::chrono::microseconds>(
+					std::chrono::duration<double>(
+						controls.GetCurrentSongLength()
+					)
+				).count()
+			);
+		}
+	});
+
 	close.OnInit(controls.GetIconSize());
 
 #if GUI
@@ -2871,33 +2900,6 @@ void CApp::PlaylistLoaded(std::filesystem::path path, std::string extension, std
 			platform->GetNativePath(path),
 			originalPath
 		);
-
-		for (auto integration : integrations) {
-			auto file = albumArt.GetCurrentFile();
-			if (albumArt.HasEmbedded()) {
-				if (auto tempFile = platform->GetTemporaryFile("/tmp/popRocks_embedded_art.XXXXXX"); !tempFile.empty()) {
-					const auto [bytes, size] = albumArt.GetEmbedded();
-
-					std::ofstream outFile(tempFile, std::ios::out | std::ios::binary);
-					outFile.write(reinterpret_cast<const char *>(bytes), size);
-
-					file = tempFile;
-				}
-			}
-
-			integration->OnSongChanged(
-				beatDetect->GetHash(),
-				controls.GetTitle(),
-				controls.GetArtist(),
-				controls.GetAlbum(),
-				file,
-				std::chrono::duration_cast<std::chrono::microseconds>(
-					std::chrono::duration<double>(
-						controls.GetCurrentSongLength()
-					)
-				).count()
-			);
-		}
 
 		// If we have any tags from the cue
 		// sheet, load them _after_ everything

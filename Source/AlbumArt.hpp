@@ -222,6 +222,7 @@ public:
 
 	std::pair<uint8_t *, std::size_t> GetEmbedded() { return { embeddedData, embeddedDataLength };}
 
+	void SetOnLoaded(std::function<void(bool)> &&f) { onLoaded = std::move(f); }
 private:
 	constexpr inline static std::array<std::string_view, 3> SupportedExtensions = { ".jpg", ".png", ".webp" };
 
@@ -392,4 +393,6 @@ private:
 	SDL_Surface *externalArtToLoad = nullptr;
 	std::filesystem::path externalArtFile;
 	std::string externalFileExtension;
+
+	std::function<void(bool)> onLoaded;
 };

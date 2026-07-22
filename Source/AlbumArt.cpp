@@ -225,6 +225,9 @@ void AlbumArt::OnLoop(
 			loadingEmbedded = false;
 
 			Scale();
+
+			if (onLoaded)
+				onLoaded(true);
 		}
 		embeddedLoadingMutex.unlock();
 	}
@@ -242,6 +245,9 @@ void AlbumArt::OnLoop(
 			loadingExternal = false;
 
 			Scale();
+
+			if (onLoaded)
+				onLoaded(false);
 		}
 
 		if (loadState == LoadState::None && albumLoaded) {
