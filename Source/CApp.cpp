@@ -2648,7 +2648,10 @@ bool CApp::Open(const std::filesystem::path &path, const std::string &extension,
 
 	if (!exclusive) {
 		controls.GetExclusiveIndicator().SetExclusive(false);
+
 		BASS_StreamFree(streamHandle);
+		BASS_StreamFree(visualStreamHandle);
+
 		target = platform->OpenWithFlags(path, extension, BASS_STREAM_PRESCAN);
 		visualTarget = platform->OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE);
 
@@ -2666,8 +2669,10 @@ bool CApp::Open(const std::filesystem::path &path, const std::string &extension,
 void CApp::Stop(BOOL reset) {
 	BASS_ChannelStop(streamHandle);
 
-	if (reset == TRUE)
+	if (reset == TRUE) {
 		BASS_StreamFree(streamHandle);
+		streamHandle = 0;
+	}
 
 	SetPlaying(false);
 }
@@ -2679,8 +2684,10 @@ void CApp::StopExclusive() {
 void CApp::StopExclusive(BOOL reset) {
 	platform->StopExclusive(reset == TRUE);
 
-	if (reset == TRUE)
+	if (reset == TRUE) {
 		BASS_StreamFree(streamHandle);
+		streamHandle = 0;
+	}
 
 	SetPlaying(false);
 }
@@ -3435,7 +3442,7 @@ bool CApp::OnMouseDown(const Vector2i &mousePos, MouseDownState *state) {
 	auto ret = fileLoaded && !miniPlayer ? SeekToMousePos(mousePos) : false;
 
 	if (!ret && miniPlayer) {
-		if (!albumArt.OnMouseDown(mousePos) && !platform->OnMouseDown(mousePos)) {
+		if (!albumArt.OnMouseDown(mousePos) && (state || !platform->OnMouseDown(mousePos))) {
 			lastMousePos = mousePos;
 
 			if (fileLoaded) {
@@ -3503,6 +3510,7 @@ bool CApp::OnMouseDown(const Vector2i &mousePos, MouseDownState *state) {
 
 			platform->SetChromaKey(true);
 
+			resizeTimer = std::chrono::system_clock::now();
 			scaleTimer = std::chrono::system_clock::now();
 
 			if (state)
@@ -3519,6 +3527,7 @@ void CApp::OnMouseUp(const Vector2i &mousePos) {
 	if (miniPlayer && !platform->IsResizing()) {
 		LogInfo("Mouse up...");
 
+		resizeTimer = std::nullopt;
 		scaleTimer = std::nullopt;
 
 		controls.OnMouseUp(mousePos);
@@ -3604,7 +3613,10 @@ bool CApp::OnMouseDragged(const Vector2i &mousePos) {
 			// our mouse pos by delta
 			lastMousePos = mousePos - delta;
 		}
-	} else if (miniPlayer && !controls.GetHelp().IsHovered() && albumArt.OnMouseDragged(mousePos)) {
+	} else if(const auto now = std::chrono::system_clock::now();
+		// Only allow resizes to occur at 30FPS
+		resizeTimer && now - *resizeTimer >= 0.0334s && 
+		miniPlayer && !controls.GetHelp().IsHovered() && albumArt.OnMouseDragged(mousePos)) {
 		const auto &ratio = Settings::settings.GetMiniPlayerVisualizerRatio();
 		const auto oldRadius = dynamic_cast<Circle<Circles::Textured>*>(&albumArt)->GetRadius();
 
@@ -3667,8 +3679,9 @@ bool CApp::OnMouseDragged(const Vector2i &mousePos) {
 			scaleTimer = now;
 		}
 
-		return true;
+		resizeTimer = now;
 
+		return true;
 	} else if (!miniPlayer) SeekToMousePos(mousePos, true);
 
 	return false;

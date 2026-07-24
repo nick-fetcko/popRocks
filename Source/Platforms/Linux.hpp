@@ -98,6 +98,7 @@ public:
 	
 	// Exclusive mode
 	bool StopPlayingExclusive() override;
+	bool StartPlayingExclusive(bool fromPlaylist, bool fileLoaded, bool advanceOnNextLoop) override;
 	std::size_t GetAvailable() const override;
 
 	// Mouse pointer
@@ -171,7 +172,7 @@ public:
 	// ==================== PipeWire =======================
 	// =====================================================
 	struct PipeWireData {
-		struct pw_main_loop *loop;
+		struct pw_thread_loop *loop;
 		struct pw_stream *stream;
 	};
 
@@ -259,10 +260,6 @@ private:
 	PipeWireData pwData = {0};
 
 	struct pw_stream_events streamEvents{0};
-
-	struct pw_context *context = nullptr;
-	struct pw_core *core = nullptr;
-	struct pw_loop *loop = nullptr;
 
 	std::string defaultSinkName;
 	

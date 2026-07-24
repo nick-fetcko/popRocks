@@ -486,6 +486,7 @@ private:
 
 	bool vulkan = Settings::settings.GetVulkan();
 
+	std::optional<std::chrono::system_clock::time_point> resizeTimer = std::nullopt;
 	std::optional<std::chrono::system_clock::time_point> scaleTimer = std::nullopt;
 
 	std::set<Integration*> integrations;
