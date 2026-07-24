@@ -207,6 +207,13 @@ void Linux::OnDestroy() {
 
 	mpris.Disable();
 	mpris.OnDestroy();
+
+	if (statusConnection) {
+		dbus_connection_flush(statusConnection);
+		dbus_connection_unref(statusConnection);
+
+		statusConnection = nullptr;
+	}
 }
 
 std::optional<bool> Linux::OnLoop() {
@@ -1012,6 +1019,74 @@ void Linux::ShowDialogBox(const std::string &title, const std::string &message) 
 
 bool Linux::HandleExistingWindow() {
 	return false;
+}
+
+// -----------------------------------------------------
+// ---------------------- Bling ------------------------
+// -----------------------------------------------------
+void Linux::SetStatus(Status status, int progress) {
+	// FIXME: Need a DBus base class for both this
+	//        and MPRIS to inherit.
+	DBusError err;
+	dbus_error_init(&err);
+
+	if (!statusConnection) {
+		statusConnection = dbus_bus_get(DBUS_BUS_SESSION, &err);
+		if (dbus_error_is_set(&err)) {
+			LogError("D-Bus Error: ", err.message);
+			dbus_error_free(&err);
+			return;
+		}
+	}
+
+	DBusMessage *msg = dbus_message_new_signal(
+		"/",
+		"com.canonical.Unity.LauncherEntry",
+		"Update"
+	);
+
+	if (!msg) return;
+
+	const char *uri = "application://popRocks.desktop";
+
+	DBusMessageIter messageArgs{0}, dictIter{0}, entryIter{0}, variantIter{0};
+
+	dbus_message_iter_init_append(msg, &messageArgs);
+
+	dbus_message_iter_append_basic(&messageArgs, DBUS_TYPE_STRING, &uri);
+
+	dbus_message_iter_open_container(&messageArgs, DBUS_TYPE_ARRAY, "{sv}", &dictIter);
+
+	dbus_message_iter_open_container(&dictIter, DBUS_TYPE_DICT_ENTRY, NULL, &entryIter);
+
+	const char* visibleKey = "progress-visible";
+	dbus_bool_t visible = status == Status::Stopped ? FALSE : TRUE;
+
+	dbus_message_iter_append_basic(&entryIter, DBUS_TYPE_STRING, &visibleKey);
+
+	dbus_message_iter_open_container(&entryIter, DBUS_TYPE_VARIANT, "b", &variantIter);
+	dbus_message_iter_append_basic(&variantIter, DBUS_TYPE_BOOLEAN, &visible);
+	dbus_message_iter_close_container(&entryIter, &variantIter);
+	dbus_message_iter_close_container(&dictIter, &entryIter);
+
+	dbus_message_iter_open_container(&dictIter, DBUS_TYPE_DICT_ENTRY, NULL, &entryIter);
+
+	const char* progressKey = "progress";
+	double progressPercent = progress / 100.0;
+
+	dbus_message_iter_append_basic(&entryIter, DBUS_TYPE_STRING, &progressKey);
+
+	dbus_message_iter_open_container(&entryIter, DBUS_TYPE_VARIANT, "d", &variantIter);
+	dbus_message_iter_append_basic(&variantIter, DBUS_TYPE_DOUBLE, &progressPercent);
+	dbus_message_iter_close_container(&entryIter, &variantIter);
+	dbus_message_iter_close_container(&dictIter, &entryIter);
+
+	dbus_message_iter_close_container(&messageArgs, &dictIter);
+
+	dbus_connection_send(statusConnection, msg, NULL);
+	dbus_connection_flush(statusConnection);
+
+	dbus_message_unref(msg);
 }
 
 // =====================================================

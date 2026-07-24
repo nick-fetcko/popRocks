@@ -113,6 +113,9 @@ public:
 	void ShowDialogBox(const std::string &title, const std::string &message) override;
 	bool HandleExistingWindow() override;
 
+	// Bling
+	void SetStatus(Status status, int progress) override;
+
 	// =====================================================
 	// ===================== Wayland =======================
 	// =====================================================
@@ -269,6 +272,11 @@ private:
 
 	int64_t lastQueueTime = 0;
 	double queueSize = 0;
+
+	// =====================================================
+	// ================= Launcher Entry ====================
+	// =====================================================
+	DBusConnection *statusConnection = nullptr;
 };
 
 #endif
