@@ -105,6 +105,8 @@ CApp::CApp() :
 		, this
 	);
 
+	menu = std::make_unique<Menu>(platform);
+
 	renderer = RendererFactory::Build(
 		Settings::settings.GetRenderer(),
 		&dynamicGain,
@@ -953,17 +955,17 @@ void CApp::OnInit() {
 		);
 		ImGui_ImplOpenGL3_Init();
 
-		menu.SetOnOpen([this](const std::filesystem::path &path) {
+		menu->SetOnOpen([this](const std::filesystem::path &path) {
 			LoadFile(path);
 			ImGui::SetWindowFocus(nullptr);
 		});
-		menu.SetOnBufferSizeChanged([this](int bufferSize) {
+		menu->SetOnBufferSizeChanged([this](int bufferSize) {
 			SetBufferLength(bufferSize);
 
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnDecayTimeChanged([this](float decayTime) {
+		menu->SetOnDecayTimeChanged([this](float decayTime) {
 			SetDecayTime(
 				std::chrono::duration<double> {
 					decayTime
@@ -973,7 +975,7 @@ void CApp::OnInit() {
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnFadeTimeChanged([this](float fadeTime) {
+		menu->SetOnFadeTimeChanged([this](float fadeTime) {
 			SetFadeTime(
 				std::chrono::duration<double> {
 					fadeTime
@@ -983,13 +985,13 @@ void CApp::OnInit() {
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnPulseChanged([this](bool pulse) {
+		menu->SetOnPulseChanged([this](bool pulse) {
 			renderer->SetPulse(pulse);
 
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnPulseBackgroundChanged([this](bool pulseBackground) {
+		menu->SetOnPulseBackgroundChanged([this](bool pulseBackground) {
 			Settings::settings.SetPulseBackground(pulseBackground);
 
 			this->pulseBackground = pulseBackground;
@@ -1000,12 +1002,12 @@ void CApp::OnInit() {
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnDarkenPulseOnBrightColorsChanged([this](bool darkenPulseOnBrightColors) {
+		menu->SetOnDarkenPulseOnBrightColorsChanged([this](bool darkenPulseOnBrightColors) {
 			Settings::settings.SetDarkenPulseOnBrightColors(darkenPulseOnBrightColors);
 
 			this->darkenPulseOnBrightColors = darkenPulseOnBrightColors;
 		});
-		menu.SetOnPulseTimeChanged([this](float pulseTime) {
+		menu->SetOnPulseTimeChanged([this](float pulseTime) {
 			renderer->SetPulseTime(
 				std::chrono::duration<double> {
 					pulseTime
@@ -1015,13 +1017,13 @@ void CApp::OnInit() {
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnStrobeChanged([this](bool strobe) {
+		menu->SetOnStrobeChanged([this](bool strobe) {
 			SetStrobe(strobe);
 
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnStrobeIntensityChanged([this](float strobeIntensity) {
+		menu->SetOnStrobeIntensityChanged([this](float strobeIntensity) {
 			Settings::settings.SetStrobeIntensity(strobeIntensity);
 
 			this->strobeIntensity = strobeIntensity;
@@ -1029,14 +1031,14 @@ void CApp::OnInit() {
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnBlurChanged([this](bool blur) {
+		menu->SetOnBlurChanged([this](bool blur) {
 			ToggleBlur();
 			ImGui::SetWindowFocus(nullptr);
 
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnSourceFactorChanged([this](GLenum sourceFactor) {
+		menu->SetOnSourceFactorChanged([this](GLenum sourceFactor) {
 			Settings::settings.SetSourceFactor(sourceFactor);
 
 			this->sourceFactor = sourceFactor;
@@ -1044,7 +1046,7 @@ void CApp::OnInit() {
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnDestFactorChanged([this](GLenum destFactor) {
+		menu->SetOnDestFactorChanged([this](GLenum destFactor) {
 			Settings::settings.SetDestFactor(destFactor);
 			
 			this->destFactor = destFactor;
@@ -1052,7 +1054,7 @@ void CApp::OnInit() {
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnSourceAlphaFactorChanged([this](GLenum sourceAlphaFactor) {
+		menu->SetOnSourceAlphaFactorChanged([this](GLenum sourceAlphaFactor) {
 			Settings::settings.SetSourceAlphaFactor(sourceAlphaFactor);
 
 			this->sourceAlphaFactor = sourceAlphaFactor;
@@ -1060,7 +1062,7 @@ void CApp::OnInit() {
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnDestAlphaFactorChanged([this](GLenum destAlphaFactor) {
+		menu->SetOnDestAlphaFactorChanged([this](GLenum destAlphaFactor) {
 			Settings::settings.SetDestAlphaFactor(destAlphaFactor);
 
 			this->destAlphaFactor = destAlphaFactor;
@@ -1068,13 +1070,13 @@ void CApp::OnInit() {
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnBlurIntensityChanged([this](float blurIntensity) {
+		menu->SetOnBlurIntensityChanged([this](float blurIntensity) {
 			SetBlurIntensity(blurIntensity);
 
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnBlurOpacityChanged([this](float blurOpacity) {
+		menu->SetOnBlurOpacityChanged([this](float blurOpacity) {
 			Settings::settings.SetBlurOpacity(blurOpacity);
 
 			this->blurOpacity = blurOpacity;
@@ -1082,20 +1084,20 @@ void CApp::OnInit() {
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnRotatingChanged([this](bool rotate) {
+		menu->SetOnRotatingChanged([this](bool rotate) {
 			SetRotating(rotate);
 			ImGui::SetWindowFocus(nullptr);
 
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnRpmChanged([this](float rpm) {
+		menu->SetOnRpmChanged([this](float rpm) {
 			SetRotationSpeed(rpm * (360.0f / 60.0f) /* 6 */);
 
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnDetectBpmChanged([this](bool detectBpm) {
+		menu->SetOnDetectBpmChanged([this](bool detectBpm) {
 			for (auto &detector : beatDetectors)
 				detector.SetDetecting(detectBpm);
 
@@ -1118,13 +1120,13 @@ void CApp::OnInit() {
 				);
 			}
 		});
-		menu.SetOnVisualizationTypeChanged([this](const std::string &visualizationType) {
+		menu->SetOnVisualizationTypeChanged([this](const std::string &visualizationType) {
 			LoadRenderer(visualizationType);
 
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnLineRendererStyleChanged([this](int lineRendererStyle) {
+		menu->SetOnLineRendererStyleChanged([this](int lineRendererStyle) {
 			const auto style = static_cast<LineRenderer::Style>(lineRendererStyle);
 
 			if (auto lineRenderer = dynamic_cast<LineRenderer *>(renderer)) {
@@ -1136,7 +1138,7 @@ void CApp::OnInit() {
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnLightPackVisualizationTypeChanged([this](const std::string &lightPackVisualizationType) {
+		menu->SetOnLightPackVisualizationTypeChanged([this](const std::string &lightPackVisualizationType) {
 			lightPack.SetLightType(
 				lightPackVisualizationType == "intensity" ?
 					LightPack::LightType::Intensity :
@@ -1145,7 +1147,7 @@ void CApp::OnInit() {
 						LightPack::LightType::ColorIntensity
 			);
 		});
-		menu.SetOnLightPackMappingChanged([this](const std::string &lightPackMapping) {
+		menu->SetOnLightPackMappingChanged([this](const std::string &lightPackMapping) {
 			lightPack.SetMapping(
 				lightPackMapping == "default" ?
 					Mappings::DEFAULT :
@@ -1156,7 +1158,7 @@ void CApp::OnInit() {
 							Mappings::BOTTOM_TO_TOP
 			);
 		});
-		menu.SetOnLightPackFocusAreaChanged([this](const std::string &lightPackFocusArea) {
+		menu->SetOnLightPackFocusAreaChanged([this](const std::string &lightPackFocusArea) {
 			lightPack.SetFocusArea(
 				lightPackFocusArea == "superbass" ?
 					LightPack::FocusArea::SuperBass :
@@ -1173,41 +1175,41 @@ void CApp::OnInit() {
 										LightPack::FocusArea::Nyquist
 			);
 		});
-		menu.SetOnRadiusChanged([this](int radius) {
+		menu->SetOnRadiusChanged([this](int radius) {
 			SetRadius(radius);
 		});
-		menu.SetOnLineWidthChanged([this](float lineWidth) {
+		menu->SetOnLineWidthChanged([this](float lineWidth) {
 			if (auto lineRenderer = dynamic_cast<LineRenderer *>(renderer))
 				lineRenderer->SetWidth(lineWidth);
 		});
-		menu.SetOnSmoothChanged([this](int smooth) {
+		menu->SetOnSmoothChanged([this](int smooth) {
 			lightPack.SetSmooth(smooth);
 		});
-		menu.SetOnGammaChanged([this](float gamma) {
+		menu->SetOnGammaChanged([this](float gamma) {
 			// Silent so it doesn't spam the console
 			// while the user is dragging
 			lightPack.SetGamma(gamma, true);
 		});
-		menu.SetOnPresetChanged([this](std::optional<std::size_t> preset) {
+		menu->SetOnPresetChanged([this](std::optional<std::size_t> preset) {
 			LoadPreset(preset);
 		});
-		menu.SetOnPlaylistOnScreenChanged([this](bool playlistOnScreen) {
+		menu->SetOnPlaylistOnScreenChanged([this](bool playlistOnScreen) {
 			controls.GetPlaylist().SetVisible(playlistOnScreen);
 		});
-		menu.SetOnPlaylistFadeChanged([this](bool playlistFade) {
+		menu->SetOnPlaylistFadeChanged([this](bool playlistFade) {
 			controls.GetPlaylist().SetFade(playlistFade);
 		});
-		menu.SetOnCurrentSongVisibleChanged([this](bool currentSongVisible) {
+		menu->SetOnCurrentSongVisibleChanged([this](bool currentSongVisible) {
 			controls.GetPlaylist().SetCurrentSongVisible(currentSongVisible);
 		});
-		menu.SetOnColorSelectionChanged([this](const Settings::ColorSelection &selection) {
+		menu->SetOnColorSelectionChanged([this](const Settings::ColorSelection &selection) {
 			Settings::settings.SetColorSelection(selection);
 			albumArt.ReprocessColors();
 		});
-		menu.SetOnFftSizeChanged([this](int fftSize) {
+		menu->SetOnFftSizeChanged([this](int fftSize) {
 			SetFftLength(fftSize);
 		});
-		menu.SetOnListeningChanged([this](bool listening) {
+		menu->SetOnListeningChanged([this](bool listening) {
 			if (listening)
 				platform->Listen();
 			else
@@ -1215,7 +1217,7 @@ void CApp::OnInit() {
 
 			Settings::settings.SetListening(listening);
 		});
-		menu.SetOnLoopbackChanged([this](bool loopback) {
+		menu->SetOnLoopbackChanged([this](bool loopback) {
 			if (loopback)
 				platform->Listen(true);
 			else
@@ -1223,7 +1225,7 @@ void CApp::OnInit() {
 
 			Settings::settings.SetLoopback(loopback);
 		});
-		menu.SetOnOutputDeviceChanged([this](const std::string &outputDevice) {
+		menu->SetOnOutputDeviceChanged([this](const std::string &outputDevice) {
 			Settings::settings.SetOutputDevice(outputDevice);
 
 			if (platform->IsListening() && Settings::settings.GetLoopback())
@@ -1248,19 +1250,19 @@ void CApp::OnInit() {
 				}
 			}
 		});
-		menu.SetOnInputDeviceChanged([this](const std::string &inputDevice) {
+		menu->SetOnInputDeviceChanged([this](const std::string &inputDevice) {
 			Settings::settings.SetInputDevice(inputDevice);
 
 			if (platform->IsListening() && !Settings::settings.GetLoopback())
 				platform->Listen();
 		});
-		menu.SetOnEffectChanged([this](const std::string &effect) {
+		menu->SetOnEffectChanged([this](const std::string &effect) {
 			SetEffect(effect);
 
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnEffectIntensityChanged([this](float effectIntensity) {
+		menu->SetOnEffectIntensityChanged([this](float effectIntensity) {
 			Settings::settings.SetEffectIntensity(effectIntensity);
 
 			this->context->With("blur"_hash, [effectIntensity](Context::Shader &shader) {
@@ -1270,7 +1272,7 @@ void CApp::OnInit() {
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnEffectXOffsetChanged([this](float effectXOffset) {
+		menu->SetOnEffectXOffsetChanged([this](float effectXOffset) {
 			Settings::settings.SetEffectXOffset(effectXOffset);
 
 			this->context->With("blur"_hash, [effectXOffset](Context::Shader &shader) {
@@ -1280,7 +1282,7 @@ void CApp::OnInit() {
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnEffectYOffsetChanged([this](float effectYOffset) {
+		menu->SetOnEffectYOffsetChanged([this](float effectYOffset) {
 			Settings::settings.SetEffectYOffset(effectYOffset);
 
 			this->context->With("blur"_hash, [effectYOffset](Context::Shader &shader) {
@@ -1291,7 +1293,7 @@ void CApp::OnInit() {
 			LoadPreset(std::nullopt);
 		});
 		// TODO: Add setting to change radiation function (circle, centered horizontal line (iTunes-style), etc.)
-		menu.SetOnEffectRadiationChanged([this](float effectRadiation) {
+		menu->SetOnEffectRadiationChanged([this](float effectRadiation) {
 			Settings::settings.SetEffectRadiation(effectRadiation);
 
 			this->context->With("blur"_hash, [effectRadiation](Context::Shader &shader) {
@@ -1301,7 +1303,7 @@ void CApp::OnInit() {
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnEffectHorizontalSpreadChanged([this](float effectHorizontalSpread) {
+		menu->SetOnEffectHorizontalSpreadChanged([this](float effectHorizontalSpread) {
 			Settings::settings.SetEffectHorizontalSpread(effectHorizontalSpread);
 
 			this->context->With("blur"_hash, [effectHorizontalSpread](Context::Shader &shader) {
@@ -1311,7 +1313,7 @@ void CApp::OnInit() {
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnEffectVerticalSpreadChanged([this](float effectVerticalSpread) {
+		menu->SetOnEffectVerticalSpreadChanged([this](float effectVerticalSpread) {
 			Settings::settings.SetEffectVerticalSpread(effectVerticalSpread);
 
 			this->context->With("blur"_hash, [effectVerticalSpread](Context::Shader &shader) {
@@ -1321,7 +1323,7 @@ void CApp::OnInit() {
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnEffectRotationChanged([this](float effectRotation) {
+		menu->SetOnEffectRotationChanged([this](float effectRotation) {
 			Settings::settings.SetEffectRotation(effectRotation);
 
 			this->context->With("blur"_hash, [effectRotation](Context::Shader &shader) {
@@ -1331,7 +1333,7 @@ void CApp::OnInit() {
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnLimitFramerateChanged([this](bool limitFramerate) {
+		menu->SetOnLimitFramerateChanged([this](bool limitFramerate) {
 			Settings::settings.SetLimitFramerate(limitFramerate);
 
 			if (limitFramerate)
@@ -1339,12 +1341,12 @@ void CApp::OnInit() {
 			else
 				frameLimit = -1;
 		});
-		menu.SetOnFrameLimitChanged([this](int frameLimit) {
+		menu->SetOnFrameLimitChanged([this](int frameLimit) {
 			Settings::settings.SetFrameLimit(frameLimit);
 
 			this->frameLimit = frameLimit;
 		});
-		menu.SetOnRandomizeChanged([this](bool randomize) {
+		menu->SetOnRandomizeChanged([this](bool randomize) {
 			Settings::settings.SetRandomize(randomize);
 
 			if (randomize)
@@ -1352,7 +1354,7 @@ void CApp::OnInit() {
 			else
 				randomizeTime = std::nullopt;
 		});
-		menu.SetOnRandomizeTimeChanged([this](float randomizeTime) {
+		menu->SetOnRandomizeTimeChanged([this](float randomizeTime) {
 			this->randomizeTime = Duration<Microseconds>(
 				std::chrono::duration<double>(
 					static_cast<double>(randomizeTime)
@@ -1363,16 +1365,16 @@ void CApp::OnInit() {
 				*this->randomizeTime
 			);
 		});
-		menu.SetOnScaleChanged([this](float scale) {
+		menu->SetOnScaleChanged([this](float scale) {
 			SetVisualizerScale(scale);
 
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnSelectedPresetsChanged([this](const std::set<std::size_t> &selectedPresets) {
+		menu->SetOnSelectedPresetsChanged([this](const std::set<std::size_t> &selectedPresets) {
 			Settings::settings.SetSelectedPresets(selectedPresets);
 		});
-		menu.SetOnRandomizePresetsChanged([this](bool randomizePresets) {
+		menu->SetOnRandomizePresetsChanged([this](bool randomizePresets) {
 			Settings::settings.SetRandomizePresets(randomizePresets);
 
 			if (randomizePresets)
@@ -1380,7 +1382,7 @@ void CApp::OnInit() {
 			else
 				randomizePresetsTime = std::nullopt;
 		});
-		menu.SetOnRandomizePresetsTimeChanged([this](float randomizePresetsTime) {
+		menu->SetOnRandomizePresetsTimeChanged([this](float randomizePresetsTime) {
 			this->randomizePresetsTime = Duration<Microseconds>(
 				std::chrono::duration<double>(
 					static_cast<double>(randomizePresetsTime)
@@ -1391,7 +1393,7 @@ void CApp::OnInit() {
 				*this->randomizePresetsTime
 			);
 		});
-		menu.SetOnRandomizePresetsByBeatChanged([this](bool randomizePresetsByBeats) {
+		menu->SetOnRandomizePresetsByBeatChanged([this](bool randomizePresetsByBeats) {
 			Settings::settings.SetRandomizePresetsByBeats(randomizePresetsByBeats);
 
 			if (randomizePresetsByBeats) {
@@ -1399,38 +1401,38 @@ void CApp::OnInit() {
 				UpdateBeatCounter();
 			} else randomizePresetsBeats = std::nullopt;
 		});
-		menu.SetOnRandomizePresetsBeatsChanged([this](int randomizePresetsBeats) {
+		menu->SetOnRandomizePresetsBeatsChanged([this](int randomizePresetsBeats) {
 			Settings::settings.SetRandomizePresetsBeats(randomizePresetsBeats);
 
 			this->randomizePresetsBeats = randomizePresetsBeats;
 
 			UpdateBeatCounter();
 		});
-		menu.SetOnResetRotation([this] {
+		menu->SetOnResetRotation([this] {
 			frameCount = 0;
 			SetRotating(false);
 
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnClearBlurFbo([this] {
+		menu->SetOnClearBlurFbo([this] {
 			ClearBlurFbo();
 		});
-		menu.SetOnResetWindow([this] {
+		menu->SetOnResetWindow([this] {
 			ResetWindow();
 		});
-		menu.SetOnQuit([this] {
+		menu->SetOnQuit([this] {
 			SDL_Event event;
 			event.type = SDL_EVENT_QUIT;
 			SDL_PushEvent(&event);
 		});
-		menu.SetOnRandom([this] {
+		menu->SetOnRandom([this] {
 			LoadPreset(Preset::Random(dynamicGain));
 		});
-		menu.SetOnAutoFadeChanged([this](bool autoFade) {
+		menu->SetOnAutoFadeChanged([this](bool autoFade) {
 			Settings::settings.SetAutoFade(autoFade);
 		});
-		menu.SetOnWaitTimeChanged([this](float waitTime) {
+		menu->SetOnWaitTimeChanged([this](float waitTime) {
 			auto duration = Duration<Microseconds>(
 				std::chrono::duration<double>(waitTime)
 			);
@@ -1438,20 +1440,20 @@ void CApp::OnInit() {
 			Settings::settings.SetWaitTime(duration);
 			controls.SetWaitTime(duration);
 		});
-		menu.SetOnAutoFadeSpeedChanged([this](float autoFadeSpeed) {
+		menu->SetOnAutoFadeSpeedChanged([this](float autoFadeSpeed) {
 			Settings::settings.SetAutoFadeSpeed(autoFadeSpeed);
 			controls.SetAutoFadeSpeed(autoFadeSpeed);
 		});
-		menu.SetOnExclusiveChanged([this](bool exclusive) {
+		menu->SetOnExclusiveChanged([this](bool exclusive) {
 			ToggleExclusive();
 		});
-		menu.SetOnExclusiveVolumeChanged([this](int volume) {
+		menu->SetOnExclusiveVolumeChanged([this](int volume) {
 			controls.GetVolume().SetVolume(volume);
 		});
-		menu.SetOnHalveBpmChanged([this](bool halveBpm) {
+		menu->SetOnHalveBpmChanged([this](bool halveBpm) {
 			Settings::settings.SetHalveBpm(halveBpm);
 		});
-		menu.SetOnRendererOffsetChanged([this](int rendererOffset) {
+		menu->SetOnRendererOffsetChanged([this](int rendererOffset) {
 			Settings::settings.SetRendererOffset(rendererOffset);
 
 			renderer->SetOffset(rendererOffset);
@@ -1459,39 +1461,39 @@ void CApp::OnInit() {
 			// We deviated from a preset
 			LoadPreset(std::nullopt);
 		});
-		menu.SetOnLutChanged([this](const std::string &lut) {
+		menu->SetOnLutChanged([this](const std::string &lut) {
 			Settings::settings.SetLut(lut);
 
 			albumArt.GetCube()->Load(Utils::GetResource(std::filesystem::path("LUTs") / lut));
 		});
-		menu.SetOnAlbumArtGammaChanged([this](float gamma) {
+		menu->SetOnAlbumArtGammaChanged([this](float gamma) {
 			Settings::settings.SetAlbumArtGamma(gamma);
 
 			this->context->With("texture"_hash, [this, gamma](Context::Shader &shader) {
 				shader.program.Uniform1f("gamma"_hash, gamma);
 			});
 		});
-		menu.SetOnAlbumArtContrastChanged([this](float contrast) {
+		menu->SetOnAlbumArtContrastChanged([this](float contrast) {
 			Settings::settings.SetAlbumArtContrast(contrast);
 
 			this->context->With("texture"_hash, [this, contrast](Context::Shader &shader) {
 				shader.program.Uniform1f("contrast"_hash, contrast);
 			});
 		});
-		menu.SetOnAlbumArtBrightnessChanged([this](float brightness) {
+		menu->SetOnAlbumArtBrightnessChanged([this](float brightness) {
 			Settings::settings.SetAlbumArtBrightness(brightness);
 
 			this->context->With("texture"_hash, [this, brightness](Context::Shader &shader) {
 				shader.program.Uniform1f("brightness"_hash, brightness);
 			});
 		});
-		menu.SetOnHdrWhitePointChanged([this](std::optional<float> hdrWhitePoint) {
+		menu->SetOnHdrWhitePointChanged([this](std::optional<float> hdrWhitePoint) {
 			Settings::settings.SetHdrWhitePoint(hdrWhitePoint);
 
 			if (hdrWhitePoint)
 				HDR::SetWhiteLevel(*hdrWhitePoint);
 		});
-		menu.SetOnRescanAlbumArt([this] {
+		menu->SetOnRescanAlbumArt([this] {
 			if (loadedFile.empty()) return;
 
 			LogDebug("Re-scanning for album art...");
@@ -1518,43 +1520,43 @@ void CApp::OnInit() {
 
 			albumArt.Scale();
 		});
-		menu.SetOnPulseUiChanged([this](bool pulseUi) {
+		menu->SetOnPulseUiChanged([this](bool pulseUi) {
 			Settings::settings.SetPulseUi(pulseUi);
 
 			if (!pulseUi) {
-				albumArt.RemoveColorChangeListener(&menu);
-				menu.OnColorChanged(visColor);
+				albumArt.RemoveColorChangeListener(menu.get());
+				menu->OnColorChanged(visColor);
 			} else {
-				albumArt.AddColorChangeListener(&menu);
-				menu.OnColorChanged(GetColor());
+				albumArt.AddColorChangeListener(menu.get());
+				menu->OnColorChanged(GetColor());
 			}
 		});
-		menu.SetOnUiGammaChanged([this](float uiGamma) {
+		menu->SetOnUiGammaChanged([this](float uiGamma) {
 			Settings::settings.SetUiGamma(uiGamma);
 
 			this->uiGamma = uiGamma;
 		});
-		menu.SetOnUiContrastChanged([this](float uiContrast) {
+		menu->SetOnUiContrastChanged([this](float uiContrast) {
 			Settings::settings.SetUiContrast(uiContrast);
 
 			this->uiContrast = uiContrast;
 		});
-		menu.SetOnUiBrightnessChanged([this](float uiBrightness) {
+		menu->SetOnUiBrightnessChanged([this](float uiBrightness) {
 			Settings::settings.SetUiBrightness(uiBrightness);
 
 			this->uiBrightness = uiBrightness;
 		});
-		menu.SetOnPulseMaxBrightnessChanged([this](bool pulseMaxBrigtness) {
+		menu->SetOnPulseMaxBrightnessChanged([this](bool pulseMaxBrigtness) {
 			Settings::settings.SetPulseMaxBrightness(pulseMaxBrigtness);
 
 			this->pulseMaxBrightness = HDR::Enabled && pulseMaxBrigtness;
 		});
-		menu.SetOnVsyncChanged([this](bool vsync) {
+		menu->SetOnVsyncChanged([this](bool vsync) {
 			Settings::settings.SetVsync(vsync);
 			
 			UpdateVsync();
 		});
-		menu.SetOnPlaylistItemChanged([this](std::size_t index) {
+		menu->SetOnPlaylistItemChanged([this](std::size_t index) {
 			if (auto track = controls.GetPlaylist().TrackAtIndex(index)) {
 				const auto next = controls.GetPlaylist().GetNext();
 
@@ -1569,18 +1571,18 @@ void CApp::OnInit() {
 					SeekTo(track->startTime);
 			}
 		});
-		menu.SetOnRngSourceChanged([this](const std::string &rngSource) {
+		menu->SetOnRngSourceChanged([this](const std::string &rngSource) {
 			Settings::settings.SetRngSource(rngSource);
 
 			prng = PRNGFactory<unsigned int>::Build(rngSource, &streamHandle);
 		});
-		menu.SetOnMiniPlayerChanged([this](bool miniPlayer) {
+		menu->SetOnMiniPlayerChanged([this](bool miniPlayer) {
 			SetMiniPlayer(miniPlayer, true);
 		});
 
-		platform->AddMenuCallbacks(&menu);
+		platform->AddMenuCallbacks(menu.get());
 
-		menu.OnColorChanged(visColor);
+		menu->OnColorChanged(visColor);
 #endif
 	} else {
 		LogError("Could not create OpenGL context: ", platform->GetOpenGlContextError());
@@ -1659,7 +1661,7 @@ void CApp::OnInit() {
 	close.OnInit(controls.GetIconSize());
 
 #if GUI
-	albumArt.AddColorChangeListener(&menu);
+	albumArt.AddColorChangeListener(menu.get());
 #endif
 	albumArt.AddColorChangeListener(this);
 	albumArt.AddColorChangeListener(&close);
@@ -1813,7 +1815,7 @@ void CApp::OnResize(int width, int height, float scale, bool force) {
 
 	// We want the menu to be a bit easier to touch
 	// on the Steam Deck, so we enlarge it
-	menu.OnResize(
+	menu->OnResize(
 		width,
 		height,
 		steamDeck ? 1.33f * originalScale : originalScale
@@ -2468,10 +2470,10 @@ inline void CApp::SwapBuffers(const Delta &time) {
 
 		// Keep the controls on screen if a menu is open
 		context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, 1.0f);
-		if (!miniPlayer && menu.OnLoop(lightPack, controls, albumArt, *context, dynamicGain))
+		if (!miniPlayer && menu->OnLoop(lightPack, controls, albumArt, *context, dynamicGain))
 			controls.Fade(true);
 
-		if (menu.HasColorChanged() && updateUi == 0)
+		if (menu->HasColorChanged() && updateUi == 0)
 			updateUi = 1;
 
 		// Keep the UI in an FBO and only update it as needed
@@ -2499,7 +2501,7 @@ inline void CApp::SwapBuffers(const Delta &time) {
 		} else ImGui::EndFrame();
 
 		if (HDR::Enabled) {
-			context->Color(1.0f, 1.0f, 1.0f, (menu.IsPresetPopupVisible() ? 1.0f : 0.98f) * controls.GetAlpha());
+			context->Color(1.0f, 1.0f, 1.0f, (menu->IsPresetPopupVisible() ? 1.0f : 0.98f) * controls.GetAlpha());
 
 			context->GetShaderProgram().Uniform1i("hdr"_hash, true);
 
@@ -2518,7 +2520,7 @@ inline void CApp::SwapBuffers(const Delta &time) {
 			context->With("blit"_hash, [this](Context::Shader &shader) {
 				shader.program.Uniform1f("yOffset"_hash, -windowHeight);
 			});
-		} else context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, (menu.IsPresetPopupVisible() ? 1.0f : 0.90f) * controls.GetAlpha());
+		} else context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, (menu->IsPresetPopupVisible() ? 1.0f : 0.90f) * controls.GetAlpha());
 
 		if (vulkan) {
 			context->With("blit"_hash, [this](Context::Shader &shader) {
@@ -2621,7 +2623,7 @@ void CApp::OnDestroy(bool includingLog) {
 	// Make sure to free our shader resources
 	context.reset();
 
-	menu.OnDestroy();
+	menu->OnDestroy();
 
 #if GUI
 	ImGui_ImplOpenGL3_Shutdown();
@@ -3088,7 +3090,7 @@ void CApp::SetColor(int r, int g, int b) {
 		overrideColor = true;
 
 	OnColorChanged(visColor);
-	menu.OnColorChanged(visColor);
+	menu->OnColorChanged(visColor);
 }
 
 void CApp::SetDecayTime(Duration<Microseconds> time) {

@@ -188,6 +188,8 @@ void Linux::OnInit(Interop::InitArgs args, Context &context) {
 
 	if (app->GetVulkan())
 		Desktop::OnInit(args, context);
+
+	GetDefaultDevice();
 }
 
 void Linux::OnResize(int windowWidth, int windowHeight) {
@@ -350,8 +352,6 @@ bool Linux::OpenExclusive(const std::filesystem::path &path, const std::string &
 
 		BASS_Free();
 		
-		GetDefaultDevice();
-		
 		pw_init(&argc, nullptr);
 
 		pwData.loop = pw_thread_loop_new("popRocks Exclusive Audio Thread", nullptr);
@@ -370,6 +370,10 @@ bool Linux::OpenExclusive(const std::filesystem::path &path, const std::string &
 		streamEvents.state_changed = &Linux::PipeWireStateChanged;
 		streamEvents.process = &Linux::PipeWireProcess;
 
+		const auto &targetSinkName = Settings::settings.GetOutputDevice().empty() ?
+			defaultSinkName :
+			Settings::settings.GetOutputDevice();
+
 		pwData.stream = pw_stream_new_simple(
 			pw_thread_loop_get_loop(pwData.loop),
 			"popRocks Visualizer",
@@ -379,7 +383,7 @@ bool Linux::OpenExclusive(const std::filesystem::path &path, const std::string &
 				PW_KEY_MEDIA_ROLE, "Music",
 				PW_KEY_NODE_EXCLUSIVE, "true",
 				PW_KEY_NODE_DONT_RECONNECT, "true",
-				PW_KEY_NODE_TARGET, defaultSinkName.c_str(),
+				PW_KEY_NODE_TARGET, targetSinkName.c_str(),
 				NULL
 			),
 			&streamEvents,
@@ -402,8 +406,16 @@ bool Linux::OpenExclusive(const std::filesystem::path &path, const std::string &
 		pw_thread_loop_unlock(pwData.loop);
 
 		if (ret >= 0) {
+			const auto start = std::chrono::system_clock::now();
+			
 			while (streamState != PW_STREAM_STATE_STREAMING &&
-				   streamState != PW_STREAM_STATE_UNCONNECTED);
+				   streamState != PW_STREAM_STATE_UNCONNECTED) {
+				// Timeout after 1s
+				if (const auto now = std::chrono::system_clock::now(); now - start > 1s) {
+					streamState = PW_STREAM_STATE_UNCONNECTED;
+					ShowDialogBox("Could not initialize exclusive mode!", "Timed out waiting for device.");
+				}
+			}
 
 			if (streamState != PW_STREAM_STATE_UNCONNECTED) {
 				BASS_Init(
@@ -666,15 +678,15 @@ std::optional<Vector2i> Linux::SetWindowPos(int x, int y, int width, int height)
 // ------------------ CApp Helpers ---------------------
 // -----------------------------------------------------
 bool Linux::OnMouseClicked(const Vector2i &mousePos) {
-	return false;
-}
-
-bool Linux::OnMouseDown(const Vector2i &mousePos) {
 	if (auto toggled = app->GetControls().GetExclusiveIndicator().OnMouseClicked(mousePos)) {
 		app->ToggleExclusive();
 		return true;
 	}
 
+	return false;
+}
+
+bool Linux::OnMouseDown(const Vector2i &mousePos) {
 	return false;
 }
 
@@ -688,6 +700,24 @@ int Linux::GetDefaultFramebuffer() {
 // -----------------------------------------------------
 // ------------------ Exclusive Mode -------------------
 // -----------------------------------------------------
+bool Linux::LoadExclusive(double pos) {
+	if (app->GetControls().GetExclusiveIndicator().IsExclusive()) {
+		// Since this is only called when switching audio devices,
+		// force a reinitialization on the new device
+		if (exclusiveChannelInfo.freq != 0)
+			exclusiveChannelInfo.freq = 1; // 0 is considered totally unloaded
+
+		if (app->Open(app->GetLoadedFile(), app->GetLoadedFileExtension(), true, app->GetStreamHandle(), app->GetVisualStreamHandle(), true)) {
+			app->SeekTo(pos);
+			app->SetPlaying(true);
+
+			return true;
+		}
+	}
+
+	return false;
+}
+
 bool Linux::StopPlayingExclusive() {
 	if (app->GetControls().GetExclusiveIndicator().IsExclusive()) {
 		const auto active = streamState == PW_STREAM_STATE_PAUSED;
@@ -732,6 +762,45 @@ std::size_t Linux::GetAvailable() const {
 		(exclusiveChannelInfo.freq / 1000.0) * // (mono) samples per millisecond
 		exclusiveChannelInfo.chans * // total channels
 		sizeof(float); // sample size
+}
+
+// -----------------------------------------------------
+// ---------------------- Audio ------------------------
+// -----------------------------------------------------
+std::map<std::string, Platform::OutputDevice> Linux::GetOutputDevices() {
+	return outputDevices;
+}
+
+bool Linux::GetOutputDeviceIndex(int &index, const std::string &device) {
+	auto iter = outputDevices.begin();
+
+	OutputDevice *sink = nullptr;
+	for(; iter != outputDevices.end(); ++iter) {
+		if (iter->second.name == device) {
+			sink = &iter->second;
+			break;
+		}
+	}
+
+	if (!sink) return false;
+
+	// Let BASS handle the default
+	// device normally
+	if (sink->isDefault) {
+		index = -1;
+		return true;
+	}
+
+	BASS_DEVICEINFO info;
+
+	for (; index != -1 && BASS_GetDeviceInfo(index, &info); ++index) {
+		if (strlen(info.driver) && 
+			strncmp(info.driver, sink->driver.c_str(), std::min(strlen(info.driver), sink->driver.size())) == 0) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 // -----------------------------------------------------
@@ -1487,16 +1556,32 @@ void Linux::PulseAudioGetServerInfoCallback(
 	const pa_server_info *i,
 	void *data
 ) {
-	auto [platform, mainloop] = *reinterpret_cast<std::pair<Linux*, pa_mainloop*>*>(data);
-
     if (i && i->default_sink_name) {
-		platform->GetDefaultSinkName() = 
+		reinterpret_cast<Linux*>(data)->GetDefaultSinkName() = 
 			std::string(
 				i->default_sink_name, 
 				i->default_sink_name + strlen(i->default_sink_name)
 			);
     }
-    pa_mainloop_quit(mainloop, 0);
+}
+
+void Linux::AddOutputDevice(const std::string &description, const std::string &name, const std::string &driver) {
+	outputDevices[description] = OutputDevice{
+		name,
+		driver,
+		name == defaultSinkName
+	};
+}
+
+void Linux::PulseAudioSinkListCallback(pa_context *c, const pa_sink_info *i, int eol, void *data) {
+	if (eol > 0 || !i) return;
+	// hw:{alsa.card},{alsa.device}
+	const char *card = pa_proplist_gets(i->proplist, "alsa.card");
+	const char *device = pa_proplist_gets(i->proplist, "alsa.device");
+
+	const auto driver = std::string("hw:") + card + "," + device;
+
+	reinterpret_cast<Linux*>(data)->AddOutputDevice(i->description, i->name, driver);
 }
 
 void Linux::GetDefaultDevice() {
@@ -1513,18 +1598,36 @@ void Linux::GetDefaultDevice() {
 		pa_mainloop_iterate(mainloop, 1, NULL);
 	
 	if (contextState == 1) {
-		std::pair<Linux*, pa_mainloop*> data(this, mainloop);
-		pa_context_get_server_info(
+		pa_operation *op = pa_context_get_server_info(
 			context,
 			PulseAudioGetServerInfoCallback,
-			&data
+			this
 		);
 
 		pa_mainloop_iterate(mainloop, 1, NULL);
+
+		while(pa_operation_get_state(op) == PA_OPERATION_RUNNING)
+			pa_mainloop_iterate(mainloop, 1, NULL);
+
+		pa_operation_unref(op);
+ 
+		outputDevices.clear();
+
+		op = pa_context_get_sink_info_list(
+			context,
+			PulseAudioSinkListCallback,
+			this
+		);
+
+		pa_mainloop_iterate(mainloop, 1, NULL);
+		
+		while (pa_operation_get_state(op) == PA_OPERATION_RUNNING)
+			pa_mainloop_iterate(mainloop, 1, NULL);
+
+		pa_operation_unref(op);
 	}
 
-	while(defaultSinkName.empty())
-		pa_mainloop_iterate(mainloop, 1, NULL);
+	pa_mainloop_quit(mainloop, 0);
 	
 	pa_context_disconnect(context);
 	pa_context_unref(context);

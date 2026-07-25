@@ -103,6 +103,10 @@ bool Platform::PlayAfterLoad() {
 	return true; 
 }
 
+std::map<std::string, Platform::OutputDevice> Platform::GetOutputDevices() {
+	return {{}};
+}
+
 // Mouse pointer
 bool Platform::IsPointerInWindow() const {
 	return true;

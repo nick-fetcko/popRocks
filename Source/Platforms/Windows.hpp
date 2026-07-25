@@ -111,6 +111,7 @@ public:
 	
 	// Audio
 	void Unmute() override;
+	std::map<std::string, OutputDevice> GetOutputDevices() override;
 
 	// Window Management
 	void HookWindow(bool miniPlayer) override;
@@ -120,7 +121,7 @@ public:
 
 protected:
 	// Polymorphic helper for GetDeviceIndex<Output>
-	bool GetDeviceIndex(int &index, const std::string &device) override;
+	bool GetInputDeviceIndex(int &index, const std::string &device) override;
 
 private:
 	static bool Register();

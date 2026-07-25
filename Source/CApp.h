@@ -186,7 +186,7 @@ public:
 
 	void UpdateVsync();
 
-	Menu &GetMenu() { return menu; }
+	std::unique_ptr<Menu> &GetMenu() { return menu; }
 
 	std::unique_ptr<MultisampledFramebufferObject> &GetBlurFbo() { return blurFbo; }
 	void SetBlurFbo(std::unique_ptr<MultisampledFramebufferObject> &&blurFbo) { this->blurFbo = std::move(blurFbo); }
@@ -397,7 +397,7 @@ private:
 	std::unique_ptr<MultisampledFramebufferObject> blurFbo;
 	std::unique_ptr<MultisampledFramebufferObject> lastFrame;
 
-	Menu menu;
+	std::unique_ptr<Menu> menu;
 
 	uint8_t updateUi = 0;
 

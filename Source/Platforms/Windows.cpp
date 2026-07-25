@@ -1062,8 +1062,27 @@ void Windows::Unmute() {
 	}
 }
 
+std::map<std::string, Platform::OutputDevice> Windows::GetOutputDevices() {
+	std::map<std::string, OutputDevice> ret;
+
+	BASS_DEVICEINFO info;
+	for (int i = 1; BASS_GetDeviceInfo(i, &info); ++i) {
+		if ((info.flags & BASS_DEVICE_ENABLED) && // // device is enabled
+			strlen(info.driver)) { // device has a driver (this excludes the "Default" device without dealing with i18n)
+			ret[info.name] = 
+				OutputDevice{
+					info.driver,
+					info.driver,
+					static_cast<bool>(info.flags & BASS_DEVICE_DEFAULT)
+				};
+		}
+	}
+
+	return ret;
+}
+
 // Polymorphic helper for GetDeviceIndex<Output>
-bool Windows::GetDeviceIndex(int &index, const std::string &device) {
+bool Windows::GetInputDeviceIndex(int &index, const std::string &device) {
 	BASS_WASAPI_DEVICEINFO info;
 
 	for (; index != -1 && BASS_WASAPI_GetDeviceInfo(index, &info); ++index) {

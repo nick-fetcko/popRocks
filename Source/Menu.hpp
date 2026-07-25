@@ -27,11 +27,13 @@
 #include "Preset.hpp"
 #include "PRNG.hpp"
 
+#include "Platforms/Platform.hpp"
+
 using namespace Fetcko;
 
 class Menu : public LoggableClass, public ColorChangeListener {
 public:
-	Menu(const std::string fontRoot = "KurintoSans") : FontRoot(fontRoot) {
+	Menu(const std::unique_ptr<Platform> &platform, const std::string fontRoot = "KurintoSans") : platform(platform), FontRoot(fontRoot) {
 #ifndef __ANDROID__
 		NFD_Init();
 #endif
@@ -1242,19 +1244,16 @@ public:
 			}
 
 			if (ImGui::BeginMenu("Output device")) {
-				BASS_DEVICEINFO info;
 				const auto &outputDevice = Settings::settings.GetOutputDevice();
-				for (int i = 1; BASS_GetDeviceInfo(i, &info); ++i) {
-					if ((info.flags & BASS_DEVICE_ENABLED) && // // device is enabled
-						strlen(info.driver)) { // device has a driver (this excludes the "Default" device without dealing with i18n)
-						bool selected = 
-							(!outputDevice.empty() && strncmp(info.driver, outputDevice.c_str(), std::min(strlen(info.driver), outputDevice.size())) == 0) ||
-							 (outputDevice.empty() && (info.flags & BASS_DEVICE_DEFAULT));
 
-						if (ImGui::MenuItem(info.name, nullptr, &selected)) {
-							if (onOutputDeviceChanged)
-								onOutputDeviceChanged(std::string(info.driver, info.driver + strlen(info.driver)));
-						}
+				for (const auto &[description, device] : platform->GetOutputDevices()) {
+					bool selected = 
+						(!outputDevice.empty() && device.name == outputDevice) ||
+						(outputDevice.empty() && device.isDefault);
+
+					if (ImGui::MenuItem(description.c_str(), nullptr, &selected)) {
+						if (onOutputDeviceChanged)
+							onOutputDeviceChanged(device.name);
 					}
 				}
 
@@ -1822,4 +1821,6 @@ private:
 	bool miniPlayer = Settings::settings.GetMiniPlayer();
 
 	bool availableInMiniPlayer = false;
+
+	const std::unique_ptr<Platform> &platform;
 };

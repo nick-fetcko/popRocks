@@ -97,9 +97,13 @@ public:
 	int GetDefaultFramebuffer() override;
 	
 	// Exclusive mode
+	bool LoadExclusive(double pos) override;
 	bool StopPlayingExclusive() override;
 	bool StartPlayingExclusive(bool fromPlaylist, bool fileLoaded, bool advanceOnNextLoop) override;
 	std::size_t GetAvailable() const override;
+
+	// Audio
+	std::map<std::string, OutputDevice> GetOutputDevices() override;
 
 	// Mouse pointer
 	bool IsPointerInWindow() const override;
@@ -192,13 +196,17 @@ public:
 
 	static void PulseAudioContextStateCallback(pa_context *c, void *data);
 	static void PulseAudioGetServerInfoCallback(pa_context *c, const pa_server_info *i, void *data);
+	static void PulseAudioSinkListCallback(pa_context *c, const pa_sink_info *i, int eol, void *data);
 
 	static void PipeWireProcess(void *data);
 	static void PipeWireStateChanged(void *data, pw_stream_state old, pw_stream_state state, const char *error);
 
+	void AddOutputDevice(const std::string &description, const std::string &name, const std::string &driver);
+	
 protected:
-	// Polymorphic helper for GetDeviceIndex<Output>
-	bool GetDeviceIndex(int &index, const std::string &device) override { return false; }
+	// Polymorphic helpers for GetDeviceIndex<Output>
+	bool GetOutputDeviceIndex(int &index, const std::string &device) override;
+	bool GetInputDeviceIndex(int &index, const std::string &device) override { return false; }
 
 private:
     static bool Register();
@@ -219,6 +227,8 @@ private:
 	bool resizing = false;
 
 	std::string lastTempFile;
+
+	std::map<std::string, OutputDevice> outputDevices;
 
 	// =====================================================
 	// ===================== Wayland =======================

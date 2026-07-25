@@ -146,6 +146,13 @@ public:
 	virtual void Unmute();
 	virtual bool PlayAfterLoad();
 
+	struct OutputDevice {
+		std::string name;
+		std::string driver;
+		bool isDefault = false;
+	};
+	virtual std::map<std::string, OutputDevice> GetOutputDevices();
+
 	// Mouse pointer
 	virtual bool IsPointerInWindow() const;
 
@@ -205,8 +212,15 @@ public:
 					break;
 				}
 			}
+
+			if (!found) {
+				// Reset index and try the platform-specific
+				// implementation
+				index = device.empty() ? -1 : 1;
+				found = GetOutputDeviceIndex(index, device);
+			}
 		} else {
-			found = GetDeviceIndex(index, device);
+			found = GetInputDeviceIndex(index, device);
 		}
 
 		// Reset to default device if we can't find
@@ -224,8 +238,9 @@ public:
 	}
 
 protected:
-	// Polymorphic helper for GetDeviceIndex<Output>
-	virtual bool GetDeviceIndex(int &index, const std::string &device) = 0;
+	// Polymorphic helpers for GetDeviceIndex<Output>
+	virtual bool GetOutputDeviceIndex(int &index, const std::string &device) { return false; }
+	virtual bool GetInputDeviceIndex(int &index, const std::string &device) = 0;
 
 	CApp *app = nullptr;
 
