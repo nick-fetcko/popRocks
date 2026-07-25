@@ -30,7 +30,7 @@ GenericName=popRocks
 Comment=An audiovisual music player, with an emphasis on the visual
 MimeType=audio/mpeg
 Path=${POPROCKS_PATH}
-Exec=popRocks
+Exec=${POPROCKS_PATH}/popRocks
 Type=Application
 Terminal=false
 Categories=AudioVideo;Audio
@@ -100,6 +100,7 @@ void Linux::OnInit(Interop::InitArgs args, Context &context) {
 			desktopPath /= "popRocks.desktop";
 
 			const auto pathStart = DesktopFileTemplate.find(PathPlaceholder);
+			const auto path2Start = DesktopFileTemplate.find(PathPlaceholder, pathStart + PathPlaceholder.length());
 			const auto iconStart = DesktopFileTemplate.find(IconPlaceholder);
 
 			std::string desktopFileContents =
@@ -113,6 +114,14 @@ void Linux::OnInit(Interop::InitArgs args, Context &context) {
 			desktopFileContents += 
 				std::string(
 					DesktopFileTemplate.begin() + pathStart + PathPlaceholder.length(),
+					DesktopFileTemplate.begin() + path2Start
+				);
+
+			desktopFileContents += basePath;
+
+			desktopFileContents += 
+				std::string(
+					DesktopFileTemplate.begin() + path2Start + PathPlaceholder.length(),
 					DesktopFileTemplate.begin() + iconStart
 				);
 
