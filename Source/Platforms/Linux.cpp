@@ -1448,6 +1448,8 @@ void Linux::PipeWireProcess(void *data) {
 
 	const auto length = frames * stride;
 
+	std::unique_lock lock(platform->GetApp()->GetStreamHandleMutex());
+
 	if (!platform->GetApp()->GetStreamHandle())
 		return;
 
@@ -1456,10 +1458,12 @@ void Linux::PipeWireProcess(void *data) {
 	DWORD c = 
 		BASS_ChannelGetData(platform->GetApp()->GetStreamHandle(), dst, length);
 
-	if (c < length || c == static_cast<DWORD>(-1)) {
+	if (c == static_cast<DWORD>(-1))
+		c = 0;
+
+	if (c < length) {
 		if (auto next = platform->GetApp()->GetNextStreamHandle(); next) {
 			DWORD c2 = BASS_ChannelGetData(next, &reinterpret_cast<uint8_t*>(dst)[c], length - c - 1);
-
 			if (c2 == 0 || c2 == static_cast<DWORD>(-1)) {
 				done = true;
 

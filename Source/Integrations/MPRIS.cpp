@@ -233,13 +233,15 @@ void MPRIS::OnSongChanged(
 	const std::string &artist,
 	const std::string &album,
 	const std::filesystem::path &externalArt,
-	const int64_t length // in microseconds
+	const int64_t length, // in microseconds
+	bool hasArt
 ) {
 	this->hash = hash;
 	this->artist = artist;
 	this->title = title;
 	this->album = album;
-	this->externalArt = externalArt;
+	if (hasArt)
+		this->externalArt = externalArt;
 	this->length = length;
 
 	PropertyChanged("Metadata", GetMetadata());

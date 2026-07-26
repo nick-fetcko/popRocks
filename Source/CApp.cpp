@@ -2870,6 +2870,8 @@ void CApp::PlaylistLoaded(std::filesystem::path path, std::string extension, std
 
 			Open(path, extension, controls.GetExclusiveIndicator().IsExclusive(), this->streamHandle, this->visualStreamHandle, !fromPlaylist);
 		} else if (advanceOnNextLoop) {
+			std::unique_lock lock(streamHandleMutex);
+
 			BASS_StreamFree(this->streamHandle);
 			BASS_StreamFree(this->visualStreamHandle);
 			this->streamHandle = nextStreamHandle;
@@ -2900,6 +2902,24 @@ void CApp::PlaylistLoaded(std::filesystem::path path, std::string extension, std
 		if (controls.GetPlaylist().Empty()) {
 			controls.GetPlaylist().AddFile(path);
 			controls.GetPlaylist().AddItem(controls.GetTitle(), 0, controls.GetTitle());
+		}
+
+		// Update the metadata we can before album
+		// art load
+		for (auto integration : integrations) {
+			integration->OnSongChanged(
+				beatDetect->GetHash(),
+				controls.GetTitle(),
+				controls.GetArtist(),
+				controls.GetAlbum(),
+				"",
+				std::chrono::duration_cast<std::chrono::microseconds>(
+					std::chrono::duration<double>(
+						controls.GetCurrentSongLength()
+					)
+				).count(),
+				false
+			);
 		}
 
 		// Always look for external art,

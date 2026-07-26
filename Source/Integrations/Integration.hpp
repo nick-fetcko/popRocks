@@ -26,7 +26,8 @@ public:
 		const std::string &artist,
 		const std::string &album,
 		const std::filesystem::path &externalArt,
-		const int64_t length // in microseconds
+		const int64_t length, // in microseconds
+		bool hasArt = true
 	) = 0;
 
 	virtual void OnPlay() = 0;
