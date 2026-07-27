@@ -235,7 +235,16 @@ float CApp::GetScale(SDL_Window *window, int *w, int *h) {
 	safeAreaPadding = context->GetSafeArea().y;
 	scale = (virtualW == 0 ? 1.0f : static_cast<float>(*w) / virtualW);
 
+#ifndef __linux__
 	scale *= SDL_GetWindowDisplayScale(window);
+#else
+	// mini-player requires unscaled
+	// values to update window shape
+	if (miniPlayer) {
+		*w /= scale;
+		*h /= scale;
+	}
+#endif
 
 	if (scale != originalScale)
 		scaleDelta = scale - originalScale;
@@ -732,14 +741,14 @@ void CApp::SetMiniPlayer(bool miniPlayer, bool inLoop) {
 		if (!vulkan)
 			SDL_GL_MakeCurrent(sdlWindow, openGlContext);
 
+		// Now that we've swapped the OpenGL
+		// context, destroy the old window
+		platform->DestroyWindow(oldWindow);
+
 		// Since the platform hasn't yet been given
 		// the new miniPlayer value, we need to
 		// explicitly pass it here.
 		platform->HookWindow(miniPlayer);
-
-		// Now that we've swapped the OpenGL
-		// context, destroy the old window
-		platform->DestroyWindow(oldWindow);
 
 		ImGui_ImplSDL3_InitForOpenGL(sdlWindow, openGlContext);
 		ImGui_ImplOpenGL3_Init();
@@ -1714,25 +1723,15 @@ void CApp::OnResize(int width, int height, float scale, bool force) {
 #endif
 		);
 	} else if (scaleDelta) {
-		const auto scaled = width + Settings::settings.GetMiniPlayerWidth() * *scaleDelta;
-		const auto delta = (scaled - width);
-
-		scaleDelta = std::nullopt;
-
-		windowWidth = scaled;
-		windowHeight = scaled;
-
-		platform->SetWindowPos(
-			windowX -= delta / 2,
-			windowY -= delta / 2,
-			scaled,
-			scaled
+		platform->HandleScaleDelta(
+			scale,
+			scaleDelta,
+			windowWidth,
+			windowHeight,
+			lastMousePos,
+			windowX,
+			windowY
 		);
-
-		if (lastMousePos) {
-			lastMousePos->x += delta / 2;
-			lastMousePos->y += delta / 2;
-		}
 	}
 
 	platform->OnResize(windowWidth, windowHeight);
@@ -1740,6 +1739,7 @@ void CApp::OnResize(int width, int height, float scale, bool force) {
 	glViewport(0, 0, windowWidth, windowHeight);
 
 	albumArt.OnResize(windowWidth, windowHeight, scale);
+
 	controls.OnResize(windowWidth, windowHeight, *context, scale,
 		platform->GetDefaultFramebuffer(),
 		miniPlayer
@@ -1974,6 +1974,9 @@ void CApp::OnLoop(const Delta &time) {
 		y -= windowY;
 #else
 		SDL_GetMouseState(&x, &y);
+		
+		x *= scale;
+		y *= scale;
 #endif
 
 		// Only show the controls if we're

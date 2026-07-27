@@ -182,8 +182,6 @@ void Linux::OnInit(Interop::InitArgs args, Context &context) {
 		}
 	}
 
-	HookWindow(miniPlayer);
-
 	HookKeyboard();
 
 	if (app->GetVulkan())
@@ -201,6 +199,15 @@ void Linux::OnResize(int windowWidth, int windowHeight) {
 			Desktop::OnResize(windowWidth, windowHeight);
 		}
 	}
+}
+
+void Linux::HandleScaleDelta(float scale, std::optional<float> &scaleDelta, int &width, int &height, std::optional<Vector2i> &lastMousePos, int &windowX, int &windowY) {
+	width = std::lround(width * scale);
+	height = std::lround(height * scale);
+
+	scaleDelta = std::nullopt;
+	
+	UpdateWindowShape();
 }
 
 void Linux::OnDestroy() {
@@ -837,8 +844,9 @@ void Linux::UpdateWindowShape() {
 
 	struct wl_region *region = wl_compositor_create_region(compositor);
 
-	const auto width = app->GetWindowSize().first;
-	const auto height = app->GetWindowSize().second;
+	// Input region is scale agnostic
+	const auto width = std::lround(app->GetWindowSize().first / app->GetScale());
+	const auto height = std::lround(app->GetWindowSize().second / app->GetScale());
 
 	LogDebug("Updating window shape based on window size of ", width, "x", height);
 
@@ -847,7 +855,8 @@ void Linux::UpdateWindowShape() {
 	memset(bitmap.data(), 0xFF, width * height * 3);
 #endif
 
-	const auto baseRadius = app->GetAlbumArt().GetRadius(true);
+	// Input region is scale agnostic
+	const auto baseRadius = std::lround(app->GetAlbumArt().GetRadius(true) / app->GetAlbumArt().GetScale());
 
 	// Rasterize album art circle
 	const auto radius = baseRadius + app->GetAlbumArt().GetOutline().GetWidth();
@@ -878,7 +887,13 @@ void Linux::UpdateWindowShape() {
 	}
 
 	// Drop a square down for the close box
-	const int32_t closeSize = app->GetControls().GetIconSize() / Close::GetLowestRatio();
+	const int32_t closeSize = std::lround(
+		app->GetControls().GetIconSize() /
+		Close::GetLowestRatio() /
+		// GetIconSize() uses the _album art's_ scale,
+		// and input region is scale agnostic
+		app->GetAlbumArt().GetScale()
+	);
 
 	const Rectanglei closeRect = {
 		static_cast<int32_t>(width / 2 + baseRadius) - closeSize * 2,
@@ -970,6 +985,9 @@ void Linux::UpdateWindowShape() {
 }
 
 void Linux::HookWindow(bool miniPlayer) {
+	if (this->miniPlayer == miniPlayer && compositor)
+		throw std::runtime_error("Trying to hook a window that's already been hooked!");
+
 	if (!miniPlayer) return;
 
 	display = reinterpret_cast<wl_display*>(
@@ -1255,7 +1273,10 @@ void Linux::PointerButton(void *data, wl_pointer *pointer, uint serial, uint tim
 		if (state == WL_POINTER_BUTTON_STATE_PRESSED) {
 			CApp::MouseDownState state = CApp::MouseDownState::None;
 
-			platform->GetApp()->OnMouseDown({platform->GetPointerX(), platform->GetPointerY()}, &state);
+			platform->GetApp()->OnMouseDown({
+				platform->GetPointerX() * platform->GetApp()->GetScale(),
+				platform->GetPointerY() * platform->GetApp()->GetScale()
+			}, &state);
 
 			if (state == CApp::MouseDownState::Dragging) {
 				platform->LogDebug("Handing window moving to Wayland");
@@ -1361,6 +1382,7 @@ void Linux::XdgSurfaceConfigure(void *data, struct xdg_surface *xdg_surface, uin
 	if (platform->GetConfigured()) {
 		xdg_surface_ack_configure(xdg_surface, serial);
 		wl_surface_commit(platform->GetSurface());
+		
 	} else {
 		platform->SetConfigureSerial(serial);
 		platform->SetConfigured(true);
@@ -1378,7 +1400,6 @@ void Linux::XdgTopLevelConfigure(void *data, struct xdg_toplevel *toplevel, int3
 	bool hadResize = false;
 	for (std::size_t i = 0; i < states->size / sizeof(uint32_t); ++i, ++state) {
 		if (*state == XDG_TOPLEVEL_STATE_RESIZING) {
-
 			hadResize = true;
 
 			SDL_SetWindowSize(platform->GetApp()->GetSdlWindow(), width, height);
@@ -1396,8 +1417,10 @@ void Linux::XdgTopLevelConfigure(void *data, struct xdg_toplevel *toplevel, int3
 				Settings::settings.Save();
 				*/
 			} else {
-				const auto radius = platform->GetApp()->GetAlbumArt().GetRadius(true);
-				const auto ratio = min / radius;
+				const auto radius = 
+					platform->GetApp()->GetAlbumArt().GetRadius(true);
+
+				const auto ratio = min * platform->GetApp()->GetScale() / radius;
 
 				Settings::settings.SetMiniPlayerVisualizerRatio(ratio);
 

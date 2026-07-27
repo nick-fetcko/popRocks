@@ -242,6 +242,11 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 					mousePos.x = static_cast<int32_t>(event.motion.x);
 					mousePos.y = static_cast<int32_t>(event.motion.y);
 
+#ifdef __linux__
+					mousePos.x *= app.GetScale();
+					mousePos.y *= app.GetScale();
+#endif
+
 					if (mouseButtonDown) {
 						if (!skipEvents) {
 							if (mouseDragged && app.OnMouseDragged(mousePos)) {

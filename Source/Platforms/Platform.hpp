@@ -48,6 +48,7 @@ public:
 	virtual void OnInit(Interop::InitArgs args, Context &context) = 0;
 	virtual void OnDestroy() = 0;
 	virtual void OnResize(int windowWidth, int windowHeight) = 0;
+	virtual void HandleScaleDelta(float scale, std::optional<float> &scaleDelta, int &width, int &height, std::optional<Vector2i> &lastMousePos, int &windowX, int &windowY) = 0;
 	virtual std::optional<bool> OnLoop() = 0;
 	virtual void SwapBuffers() = 0;
 

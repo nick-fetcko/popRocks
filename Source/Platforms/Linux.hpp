@@ -38,6 +38,7 @@ public:
 	// CApp helpers
 	void OnInit(Interop::InitArgs args, Context &context) override;
 	void OnResize(int windowWidth, int windowHeight) override;
+	void HandleScaleDelta(float scale, std::optional<float> &scaleDelta, int &width, int &height, std::optional<Vector2i> &lastMousePos, int &windowX, int &windowY) override;
 	void OnDestroy() override;
 	std::optional<bool> OnLoop() override;
 	void SwapBuffers() override;

@@ -195,6 +195,28 @@ void Windows::OnResize(int windowWidth, int windowHeight) {
 	}
 }
 
+void Windows::HandleScaleDelta(float scale, std::optional<float> &scaleDelta, int &width, int &height, std::optional<Vector2i> &lastMousePos, int &windowX, int &windowY) {
+	const auto scaled = width + Settings::settings.GetMiniPlayerWidth() * *scaleDelta;
+	const auto delta = (scaled - width);
+
+	scaleDelta = std::nullopt;
+
+	width = scaled;
+	height = scaled;
+
+	SetWindowPos(
+		windowX -= delta / 2,
+		windowY -= delta / 2,
+		scaled,
+		scaled
+	);
+
+	if (lastMousePos) {
+		lastMousePos->x += delta / 2;
+		lastMousePos->y += delta / 2;
+	}
+}
+
 std::optional<bool> Windows::OnLoop() {
 	if (!app->GetVulkan() && HDR::Enabled)
 		return dxgi.OnLoop();

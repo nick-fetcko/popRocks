@@ -87,6 +87,7 @@ public:
 
 	void OnInit(int windowWidth, int windowHeight, float scale = 1.0f);
 	void OnResize(int windowWidth, int windowHeight, float scale = 1.0f);
+	const float &GetScale() const { return scale; }
 	void OnLoop(
 		const Delta &time,
 		GLfloat x,

@@ -76,9 +76,14 @@ public:
 		if (scale != lastScale) {
 			// https://github.com/ocornut/imgui/issues/5452
 			ImGui::GetStyle() = *originalStyle;
+
+			// This seems to be getting auto-detected
+			// by ImGui on Linux
+#ifndef __linux__
 			ImGui::GetStyle().ScaleAllSizes(scale);
 
 			ImGui::GetStyle().FontScaleMain = scale;
+#endif
 
 			lastScale = scale;
 		}
@@ -1416,7 +1421,7 @@ public:
 			ImGui::EndMenu();
 		}
 
-		if (auto height = ImGui::GetFrameHeight(); height + safeAreaPadding != context.GetYOffset()) {
+		if (auto height = ImGui::GetFrameHeight() * scale; height + safeAreaPadding != context.GetYOffset()) {
 			this->height = height;
 			context.SetYOffset(safeAreaPadding + height);
 		}
