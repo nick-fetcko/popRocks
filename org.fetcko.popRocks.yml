@@ -44,13 +44,20 @@ modules:
       - type: dir
         path: .
     config-opts:
-# The BASS libs currently freak ld out when built in Release
-#      - -DCMAKE_BUILD_TYPE=Release
+      - -DCMAKE_BUILD_TYPE=Release
       - -DCMAKE_INSTALL_PREFIX=/app
       - -DUSING_FLATPAK=ON
+    build-commands:
+      - install -Dm644 Resources/org.fetcko.popRocks.desktop /app/share/applications/org.fetcko.popRocks.desktop
+      - install -Dm644 Data/popRocks.svg /app/share/icons/hicolor/scalable/apps/org.fetcko.popRocks.svg
 finish-args:
   - --socket=wayland
-  - --socket=fallback-x11
   - --device=dri
   - --socket=pulseaudio
   - --filesystem=home
+  - --filesystem=xdg-run/pipewire-0
+  #  mpris support via dbus
+  - --own-name=org.mpris.MediaPlayer2.popRocks.*
+  - --talk-name=org.gnome.SessionManager
+  - --talk-name=com.canonical.Unity.LauncherEntry
+  - --socket=session-bus

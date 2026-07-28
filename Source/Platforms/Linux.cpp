@@ -24,8 +24,7 @@
 
 constexpr std::string_view DesktopFileTemplate = 
 R"([Desktop Entry]
-Version=0.9
-Name=popRocks Visualizer
+Name=popRocks Visualizer (Standalone)
 GenericName=popRocks
 Comment=An audiovisual music player, with an emphasis on the visual
 MimeType=audio/mpeg
@@ -38,15 +37,27 @@ Icon=${POPROCKS_ICON}
 MimeType=audio/flac;audio/ogg;audio/mpeg;audio/mp4)";
 
 constexpr std::string_view ServiceMenuTemplate = 
+#ifdef USING_FLATPAK
+R"([Desktop Entry]
+Type=Service
+MimeType=inode/directory
+Actions=org.fetcko.popRocks.visualizeWith
+
+[Desktop Action org.fetcko.popRocks.visualizeWith]
+Name=Visualize with popRocks
+Icon=org.fetcko.popRocks
+Exec=flatpak run org.fetcko.popRocks %u)";
+#else
 R"([Desktop Entry]
 Type=Service
 MimeType=inode/directory
 Actions=visualizeWithPopRocks
 
 [Desktop Action visualizeWithPopRocks]
-Name=Visualize with popRocks
+Name=Visualize with popRocks (Standalone)
 Icon=${POPROCKS_ICON}
 Exec=bash -c 'cd ${POPROCKS_PATH} && ./popRocks "$1"' -- %f)";
+#endif
 
 const std::string PathPlaceholder = "${POPROCKS_PATH}";
 const std::string IconPlaceholder = "${POPROCKS_ICON}";
@@ -87,10 +98,12 @@ void Linux::OnInit(Interop::InitArgs args, Context &context) {
 	std::size_t count = readlink("/proc/self/exe", path, PATH_MAX);
 
 	if (count != -1) {
+
 		const auto pathPath = std::filesystem::path(path, path + count);
-		const auto iconPath = (pathPath.parent_path() / "Data" / "popRocks.png").u8string();
+		const auto iconPath = (pathPath.parent_path() / "Data" / "popRocks.svg").u8string();
 		const auto basePath = pathPath.parent_path().u8string();
 
+#ifndef USING_FLATPAK
 		// Create .desktop file
 		auto desktopPath = std::filesystem::path(getenv("HOME")) / ".local" / "share" / "applications";
 		if (!std::filesystem::exists(desktopPath))
@@ -136,6 +149,7 @@ void Linux::OnInit(Interop::InitArgs args, Context &context) {
 			std::ofstream outFile(desktopPath);
 			outFile << desktopFileContents << std::endl;
 		}
+#endif
 
 		// Create servicemenu .desktop file
 		auto serviceMenuPath = std::filesystem::path(getenv("HOME")) / ".local" / "share" / "kio" / "servicemenus";
@@ -143,6 +157,15 @@ void Linux::OnInit(Interop::InitArgs args, Context &context) {
 			std::filesystem::create_directories(serviceMenuPath);
 
 		if (std::filesystem::exists(serviceMenuPath)) {
+#ifdef USING_FLATPAK
+			serviceMenuPath /= "org.fetcko.popRocks.visualizeWith.desktop";
+
+			std::string serviceMenuContents =
+				std::string(
+					ServiceMenuTemplate.begin(),
+					ServiceMenuTemplate.end()
+				);
+#else
 			serviceMenuPath /= "visualizeWithPopRocks.desktop";
 
 			const auto iconStart = ServiceMenuTemplate.find(IconPlaceholder);
@@ -169,6 +192,7 @@ void Linux::OnInit(Interop::InitArgs args, Context &context) {
 					ServiceMenuTemplate.begin() + pathStart + PathPlaceholder.length(),
 					ServiceMenuTemplate.end()
 				);
+#endif
 
 			std::ofstream outFile(serviceMenuPath);
 			outFile << serviceMenuContents << std::endl;
@@ -452,6 +476,8 @@ bool Linux::OpenExclusive(const std::filesystem::path &path, const std::string &
 				return false;
 			}
 		} else {
+			LogError("Could not initialize exclusive mode! pw_stream_connect returned ", ret);
+
 			StopPipeWire();
 
 			BASS_Free();
@@ -1036,6 +1062,12 @@ void Linux::HookWindow(bool miniPlayer) {
 
 		xdgTopLevel = xdg_surface_get_toplevel(xdgSurface);
 
+#ifdef USING_FLATPAK
+		xdg_toplevel_set_app_id(xdgTopLevel, "org.fetcko.popRocks");
+#else
+		xdg_toplevel_set_app_id(xdgTopLevel, "popRocks");
+#endif
+
 		xdgSurfaceListener.configure = &Linux::XdgSurfaceConfigure;
 
 		xdg_surface_add_listener(xdgSurface, &xdgSurfaceListener, this);
@@ -1121,6 +1153,10 @@ bool Linux::HandleExistingWindow() {
 // ---------------------- Bling ------------------------
 // -----------------------------------------------------
 void Linux::SetStatus(Status status, int progress) {
+	if (progress == lastProgress) return;
+
+	lastProgress = progress;
+
 	// FIXME: Need a DBus base class for both this
 	//        and MPRIS to inherit.
 	DBusError err;
@@ -1143,7 +1179,11 @@ void Linux::SetStatus(Status status, int progress) {
 
 	if (!msg) return;
 
+#ifdef USING_FLATPAK
+	const char *uri = "application://org.fetcko.popRocks.desktop";
+#else
 	const char *uri = "application://popRocks.desktop";
+#endif
 
 	DBusMessageIter messageArgs{0}, dictIter{0}, entryIter{0}, variantIter{0};
 

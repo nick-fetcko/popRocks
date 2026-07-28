@@ -288,6 +288,8 @@ private:
 	// ================= Launcher Entry ====================
 	// =====================================================
 	DBusConnection *statusConnection = nullptr;
+
+	int lastProgress = 0;
 };
 
 #endif

@@ -88,7 +88,11 @@ void MPRIS::OnLoop() {
 						AddBooleanProp(dictIter, entryIter, variantIter, "CanRaise", 0);
 						AddBooleanProp(dictIter, entryIter, variantIter, "HasTrackList", 1);
 						AddStringProp(dictIter, entryIter, variantIter, "Identity", "popRocks Visualizer");
+#ifdef USING_FLATPAK
+						AddStringProp(dictIter, entryIter, variantIter, "DesktopEntry", "org.fetcko.popRocks");
+#else
 						AddStringProp(dictIter, entryIter, variantIter, "DesktopEntry", "popRocks");
+#endif
 						std::vector<std::string> supportedUriSchemes = {"file"};
 						AddStringArrayProp(dictIter, entryIter, variantIter, "SupportedUriSchemes", supportedUriSchemes);
 						std::vector<std::string> supportedMimeTypes = {"audio/mpeg"};

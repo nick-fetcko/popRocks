@@ -111,9 +111,9 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 		}
 #else
 		logger.LogDebug("File prepared: ", argv[1]);
-		auto ascii = std::string(argv[1]);
+		auto utf8 = std::string(argv[1]);
 		app.SetPreLoaded(true);
-		app.LoadFile(std::wstring(ascii.begin(), ascii.end()));
+		app.LoadFile(utf8);
 #endif
 	}
 #else

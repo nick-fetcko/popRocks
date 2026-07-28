@@ -310,8 +310,6 @@ else()
 	set_target_properties(bass PROPERTIES
 		INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bass/include"
 		IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bass/lib/libbass.so"
-		IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bass/lib/bass.lib"
-		IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bass/lib/bass.lib"
 		)
 endif()
 
@@ -328,8 +326,6 @@ else()
 	set_target_properties(bassflac PROPERTIES
 		INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassflac/include"
 		IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassflac/lib/libbassflac.so"
-		IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassflac/lib/bassflac.lib"
-		IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassflac/lib/bassflac.lib"
 		)
 endif()
 
@@ -346,8 +342,6 @@ else()
 	set_target_properties(bassape PROPERTIES
 		INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassape/include"
 		IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassape/lib/libbassape.so"
-		IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassape/lib/bassape.lib"
-		IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassape/lib/bassape.lib"
 		)
 endif()
 
@@ -364,8 +358,6 @@ else()
 	set_target_properties(basswv PROPERTIES
 		INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswv/include"
 		IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswv/lib/libbasswv.so"
-		IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswv/lib/basswv.lib"
-		IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswv/lib/basswv.lib"
 		)
 endif()
 
@@ -383,8 +375,6 @@ else()
 	set_target_properties(basstta PROPERTIES
 		INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basstta/include"
 		IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basstta/lib/libbass_tta.so"
-		IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basstta/lib/bass_tta.lib"
-		IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basstta/lib/bass_tta.lib"
 		)
 endif()
 
@@ -470,7 +460,7 @@ if (WIN32)
 	endif()
 else()
 	if (USING_FLATPAK)
-		target_link_libraries(popRocks PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassalac/lib/libbassalac.so" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassaac/lib/libbass_aac.so")
+		target_link_libraries(popRocks PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassalac/lib/libbassalac.so" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassaac/lib/libbass_aac.so" pulse)
 	else()
 		target_link_libraries(popRocks PRIVATE bassalac bassaac pulse)
 	endif()
