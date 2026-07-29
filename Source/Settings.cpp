@@ -89,8 +89,6 @@ Settings Settings::Load() {
 
 	Settings ret;
 
-	LoggableClass errorLog(typeid(Settings).name());
-
 	if (auto path = Filesystem::GetPath(); !path.empty()) {
 		std::ifstream inFile(path, std::ios::in);
 
@@ -108,9 +106,9 @@ Settings Settings::Load() {
 				// they'd like to.
 				ret.Save();
 			} catch (std::exception &e) {
-				errorLog.LogWarning("Could not load settings due to ", e.what());
+				std::cerr << "Could not load settings due to " << e.what() << std::endl;
 			}
-		} else errorLog.LogWarning("Settings file does not yet exist!");
+		} else std::cerr << "Settings file does not yet exist!" << std::endl;
 	}
 
 #ifdef __ANDROID__
