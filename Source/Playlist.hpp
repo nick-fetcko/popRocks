@@ -226,21 +226,16 @@ private:
 
 			const auto &bounds = currentTitle.GetBounds();
 
-			if (currentSongVisible) {
-				outline.SetText(title.GetAltText());
-				context.Use("scrolling"_hash);
-				context.Color(1.0f, 1.0f, 1.0f, std::max(hidden ? 0.0f : 0.5f, alpha));
-				outline.OnLoop(pos.x - bounds.width / 2, pos.y - bounds.height / 2, time);
-				context.Color(
-					HDR::WhiteLevel,
-					HDR::WhiteLevel,
-					HDR::WhiteLevel,
-					std::max(hidden ? 0.0f : 0.5f, alpha)
-				);
-			} else {
-				context.Use("scrolling"_hash);
-				context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
-			}
+			outline.SetText(title.GetAltText());
+			context.Use("scrolling"_hash);
+			context.Color(1.0f, 1.0f, 1.0f, std::max(hidden ? 0.0f : 0.5f, alpha));
+			outline.OnLoop(pos.x - bounds.width / 2, pos.y - bounds.height / 2, time);
+			context.Color(
+				HDR::WhiteLevel,
+				HDR::WhiteLevel,
+				HDR::WhiteLevel,
+				std::max(hidden ? 0.0f : 0.5f, alpha)
+			);
 
 			currentTitle.OnLoop(pos.x - bounds.width / 2, pos.y - bounds.height / 2, time);
 

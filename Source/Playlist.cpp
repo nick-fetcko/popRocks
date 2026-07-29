@@ -502,7 +502,7 @@ void Playlist::DeselectCurrent() {
 }
 
 void Playlist::OnLoop(const Delta &time, Vector2i pos, float maxHeight, float alpha, Context &context, bool miniPlayer, bool hidden) {
-	if (!visible) return;
+	if (!visible && !miniPlayer) return;
 
 	// We want to store its _origin_
 	this->pos = pos;
