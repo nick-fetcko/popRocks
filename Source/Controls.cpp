@@ -1272,9 +1272,9 @@ void Controls::OnMouseMoved(const Vector2i &mousePos) {
 	// Don't allow interaction if Help is visible
 	auto button = help.IsHovered() ? ControlButton::None : GetButtonAtPos(mousePos);
 
-	if (!help.IsHovered() && playlist.OnMouseMoved(mousePos))
+	if (!help.IsHovered() && !presetList.IsHovered() && playlist.OnMouseMoved(mousePos))
 		button = ControlButton::None;
-	else if (!help.IsHovered() && presetList.OnMouseMoved(
+	else if (!help.IsHovered() && !playlist.IsHovered() && presetList.OnMouseMoved(
 		mousePos,
 		{
 			windowWidth / 2 - presetText.GetBounds().width / 2,
