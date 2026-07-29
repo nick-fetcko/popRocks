@@ -285,8 +285,8 @@ bool MiniPlayerList::OnMouseMoved(const Vector2i &mousePos, Rectanglei bounds, b
 		OnRadiusChanged();
 
 	const auto inTriggerX =
-		mousePos.x > bounds.x &&
-		mousePos.x < bounds.w;
+		mousePos.x > bounds.x - font->GetEm().width / 2 &&
+		mousePos.x < bounds.w + font->GetEm().width / 2;
 
 	const auto inX = justBounds ? inTriggerX : 
 		mousePos.x > pos.x - albumArt->GetRadius(miniPlayer) &&
@@ -302,7 +302,7 @@ bool MiniPlayerList::OnMouseMoved(const Vector2i &mousePos, Rectanglei bounds, b
 	hoveredOffset = -1;
 
 	if (inTriggerX &&
-		mousePos.y >= bounds.y && mousePos.y <= bounds.h) {
+		mousePos.y >= bounds.y - font->GetEm().height / 2 && mousePos.y <= bounds.h + font->GetEm().height / 2 ) {
 		hoverTimer = std::chrono::system_clock::now();
 
 		return true;
