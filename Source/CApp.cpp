@@ -2054,12 +2054,14 @@ void CApp::OnLoop(const Delta &time) {
 		return;
 	}
 
-	if (randomizeTime && std::chrono::system_clock::now() > lastRandomize + std::chrono::duration<double>(randomizeTime->AsSeconds())) {
-		LoadPreset(Preset::Random(dynamicGain));
-		lastRandomize = std::chrono::system_clock::now();
-	} else if (randomizePresetsTime && std::chrono::system_clock::now() > lastPresetRandomize + std::chrono::duration<double>(randomizePresetsTime->AsSeconds())) {
-		LoadRandomPreset();
-		lastPresetRandomize = std::chrono::system_clock::now();
+	if (!miniPlayer) {
+		if (randomizeTime && std::chrono::system_clock::now() > lastRandomize + std::chrono::duration<double>(randomizeTime->AsSeconds())) {
+			LoadPreset(Preset::Random(dynamicGain));
+			lastRandomize = std::chrono::system_clock::now();
+		} else if (randomizePresetsTime && std::chrono::system_clock::now() > lastPresetRandomize + std::chrono::duration<double>(randomizePresetsTime->AsSeconds())) {
+			LoadRandomPreset();
+			lastPresetRandomize = std::chrono::system_clock::now();
+		}
 	}
 
 	if(fileLoaded) {
@@ -2435,7 +2437,7 @@ void CApp::OnLoop(const Delta &time) {
 		currentFadeTime = 0.0f;
 		fadeTime = beatDetect->NextBeatTime() - beatDetectTime;
 
-		if (randomizePresetsBeats) {
+		if (!miniPlayer && randomizePresetsBeats) {
 			if (++beatCounter == *randomizePresetsBeats || resyncBeats) {
 				LoadRandomPreset();
 				beatCounter = 0;
