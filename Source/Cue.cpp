@@ -6,11 +6,14 @@
 #include "Playlist.hpp"
 
 inline std::string Cue::Parse(const std::string &string) {
-	if (encoding == Utils::Encoding::ShiftJis)
-		return ShiftJIS::ToUtf8(string);
-	else if (encoding == Utils::Encoding::Windows1252)
-		return Utils::ToUTF8(Windows1252::ToUtf16(string));
-	else return string;
+	if (encoding) {
+		if (*encoding == Utils::Encoding::ShiftJis)
+			return ShiftJIS::ToUtf8(string);
+		else if (*encoding == Utils::Encoding::Windows1252)
+			return Utils::ToUTF8(Windows1252::ToUtf16(string));
+	}
+
+	return string;
 }
 
 std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &path, bool append) {
@@ -48,14 +51,15 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 		lines = ReadLines(fileBuf);
 	}
 
-	{
+	if (!bom || bom != Fetcko::Utils::BOM::UTF_8) {
 		std::string combined;
 		for (const auto &line : lines) {
 			for (const auto &word : line)
 				combined += word;
 		}
 		encoding = Utils::GuessEncoding(combined, 1);
-	}
+	} else encoding = std::nullopt;
+	
 
 	bool inFileSection = false;
 	bool inTrackSection = false;

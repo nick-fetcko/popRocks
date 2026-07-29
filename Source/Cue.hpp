@@ -149,5 +149,5 @@ private:
 
 	uint8_t discIndex = 1;
 
-	Utils::Encoding encoding = Utils::Encoding::Ascii;
+	std::optional<Utils::Encoding> encoding = std::nullopt;
 };
