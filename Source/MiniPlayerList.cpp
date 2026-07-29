@@ -541,12 +541,15 @@ void MiniPlayerList::OnColorChanged(const Colour<float> &color, bool silent) {
 		}
 
 		this->hoveredColor = hoveredColor;
-	}
-	else this->hoveredColor = { 0.5f, 0.5f, 0.5f };
 
-	hsv = this->hoveredColor.ToHsv();
-	hsv.v = 0.5f;
-	darkColor = Colour<float>::FromHsv(hsv.h, hsv.s, hsv.v);
+		hsv = this->hoveredColor.ToHsv();
+		hsv.v = 0.5f;
+		darkColor = Colour<float>::FromHsv(hsv.h, hsv.s, hsv.v);
+	} else {
+		// If we're too close to white, use grays
+		this->hoveredColor = { 0.5f, 0.5f, 0.5f };
+		this->darkColor = { 0.25f, 0.25f, 0.25f };
+	}
 }
 
 void MiniPlayerList::OnBlackChanged(const float &black) {
