@@ -5,6 +5,8 @@
 #include <unistd.h>
 
 #include <linux/input-event-codes.h>
+#include <sys/mman.h>
+#include <fcntl.h>
 
 #include <SDL3/SDL.h>
 
@@ -235,6 +237,14 @@ void Linux::HandleScaleDelta(float scale, std::optional<float> &scaleDelta, int 
 }
 
 void Linux::OnDestroy() {
+	if (sharedFd != -1) {
+		pthread_mutex_destroy(reinterpret_cast<pthread_mutex_t*>(sharedMemory));
+		munmap(sharedMemory, SharedMemorySize);
+		close(sharedFd);
+		shm_unlink(SharedMemoryName.data());
+		sharedFd = -1;
+	}
+
 	StopPipeWire();
 	
 	DestroyInterop();
@@ -259,8 +269,22 @@ void Linux::OnDestroy() {
 }
 
 std::optional<bool> Linux::OnLoop() {
-	mpris.OnLoop();
+	if (sharedMemory) {
+		pthread_mutex_lock(reinterpret_cast<pthread_mutex_t*>(sharedMemory));
+		if (auto size = *reinterpret_cast<std::size_t*>(&sharedMemory[sizeof(pthread_mutex_t)]); size != 0) {
+			const auto path = std::string(
+				reinterpret_cast<char *>(&sharedMemory[sizeof(pthread_mutex_t) + sizeof(std::size_t)]),
+				reinterpret_cast<char *>(&sharedMemory[sizeof(pthread_mutex_t) + sizeof(std::size_t)]) + size
+			);
+			LogDebug("Recieved argument from another popRocks instance: \"", path, "\"");
+			app->LoadFile(path);
+			*reinterpret_cast<std::size_t*>(&sharedMemory[sizeof(pthread_mutex_t)]) = 0;
+		}
+		pthread_mutex_unlock(reinterpret_cast<pthread_mutex_t*>(sharedMemory));
+	}
 
+	mpris.OnLoop();
+	
 	if (app->GetVulkan())
 		return interop->OnLoop();
 
@@ -1145,7 +1169,64 @@ void Linux::ShowDialogBox(const std::string &title, const std::string &message) 
 	);
 }
 
-bool Linux::HandleExistingWindow() {
+bool Linux::HandleExistingWindow(int argc, char *argv[]) {
+	constexpr auto MapSharedMemory = [](uint8_t **sharedMemory, int sharedFd) {
+		*sharedMemory = reinterpret_cast<uint8_t*>(
+			mmap(0, SharedMemorySize, PROT_READ | PROT_WRITE, MAP_SHARED, sharedFd, 0)
+		);
+
+		pthread_mutexattr_t attr;
+		pthread_mutexattr_init(&attr);
+		pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+		pthread_mutex_init(reinterpret_cast<pthread_mutex_t*>(*sharedMemory), &attr);
+		pthread_mutexattr_destroy(&attr);
+	};
+
+	// Can we create an exclusive file?
+	sharedFd = shm_open(SharedMemoryName.data(), O_RDWR | O_CREAT | O_EXCL, 0666);
+	if (sharedFd == -1) {
+		printf("Found an exiting popRocks instance! Redirecting arguments to it...\n");
+
+		// If not, open exiting file
+		sharedFd = shm_open(SharedMemoryName.data(), O_RDWR, 0666);
+		if (sharedFd != -1) {
+			MapSharedMemory(&sharedMemory, sharedFd);
+
+			if (!sharedMemory) {
+				printf("Shared memory is null!\n");
+			} else if (argc > 1) {
+				pthread_mutex_lock(reinterpret_cast<pthread_mutex_t*>(sharedMemory));
+				// Send length of our argument first
+				*reinterpret_cast<std::size_t*>(&sharedMemory[sizeof(pthread_mutex_t)]) = strlen(argv[1]);
+				// Then the argument itself
+				memcpy(&sharedMemory[sizeof(pthread_mutex_t) + sizeof(std::size_t)], argv[1], strlen(argv[1]));
+
+				pthread_mutex_unlock(reinterpret_cast<pthread_mutex_t*>(sharedMemory));
+			}
+
+			close(sharedFd);
+		} else printf("Could not open shared fd!\n");
+
+		return true;
+	} else {
+		if (ftruncate(sharedFd, SharedMemorySize) == 0) {
+			MapSharedMemory(&sharedMemory, sharedFd);
+
+			// Clear length
+			pthread_mutex_lock(reinterpret_cast<pthread_mutex_t*>(sharedMemory));
+			*reinterpret_cast<std::size_t*>(&sharedMemory[sizeof(pthread_mutex_t)]) = 0;
+			pthread_mutex_unlock(reinterpret_cast<pthread_mutex_t*>(sharedMemory));
+
+			LogDebug("Opened exclusive file!");
+		} else {
+			close(sharedFd);
+			shm_unlink(SharedMemoryName.data());
+			sharedFd = -1;
+
+			LogError("Could not truncate shared fd!");
+		}
+	}
+
 	return false;
 }
 

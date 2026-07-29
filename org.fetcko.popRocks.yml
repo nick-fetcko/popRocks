@@ -51,13 +51,20 @@ modules:
       - install -Dm644 Resources/org.fetcko.popRocks.desktop /app/share/applications/org.fetcko.popRocks.desktop
       - install -Dm644 Data/popRocks.svg /app/share/icons/hicolor/scalable/apps/org.fetcko.popRocks.svg
 finish-args:
+  # popRocks does not currently support X11
   - --socket=wayland
+  # Direct Rendering for OpenGL / Vulkan
   - --device=dri
-  - --socket=pulseaudio
+  # Configuration data is currently stored in $HOME
   - --filesystem=home
+  # PulseAudio / PipeWire for output device selection and exclusive audio output
+  - --socket=pulseaudio
   - --filesystem=xdg-run/pipewire-0
-  #  mpris support via dbus
+  #  MPRIS support via DBus
   - --own-name=org.mpris.MediaPlayer2.popRocks.*
   - --talk-name=org.gnome.SessionManager
+  # Unity LauncherEntry via DBus for taskbar progress bar
   - --talk-name=com.canonical.Unity.LauncherEntry
-  - --socket=session-bus
+  # Shared memory to allow one instance to defer to another
+  - --share=ipc
+  - --device=shm

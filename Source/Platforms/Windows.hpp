@@ -86,7 +86,7 @@ public:
 	bool AllowsWindowMovement() const override;
 	std::optional<Vector2i> SetWindowPos(int x, int y, int width, int height) override;
 	void ShowDialogBox(const std::string &title, const std::string &message) override;
-	bool HandleExistingWindow() override;
+	bool HandleExistingWindow(int argc, char *argv[]) override;
 
 	// =====================================================
 	// ===================== Virtuals ======================

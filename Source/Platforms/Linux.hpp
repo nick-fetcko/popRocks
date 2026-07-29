@@ -116,7 +116,7 @@ public:
 	void DestroyWindow(SDL_Window *window) override;
 	void HookWindow(bool miniPlayer) override;
 	void ShowDialogBox(const std::string &title, const std::string &message) override;
-	bool HandleExistingWindow() override;
+	bool HandleExistingWindow(int argc, char *argv[]) override;
 
 	// Bling
 	void SetStatus(Status status, int progress) override;
@@ -290,6 +290,14 @@ private:
 	DBusConnection *statusConnection = nullptr;
 
 	int lastProgress = 0;
+
+	// =====================================================
+	// ================= Launcher Entry ====================
+	// =====================================================
+	constexpr static std::size_t SharedMemorySize = sizeof(pthread_mutex_t) + sizeof(std::size_t) + PATH_MAX;
+	constexpr static std::string_view SharedMemoryName = "/popRocks";
+	int sharedFd = -1;
+	uint8_t *sharedMemory = nullptr;
 };
 
 #endif

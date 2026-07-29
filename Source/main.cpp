@@ -76,7 +76,7 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 
 	CApp app;
 
-	if (app.GetPlatform()->HandleExistingWindow())
+	if (app.GetPlatform()->HandleExistingWindow(argc, argv))
 		return 1;
 
 #ifdef __ANDROID__

@@ -887,7 +887,7 @@ void Windows::ShowDialogBox(const std::string &title, const std::string &message
 	TaskDialogIndirect(&config, NULL, NULL, NULL);
 }
 
-bool Windows::HandleExistingWindow() {
+bool Windows::HandleExistingWindow(int argc, char *argv[]) {
 #ifndef _DEBUG
 	std::stringstream mutexNameStream;
 	mutexNameStream << "Local\\" << GUID;
