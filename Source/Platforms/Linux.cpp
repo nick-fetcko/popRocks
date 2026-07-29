@@ -278,6 +278,8 @@ std::optional<bool> Linux::OnLoop() {
 			);
 			LogDebug("Recieved argument from another popRocks instance: \"", path, "\"");
 			app->LoadFile(path);
+
+			// Reset size to signal we got the message
 			*reinterpret_cast<std::size_t*>(&sharedMemory[sizeof(pthread_mutex_t)]) = 0;
 		}
 		pthread_mutex_unlock(reinterpret_cast<pthread_mutex_t*>(sharedMemory));
@@ -1186,6 +1188,7 @@ bool Linux::HandleExistingWindow(int argc, char *argv[]) {
 	sharedFd = shm_open(SharedMemoryName.data(), O_RDWR | O_CREAT | O_EXCL, 0666);
 	if (sharedFd == -1) {
 		printf("Found an exiting popRocks instance! Redirecting arguments to it...\n");
+		bool redirected = false;
 
 		// If not, open exiting file
 		sharedFd = shm_open(SharedMemoryName.data(), O_RDWR, 0666);
@@ -1196,19 +1199,43 @@ bool Linux::HandleExistingWindow(int argc, char *argv[]) {
 				printf("Shared memory is null!\n");
 			} else if (argc > 1) {
 				pthread_mutex_lock(reinterpret_cast<pthread_mutex_t*>(sharedMemory));
+
 				// Send length of our argument first
 				*reinterpret_cast<std::size_t*>(&sharedMemory[sizeof(pthread_mutex_t)]) = strlen(argv[1]);
 				// Then the argument itself
 				memcpy(&sharedMemory[sizeof(pthread_mutex_t) + sizeof(std::size_t)], argv[1], strlen(argv[1]));
 
 				pthread_mutex_unlock(reinterpret_cast<pthread_mutex_t*>(sharedMemory));
+
+				// Make sure we actually get ingested
+				const auto start = std::chrono::system_clock::now();
+				auto now = start;
+				while (!redirected && now - start <= 100ms) {
+					pthread_mutex_lock(reinterpret_cast<pthread_mutex_t*>(sharedMemory));
+
+					if (*reinterpret_cast<std::size_t*>(&sharedMemory[sizeof(pthread_mutex_t)]) == 0) {
+						printf("\tRedirect successful!\n");
+						redirected = true;
+					}
+
+					pthread_mutex_unlock(reinterpret_cast<pthread_mutex_t*>(sharedMemory));
+
+					std::this_thread::sleep_for(1ms);
+					now = std::chrono::system_clock::now();
+				}
 			}
 
 			close(sharedFd);
 		} else printf("Could not open shared fd!\n");
 
-		return true;
-	} else {
+		// If we weren't redirected, assume control
+		if (!redirected) {
+			LogWarning("Found abandoned shared fd!");
+			sharedFd = shm_open(SharedMemoryName.data(), O_RDWR | O_CREAT, 0666);
+		} else return true;
+	}
+
+	if (sharedFd != -1) {
 		if (ftruncate(sharedFd, SharedMemorySize) == 0) {
 			MapSharedMemory(&sharedMemory, sharedFd);
 
