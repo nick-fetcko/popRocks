@@ -6,9 +6,6 @@
 #include "Playlist.hpp"
 
 inline std::string Cue::Parse(const std::string &string) {
-	// As these are single lines, lower threshold to a single match
-	const auto encoding = Utils::GuessEncoding(string, 1);
-
 	if (encoding == Utils::Encoding::ShiftJis)
 		return ShiftJIS::ToUtf8(string);
 	else if (encoding == Utils::Encoding::Windows1252)
@@ -49,6 +46,15 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 		);
 
 		lines = ReadLines(fileBuf);
+	}
+
+	{
+		std::string combined;
+		for (const auto &line : lines) {
+			for (const auto &word : line)
+				combined += word;
+		}
+		encoding = Utils::GuessEncoding(combined, 1);
 	}
 
 	bool inFileSection = false;
