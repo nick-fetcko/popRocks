@@ -216,6 +216,19 @@ void Linux::OnInit(Interop::InitArgs args, Context &context) {
 	GetDefaultDevice();
 }
 
+bool Linux::NeedsToResize(int &width, int &height, int windowWidth, int windowHeight, float scale, const std::optional<float> &scaleDelta, bool force) {
+	const auto ret = !(
+		std::lround(width * scale) == windowWidth && std::lround(height * scale) == windowHeight && !scaleDelta && !force
+	);
+
+	if (ret) {
+		width = std::lround(width * scale);
+		height = std::lround(height * scale);
+	}
+
+	return ret;
+}
+
 void Linux::OnResize(int windowWidth, int windowHeight) {
 	if (auto &context = app->GetContext()) {
 		if (!app->GetVulkan()) {
@@ -228,9 +241,6 @@ void Linux::OnResize(int windowWidth, int windowHeight) {
 }
 
 void Linux::HandleScaleDelta(float scale, std::optional<float> &scaleDelta, int &width, int &height, std::optional<Vector2i> &lastMousePos, int &windowX, int &windowY) {
-	width = std::lround(width * scale);
-	height = std::lround(height * scale);
-
 	scaleDelta = std::nullopt;
 	
 	UpdateWindowShape();
@@ -716,15 +726,19 @@ bool Linux::AllowsWindowMovement() const {
 	return false;
 }
 
-std::optional<Vector2i> Linux::SetWindowPos(int x, int y, int width, int height) {
+std::optional<Vector2i> Linux::SetWindowPos(int x, int y, int width, int height, int *windowWidth, int *windowHeight, bool alreadyRespawned) {
 	Vector2i ret = {x, y};
 
-	app->OnResize(
-		Settings::settings.GetMiniPlayerWidth(),
-		Settings::settings.GetMiniPlayerHeight(),
-		app->GetScale(),
-		true
-	);
+	if (windowWidth && windowHeight) {
+		*windowWidth = width * (miniPlayer ? scale : 1.0f);
+		*windowHeight = height * (miniPlayer ? scale : 1.0f);
+
+		if (!alreadyRespawned)
+			app->RespawnWindow();
+
+		//if (!miniPlayer)
+		app->OnResize(width, height, scale, true);
+	}
 
 	return ret;
 }
@@ -754,6 +768,19 @@ bool Linux::OnMouseDown(const Vector2i &mousePos) {
 // -----------------------------------------------------
 int Linux::GetDefaultFramebuffer() {
 	return app->GetVulkan() ? GetInterop()->GetFramebuffer() : 0;
+}
+
+const float Linux::GetScale(SDL_Window *window, Context &context, int *w, int *h) {
+	SDL_GetWindowSize(window, w, h);
+
+	scale = SDL_GetWindowDisplayScale(window);
+
+	// Round to 2 decimal places
+	scale = std::round(scale * 100.0f) / 100.0f;
+
+	SetSafeArea(window, context, *w * scale, *h * scale);
+
+	return scale;
 }
 
 // -----------------------------------------------------
@@ -882,7 +909,8 @@ bool Linux::IsResizing() const {
 
 void Linux::UpdateWindowShape() {
 	// If we don't have a wl_surface yet, ignore
-	if (!surface) return;
+	if (!surface)
+		return;
 
 	if (!miniPlayer) {
 		LogDebug("Resetting input region!");
@@ -1391,8 +1419,10 @@ void Linux::SeatCapabilities(void *data, struct wl_seat *seat, uint32_t caps) {
 void Linux::PointerEnter(void *data, wl_pointer *pointer, uint serial, wl_surface *surface, wl_fixed_t surface_x, wl_fixed_t surface_y) {
 	auto platform = reinterpret_cast<Linux*>(data);
 
-	if (platform->IsMoving())
+	if (platform->IsMoving()) {
+		platform->GetApp()->GetAlbumArt().TargetOverrideOutlineAlpha(0.0f);
 		platform->SetMoving(false);
+	}
 	
 	platform->SetPointerX(wl_fixed_to_int(surface_x));
 	platform->SetPointerY(wl_fixed_to_int(surface_y));
@@ -1428,8 +1458,10 @@ void Linux::PointerButton(void *data, wl_pointer *pointer, uint serial, uint tim
 
 			if (state == CApp::MouseDownState::Dragging) {
 				platform->LogDebug("Handing window moving to Wayland");
-
+				
 				platform->SetMoving(true);
+				platform->GetApp()->OnMoveStart();
+
 				xdg_toplevel_move(
 					platform->GetXdgTopLevel(),
 					platform->GetSeat(),
@@ -1481,7 +1513,7 @@ void Linux::PointerButton(void *data, wl_pointer *pointer, uint serial, uint tim
 					);
 				}
 			}
-		} else if (state == WL_POINTER_BUTTON_STATE_RELEASED) {
+		} else if (state == WL_POINTER_BUTTON_STATE_RELEASED) {		
 			platform->SetMoving(false);
 			platform->SetResizing(false);
 		}

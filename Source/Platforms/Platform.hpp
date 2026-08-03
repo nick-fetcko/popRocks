@@ -47,6 +47,7 @@ public:
 	// CApp helpers
 	virtual void OnInit(Interop::InitArgs args, Context &context) = 0;
 	virtual void OnDestroy() = 0;
+	virtual bool NeedsToResize(int &width, int &height, int windowWidth, int windowHeight, float scale, const std::optional<float> &scaleDelta, bool force) = 0;
 	virtual void OnResize(int windowWidth, int windowHeight) = 0;
 	virtual void HandleScaleDelta(float scale, std::optional<float> &scaleDelta, int &width, int &height, std::optional<Vector2i> &lastMousePos, int &windowX, int &windowY) = 0;
 	virtual std::optional<bool> OnLoop() = 0;
@@ -97,7 +98,7 @@ public:
 
 	// Window management
 	virtual bool AllowsWindowMovement() const = 0;
-	virtual std::optional<Vector2i> SetWindowPos(int x, int y, int width, int height) = 0;
+	virtual std::optional<Vector2i> SetWindowPos(int x, int y, int width, int height, int *windowWidth = nullptr, int *windowHeight = nullptr, bool alreadyRespawned = false) = 0;
 	virtual void ShowDialogBox(const std::string &title, const std::string &message) = 0;
 	virtual bool HandleExistingWindow(int argc, char *argv[]) = 0;
 
@@ -111,7 +112,9 @@ public:
 
 	// Display properties
 	virtual void SetSafeArea(SDL_Window *window, Context &context, int w, int h);
-	virtual const float GetScale(float scale) const;
+	virtual const float GetScale(SDL_Window *window, Context &context, int *w, int *h);
+	virtual const float GetScale(bool actual = false) const;
+	virtual const float GetScaleForPoint(int x, int y) const;
 	virtual const int IsAlphaPremultiplied() const;
 	virtual bool IsUiInverted();
 	virtual GLenum GetFboInternalFormat(bool hdrEnabled);
@@ -258,6 +261,8 @@ protected:
 	float gain = 20.0f;
 
 	bool pauseFilter = true;
+
+	float scale = 1.0f;
 };
 
 // =====================================================

@@ -9,6 +9,7 @@
 #include "Utils/Filesystem.hpp"
 
 #include "AlbumArt.hpp"
+#include "CApp.h"
 #include "Preset.hpp"
 
 #ifndef __ANDROID__
@@ -116,6 +117,89 @@ Settings Settings::Load() {
 #endif
 
 	return ret;
+}
+
+float Settings::LoadDefaults(CApp *app) {
+	if (miniPlayerWidth == -1 ||
+		miniPlayerHeight == -1 ||
+		windowWidth == -1 ||
+		windowHeight == -1) {
+		int screenWidth = 0, screenHeight = 0;
+		const auto *displayMode = SDL_GetDesktopDisplayMode(
+#ifdef __linux__
+			app ? 
+				SDL_GetDisplayForWindow(app->GetSdlWindow())
+				:
+#endif
+			SDL_GetPrimaryDisplay()
+		);
+		
+		if (displayMode) {
+			
+			const auto dpi = 
+#ifdef __linux__
+				// Round to 2 decimal places
+				std::round(displayMode->pixel_density * 100.0f) / 100.0f;
+#else
+
+				// On Windows, displayMode->pixel_density is always 1.0,
+				// so use SDL_GetDisplayContentScale() here, instead
+				SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
+#endif
+
+			const auto min = std::min(displayMode->w, displayMode->h);
+			
+			constexpr auto DefaultPercentage = 0.75f;
+
+			if (windowWidth == -1 || windowHeight == -1) {
+				SetWindowWidth(1920 / dpi, true);
+				SetWindowHeight(1080 / dpi, true);
+
+				LogDebug(
+					"Setting (full view) defaults to:\n\twindowWidth = ", windowWidth,
+					"\n\tminiPlayerHeight = ", windowHeight
+				);
+			}
+
+			if (miniPlayerWidth == -1 || miniPlayerHeight == -1) {
+				SetMiniPlayerWidth(
+					min * DefaultPercentage
+					// Save as DPI agnostic pixels on Windows
+#ifdef WIN32
+					/ dpi
+#endif
+					,
+					true
+				);
+				SetMiniPlayerHeight(
+					min * DefaultPercentage
+					// Save as DPI agnostic pixels on Windows
+#ifdef WIN32
+					/ dpi
+#endif
+					,
+					true
+				);
+				SetMiniPlayerRadius(min * DefaultPercentage / 5.4f, true);
+				SetMiniPlayerVisualizerRatio(min * DefaultPercentage / miniPlayerRadius, true);
+				SetMiniPlayerFontSize(std::lround(20 / (AlbumArt::BaseRadius / miniPlayerRadius)), true);
+
+				LogDebug(
+					"Setting (mini-player) defaults to:\n\tminiPlayerWidth = ", miniPlayerWidth,
+					"\n\tminiPlayerHeight = ", miniPlayerHeight,
+					"\n\tminiPlayerRadius = ", miniPlayerRadius,
+					"\n\tminiPlayerVisualizerRatio = ", miniPlayerVisualizerRatio,
+					"\n\tminiPlayerFontSize = ", miniPlayerFontSize
+				);
+			}
+
+			Save();
+
+			return dpi;
+		} else LogError("Display mode was null! ", SDL_GetError());
+	}
+
+	return 1.0f;
 }
 
 void Settings::LoadPresets() {

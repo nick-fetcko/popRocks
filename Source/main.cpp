@@ -50,7 +50,9 @@ bool EventFilter(void *pThis, SDL_Event *event) {
 	if ((!Settings::settings.GetMiniPlayer() && !app->GetPlatform()->IsFilterPaused())) {
 		if (event->type == SDL_EVENT_WINDOW_EXPOSED) {
 			app->OnLoop(timer.Update());
-		} else if (event->type == SDL_EVENT_WINDOW_SAFE_AREA_CHANGED || event->type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
+		} else if (event->type == SDL_EVENT_WINDOW_SAFE_AREA_CHANGED || 
+			event->type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED ||
+			event->type == SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED) {
 			int w = 0, h = 0;
 			auto scale = app->GetScale(app->GetSdlWindow(), &w, &h);
 
@@ -148,12 +150,21 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 				case SDL_EVENT_QUIT:
 					running = false;
 					break;
-				case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
-				case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: {
+				case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED: {
 					auto window = SDL_GetWindowFromID(event.window.windowID);
-					auto scale = app.GetScale(window, &w, &h);
+					const auto oldScale = app.GetScale();
 
-					app.OnResize(w, h, scale);
+					auto scale = app.GetScale(window, &w, &h);
+					if (oldScale != scale) {
+						app.OnResize(w, h, scale);
+					}
+					break;
+				} case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: {
+					app.OnResize(
+						event.window.data1 / app.GetPlatform()->GetScale(),
+						event.window.data2 / app.GetPlatform()->GetScale(),
+						app.GetScale()
+					);
 					break;
 				} case SDL_EVENT_WINDOW_MOVED:
 					if (mouseButtonDown) break;
@@ -212,8 +223,6 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 						app.LoadPreset(event.key.key - SDLK_F1);
 					else if (event.key.key == SDLK_S)
 						app.SyncToNearestBeat();
-					else if (event.key.key == SDLK_R)
-						app.ResetWindow();
 					else if (event.key.key == SDLK_PAGEDOWN)
 						app.GetControls().PageDown();
 					else if (event.key.key == SDLK_PAGEUP)
@@ -237,6 +246,8 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 						app.SetVulkan(!app.GetVulkan());
 					else if (event.key.key == SDLK_M)
 						app.SetMiniPlayer(!app.GetMiniPlayer());
+					else if (event.key.key == SDLK_R)
+						app.ResetWindow();
 					break;
 				case SDL_EVENT_MOUSE_MOTION:
 					mousePos.x = static_cast<int32_t>(event.motion.x);

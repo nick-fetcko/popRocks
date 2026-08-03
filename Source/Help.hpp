@@ -197,8 +197,6 @@ public:
 	void OnLoop(const Delta &time, Vector2i pos, Context &context) {
 		this->pos = pos;
 
-		albumArt->OverrideOutlineAlpha(alpha);
-
 		if (alpha == 0.0f) {
 			PreLoop();
 
@@ -208,6 +206,8 @@ public:
 			PostLoop(time);
 			return;
 		}
+
+		albumArt->OverrideOutlineAlpha(alpha);
 
 		if (albumArt->Loaded()) {
 			context.Blend(true, [&] {

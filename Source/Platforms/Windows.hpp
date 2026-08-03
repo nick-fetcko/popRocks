@@ -37,6 +37,7 @@ public:
 	// CApp helpers
 	void OnInit(Interop::InitArgs args, Context &context) override;
 	void OnDestroy() override;
+	bool NeedsToResize(int &width, int &height, int windowWidth, int windowHeight, float scale, const std::optional<float> &scaleDelta, bool force) override;
 	void OnResize(int windowWidth, int windowHeight) override;
 	void HandleScaleDelta(float scale, std::optional<float> &scaleDelta, int &width, int &height, std::optional<Vector2i> &lastMousePos, int &windowX, int &windowY) override;
 	std::optional<bool> OnLoop() override;
@@ -84,7 +85,7 @@ public:
 
 	// Window management
 	bool AllowsWindowMovement() const override;
-	std::optional<Vector2i> SetWindowPos(int x, int y, int width, int height) override;
+	std::optional<Vector2i> SetWindowPos(int x, int y, int width, int height, int *windowWidth = nullptr, int *windowHeight = nullptr, bool alreadyRespawned = false) override;
 	void ShowDialogBox(const std::string &title, const std::string &message) override;
 	bool HandleExistingWindow(int argc, char *argv[]) override;
 
@@ -98,6 +99,9 @@ public:
 	// Display properties
 	int GetAdapterIndex() override;
 	int GetDefaultFramebuffer() override;
+	const float GetScale(SDL_Window *window, Context &context, int *w, int *h) override;
+	const float GetScale(bool actual = false) const override;
+	const float GetScaleForPoint(int x, int y) const override;
 
 	// Exclusive mode
 	bool LoadExclusive(double pos) override;
@@ -150,6 +154,8 @@ private:
 	int lastProgress = 0;
 
 	WNDPROC sdlWndProc = nullptr;
+
+	float actualScale = 1.0f;
 
 #ifndef _DEBUG
 	HKEY registryKey = nullptr;

@@ -302,7 +302,7 @@ bool MiniPlayerList::OnMouseMoved(const Vector2i &mousePos, Rectanglei bounds, b
 	hoveredOffset = -1;
 
 	if (inTriggerX &&
-		mousePos.y >= bounds.y - font->GetEm().height / 2 && mousePos.y <= bounds.h + font->GetEm().height / 2 ) {
+		mousePos.y >= bounds.y - font->GetEm().height / 4 && mousePos.y <= bounds.h + font->GetEm().height / 4 ) {
 		hoverTimer = std::chrono::system_clock::now();
 
 		return true;

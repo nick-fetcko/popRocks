@@ -175,6 +175,12 @@ void Windows::OnDestroy() {
 #endif
 }
 
+bool Windows::NeedsToResize(int &width, int &height, int windowWidth, int windowHeight, float scale, const std::optional<float> &scaleDelta, bool force) {
+	return !(
+		width == windowWidth && height == windowHeight && !scaleDelta && !force
+	);
+}
+
 void Windows::OnResize(int windowWidth, int windowHeight) {
 	if (auto &context = app->GetContext()) {
 		if (!app->GetVulkan()) {
@@ -205,8 +211,8 @@ void Windows::HandleScaleDelta(float scale, std::optional<float> &scaleDelta, in
 	height = scaled;
 
 	SetWindowPos(
-		windowX -= delta / 2,
-		windowY -= delta / 2,
+		windowX,
+		windowY,
 		scaled,
 		scaled
 	);
@@ -812,7 +818,7 @@ bool Windows::AllowsWindowMovement() const {
 	return true;
 }
 
-std::optional<Vector2i> Windows::SetWindowPos(int x, int y, int width, int height) {
+std::optional<Vector2i> Windows::SetWindowPos(int x, int y, int width, int height, int *windowWidth, int *windowHeight, bool alreadyRespawned) {
 	std::optional<Vector2i> ret = std::nullopt;
 
 	const auto hwnd = reinterpret_cast<HWND>(
@@ -973,6 +979,32 @@ int Windows::GetAdapterIndex() {
 
 int Windows::GetDefaultFramebuffer() {
 	return (HDR::Enabled || app->GetVulkan()) ? GetInterop()->GetFramebuffer() : 0;
+}
+
+const float Windows::GetScale(SDL_Window *window, Context &context, int *w, int *h) {
+	actualScale = SDL_GetWindowDisplayScale(window);
+
+	SDL_GetWindowSizeInPixels(window, w, h);
+
+	SetSafeArea(window, context, *w, *h);
+
+	// We want to return 1.0 when our scale is
+	// queried because Windows does NOT use
+	// virtual coordinates. All mouse coords, etc.
+	// are reported in real pixel values
+	this->scale = 1.0f;
+
+	return actualScale;
+}
+
+const float Windows::GetScale(bool actual) const {
+	if (actual) return actualScale;
+	return scale;
+}
+
+const float Windows::GetScaleForPoint(int x, int y) const {
+	SDL_Point point{ x, y };
+	return SDL_GetDisplayContentScale(SDL_GetDisplayForPoint(&point));
 }
 
 // -----------------------------------------------------

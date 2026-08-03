@@ -98,6 +98,8 @@ public:
 
 protected:
 	virtual void UpdateVertexCoords() {
+		if (!vbo) return;
+
 		constexpr uint8_t Stride = static_cast<uint8_t>(T);
 
 		float degInRad = 0.0f;

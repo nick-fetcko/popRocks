@@ -87,6 +87,11 @@ public:
 
 	void OnInit(int windowWidth, int windowHeight, float scale = 1.0f);
 	void OnResize(int windowWidth, int windowHeight, float scale = 1.0f);
+
+	// Use this to change scale's internal value
+	// WITHOUT updating the radius
+	void OverrideScale(float scale) { this->scale = scale; }
+
 	const float &GetScale() const { return scale; }
 	void OnLoop(
 		const Delta &time,
@@ -215,6 +220,11 @@ public:
 	void DrawPlaceholder(GLfloat x, GLfloat y, float alpha, Context &context) const;
 
 	void OverrideOutlineAlpha(float overrideOutlineAlpha) { this->overrideOutlineAlpha = overrideOutlineAlpha; }
+	const float &GetTargetOverrideOutlineAlpha() const { return targetOverrideOutlineAlpha; }
+	void TargetOverrideOutlineAlpha(float targetOverrideOutlineAlpha) { 
+		if (this->targetOverrideOutlineAlpha != targetOverrideOutlineAlpha) 
+			this->targetOverrideOutlineAlpha = targetOverrideOutlineAlpha; 
+	}
 
 	const Fetcko::Polyline &GetOutline() const { return outline; }
 	const Fetcko::Polyline &GetVisualizerOutline() const { return visualizerOutline; }
@@ -359,6 +369,7 @@ private:
 	float outlineAlpha = 0.0f;
 	float targetOutlineAlpha = 0.0f;
 	float overrideOutlineAlpha = 0.0f;
+	float targetOverrideOutlineAlpha = 0.0f;
 
 	std::set<BlackChangedListener*> blackChangedListeners;
 

@@ -21,6 +21,7 @@ using namespace Fetcko;
 using namespace MathsCPP;
 using namespace serial;
 
+class CApp;
 class Settings : public LoggableClass {
 private:
 	static const DynamicGain<float> BaseDynamicGain;
@@ -96,6 +97,7 @@ public:
 
 	Settings &operator=(Settings &&) = default;
 
+	float LoadDefaults(CApp *app);
 	void Save();
 
 	const float &GetVolume() const { return volume; }
@@ -418,8 +420,8 @@ private:
 	bool exclusive = true;
 	ColorSelection colorSelection;
 
-	int windowWidth = 1920;
-	int windowHeight = 1080;
+	int windowWidth = -1;
+	int windowHeight = -1;
 
 	int windowX = SDL_WINDOWPOS_CENTERED;
 	int windowY = SDL_WINDOWPOS_CENTERED;
@@ -577,8 +579,8 @@ private:
 	int miniPlayerX = SDL_WINDOWPOS_CENTERED;
 	int miniPlayerY = SDL_WINDOWPOS_CENTERED;
 	float miniPlayerVisualizerRatio = 5.4f;
-	int miniPlayerWidth = 200 * miniPlayerVisualizerRatio;
-	int miniPlayerHeight = 200 * miniPlayerVisualizerRatio;
+	int miniPlayerWidth = -1;
+	int miniPlayerHeight = -1;
 	float miniPlayerRadius = 200;
 	int miniPlayerFontSize = 20;
 

@@ -46,11 +46,12 @@ void Controls::OpenFont(Context *context, GLuint defaultFramebuffer) {
 
 		UpdateFontSize();
 	} else {
+		const auto fontSize = miniPlayer ? Settings::settings.GetMiniPlayerFontSize() : 18;
 		font = new OpenGLFont();
 		font->SetDefaultFramebuffer(defaultFramebuffer);
 		if (!font->OnInit(
 			FontRoot,
-			static_cast<FT_UInt>(18 * scale)
+			static_cast<FT_UInt>(fontSize * scale)
 		)) {
 			delete font;
 			font = nullptr;
@@ -60,7 +61,7 @@ void Controls::OpenFont(Context *context, GLuint defaultFramebuffer) {
 		boldFont->SetDefaultFramebuffer(defaultFramebuffer);
 		if (!boldFont->OnInit(
 			FontRoot,
-			static_cast<FT_UInt>(18 * scale)
+			static_cast<FT_UInt>(fontSize * scale)
 		)) {
 			delete boldFont;
 			boldFont = nullptr;
@@ -70,8 +71,8 @@ void Controls::OpenFont(Context *context, GLuint defaultFramebuffer) {
 		outlineFont->SetDefaultFramebuffer(defaultFramebuffer);
 		if (!outlineFont->OnInit(
 			FontRoot,
-			static_cast<FT_UInt>(18 * scale),
-			3.75f
+			static_cast<FT_UInt>(fontSize * scale),
+			4.75f
 		)) {
 			delete outlineFont;
 			outlineFont = nullptr;
@@ -81,8 +82,8 @@ void Controls::OpenFont(Context *context, GLuint defaultFramebuffer) {
 		boldOutlineFont->SetDefaultFramebuffer(defaultFramebuffer);
 		if (!boldOutlineFont->OnInit(
 			FontRoot,
-			static_cast<FT_UInt>(18 * scale),
-			3.75f
+			static_cast<FT_UInt>(fontSize * scale),
+			4.75f
 		)) {
 			delete boldOutlineFont;
 			boldOutlineFont = nullptr;
@@ -935,12 +936,12 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 				context.Color(0.0f, 0.0f, 0.0f, alpha);
 				statsOutline.OnLoop(
 					windowWidth / 2 - statsWidth / 2 + fpsCounter.GetText().GetBounds().width,
-					windowHeight / 2 + font->GetEm().height * 2
+					windowHeight / 2 + font->GetEm().height * 1.98f
 				);
 				context.Color(1.0f, 1.0f, 1.0f, alpha);
 				stats.OnLoop(
 					windowWidth / 2 - statsWidth / 2 + fpsCounter.GetText().GetBounds().width,
-					windowHeight / 2 + font->GetEm().height * 2
+					windowHeight / 2 + font->GetEm().height * 1.98f
 				);
 			}
 
@@ -951,7 +952,7 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 #endif
 				fpsCounter.Draw(
 					miniPlayer ? windowWidth / 2 - statsWidth / 2 : 0,
-					miniPlayer ? windowHeight / 2 + font->GetEm().height * 2 : 0,
+					miniPlayer ? windowHeight / 2 + font->GetEm().height * 1.98f : 0,
 					alpha
 				);
 			}
@@ -1272,9 +1273,9 @@ void Controls::OnMouseMoved(const Vector2i &mousePos) {
 	// Don't allow interaction if Help is visible
 	auto button = help.IsHovered() ? ControlButton::None : GetButtonAtPos(mousePos);
 
-	if (!help.IsHovered() && !presetList.IsHovered() && playlist.OnMouseMoved(mousePos))
+	if (!help.IsHovered() && playlist.OnMouseMoved(mousePos))
 		button = ControlButton::None;
-	else if (!help.IsHovered() && !playlist.IsHovered() && presetList.OnMouseMoved(
+	else if (!help.IsHovered() && presetList.OnMouseMoved(
 		mousePos,
 		{
 			windowWidth / 2 - presetText.GetBounds().width / 2,
@@ -1473,7 +1474,7 @@ float Controls::UpdateFontSize(std::optional<float> radius, bool miniPlayerToggl
 	if (std::abs(newFontSize - lastFontSize) >= 1.0f) {
 		const auto newOutlineSize = miniPlayer ? 4.75f / (AlbumArt::BaseRadius / *radius) * scale : 3.0f * scale;
 
-		LogInfo("Updating font size to ", newFontSize);
+		LogInfo("Updating font size to ", newFontSize, " based on a scale of ", scale);
 
 		font->SetFontSize(newFontSize);
 		boldFont->SetFontSize(newFontSize);

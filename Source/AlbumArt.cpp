@@ -25,7 +25,7 @@
 using namespace MathsCPP;
 
 AlbumArt::AlbumArt(Controls * const controls, std::unique_ptr<Context> &context, std::unique_ptr<Platform> &platform) : controls(controls), context(context), platform(platform), outline(10), visualizerOutline(5) {
-	Circle::radius = GetRadius(Settings::settings.GetMiniPlayer());
+	
 }
 
 AlbumArt::~AlbumArt() {
@@ -65,7 +65,9 @@ void AlbumArt::OnInit(int windowWidth, int windowHeight, float scale) {
 	this->outlineFont = controls->GetOutlineFont();
 	this->boldOutlineFont = controls->GetBoldOutlineFont();
 
-	Circle::radius *= scale;
+	miniPlayerRadius = Settings::settings.GetMiniPlayerRadius();
+
+	Circle::radius = GetRadius(Settings::settings.GetMiniPlayer());
 
 	if (context) {
 		context->With("rotate"_hash, [this](Context::Shader &shader) {
@@ -130,7 +132,7 @@ void AlbumArt::OnResize(int windowWidth, int windowHeight, float scale) {
 
 		placeholder.SetRadius(Circle::radius);
 
-		LogDebug("Scale changed! New radius is ", Circle::radius);
+		LogDebug("Scale changed to ", scale, "! New radius is ", Circle::radius);
 
 		UpdateVertexCoords();
 		UpdateFontSize();
@@ -151,8 +153,8 @@ void AlbumArt::SetRadius(float radius, bool miniPlayer) {
 		miniPlayerRadius = radius / scale;
 		Settings::settings.SetMiniPlayerRadius(radius / scale, true);
 	} else {
-		this->radius = radius;
-		Settings::settings.SetRadius(radius);
+		this->radius = radius / scale;
+		Settings::settings.SetRadius(radius / scale);
 	}
 
 	placeholder.SetRadius(radius);
@@ -296,7 +298,7 @@ void AlbumArt::OnLoop(
 		context.LoadIdentity();
 	}
 
-	if (Settings::settings.GetMiniPlayer() || !albumLoaded) {
+	if (auto miniPlayer = Settings::settings.GetMiniPlayer(); miniPlayer || !albumLoaded) {
 		context.Blend(albumLoaded, [&] {
 			DrawPlaceholder(x, y, alpha, context);
 		});
@@ -308,32 +310,47 @@ void AlbumArt::OnLoop(
 			);
 		}
 
-		if (hoverTimer && (std::chrono::system_clock::now() - *hoverTimer) >= Settings::settings.GetHoverTime()) {
-			hovered = true;
-			targetOutlineAlpha = 1.0f;
-			hoverTimer = std::nullopt;
-		}
+		if (miniPlayer) {
+			if (hoverTimer && (std::chrono::system_clock::now() - *hoverTimer) >= Settings::settings.GetHoverTime()) {
+				hovered = true;
+				targetOutlineAlpha = 1.0f;
+				hoverTimer = std::nullopt;
+			}
 
-		if (outlineAlpha > 0.0f || overrideOutlineAlpha > 0.0f) {
-			context.Use("basic"_hash);
-			context.Color(1.0f, 1.0f, 1.0f, overrideOutlineAlpha > 0.0f ? overrideOutlineAlpha : outlineAlpha);
-			context.Translate(x, y, 0);
-			context.Apply();
-			outline.Draw<false>(context);
-			visualizerOutline.Draw<true>(context);
-		}
+			if (outlineAlpha > 0.0f || overrideOutlineAlpha > 0.0f) {
+				context.Use("basic"_hash);
+				context.Color(1.0f, 1.0f, 1.0f, overrideOutlineAlpha > 0.0f ? overrideOutlineAlpha : outlineAlpha);
+				context.Translate(x, y, 0);
+				context.Apply();
+				outline.Draw<false>(context);
+				visualizerOutline.Draw<true>(context);
+			}
 
-		if (outlineAlpha != targetOutlineAlpha) {
-			if (outlineAlpha < targetOutlineAlpha) {
-				outlineAlpha += 5.0f * time.change.AsSeconds();
-				if (outlineAlpha > targetOutlineAlpha) {
-					outlineAlpha = targetOutlineAlpha;
-					if (resizable) UpdateCursor(mousePos);
+			if (outlineAlpha != targetOutlineAlpha) {
+				if (outlineAlpha < targetOutlineAlpha) {
+					outlineAlpha += 5.0f * time.change.AsSeconds();
+					if (outlineAlpha > targetOutlineAlpha) {
+						outlineAlpha = targetOutlineAlpha;
+						if (resizable) UpdateCursor(mousePos);
+					}
+				} else {
+					outlineAlpha -= 5.0f * time.change.AsSeconds();
+					if (outlineAlpha < targetOutlineAlpha)
+						outlineAlpha = targetOutlineAlpha;
 				}
-			} else {
-				outlineAlpha -= 5.0f * time.change.AsSeconds();
-				if (outlineAlpha < targetOutlineAlpha)
-					outlineAlpha = targetOutlineAlpha;
+			}
+
+			if (overrideOutlineAlpha != targetOverrideOutlineAlpha) {
+				if (overrideOutlineAlpha < targetOverrideOutlineAlpha) {
+					overrideOutlineAlpha += 2.5f * time.change.AsSeconds();
+					if (overrideOutlineAlpha > targetOverrideOutlineAlpha) {
+						overrideOutlineAlpha = targetOverrideOutlineAlpha;
+					}
+				} else {
+					overrideOutlineAlpha -= 2.5f * time.change.AsSeconds();
+					if (overrideOutlineAlpha < targetOverrideOutlineAlpha)
+						overrideOutlineAlpha = targetOverrideOutlineAlpha;
+				}
 			}
 		}
 	}

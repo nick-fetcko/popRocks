@@ -37,6 +37,7 @@ public:
 
 	// CApp helpers
 	void OnInit(Interop::InitArgs args, Context &context) override;
+	bool NeedsToResize(int &width, int &height, int windowWidth, int windowHeight, float scale, const std::optional<float> &scaleDelta, bool force) override;
 	void OnResize(int windowWidth, int windowHeight) override;
 	void HandleScaleDelta(float scale, std::optional<float> &scaleDelta, int &width, int &height, std::optional<Vector2i> &lastMousePos, int &windowX, int &windowY) override;
 	void OnDestroy() override;
@@ -84,7 +85,7 @@ public:
 
 	// Window management
 	bool AllowsWindowMovement() const override;
-	std::optional<Vector2i> SetWindowPos(int x, int y, int width, int height) override;
+	std::optional<Vector2i> SetWindowPos(int x, int y, int width, int height, int *windowWidth = nullptr, int *windowHeight = nullptr, bool alreadyRespawned = false) override;
 
 	// =====================================================
 	// ===================== Virtuals ======================
@@ -96,6 +97,7 @@ public:
 
 	// Display properties
 	int GetDefaultFramebuffer() override;
+	const float GetScale(SDL_Window *window, Context &context, int *w, int *h) override;
 	
 	// Exclusive mode
 	bool LoadExclusive(double pos) override;

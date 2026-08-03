@@ -160,6 +160,7 @@ public:
 		Resizing
 	};
 	bool OnMouseDown(const Vector2i &mousePos, MouseDownState *state = nullptr);
+	void OnMoveStart();
 	void OnMouseUp(const Vector2i &mousePos);
 	void OnMouseMoved(const Vector2i &mousePos);
 	bool OnMouseDragged(const Vector2i &mousePos);
@@ -226,6 +227,8 @@ public:
 	const bool &GetMiniPlayer() const { return miniPlayer; }
 	void SetMiniPlayer(bool miniPlayer, bool inLoop = false);
 
+	void RespawnWindow();
+
 	const bool IsFileLoaded() const { return fileLoaded || platform->IsListening(); }
 
 	const float &GetBackgroundAlpha() const { return backgroundAlpha; }
@@ -289,14 +292,14 @@ private:
 
 	inline void SetHdr(bool enabled);
 
-	inline SDL_PropertiesID CreateSdlWindow();
+	inline SDL_PropertiesID CreateSdlWindow(bool first);
 
 	Interop::InitArgs GetInteropArgs();
 
 	inline void SetRadius(float radius);
 	inline void UpdateBleedEdge(float radius);
 
-	inline void UpdateMiniPlayer();
+	inline void UpdateMiniPlayer(bool respawn);
 
 	inline void DrawCloseButton(const Delta &time);
 	inline bool IsOnCloseButton(const Vector2i &mousePos);
@@ -509,6 +512,8 @@ private:
 	bool preLoaded = false;
 
 	std::optional<float> audioOffset = Settings::settings.GetAudioOffset();
+
+	std::optional<std::chrono::system_clock::time_point> moveTimer = std::nullopt;
 
 #ifdef _DEBUG
 	std::string lastPos;

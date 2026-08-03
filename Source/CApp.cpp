@@ -220,38 +220,17 @@ void CApp::PrepareFile(std::wstring file) {
 }
 
 float CApp::GetScale(SDL_Window *window, int *w, int *h) {
-	int virtualW = 0, virtualH = 0;
-	SDL_GetWindowSize(window, &virtualW, &virtualH);
+	scale = platform->GetScale(window, *context, w, h);
 
-	int localW = 0, localH = 0;
-
-	// Use local variables if no pointers
-	// were provided
-	if (!w) w = &localW;
-	if (!h) h = &localH;
-
-	SDL_GetWindowSizeInPixels(window, w, h);
-	platform->SetSafeArea(window, *context, *w, *h);
+	// Platform::GetScale() can update the safe area
 	safeAreaPadding = context->GetSafeArea().y;
-	scale = (virtualW == 0 ? 1.0f : static_cast<float>(*w) / virtualW);
-
-#ifndef __linux__
-	scale *= SDL_GetWindowDisplayScale(window);
-#else
-	// mini-player requires unscaled
-	// values to update window shape
-	if (miniPlayer) {
-		*w /= scale;
-		*h /= scale;
-	}
-#endif
 
 	if (scale != originalScale)
 		scaleDelta = scale - originalScale;
 
 	originalScale = scale;
 
-	return platform->GetScale(scale);
+	return scale;
 }
 
 inline void CApp::CacheBlurUniforms(Context::Shader &shader) {
@@ -603,7 +582,7 @@ void CApp::SetVulkan(bool vulkan) {
 
 	platform->CreateInterop();
 
-	auto props = CreateSdlWindow();
+	auto props = CreateSdlWindow(false);
 	if (vulkan)
 		platform->OpenOpenGlWindow(props);
 	SDL_DestroyProperties(props);
@@ -627,17 +606,31 @@ void CApp::SetVulkan(bool vulkan) {
 	OnResize(windowWidth, windowHeight, scale, true);
 }
 
-inline SDL_PropertiesID CApp::CreateSdlWindow() {
+inline SDL_PropertiesID CApp::CreateSdlWindow(bool first) {
 	SDL_PropertiesID props = SDL_CreateProperties();
 
-	windowX = Settings::settings.GetMiniPlayerX();
-	windowY = Settings::settings.GetMiniPlayerY();
+	windowX = miniPlayer ? Settings::settings.GetMiniPlayerX() : Settings::settings.GetWindowX();
+	windowY = miniPlayer ? Settings::settings.GetMiniPlayerY() : Settings::settings.GetWindowY();
+
+	const float newScale = first ? 1.0f : platform->GetScaleForPoint(windowX, windowY);
+
+	scale = originalScale = newScale;
+
+	const auto width = (miniPlayer ?
+		Settings::settings.GetMiniPlayerWidth() :
+		Settings::settings.GetWindowWidth()
+	) * newScale;
+
+	const auto height = (miniPlayer ?
+		Settings::settings.GetMiniPlayerHeight() :
+		Settings::settings.GetWindowHeight()
+	) * newScale;
 
 	SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "popRocks");
-	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, miniPlayer ? Settings::settings.GetMiniPlayerWidth() : Settings::settings.GetWindowWidth());
-	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, miniPlayer ? Settings::settings.GetMiniPlayerHeight() : Settings::settings.GetWindowHeight());
-	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, miniPlayer ? windowX : Settings::settings.GetWindowX());
-	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, miniPlayer ? windowY : Settings::settings.GetWindowY());
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, windowX);
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, windowY);
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, width);
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, height);
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_VULKAN_BOOLEAN, platform->GetVulkanProperty());
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_OPENGL_BOOLEAN, platform->GetOpenGlProperty());
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
@@ -685,14 +678,29 @@ Interop::InitArgs CApp::GetInteropArgs() {
 	return args;
 }
 
-void CApp::UpdateMiniPlayer() {
+void CApp::UpdateMiniPlayer(bool respawn) {
 	if (miniPlayer) {
 		UpdateBleedEdge(albumArt.GetRadius(miniPlayer));
 		if (const auto pos = platform->SetWindowPos(
 			Settings::settings.GetMiniPlayerX(),
 			Settings::settings.GetMiniPlayerY(),
-			Settings::settings.GetMiniPlayerWidth(),
+			Settings::settings.GetMiniPlayerWidth()
+			// On Windows, these are explicitly 
+			// saved as DPI agnostic pixels
+#ifdef WIN32
+			* scale
+#endif
+			,
 			Settings::settings.GetMiniPlayerHeight()
+			// On Windows, these are explicitly 
+			// saved as DPI agnostic pixels
+#ifdef WIN32
+			* scale
+#endif
+			,
+			&windowWidth,
+			&windowHeight,
+			respawn
 		)) {
 			// If SetWindowPos changed our position,
 			// make sure to update it.
@@ -724,34 +732,7 @@ void CApp::SetMiniPlayer(bool miniPlayer, bool inLoop) {
 
 	if (sdlWindow) {
 #if 1
-		ImGui_ImplOpenGL3_Shutdown();
-		ImGui_ImplSDL3_Shutdown();
-
-		if (auto interop = platform->GetInterop())
-			interop->OnDestroy();
-
-		// Keep the old window around to
-		// swap out its OpenGL context
-		auto oldWindow = sdlWindow;
-
-		// We don't need the properties here,
-		// so destroy them right away
-		SDL_DestroyProperties(CreateSdlWindow());
-
-		if (!vulkan)
-			SDL_GL_MakeCurrent(sdlWindow, openGlContext);
-
-		// Now that we've swapped the OpenGL
-		// context, destroy the old window
-		platform->DestroyWindow(oldWindow);
-
-		// Since the platform hasn't yet been given
-		// the new miniPlayer value, we need to
-		// explicitly pass it here.
-		platform->HookWindow(miniPlayer);
-
-		ImGui_ImplSDL3_InitForOpenGL(sdlWindow, openGlContext);
-		ImGui_ImplOpenGL3_Init();
+		RespawnWindow();
 #else
 		SDL_SetWindowAlwaysOnTop(sdlWindow, miniPlayer);
 		platform->SetWindowPos(
@@ -790,9 +771,11 @@ void CApp::SetMiniPlayer(bool miniPlayer, bool inLoop) {
 			shader.program.Uniform1i("premultipliedAlpha"_hash, premultipliedAlpha);
 		});
 	}
-	UpdateMiniPlayer();
+	UpdateMiniPlayer(true);
 
 	// We need to resize the control icons
+
+	/*
 	controls.OnResize(
 		miniPlayer ? Settings::settings.GetMiniPlayerWidth() : Settings::settings.GetWindowWidth(),
 		miniPlayer ? Settings::settings.GetMiniPlayerHeight() : Settings::settings.GetWindowHeight(),
@@ -801,6 +784,7 @@ void CApp::SetMiniPlayer(bool miniPlayer, bool inLoop) {
 		platform->GetDefaultFramebuffer(),
 		miniPlayer
 	);
+	*/
 
 	if (auto index = miniPlayer ? Settings::settings.GetMiniPlayerPresetIndex() : Settings::settings.GetPresetIndex())
 		LoadPreset(Preset::GetPresets().at(*index));
@@ -811,6 +795,37 @@ void CApp::SetMiniPlayer(bool miniPlayer, bool inLoop) {
 	// Make sure our cursor is visible
 	if (miniPlayer)
 		SDL_ShowCursor();
+	else
+		SDL_SetCursor(SDL_GetDefaultCursor());
+}
+
+void CApp::RespawnWindow() {
+	ImGui_ImplSDL3_Shutdown();
+
+	if (auto interop = platform->GetInterop())
+		interop->OnDestroy();
+
+	// Keep the old window around to
+	// swap out its OpenGL context
+	auto oldWindow = sdlWindow;
+
+	// We don't need the properties here,
+	// so destroy them right away
+	SDL_DestroyProperties(CreateSdlWindow(false));
+
+	if (!vulkan)
+		SDL_GL_MakeCurrent(sdlWindow, openGlContext);
+
+	// Now that we've swapped the OpenGL
+	// context, destroy the old window
+	platform->DestroyWindow(oldWindow);
+
+	// Since the platform hasn't yet been given
+	// the new miniPlayer value, we need to
+	// explicitly pass it here.
+	platform->HookWindow(miniPlayer);
+
+	ImGui_ImplSDL3_InitForOpenGL(sdlWindow, openGlContext);
 }
 
 inline void CApp::UpdateBleedEdge(float radius) {
@@ -841,30 +856,43 @@ void CApp::ResetWindow() {
 		// Use temporary scaled values to ensure any
 		// DPI changes when moving back to the primary
 		// monitor are handled correctly.
-		Settings::settings.SetMiniPlayerWidth(1080 * scale, true);
-		Settings::settings.SetMiniPlayerHeight(1080 * scale, true);
+		Settings::settings.SetMiniPlayerWidth(-1, true);
+		Settings::settings.SetMiniPlayerHeight(-1, true);
 
 		Settings::settings.SetMiniPlayerX(SDL_WINDOWPOS_CENTERED, true);
 		Settings::settings.SetMiniPlayerY(SDL_WINDOWPOS_CENTERED, true);
-		Settings::settings.SetMiniPlayerVisualizerRatio(5.4f, true);
-		Settings::settings.SetMiniPlayerRadius(AlbumArt::BaseRadius);
 
-		UpdateMiniPlayer();
+		// Make sure we don't see any change in scale
+		scale = originalScale = Settings::settings.LoadDefaults(this);
 
-		// Prepare for potential DPI change
-		Settings::settings.SetMiniPlayerWidth(1080, true);
-		Settings::settings.SetMiniPlayerHeight(1080);
+		// Make sure album art doesn't
+		// see any change in scale
+		albumArt.OverrideScale(scale);
 
-		SetRadius(Settings::settings.GetMiniPlayerRadius() * scale);
+		SetRadius(
+			Settings::settings.GetMiniPlayerRadius() * platform->GetScale()
+		);
+
+		UpdateMiniPlayer(false);
+
+		controls.UpdateFontSize(std::nullopt, true);
 	}
 	else {
-		Settings::settings.SetWindowWidth(1920, true);
-		Settings::settings.SetWindowHeight(1080, true);
+		Settings::settings.SetWindowWidth(-1, true);
+		Settings::settings.SetWindowHeight(-1, true);
 		Settings::settings.SetWindowX(SDL_WINDOWPOS_CENTERED, true);
-		Settings::settings.SetWindowY(SDL_WINDOWPOS_CENTERED);
+		Settings::settings.SetWindowY(SDL_WINDOWPOS_CENTERED, true);
 
-		SDL_SetWindowSize(sdlWindow, Settings::settings.GetWindowWidth(), Settings::settings.GetWindowHeight());
-		SDL_SetWindowPosition(sdlWindow, Settings::settings.GetWindowX(), Settings::settings.GetWindowY());
+		Settings::settings.LoadDefaults(this);
+
+		platform->SetWindowPos(
+			Settings::settings.GetWindowX(),
+			Settings::settings.GetWindowY(),
+			Settings::settings.GetWindowWidth(),
+			Settings::settings.GetWindowHeight(),
+			&windowWidth,
+			&windowHeight
+		);
 	}
 }
 
@@ -898,6 +926,9 @@ void CApp::OnInit() {
 	if (!ret)
 		LogDebug("SDL_GetError = ", SDL_GetError());
 
+	// No SDL window to get defaults from yet
+	Settings::settings.LoadDefaults(nullptr);
+
 	/*
 	ret = IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG | IMG_INIT_WEBP);
 
@@ -930,7 +961,7 @@ void CApp::OnInit() {
 	windowWidth = Settings::settings.GetWindowWidth();
 	windowHeight = Settings::settings.GetWindowHeight();
 
-	auto props = CreateSdlWindow();
+	auto props = CreateSdlWindow(true);
 	platform->OpenOpenGlWindow(props);
 	SDL_DestroyProperties(props);
 
@@ -1678,7 +1709,7 @@ void CApp::OnInit() {
 
 	spindle.OnInit(albumArt.GetRadius(miniPlayer) / SpindleSize);
 
-	UpdateMiniPlayer();
+	UpdateMiniPlayer(true);
 
 	OnResize(windowWidth, windowHeight, scale, true);
 
@@ -1702,27 +1733,34 @@ HSTREAM CApp::GetNextStreamHandle() const {
 }
 
 void CApp::OnResize(int width, int height, float scale, bool force) {
-	if (width == windowWidth && height == windowHeight && !scaleDelta && !force) return;
+	if (!platform->NeedsToResize(
+		width,
+		height,
+		windowWidth,
+		windowHeight,
+		scale,
+		scaleDelta,
+		force
+	)) return;
+
+	//LogDebug("Resizing to ", width, " x ", height);
 
 	windowWidth = width;
 	windowHeight = height;
 
-	//LogDebug("Resizing to ", width, " x ", height);
-
 	if (!miniPlayer) {
+		if (scaleDelta) scaleDelta = std::nullopt;
+
+		context->SetSafeArea({0, 0, width, height});
+
 		Settings::settings.SetWindowWidth(
-			width
-#ifdef __linux__
-			/ scale
-#endif
+			width / scale
 		);
 		Settings::settings.SetWindowHeight(
-			height
-#ifdef __linux__
-			/ scale
-#endif
+			height / scale
 		);
 	} else if (scaleDelta) {
+		LogDebug("Handling (mini-player) scale delta of ", *scaleDelta);
 		platform->HandleScaleDelta(
 			scale,
 			scaleDelta,
@@ -1953,6 +1991,13 @@ void CApp::OnLoop(const Delta &time) {
 			chroma,
 			backgroundAlpha
 		);
+
+		if (moveTimer) {
+			if (auto now = std::chrono::system_clock::now(); platform->IsMoving() && now - *moveTimer > 100ms)
+				albumArt.TargetOverrideOutlineAlpha(0.334f);
+			else if (!platform->IsMoving())
+				moveTimer = std::nullopt;
+		}
 	} else glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -2114,7 +2159,7 @@ void CApp::OnLoop(const Delta &time) {
 			++pps;
 
 		if (auto now = std::chrono::system_clock::now(); now - posTimer >= 1s) {
-			controls.SetStats("  " /* padding */ + std::to_string(pps) + "PPS"); // POSITIONS per second
+			controls.SetStats("  " /* padding */ + std::to_string(pps) + " PPS"); // POSITIONS per second
 			pps = 0;
 			posTimer = now;
 		}
@@ -3550,6 +3595,10 @@ bool CApp::OnMouseDown(const Vector2i &mousePos, MouseDownState *state) {
 	return ret;
 }
 
+void CApp::OnMoveStart() {
+	moveTimer = std::chrono::system_clock::now();
+}
+
 void CApp::OnMouseUp(const Vector2i &mousePos) {
 	if (miniPlayer && !platform->IsResizing()) {
 		LogInfo("Mouse up...");
@@ -3560,6 +3609,9 @@ void CApp::OnMouseUp(const Vector2i &mousePos) {
 		controls.OnMouseUp(mousePos);
 
 		miniPlayerVisualizerRatio = Settings::settings.GetMiniPlayerVisualizerRatio();
+
+		if (lastMousePos)
+			albumArt.TargetOverrideOutlineAlpha(0.0f);
 
 		lastMousePos = std::nullopt;
 
@@ -3622,6 +3674,8 @@ bool CApp::OnMouseDragged(const Vector2i &mousePos) {
 
 	if (lastMousePos) {
 		if (!seek) {
+			albumArt.TargetOverrideOutlineAlpha(0.334f);
+
 			if (windowX == SDL_WINDOWPOS_CENTERED)
 				SDL_GetWindowPosition(sdlWindow, &windowX, &windowY);
 
@@ -3641,8 +3695,10 @@ bool CApp::OnMouseDragged(const Vector2i &mousePos) {
 			lastMousePos = mousePos - delta;
 		}
 	} else if(const auto now = std::chrono::system_clock::now();
-		// Only allow resizes to occur at 30FPS
-		resizeTimer && now - *resizeTimer >= 0.0334s && 
+		// Only allow resizes to occur at 30FPS on Linux
+#ifdef __linux__
+		resizeTimer && now - *resizeTimer >= 0.0334s &&
+#endif
 		miniPlayer && !controls.GetHelp().IsHovered() && albumArt.OnMouseDragged(mousePos)) {
 		const auto &ratio = Settings::settings.GetMiniPlayerVisualizerRatio();
 		const auto oldRadius = dynamic_cast<Circle<Circles::Textured>*>(&albumArt)->GetRadius();

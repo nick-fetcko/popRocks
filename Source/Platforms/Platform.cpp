@@ -20,8 +20,16 @@ void Platform::SetSafeArea(SDL_Window *window, Context &context, int w, int h) {
 	context.SetSafeArea({ 0, 0, w, h }); 
 }
 
-const float Platform::GetScale(float scale) const {
+const float Platform::GetScale(SDL_Window *window, Context &context, int *x, int *y) {
 	return scale; 
+}
+
+const float Platform::GetScale(bool actual) const {
+	return scale;
+}
+
+const float Platform::GetScaleForPoint(int x, int y) const {
+	return 1.0f;
 }
 
 const int Platform::IsAlphaPremultiplied() const {

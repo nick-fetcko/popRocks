@@ -158,7 +158,7 @@ public:
 
 		ImGui::BeginMenuBar();
 
-		const auto maxHeight = windowHeight - height - Controls::SeekbarSize * 2 - safeAreaPadding;
+		const auto maxHeight = (windowHeight - height - Controls::SeekbarSize * 2 - safeAreaPadding) / platform->GetScale();
 		const auto maxWidth = windowWidth - ImGui::GetStyle().ScrollbarSize;
 
 		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(maxWidth, maxHeight));
@@ -630,7 +630,7 @@ public:
 			radius = Settings::settings.GetRadius();
 			if (ImGui::SliderInt("Album art radius", &radius, 50, 720)) {
 				if (onRadiusChanged)
-					onRadiusChanged(radius);
+					onRadiusChanged(radius * platform->GetScale(true));
 			}
 
 			lineWidth = Settings::settings.GetWidth();
