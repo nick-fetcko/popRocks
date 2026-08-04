@@ -7,5 +7,5 @@ Type=Application
 Terminal=false
 Categories=AudioVideo;Audio
 Icon=org.fetcko.popRocks
-MimeType=audio/flac;audio/ogg;audio/mpeg;audio/mp4
+MimeType=audio/flac;audio/ogg;audio/mpeg;audio/mp4;inode/directory
 StartupWMClass=org.fetcko.popRocks

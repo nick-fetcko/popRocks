@@ -36,7 +36,7 @@ Type=Application
 Terminal=false
 Categories=AudioVideo;Audio
 Icon=${POPROCKS_ICON}
-MimeType=audio/flac;audio/ogg;audio/mpeg;audio/mp4)";
+MimeType=audio/flac;audio/ogg;audio/mpeg;audio/mp4;inode/directory)";
 
 constexpr std::string_view ServiceMenuTemplate = 
 #ifdef USING_FLATPAK
@@ -153,6 +153,8 @@ void Linux::OnInit(Interop::InitArgs args, Context &context) {
 		}
 #endif
 
+		// Servicemenu superceeded by normal .desktop file with added "inode/directory" MIME type
+#if 0
 		// Create servicemenu .desktop file
 		auto serviceMenuPath = std::filesystem::path(getenv("HOME")) / ".local" / "share" / "kio" / "servicemenus";
 		if (!std::filesystem::exists(serviceMenuPath))
@@ -206,6 +208,7 @@ void Linux::OnInit(Interop::InitArgs args, Context &context) {
 				std::filesystem::perm_options::add
 			);
 		}
+#endif
 	}
 
 	HookKeyboard();
