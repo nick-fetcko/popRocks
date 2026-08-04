@@ -1642,7 +1642,7 @@ bool AlbumArt::OnMouseDragged(const Vector2i &mousePos) {
 
 				UpdateFontSize();
 			}
-		} else if (const auto clamped = std::clamp(distance / miniPlayerRadius * 2.0, 2.2, 15.0);
+		} else if (const auto clamped = std::clamp(distance / miniPlayerRadius * 2.0, 3.0, 15.0);
 			clamped != Settings::settings.GetMiniPlayerVisualizerRatio()) {
 			ret = true;
 
