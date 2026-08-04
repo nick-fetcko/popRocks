@@ -517,10 +517,10 @@ bool Playlist::OnMouseMoved(const Vector2i &mousePos) {
 	return MiniPlayerList::OnMouseMoved(
 		mousePos,
 		{
-			pos.x - outline.GetBounds().width / 2,
-			pos.y - outline.GetBounds().height / 2,
-			pos.x + outline.GetBounds().width / 2,
-			pos.y + outline.GetBounds().height / 2
+			pos.x - currentTitle.GetBounds().width / 2,
+			pos.y - currentTitle.GetBounds().height,
+			pos.x + currentTitle.GetBounds().width / 2,
+			pos.y 
 		}
 	);
 }
@@ -542,10 +542,10 @@ std::optional<Playlist::Track> Playlist::OnMouseClicked(const Vector2i &mousePos
 				return Track{ track.filePath, track.title, track.startTime };
 			}
 		} else if (MiniPlayerList::OnMouseClicked(mousePos, {
-			pos.x - outline.GetBounds().width / 2,
-			pos.y - outline.GetBounds().height / 2,
-			pos.x + outline.GetBounds().width / 2,
-			pos.y + outline.GetBounds().height / 2
+			pos.x - currentTitle.GetBounds().width / 2,
+			pos.y - currentTitle.GetBounds().height,
+			pos.x + currentTitle.GetBounds().width / 2,
+			pos.y
 		})) {
 			return std::nullopt;
 		}

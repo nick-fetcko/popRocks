@@ -292,7 +292,11 @@ bool MiniPlayerList::OnMouseMoved(const Vector2i &mousePos, Rectanglei bounds, b
 		mousePos.x > pos.x - albumArt->GetRadius(miniPlayer) &&
 		mousePos.x < pos.x + albumArt->GetRadius(miniPlayer);
 
-	const auto radius = albumArt->GetRadius(miniPlayer);
+	const auto radius = items.size() > numberOfVisibleItems ? 
+		albumArt->GetRadius(miniPlayer) :
+		// If we have fewer items than can fit,
+		// restrict us to the size of said items
+		numberOfVisibleItems * font->GetEm().height;
 
 	const auto inY = justBounds ? (mousePos.y > bounds.y && mousePos.y < bounds.h) : (
 		(direction == Direction::Down && mousePos.y > bounds.y && mousePos.y < bounds.h + (bounds.h - bounds.y) + radius) ||
@@ -302,7 +306,7 @@ bool MiniPlayerList::OnMouseMoved(const Vector2i &mousePos, Rectanglei bounds, b
 	hoveredOffset = -1;
 
 	if (inTriggerX &&
-		mousePos.y >= bounds.y - font->GetEm().height / 4 && mousePos.y <= bounds.h + font->GetEm().height / 4 ) {
+		mousePos.y >= bounds.y && mousePos.y <= bounds.h + font->GetEm().height / 4) {
 		hoverTimer = std::chrono::system_clock::now();
 
 		return true;
@@ -332,7 +336,7 @@ bool MiniPlayerList::OnMouseMoved(const Vector2i &mousePos, Rectanglei bounds, b
 }
 
 bool MiniPlayerList::OnMouseClicked(const Vector2i &mousePos, Rectanglei bounds) {
-	if (!hovered && mousePos.x >= bounds.x && mousePos.x <= bounds.w && mousePos.y >= bounds.y && mousePos.y <= bounds.h) {
+	if (!hovered && mousePos.x >= bounds.x - font->GetEm().width / 2 && mousePos.x <= bounds.w + font->GetEm().width / 2 && mousePos.y >= bounds.y && mousePos.y <= bounds.h + font->GetEm().height / 4) {
 		hovered = true;
 		targetAlpha = 1.0f;
 		hoverTimer = std::nullopt;
