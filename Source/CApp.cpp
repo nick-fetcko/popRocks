@@ -2865,7 +2865,8 @@ inline void CApp::ClearBlurFbo() {
 }
 
 void CApp::PlaylistLoaded(std::filesystem::path path, std::string extension, std::filesystem::path originalPath, bool fromPlaylist) {
-	controls.GetPlaylist().LoadTitles();
+	if (!fromPlaylist)
+		controls.GetPlaylist().LoadTitles();
 
 	const auto wasPlaying = playing;
 

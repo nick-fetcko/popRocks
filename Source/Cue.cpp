@@ -65,12 +65,25 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 	bool inTrackSection = false;
 
 	Track track;
+	int firstTrackIndex = 0;
 	track.disc = discIndex;
 	for (const auto &line : lines) {
 		if (line[0] == "FILE") {
+			// Finalize the previous track,
+			// if there was one, and start
+			// a new disc
+			if (inFileSection && inTrackSection) {
+				firstTrackIndex = track.index;
+				tracks.emplace_back(std::move(track));
+
+				track = Track();
+				track.disc = ++discIndex;
+				track.index = 1;
+			}
+
 			// tracks + .cue not supported
-			if (!filePath.empty()) {
-				LogWarning("tracks + .cue not supported! Ignoring .cue file");
+			if (!filePath.empty() && tracks.size() == 1) {
+				LogWarning("tracks + .cue not supported! Ignoring .cue file and loading individual songs.");
 				return std::nullopt;
 			}
 
@@ -151,11 +164,13 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 			if (inTrackSection) {
 				if (line[0] == "TRACK") {
 					// Finalize the previous track
-					tracks.emplace_back(std::move(track));
-					track = Track();
-					track.filePath = filePath;
-					track.disc = discIndex;
-					track.index = static_cast<uint8_t>(std::stoi(line[1]));
+					if (!track.title.empty()) {
+						tracks.emplace_back(std::move(track));
+						track = Track();
+						track.filePath = filePath;
+						track.disc = discIndex;
+						track.index = static_cast<uint8_t>(std::stoi(line[1]) - firstTrackIndex);
+					}
 				} else if (line[0] == "TITLE") {
 					track.title = Parse(line[1]);
 				} else if (line[0] == "PERFORMER") {
@@ -195,7 +210,7 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 
 	currentTrack = tracks.begin();
 
-	return filePath.empty() ? std::nullopt : std::optional<std::filesystem::path>(filePath);
+	return tracks.empty() ? std::nullopt : std::optional<std::filesystem::path>(tracks.begin()->filePath);
 }
 
 const Cue::Track &Cue::Next() const {
