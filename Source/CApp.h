@@ -304,6 +304,8 @@ private:
 	inline void DrawCloseButton(const Delta &time);
 	inline bool IsOnCloseButton(const Vector2i &mousePos);
 
+	void OnAlbumArtLoaded(bool embedded);
+
 	int windowWidth = 1920;
 	int windowHeight = 1080;
 
@@ -514,6 +516,8 @@ private:
 	std::optional<float> audioOffset = Settings::settings.GetAudioOffset();
 
 	std::optional<std::chrono::system_clock::time_point> moveTimer = std::nullopt;
+
+	bool wasLastAlbumArtLoadEmbedded = true;
 
 #ifdef _DEBUG
 	std::string lastPos;

@@ -896,6 +896,37 @@ void CApp::ResetWindow() {
 	}
 }
 
+void CApp::OnAlbumArtLoaded(bool embedded) {
+	wasLastAlbumArtLoadEmbedded = embedded;
+
+	for (auto integration : integrations) {
+		auto file = albumArt.GetCurrentFile();
+		if (embedded && albumArt.HasEmbedded()) {
+			if (auto tempFile = platform->GetTemporaryFile("/tmp/popRocks_embedded_art.XXXXXX"); !tempFile.empty()) {
+				const auto [bytes, size] = albumArt.GetEmbedded();
+
+				std::ofstream outFile(tempFile, std::ios::out | std::ios::binary);
+				outFile.write(reinterpret_cast<const char *>(bytes), size);
+
+				file = tempFile;
+			}
+		}
+
+		integration->OnSongChanged(
+			beatDetect->GetHash(),
+			controls.GetTitle(),
+			controls.GetArtist(),
+			controls.GetAlbum(),
+			file,
+			std::chrono::duration_cast<std::chrono::microseconds>(
+				std::chrono::duration<double>(
+					controls.GetCurrentSongLength()
+				)
+			).count()
+		);
+	}
+}
+
 void CApp::OnInit() {
 #ifdef __linux__
 	std::ifstream boardVendor("/sys/devices/virtual/dmi/id/board_vendor");
@@ -1670,32 +1701,7 @@ void CApp::OnInit() {
 	});
 
 	albumArt.SetOnLoaded([this] (bool embedded) {
-		for (auto integration : integrations) {
-			auto file = albumArt.GetCurrentFile();
-			if (embedded && albumArt.HasEmbedded()) {
-				if (auto tempFile = platform->GetTemporaryFile("/tmp/popRocks_embedded_art.XXXXXX"); !tempFile.empty()) {
-					const auto [bytes, size] = albumArt.GetEmbedded();
-
-					std::ofstream outFile(tempFile, std::ios::out | std::ios::binary);
-					outFile.write(reinterpret_cast<const char *>(bytes), size);
-
-					file = tempFile;
-				}
-			}
-
-			integration->OnSongChanged(
-				beatDetect->GetHash(),
-				controls.GetTitle(),
-				controls.GetArtist(),
-				controls.GetAlbum(),
-				file,
-				std::chrono::duration_cast<std::chrono::microseconds>(
-					std::chrono::duration<double>(
-						controls.GetCurrentSongLength()
-					)
-				).count()
-			);
-		}
+		OnAlbumArtLoaded(embedded);
 	});
 
 	close.OnInit(controls.GetIconSize());
@@ -3480,9 +3486,13 @@ bool CApp::OnMouseClicked(const Vector2i &mousePos) {
 			PreviousTrack();
 		else if (button == Controls::ControlButton::Next)
 			NextTrack();
-		else if (button == Controls::ControlButton::CaptureCheckbox)
+		else if (button == Controls::ControlButton::CaptureCheckbox) {
 			platform->HookKeyboard();
-		else if (button == Controls::ControlButton::RotateCheckbox) {
+
+			OnAlbumArtLoaded(
+				wasLastAlbumArtLoadEmbedded
+			);
+		} else if (button == Controls::ControlButton::RotateCheckbox) {
 			rotating = !rotating;
 			if (!rotating) frameCount = 0;
 		} else
