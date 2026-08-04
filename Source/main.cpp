@@ -326,10 +326,30 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 						wheelAccum += event.wheel.y;
 
 					if (wheelAccum + event.wheel.y >= 1) {
-						app.AddToScrollOffset((event.wheel.direction == SDL_MOUSEWHEEL_NORMAL ? -1 : 1));
+						app.AddToScrollOffset((
+							event.wheel.direction == SDL_MOUSEWHEEL_NORMAL ?
+							-1 :
+							// Linux already inverts our Y direction on
+							// inverted scroll, so don't change anything
+#ifdef WIN32
+							1
+#else
+							-1
+#endif
+						));
 						wheelAccum -= 1.0f;
 					} else if (wheelAccum + event.wheel.y <= -1) {
-						app.AddToScrollOffset((event.wheel.direction == SDL_MOUSEWHEEL_NORMAL ? 1 : -1));
+						app.AddToScrollOffset((
+							event.wheel.direction == SDL_MOUSEWHEEL_NORMAL ?
+							1 :
+							// Linux already inverts our Y direction on
+							// inverted scroll, so don't change anything
+#ifdef WIN32
+							-1
+#else
+							1
+#endif
+						));
 						wheelAccum += 1.0f;
 					}
 					
