@@ -200,8 +200,10 @@ public:
 		if (alpha == 0.0f) {
 			PreLoop();
 
-			promptOutline.OnLoop(pos.x, pos.y);
-			prompt.OnLoop(pos.x, pos.y);
+			context.Blend(true, [this, &pos] {
+				promptOutline.OnLoop(pos.x, pos.y);
+				prompt.OnLoop(pos.x, pos.y);
+			});
 
 			PostLoop(time);
 			return;
