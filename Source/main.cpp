@@ -143,6 +143,9 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 				ImGui_ImplSDL3_ProcessEvent(&event);
 				if (io.WantCaptureKeyboard || io.WantCaptureMouse)
 					app.UpdateUi();
+			} else if (io.WantCaptureKeyboard || io.WantCaptureMouse) {
+				io.WantCaptureKeyboard = false;
+				io.WantCaptureMouse = false;
 			}
 #endif
 
