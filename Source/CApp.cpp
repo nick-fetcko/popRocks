@@ -751,7 +751,7 @@ void CApp::SetMiniPlayer(bool miniPlayer, bool inLoop) {
 			// Menu callbacks take place
 			// between OnLoop() and SwapBuffers(),
 			// so we have to return to that state
-			if (inLoop) interop->OnLoop();
+			if (inLoop && interop->IsActive()) interop->OnLoop();
 		}
 #endif
 
