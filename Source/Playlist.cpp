@@ -522,12 +522,12 @@ bool Playlist::OnMouseMoved(const Vector2i &mousePos) {
 			pos.x + currentTitle.GetBounds().width / 2,
 			pos.y 
 		}
-	);
+	) != MiniPlayerList::HoverState::None;
 }
 
 std::optional<Playlist::Track> Playlist::OnMouseClicked(const Vector2i &mousePos) {
 	if (miniPlayer) {
-		if (hovered && hoveredOffset != -1) {
+		if (hovered && hoveredOffset >= 0) {
 			if (!files.empty()) {
 				currentFile = files.begin() + (hoveredOffset + scrollOffset);
 
@@ -541,6 +541,11 @@ std::optional<Playlist::Track> Playlist::OnMouseClicked(const Vector2i &mousePos
 
 				return Track{ track.filePath, track.title, track.startTime };
 			}
+		} else if (hovered && alpha == 1.0f && alpha == targetAlpha) { // Clicking without a hover target dismisses the Playlist
+			hovered = false;
+			hoverTimer = std::nullopt;
+			targetAlpha = 0.0f;
+			clickTimer = std::chrono::system_clock::now();
 		} else if (MiniPlayerList::OnMouseClicked(mousePos, {
 			pos.x - currentTitle.GetBounds().width / 2,
 			pos.y - currentTitle.GetBounds().height,

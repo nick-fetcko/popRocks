@@ -13,31 +13,42 @@
 class MiniPlayerList : public ColorChangeListener, public AlbumArt::BlackChangedListener {
 private:
 	constexpr static std::size_t ArcWidth = 75;
-	constexpr static std::array<float, 2> ArcStartAngles = { 233, 239 };
+	constexpr static std::array<float, 3> ArcStartAngles = { 233, 239, 233 };
 
 	constexpr static float UpwardsBias = 0.515f;
 
 public:
 	enum class Direction : uint8_t {
 		Up = 0,
-		Down
+		Down,
+		Both
+	};
+
+	enum class HoverState : uint8_t {
+		None = 0,
+		Trigger,
+		Hovered
 	};
 
 	MiniPlayerList(Direction direction, AlbumArt * const albumArt, const bool &vulkan);
 	virtual ~MiniPlayerList();
 
-	void OnInit(OpenGLFont *font, OpenGLFont *boldFont, OpenGLFont *outlineFont, OpenGLFont *boldOutlineFont, Context *context);
+	virtual void OnInit(OpenGLFont *font, OpenGLFont *boldFont, OpenGLFont *outlineFont, OpenGLFont *boldOutlineFont, Context *context);
 	virtual bool OnResize(int windowWidth, int windowHeight, float scale = 1.0f, bool miniPlayer = false, float maxWidth = 0.0f);
 
 	void PreLoop(std::optional<std::size_t> currentIndex = std::nullopt);
 	void OnLoop(const Delta &time, Vector2i pos, std::optional<std::size_t> currentIndex);
-	void OnLoop(const Delta &time, Vector2i pos, std::optional<std::size_t> currentIndex, const float &alpha);
+	virtual void OnLoop(const Delta &time, Vector2i pos, std::optional<std::size_t> currentIndex, const float &alpha);
+	virtual float GetItemWidth() const { return 0.0f; }
+	virtual float GetItemLeading() const { return 0.0f; }
+	virtual void DrawItem(const Delta &time, std::size_t index, int x, int y, int left, int top, bool hovered = false) {}
 	void PostLoop(const Delta &time);
 
 	virtual void OnDestroy();
 
-	bool OnMouseMoved(const Vector2i &mousePos, Rectanglei bounds, bool justBounds = false);
-	bool OnMouseClicked(const Vector2i &mousePos, Rectanglei bounds);
+	HoverState OnMouseMoved(const Vector2i &mousePos, Rectanglei bounds, bool justBounds = false);
+	const HoverState &GetHoverState() const { return hoverState; }
+	virtual bool OnMouseClicked(const Vector2i &mousePos, Rectanglei bounds);
 	bool OnMouseDown(const Vector2i &mousePos);
 	bool OnMouseDragged(const Vector2i &mousePos);
 	virtual void OnMouseUp(const Vector2i &mousePos, bool updateCache);
@@ -59,7 +70,11 @@ public:
 	void OnBlackChanged(const float &black) override;
 
 	const bool &IsHovered() const { return hovered; }
+	const bool IsHoveredOrWillBeHovered() const { return hovered || alpha != targetAlpha; }
+	const bool IsActive() const { return hovered || hoverTimer || alpha != targetAlpha; }
 	void SetHovered(bool hovered, bool sticky, bool ignoreNextTimeDelta, std::function<void()> afterFade = nullptr);
+	const Colourf &GetColor() const;
+	const Colourf &GetHoveredColor() const { return hoveredColor; }
 
 	const bool Empty() const { return items.empty(); }
 
@@ -132,6 +147,9 @@ protected:
 	bool scrollBarHandleHovered = false;
 
 	float baseWidth = 8.0f;
+
+	HoverState hoverState = HoverState::None;
+	std::optional<std::chrono::system_clock::time_point> clickTimer = std::nullopt;
 
 	const bool &vulkan;
 };

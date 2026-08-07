@@ -402,6 +402,9 @@ public:
 	const std::optional<float> &GetAudioOffset() const { return audioOffset; }
 	void SetAudioOffset(std::optional<float> audioOffset, bool delayed = false);
 
+	const bool &GetDisplayStats() const { return displayStats; }
+	void SetDisplayStats(bool displayStats, bool delayed = false);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -595,4 +598,6 @@ private:
 	DynamicGain<float> dynamicGain = BaseDynamicGain;
 
 	std::optional<float> audioOffset = std::nullopt;
+
+	bool displayStats = false;
 };

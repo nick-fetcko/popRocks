@@ -22,7 +22,9 @@
 #include "Checkbox.hpp"
 #include "ExclusiveIndicator.hpp"
 #include "FPSCounter.hpp"
+#include "Hamburger.hpp"
 #include "Help.hpp"
+#include "MiniPlayerCheckboxList.hpp"
 #include "Next.hpp"
 #include "Pause.hpp"
 #include "Play.hpp"
@@ -48,8 +50,7 @@ public:
 		PlayPause,
 		Previous,
 		Next,
-		CaptureCheckbox,
-		RotateCheckbox
+		Menu
 	};
 
 	Controls(AlbumArt *const albumArt, std::unique_ptr<Platform> &platform, const bool &vulkan);
@@ -144,6 +145,11 @@ public:
 
 	void SetStats(const std::string &stats);
 
+	MiniPlayerCheckboxList &GetCheckboxList() { return checkboxList; }
+
+	void SetDisplayStats(bool displayStats) { this->displayStats = displayStats; }
+	const bool &GetDisplayStats() const { return displayStats; }
+
 private:
 	inline void OpenFont(Context *context, GLuint defaultFramebuffer);
 	std::string FormatSeconds(int seconds) const;
@@ -199,8 +205,7 @@ private:
 	Play play;
 	Next next;
 	Previous previous;
-	Checkbox captureCheckbox;
-	Checkbox rotateCheckbox;
+	Hamburger hamburger;
 
 	Help help;
 
@@ -213,6 +218,10 @@ private:
 
 	Text stats;
 	Text statsOutline;
+
+	MiniPlayerCheckboxList checkboxList;
+
+	bool displayStats = Settings::settings.GetDisplayStats();
 
 	std::unique_ptr<VertexArray> vao;
 	std::unique_ptr<ArrayBuffer> vbo;

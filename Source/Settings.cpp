@@ -908,6 +908,13 @@ void Settings::SetAudioOffset(std::optional<float> audioOffset, bool delayed) {
 	}
 }
 
+void Settings::SetDisplayStats(bool displayStats, bool delayed) {
+	if (this->displayStats != displayStats) {
+		this->displayStats = displayStats;
+		if (!delayed) Save();
+	}
+}
+
 void Settings::Save() {
 	if (auto path = Filesystem::GetPath(); !path.empty()) {
 		LogInfo("Saving settings...");
@@ -1240,6 +1247,9 @@ const Node &operator>>(const Node &node, Settings &settings) {
 		node["audioOffset"]->get(settings.audioOffset);
 	else
 		settings.audioOffset = std::nullopt;
+
+	if (node.has("displayStats"))
+		node["displayStats"]->get(settings.displayStats);
 		
 	return node;
 }
@@ -1348,6 +1358,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 		node["audioOffset"]->set(settings.audioOffset);
 	else
 		node.remove("audioOffset");
+	node["displayStats"]->set(settings.displayStats);
 
 	return node;
 }

@@ -144,6 +144,15 @@ void MiniPlayerList::SetHovered(bool hovered, bool sticky, bool ignoreNextTimeDe
 	this->afterFade = afterFade;
 }
 
+const Colourf &MiniPlayerList::GetColor() const {
+	if (clickTimer)
+		return darkColor;
+
+	if (hoverState == HoverState::Trigger)
+		return hoveredColor;
+	else return HDR::WhiteColor;
+}
+
 void MiniPlayerList::PreLoop(std::optional<std::size_t> currentIndex) {
 	if (!isHoverSticky && hoverTimer && (std::chrono::system_clock::now() - *hoverTimer) >= Settings::settings.GetHoverTime()) {
 		// Scroll to currently selected item
@@ -156,6 +165,9 @@ void MiniPlayerList::PreLoop(std::optional<std::size_t> currentIndex) {
 		targetAlpha = 1.0f;
 		hoverTimer = std::nullopt;
 	}
+
+	if (clickTimer && std::chrono::system_clock::now() - *clickTimer >= 75ms)
+		clickTimer = std::nullopt;
 }
 
 void MiniPlayerList::PostLoop(const Delta &time) {
@@ -220,7 +232,7 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 		context->Color(1.0f, 1.0f, 1.0f, alpha);
 
 		outlines[index].OnLoop(
-			pos.x - outlines[index].GetBounds().width / 2.0f + outlineFont->GetOutlineRadius(),
+			pos.x - ((outlines[index].GetBounds().width - GetItemWidth()) / 2.0f) + outlineFont->GetOutlineRadius(),
 			yOffset - std::floor(outlines[index].GetBounds().overhang / 3.0f),
 			time
 		);
@@ -239,12 +251,22 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 			context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 
 		items[index].OnLoop(
-			pos.x - items[index].GetBounds().width / 2.0f,
+			pos.x - ((items[index].GetBounds().width - GetItemWidth()) / 2.0f),
 			yOffset - std::floor(items[index].GetBounds().overhang / 3.0f),
 			time
 		);
 
-		yOffset += items[index].GetBounds().height;
+		DrawItem(
+			time,
+			index,
+			pos.x,
+			yOffset,
+			-((items[index].GetBounds().width - GetItemWidth()) / 2.0f),
+			-std::floor(items[index].GetBounds().overhang / 3.0f),
+			hovered && i == hoveredOffset
+		);
+
+		yOffset += items[index].GetBounds().height + GetItemLeading();
 	}
 
 	if (miniPlayer && alpha > 0.0f && items.size() > numberOfVisibleItems) {
@@ -268,8 +290,10 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 	}
 }
 
-bool MiniPlayerList::OnMouseMoved(const Vector2i &mousePos, Rectanglei bounds, bool justBounds) {
-	if (!miniPlayer) return false;
+MiniPlayerList::HoverState MiniPlayerList::OnMouseMoved(const Vector2i &mousePos, Rectanglei bounds, bool justBounds) {
+	hoverState = HoverState::None;
+
+	if (!miniPlayer) return hoverState;
 
 	bool wasScrollBarHovered = scrollBarHovered;
 
@@ -292,7 +316,7 @@ bool MiniPlayerList::OnMouseMoved(const Vector2i &mousePos, Rectanglei bounds, b
 		mousePos.x > pos.x - albumArt->GetRadius(miniPlayer) &&
 		mousePos.x < pos.x + albumArt->GetRadius(miniPlayer);
 
-	const auto radius = items.size() > numberOfVisibleItems ? 
+	const auto radius = (direction == Direction::Both || items.size() > numberOfVisibleItems) ? 
 		albumArt->GetRadius(miniPlayer) :
 		// If we have fewer items than can fit,
 		// restrict us to the size of said items
@@ -300,7 +324,8 @@ bool MiniPlayerList::OnMouseMoved(const Vector2i &mousePos, Rectanglei bounds, b
 
 	const auto inY = justBounds ? (mousePos.y > bounds.y && mousePos.y < bounds.h) : (
 		(direction == Direction::Down && mousePos.y > bounds.y && mousePos.y < bounds.h + (bounds.h - bounds.y) + radius) ||
-		(direction == Direction::Up && mousePos.y < bounds.h && mousePos.y > bounds.y - (bounds.h - bounds.y) - radius)
+		(direction == Direction::Up && mousePos.y < bounds.h && mousePos.y > bounds.y - (bounds.h - bounds.y) - radius) ||
+		(direction == Direction::Both && mousePos.y < bounds.h + radius / 2 && mousePos.y > bounds.y - (bounds.h - bounds.y) - radius / 2)
 	);
 
 	hoveredOffset = -1;
@@ -308,38 +333,48 @@ bool MiniPlayerList::OnMouseMoved(const Vector2i &mousePos, Rectanglei bounds, b
 	if (inTriggerX &&
 		mousePos.y >= bounds.y && mousePos.y <= bounds.h + font->GetEm().height / 4) {
 		hoverTimer = std::chrono::system_clock::now();
+		hoverState = HoverState::Trigger;
 
-		return true;
+		return hoverState;
 	} else if (hovered && !scrollBarHovered && inX && inY) {
 		float yOffset = pos.y + (font->GetEm().height * (direction == Direction::Up ? UpwardsBias : 1));
 
 		for (long i = 0; i < numberOfVisibleItems; ++i) {
 			const auto &title = items[i + scrollOffset];
 
-			if (mousePos.x >= pos.x - title.GetBounds().width / 2 && mousePos.x <= pos.x + title.GetBounds().width / 2 &&
+			if (mousePos.x >= pos.x - (title.GetBounds().width + GetItemWidth() * 2.25f) / 2 && mousePos.x <= pos.x + (title.GetBounds().width + GetItemWidth()) / 2 &&
 				mousePos.y >= yOffset - title.GetBounds().height / 2 && mousePos.y <= yOffset + title.GetBounds().height / 2 + title.GetBounds().overhang) {
 				hoveredOffset = i;
 				break;
 			}
 
-			yOffset += title.GetBounds().height;
+			yOffset += title.GetBounds().height + GetItemLeading();
 		}
 
-		return true;
+		hoverState = HoverState::Hovered;
+
+		return hoverState;
 	} else if (!isHoverSticky && !scrollBarHovered) {
 		hovered = false;
 		hoverTimer = std::nullopt;
 		targetAlpha = 0.0f;
 	}
 
-	return false;
+	return hoverState;
 }
 
 bool MiniPlayerList::OnMouseClicked(const Vector2i &mousePos, Rectanglei bounds) {
-	if (!hovered && mousePos.x >= bounds.x - font->GetEm().width / 2 && mousePos.x <= bounds.w + font->GetEm().width / 2 && mousePos.y >= bounds.y && mousePos.y <= bounds.h + font->GetEm().height / 4) {
+	if (!hovered && 
+		mousePos.x >= bounds.x - font->GetEm().width / 2 &&
+		mousePos.x <= bounds.w + font->GetEm().width / 2 &&
+		mousePos.y >= bounds.y &&
+		mousePos.y <= bounds.h + font->GetEm().height / 4
+	) {
 		hovered = true;
 		targetAlpha = 1.0f;
 		hoverTimer = std::nullopt;
+
+		clickTimer = std::chrono::system_clock::now();
 
 		return true;
 	}

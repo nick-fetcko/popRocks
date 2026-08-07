@@ -64,6 +64,10 @@ public:
 		}
 	}
 
+	void SetDarkColor(const Colour<float> &darkColor) {
+		this->darkColor = darkColor;
+	}
+
 	void SetHovered(bool hovered) {
 		this->hovered = hovered;
 	}
@@ -76,6 +80,8 @@ public:
 	}
 
 	const bool &IsClicked() const { return clicked; }
+
+	virtual const float GetRadius() const { return radius; }
 
 protected:
 	const Colour<float> &GetColor() const {

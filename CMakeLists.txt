@@ -91,6 +91,7 @@ set(_poprocks_cpp_headers
 	Source/FLAC.hpp
 	Source/FPSCounter.hpp
 	Source/Gaussian.hpp
+	Source/Hamburger.hpp
 	Source/HDR.hpp
 	Source/Help.hpp
 	Source/ID3V2.hpp
@@ -103,6 +104,7 @@ set(_poprocks_cpp_headers
 	Source/Menu.hpp
 	Source/Metadata.hpp
 	Source/MetadataReader.hpp
+	Source/MiniPlayerCheckboxList.hpp
 	Source/MiniPlayerList.hpp
 	Source/MP3.hpp
 	Source/MP4.hpp
@@ -148,6 +150,7 @@ set(_poprocks_cpp_sources
 	Source/LineRenderer.cpp
 	Source/Mappings.cpp
 	Source/Metadata.cpp
+	Source/MiniPlayerCheckboxList.cpp
 	Source/MiniPlayerList.cpp
 	Source/MP4.cpp
 	Source/MT19937.cpp

@@ -230,10 +230,12 @@ private:
 			context.Use("scrolling"_hash);
 			context.Color(1.0f, 1.0f, 1.0f, std::max(hidden ? 0.0f : 0.5f, alpha));
 			outline.OnLoop(pos.x - bounds.width / 2, pos.y - bounds.height / 2, time);
+			const auto &color = GetColor();
+
 			context.Color(
-				HDR::WhiteLevel,
-				HDR::WhiteLevel,
-				HDR::WhiteLevel,
+				color.r,
+				color.g,
+				color.b,
 				std::max(hidden ? 0.0f : 0.5f, alpha)
 			);
 

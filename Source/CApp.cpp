@@ -1700,6 +1700,93 @@ void CApp::OnInit() {
 		}
 	});
 
+	// Add settings
+	controls.GetCheckboxList().AddItem(
+		"Display stats?",
+		[] {
+			return Settings::settings.GetDisplayStats();
+		},
+		[this](bool checked) {
+			controls.SetDisplayStats(checked);
+			Settings::settings.SetDisplayStats(checked);
+		}
+	);
+
+	controls.GetCheckboxList().AddItem(
+		"Rotate album art?",
+		[] {
+			return Settings::settings.GetMiniPlayerRotating();
+		},
+		[this](bool checked) {
+			Settings::settings.SetMiniPlayerRotating(checked);
+
+			rotating = checked;
+			if (!rotating) frameCount = 0;
+		}
+	);
+
+	controls.GetCheckboxList().AddItem(
+		"Capture keyboard media keys?",
+		[] {
+			return Settings::settings.GetCaptureKeyboardMediaKeys();
+		},
+		[this](bool checked) {
+			Settings::settings.SetCaptureKeyboardMediaKeys(checked);
+
+			platform->HookKeyboard();
+
+			OnAlbumArtLoaded(
+				wasLastAlbumArtLoadEmbedded
+			);
+		}
+	);
+
+	controls.GetCheckboxList().AddItem(
+		"Change colors to the beat?",
+		[] {
+			return Settings::settings.GetDetectBpm();
+		},
+		[this](bool checked) {
+			// Reset to primary bin
+			albumArt.ResetBin(true);
+
+			for (auto &detector : beatDetectors)
+				detector.SetDetecting(checked);
+
+			Settings::settings.SetDetectBpm(beatDetect->IsDetecting());
+
+			if (beatDetect->IsDetecting() && !loadedFile.empty()) {
+				for (auto &detector : beatDetectors)
+					detector.Cancel();
+
+				auto stream = platform->OpenWithFlags(loadedFile, loadedFileExtension, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+
+				// Disassociate the stream from a device,
+				// so it doesn't get freed on BASS_Free()
+				BASS_ChannelSetDevice(stream, BASS_NODEVICE);
+
+				LoadBeats(
+					stream,
+					loadedFile,
+					false // don't ping-pong when we toggle
+				);
+			}
+		}
+	);
+
+	controls.GetCheckboxList().AddItem(
+		"Auto-fade controls?",
+		[] {
+			return Settings::settings.GetAutoFade();
+		},
+		[](bool checked) {
+			Settings::settings.SetAutoFade(checked);
+		}
+	);
+
+	// After adding items, have to update size
+	controls.GetCheckboxList().OnRadiusChanged();
+
 	albumArt.SetOnLoaded([this] (bool embedded) {
 		OnAlbumArtLoaded(embedded);
 	});
@@ -2155,23 +2242,23 @@ void CApp::OnLoop(const Delta &time) {
 				BASS_ChannelGetData(streamHandle, buffer, static_cast<DWORD>(bufferLength * sizeof(short) * channelInfo.chans));
 		}
 
-#ifdef _DEBUG
-		std::stringstream posStream;
-		posStream << std::fixed << std::setprecision(3) << std::setfill('0') << inSeconds;
+		if (controls.GetDisplayStats()) {
+			std::stringstream posStream;
+			posStream << std::fixed << std::setprecision(3) << std::setfill('0') << inSeconds;
 
-		const auto newPos = posStream.str();
+			const auto newPos = posStream.str();
 
-		if (lastPos != newPos && !lastPos.empty() && std::stod(newPos) > std::stod(lastPos))
-			++pps;
+			if (lastPos != newPos && !lastPos.empty() && std::stod(newPos) > std::stod(lastPos))
+				++pps;
 
-		if (auto now = std::chrono::system_clock::now(); now - posTimer >= 1s) {
-			controls.SetStats("  " /* padding */ + std::to_string(pps) + " PPS"); // POSITIONS per second
-			pps = 0;
-			posTimer = now;
+			if (auto now = std::chrono::system_clock::now(); now - posTimer >= 1s) {
+				controls.SetStats("  " /* padding */ + std::to_string(pps) + " PPS"); // POSITIONS per second
+				pps = 0;
+				posTimer = now;
+			}
+
+			lastPos = newPos;
 		}
-
-		lastPos = newPos;
-#endif
 	} else {
 		platform->LoadHeardSamples(renderer, floatBuffer, shortBuffer, bufferLength);
 	}
@@ -3487,16 +3574,7 @@ bool CApp::OnMouseClicked(const Vector2i &mousePos) {
 			PreviousTrack();
 		else if (button == Controls::ControlButton::Next)
 			NextTrack();
-		else if (button == Controls::ControlButton::CaptureCheckbox) {
-			platform->HookKeyboard();
-
-			OnAlbumArtLoaded(
-				wasLastAlbumArtLoadEmbedded
-			);
-		} else if (button == Controls::ControlButton::RotateCheckbox) {
-			rotating = !rotating;
-			if (!rotating) frameCount = 0;
-		} else
+		else
 			TogglePlaying();
 
 	} else if (!miniPlayer && !platform->OnMouseClicked(mousePos) && albumArt.OnMouseClicked(mousePos)) {

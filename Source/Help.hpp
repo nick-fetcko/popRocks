@@ -194,14 +194,23 @@ public:
 		return ret;
 	}
 
-	void OnLoop(const Delta &time, Vector2i pos, Context &context) {
+	void OnLoop(const Delta &time, Vector2i pos, Context &context, float controlAlpha) {
 		this->pos = pos;
+
+		const auto &color = GetColor();
 
 		if (alpha == 0.0f) {
 			PreLoop();
 
-			context.Blend(true, [this, &pos] {
+			context.Blend(true, [this, &pos, &context, &controlAlpha, &color] {
 				promptOutline.OnLoop(pos.x, pos.y);
+
+				context.Color(
+					color.r,
+					color.g,
+					color.b,
+					controlAlpha
+				);
 				prompt.OnLoop(pos.x, pos.y);
 			});
 
@@ -227,7 +236,12 @@ public:
 		backdrop.OnLoop(windowWidth / 2, windowHeight / 2, context);
 
 		context.Use("texture"_hash);
-		context.Color(1.0f, 1.0f, 1.0f, 1.0f);
+		context.Color(
+			color.r,
+			color.g,
+			color.b,
+			1.0f
+		);
 		promptOutline.OnLoop(pos.x, pos.y);
 		prompt.OnLoop(pos.x, pos.y);
 
@@ -260,7 +274,7 @@ public:
 				pos.y + promptOutline.GetBounds().height / 2
 			},
 			true
-		);
+		) != MiniPlayerList::HoverState::None;
 	}
 
 	bool OnMouseClicked(const Vector2i &mousePos) {
