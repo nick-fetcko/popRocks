@@ -87,9 +87,12 @@ void MiniPlayerCheckboxList::OnLoop(const Delta &time, Vector2i pos, std::option
 	if (!hovered && this->alpha == targetAlpha) return;
 
 	context->Color(0.0f, 0.0f, 0.0f, alpha);
-	outline.OnLoop(pos.x - title.GetBounds().width / 2, pos.y - title.GetBounds().height / 2);
-	context->Color(1.0f, 1.0f, 1.0f, alpha);
-	title.OnLoop(pos.x - title.GetBounds().width / 2, pos.y - title.GetBounds().height / 2);
+
+	context->Blend(true, [this, &pos, &alpha] {
+		outline.OnLoop(pos.x - title.GetBounds().width / 2, pos.y - title.GetBounds().height / 2);
+		context->Color(1.0f, 1.0f, 1.0f, alpha);
+		title.OnLoop(pos.x - title.GetBounds().width / 2, pos.y - title.GetBounds().height / 2);
+	});
 
 	MiniPlayerList::OnLoop(time, pos, currentIndex, alpha);
 }
@@ -108,11 +111,15 @@ void MiniPlayerCheckboxList::DrawItem(const Delta &time, std::size_t index, int 
 	auto &setting = checkboxes.at(index);
 
 	setting.checkbox.SetHovered(hovered);
-	setting.checkbox.OnLoop(
-		x + left - setting.checkbox.GetSize().x * 1.25f,
-		y + top + setting.checkbox.GetSize().y / 4,
-		time,
-		*context,
-		&alpha
-	);
+
+	context->Blend(true, [this, &setting, &time, x, y, left, top] {
+		setting.checkbox.OnLoop(
+			x + left - setting.checkbox.GetSize().x * 1.25f,
+			y + top + setting.checkbox.GetSize().y / 4,
+			time,
+			*context,
+			&alpha
+		);
+	});
+
 }
