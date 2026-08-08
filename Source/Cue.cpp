@@ -59,13 +59,13 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 		}
 		encoding = Utils::GuessEncoding(combined, 1);
 	} else encoding = std::nullopt;
-	
 
 	bool inFileSection = false;
 	bool inTrackSection = false;
 
 	Track track;
 	int firstTrackIndex = 0;
+	std::size_t tracksOnThisDisc = 0;
 	track.disc = discIndex;
 	for (const auto &line : lines) {
 		if (line[0] == "FILE") {
@@ -75,6 +75,7 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 			if (inFileSection && inTrackSection) {
 				firstTrackIndex = track.index;
 				tracks.emplace_back(std::move(track));
+				++tracksOnThisDisc;
 
 				track = Track();
 				track.disc = ++discIndex;
@@ -82,10 +83,12 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 			}
 
 			// tracks + .cue not supported
-			if (!filePath.empty() && tracks.size() == 1) {
+			if (!filePath.empty() && (tracks.size() == 1 || tracksOnThisDisc == 1)) {
 				LogWarning("tracks + .cue not supported! Ignoring .cue file and loading individual songs.");
 				return std::nullopt;
 			}
+
+			tracksOnThisDisc = 0;
 
 			std::filesystem::path originalFilePath;
 			try {
@@ -170,6 +173,7 @@ std::optional<std::filesystem::path> Cue::OnLoad(const std::filesystem::path &pa
 						track.filePath = filePath;
 						track.disc = discIndex;
 						track.index = static_cast<uint8_t>(std::stoi(line[1]) - firstTrackIndex);
+						++tracksOnThisDisc;
 					}
 				} else if (line[0] == "TITLE") {
 					track.title = Parse(line[1]);
