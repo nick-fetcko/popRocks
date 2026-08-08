@@ -2525,7 +2525,10 @@ void CApp::OnLoop(const Delta &time) {
 		LoadFile(controls.GetPlaylist().Next()->path, true);
 		advanceOnNextLoop = false;
 	} else if (auto &cue = controls.GetPlaylist().GetCue();
-		(!controls.GetExclusiveIndicator().IsExclusive() || cue) && elapsed >= controls.GetCurrentSongLength()) {
+		(!controls.GetExclusiveIndicator().IsExclusive() || cue) &&
+		elapsed >= controls.GetCurrentSongLength() &&
+		controls.GetPlaylist().IsLoaded()
+	) {
 		if (auto next = controls.GetPlaylist().Next()) {
 			LogDebug("Reached the end of the current song and loading the next");
 

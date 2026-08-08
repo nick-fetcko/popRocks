@@ -630,7 +630,10 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 		// Only update if BASS didn't error out
 		float pixels = 0.0f;
 		if (currentPos != -1) {
-			pixels = static_cast<float>((currentPos / GetCurrentSongLength()) * (miniPlayer ? albumArt->GetRadius(miniPlayer) * MiniPlayerSeekbarRatio : windowWidth));
+			const auto ratio = (currentPos / GetCurrentSongLength());
+
+			if (ratio >= 0.0f && ratio <= 1.0f)
+				pixels = static_cast<float>(ratio * (miniPlayer ? albumArt->GetRadius(miniPlayer) * MiniPlayerSeekbarRatio : windowWidth));
 
 			std::vector<float> posRect = {
 				0,
