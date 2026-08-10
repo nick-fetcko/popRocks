@@ -204,7 +204,6 @@ public:
 
 			context.Blend(true, [this, &pos, &context, &controlAlpha, &color] {
 				promptOutline.OnLoop(pos.x, pos.y);
-
 				context.Color(
 					color.r,
 					color.g,
@@ -242,8 +241,11 @@ public:
 			color.b,
 			1.0f
 		);
-		promptOutline.OnLoop(pos.x, pos.y);
-		prompt.OnLoop(pos.x, pos.y);
+
+		context.Blend(true, [this, &pos] {
+			promptOutline.OnLoop(pos.x, pos.y);
+			prompt.OnLoop(pos.x, pos.y);
+		});
 
 		context.Use("basic"_hash);
 		

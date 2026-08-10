@@ -1701,8 +1701,23 @@ void CApp::OnInit() {
 	});
 
 	// Add settings
+
+	// Reserve space so returned Checkbox pointers
+	// don't get invalidated by reallocations
+	controls.GetCheckboxList().Reserve(6);
+
+	exclusiveCheckbox = controls.GetCheckboxList().AddItem(
+		"Exclusive output",
+		[this] {
+			return controls.GetExclusiveIndicator().IsExclusive();
+		},
+		[this](bool checked) {
+			ToggleExclusive();
+		}
+	);
+
 	controls.GetCheckboxList().AddItem(
-		"Display stats?",
+		"Display stats",
 		[] {
 			return Settings::settings.GetDisplayStats();
 		},
@@ -1713,7 +1728,7 @@ void CApp::OnInit() {
 	);
 
 	controls.GetCheckboxList().AddItem(
-		"Rotate album art?",
+		"Rotate album art",
 		[] {
 			return Settings::settings.GetMiniPlayerRotating();
 		},
@@ -1726,7 +1741,7 @@ void CApp::OnInit() {
 	);
 
 	controls.GetCheckboxList().AddItem(
-		"Capture keyboard media keys?",
+		"Capture keyboard media keys",
 		[] {
 			return Settings::settings.GetCaptureKeyboardMediaKeys();
 		},
@@ -1742,7 +1757,7 @@ void CApp::OnInit() {
 	);
 
 	controls.GetCheckboxList().AddItem(
-		"Change colors to the beat?",
+		"Change colors to the beat",
 		[] {
 			return Settings::settings.GetDetectBpm();
 		},
@@ -1775,7 +1790,7 @@ void CApp::OnInit() {
 	);
 
 	controls.GetCheckboxList().AddItem(
-		"Auto-fade controls?",
+		"Auto-fade controls",
 		[] {
 			return Settings::settings.GetAutoFade();
 		},
@@ -2797,6 +2812,9 @@ bool CApp::Open(const std::filesystem::path &path, const std::string &extension,
 	if (!exclusive) {
 		controls.GetExclusiveIndicator().SetExclusive(false);
 
+		if (exclusiveCheckbox)
+			exclusiveCheckbox->SetChecked(false);
+
 		BASS_StreamFree(streamHandle);
 		BASS_StreamFree(visualStreamHandle);
 
@@ -3507,6 +3525,8 @@ void CApp::ToggleExclusive() {
 		!exclusive
 	);
 
+	if (exclusiveCheckbox) exclusiveCheckbox->SetChecked(!exclusive);
+
 	if (!exclusive)
 		controls.GetVolume().SetRadius(albumArt.GetRadius(miniPlayer) / scale);
 
@@ -3670,6 +3690,10 @@ bool CApp::OnMouseDown(const Vector2i &mousePos, MouseDownState *state) {
 			controls.GetPresetList().SetFadeSpeed(4.0f);
 			controls.GetPresetList().SetHovered(false, false, false, [this] {
 				controls.GetPresetList().SetFadeSpeed(2.0f);
+			});
+			controls.GetCheckboxList().SetFadeSpeed(4.0f);
+			controls.GetCheckboxList().SetHovered(false, false, false, [this] {
+				controls.GetCheckboxList().SetFadeSpeed(2.0f);
 			});
 
 			platform->SetChromaKey(true);

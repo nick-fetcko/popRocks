@@ -396,21 +396,7 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 			windowWidth / 2 - (radius * MiniPlayerSeekbarRatio) / 2.0f - exclusiveIndicator.GetOutlineWidth() * 1.05f - exclusiveIndicator.GetWidth() / 2,
 			windowHeight / 2 + font->GetEm().height
 		},
-		"exclusive",
-		{ "Click to toggle", "exclusive output"},
-		radius / AlbumArt::BaseRadius
-	);
-
-	help.AddArrow(
-		{ 
-			windowWidth / 2 + cos(0.5) * radius * 1.70f,
-			windowHeight / 2 
-		},
-		{
-			windowWidth / 2 + (radius * MiniPlayerSeekbarRatio) / 2.0f + hamburger.GetRadius() * 2.5f,
-			windowHeight / 2 + font->GetEm().height
-		},
-		"rotate",
+		"settings",
 		{ "Hover OR click to", "access quick toggles" },
 		radius / AlbumArt::BaseRadius
 	);
@@ -434,12 +420,12 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 	if (!Settings::settings.GetHelpDismissed()) {
 		help.AddArrow(
 			{
-				windowWidth / 2 + radius / 2,
-				windowHeight / 2 + radius * 1.5f
+				windowWidth / 2 + cos(0.5) * radius * 1.75f,
+				windowHeight / 2
 			},
 			{
-				windowWidth / 2.0f + radius * MiniPlayerIconRatio * 3.5f + help.GetPrompt().GetBounds().width,
-				(windowHeight / 2.0f + (SeekbarSize + radius * MiniPlayerIconRatio * 2.0f)) + font->GetEm().height / 2 + radius * MiniPlayerIconRatio / 4
+				windowWidth / 2 + (radius * MiniPlayerSeekbarRatio) / 2.0f + hamburger.GetRadius() * 2.5f,
+				windowHeight / 2 + font->GetEm().height
 			},
 			"help",
 			{ "Click to dismiss this help", "Hover to show help again" },
@@ -923,13 +909,6 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 				);
 
 				context.Use("texture"_hash);
-				exclusiveIndicator.OnLoop(
-					windowWidth / 2 - (albumArt->GetRadius(miniPlayer) * MiniPlayerSeekbarRatio) / 2.0f - exclusiveIndicator.GetOutlineWidth() * 1.05f,
-					windowHeight / 2 + font->GetEm().height,
-					alpha,
-					albumArt,
-					context
-				);
 
 				if (displayStats) {
 					statsWidth += stats.GetBounds().width;
@@ -1009,7 +988,7 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 
 			if (miniPlayer) {
 				hamburger.OnLoop(
-					windowWidth / 2 + (albumArt->GetRadius(miniPlayer) * MiniPlayerSeekbarRatio) / 2.0f + hamburger.GetRadius() * 1.25f,
+					windowWidth / 2 - (albumArt->GetRadius(miniPlayer) * MiniPlayerSeekbarRatio) / 2.0f - hamburger.GetRadius() * 1.25f,
 					windowHeight / 2 + font->GetEm().height,
 					time,
 					context,
@@ -1058,10 +1037,10 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 				context.Color(1.0f, 1.0f, 1.0f, alpha);
 				
 				help.OnLoop(
-					time, 
-					{ 
-						windowWidth / 2.0f + albumArt->GetRadius(miniPlayer) * MiniPlayerIconRatio * 3.75f,
-						iconY - help.GetPrompt().GetBounds().height / 2 + albumArt->GetRadius(miniPlayer) * MiniPlayerIconRatio / 4
+					time,
+					{
+						windowWidth / 2 + (albumArt->GetRadius(miniPlayer) * MiniPlayerSeekbarRatio) / 2.0f + help.GetPrompt().GetBounds().width * 1.75f,
+						windowHeight / 2 + font->GetEm().height - (help.GetPrompt().GetBounds().height / 2) + outlineFont->GetOutlineRadius() * 1.5f,
 					},
 					context,
 					alpha
@@ -1269,12 +1248,12 @@ void Controls::OnMouseMoved(const Vector2i &mousePos) {
 	else if (!help.IsHovered() && !playlist.IsActive() && !presetList.IsActive() && checkboxList.OnMouseMoved(
 		mousePos,
 		{
-			static_cast<int>(windowWidth / 2 + (albumArt->GetRadius(miniPlayer) * MiniPlayerSeekbarRatio) / 2.0f + hamburger.GetRadius() * 1.25f - hamburger.GetRadius() / 2),
+			static_cast<int>(windowWidth / 2 - (albumArt->GetRadius(miniPlayer) * MiniPlayerSeekbarRatio) / 2.0f - hamburger.GetRadius() * 1.25f - hamburger.GetRadius() / 2),
 			windowHeight / 2 + font->GetEm().height - static_cast<int>(hamburger.GetRadius() / 3 * 2),
-			static_cast<int>(windowWidth / 2 + (albumArt->GetRadius(miniPlayer) * MiniPlayerSeekbarRatio) / 2.0f + hamburger.GetRadius() * 1.25f + hamburger.GetRadius() / 2),
+			static_cast<int>(windowWidth / 2 - (albumArt->GetRadius(miniPlayer) * MiniPlayerSeekbarRatio) / 2.0f - hamburger.GetRadius() * 1.25f + hamburger.GetRadius() / 2),
 			windowHeight / 2 + font->GetEm().height + static_cast<int>(hamburger.GetRadius() / 3 * 2),
 		}
-		) == MiniPlayerList::HoverState::Trigger) 
+	) == MiniPlayerList::HoverState::Trigger) 
 		button = ControlButton::Menu;
 	else if (help.OnMouseMoved(mousePos))
 		button = ControlButton::None;
@@ -1287,19 +1266,19 @@ void Controls::OnMouseMoved(const Vector2i &mousePos) {
 }
 
 const bool Controls::IsScrolling() const {
-	return playlist.IsScrolling() || presetList.IsScrolling();
+	return playlist.IsScrolling() || presetList.IsScrolling() || checkboxList.IsScrolling();
 }
 
 const bool Controls::IsScrollBarHovered() const {
-	return playlist.IsScrollBarHovered() || presetList.IsScrollBarHovered();
+	return playlist.IsScrollBarHovered() || presetList.IsScrollBarHovered() || checkboxList.IsScrollBarHovered();
 }
 
 bool Controls::OnMouseDown(const Vector2i &mousePos) {
-	return playlist.OnMouseDown(mousePos) || presetList.OnMouseDown(mousePos);
+	return playlist.OnMouseDown(mousePos) || presetList.OnMouseDown(mousePos) || checkboxList.OnMouseDown(mousePos);
 }
 
 bool Controls::OnMouseDragged(const Vector2i &mousePos) {
-	return playlist.OnMouseDragged(mousePos) || presetList.OnMouseDragged(mousePos);
+	return playlist.OnMouseDragged(mousePos) || presetList.OnMouseDragged(mousePos) || checkboxList.OnMouseDragged(mousePos);
 }
 
 void Controls::OnMouseUp(const Vector2i &mousePos) {
@@ -1311,21 +1290,25 @@ void Controls::OnMouseUp(const Vector2i &mousePos) {
 void Controls::PageUp() {
 	playlist.PageUp();
 	presetList.PageUp();
+	checkboxList.PageUp();
 }
 
 void Controls::PageDown() {
 	playlist.PageDown();
 	presetList.PageDown();
+	checkboxList.PageDown();
 }
 
 void Controls::Home() {
 	playlist.Home();
 	presetList.Home();
+	checkboxList.Home();
 }
 
 void Controls::End() {
 	playlist.End();
 	presetList.End();
+	checkboxList.End();
 }
 
 Controls::ControlButton Controls::OnMouseClicked(const Vector2i &mousePos, std::function<void(float)> seekCallback, bool playing, bool canTakeAction) {
@@ -1352,9 +1335,9 @@ Controls::ControlButton Controls::OnMouseClicked(const Vector2i &mousePos, std::
 	if (canTakeAction && checkboxList.OnMouseClicked(
 		mousePos,
 		{
-			static_cast<int>(windowWidth / 2 + (albumArt->GetRadius(miniPlayer) * MiniPlayerSeekbarRatio) / 2.0f + hamburger.GetRadius() * 1.25f - hamburger.GetRadius() / 2),
+			static_cast<int>(windowWidth / 2 - (albumArt->GetRadius(miniPlayer) * MiniPlayerSeekbarRatio) / 2.0f - hamburger.GetRadius() * 1.25f - hamburger.GetRadius() / 2),
 			windowHeight / 2 + font->GetEm().height - static_cast<int>(hamburger.GetRadius() / 3 * 2),
-			static_cast<int>(windowWidth / 2 + (albumArt->GetRadius(miniPlayer) * MiniPlayerSeekbarRatio) / 2.0f + hamburger.GetRadius() * 1.25f + hamburger.GetRadius() / 2),
+			static_cast<int>(windowWidth / 2 - (albumArt->GetRadius(miniPlayer) * MiniPlayerSeekbarRatio) / 2.0f - hamburger.GetRadius() * 1.25f + hamburger.GetRadius() / 2),
 			windowHeight / 2 + font->GetEm().height + static_cast<int>(hamburger.GetRadius() / 3 * 2),
 		}
 	)) {
@@ -1404,6 +1387,8 @@ bool Controls::AddToScrollOffset(int offset) {
 		return true;
 	else if (help.AddToScrollOffset(offset))
 		return true;
+	else if (checkboxList.AddToScrollOffset(offset))
+		return true;
 
 	return false;
 }
@@ -1419,6 +1404,7 @@ bool Controls::Unstick() {
 	// Make sure to hide any MiniPlayerLists
 	playlist.SetHovered(false, false, false);
 	presetList.SetHovered(false, false, false);
+	checkboxList.SetHovered(false, false, false);
 
 	return AutoFader::Unstick();
 }

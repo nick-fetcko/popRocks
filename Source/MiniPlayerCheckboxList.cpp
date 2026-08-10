@@ -35,22 +35,24 @@ void MiniPlayerCheckboxList::OnDestroy() {
 	outline.OnDestroy();
 }
 
-const OpenGLFont::Bounds &MiniPlayerCheckboxList::AddItem(const std::string &text, std::function<bool()> &&get, std::function<void(bool)> &&set, std::optional<std::size_t> index, std::string altText) {
+Checkbox *MiniPlayerCheckboxList::AddItem(const std::string &text, std::function<bool()> &&get, std::function<void(bool)> &&set, std::optional<std::size_t> index, std::string altText) {
 	Checkbox checkbox(albumArt);
 
 	checkbox.OnInit(font, outlineFont, controls->GetIconSize(), *context);
 	checkbox.SetDarkColor(hoveredColor);
 	checkbox.SetChecked(get());
 
-	checkboxes.emplace_back(
+	const auto ret = &checkboxes.emplace_back(
 		CheckboxSetting{
 			std::move(checkbox),
 			std::move(get),
 			std::move(set)
 		}
-	);
+	).checkbox;
 
-	return MiniPlayerList::AddItem(text, index, altText);
+	MiniPlayerList::AddItem(text, index, altText);
+
+	return ret;
 }
 
 void MiniPlayerCheckboxList::OnColorChanged(const Colour<float> &color, bool silent) {

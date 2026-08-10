@@ -232,7 +232,7 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 		context->Color(1.0f, 1.0f, 1.0f, alpha);
 
 		outlines[index].OnLoop(
-			pos.x - ((outlines[index].GetBounds().width - GetItemWidth()) / 2.0f) + outlineFont->GetOutlineRadius(),
+			pos.x - ((outlines[index].GetBounds().width - GetItemWidth()) / 2.0f) + outlineFont->GetOutlineRadius() + GetItemWidth() / 2.0f,
 			yOffset - std::floor(outlines[index].GetBounds().overhang / 3.0f),
 			time
 		);
@@ -251,7 +251,7 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 			context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 
 		items[index].OnLoop(
-			pos.x - ((items[index].GetBounds().width - GetItemWidth()) / 2.0f),
+			pos.x - ((items[index].GetBounds().width - GetItemWidth()) / 2.0f) + GetItemWidth() / 2.0f,
 			yOffset - std::floor(items[index].GetBounds().overhang / 3.0f),
 			time
 		);
@@ -259,7 +259,7 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 		DrawItem(
 			time,
 			index,
-			pos.x,
+			pos.x + GetItemWidth() / 2.0f,
 			yOffset,
 			-((items[index].GetBounds().width - GetItemWidth()) / 2.0f),
 			-std::floor(items[index].GetBounds().overhang / 3.0f),
