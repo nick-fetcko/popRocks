@@ -79,7 +79,7 @@ bool Platform::StartPlayingExclusive(bool fromPlaylist, bool fileLoaded, bool ad
 	return false; 
 }
 
-bool Platform::StartExclusive() { 
+bool Platform::StartExclusive(bool wasPlaying) { 
 	return false; 
 }
 
@@ -108,7 +108,7 @@ void Platform::BlitBlurFbo() {}
 void Platform::Unmute() {}
 
 bool Platform::PlayAfterLoad() { 
-	return true; 
+	return Settings::settings.GetAutoPlay(); 
 }
 
 std::map<std::string, Platform::OutputDevice> Platform::GetOutputDevices() {

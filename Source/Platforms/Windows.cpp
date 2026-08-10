@@ -1023,7 +1023,7 @@ bool Windows::LoadExclusive(double pos) {
 }
 
 bool Windows::StartPlayingExclusive(bool fromPlaylist, bool fileLoaded, bool advanceOnNextLoop) {
-	if (app->GetControls().GetExclusiveIndicator().IsExclusive()) {
+	if (app->GetControls().GetExclusiveIndicator().IsExclusive() && PlayAfterLoad()) {
 		// Only unmute if this is the first / only song
 		if (!fromPlaylist)
 			Unmute();
@@ -1041,13 +1041,19 @@ bool Windows::StartPlayingExclusive(bool fromPlaylist, bool fileLoaded, bool adv
 	return false;
 }
 
-bool Windows::StartExclusive() {
+bool Windows::StartExclusive(bool wasPlaying) {
 	if (app->GetControls().GetExclusiveIndicator().IsExclusive()) {
-		Unmute();
-		BASS_WASAPI_Start();
+		if (PlayAfterLoad() || wasPlaying) {
+			Unmute();
+			BASS_WASAPI_Start();
 
-		app->SetPlaying(true);
+			app->SetPlaying(true);
+		}
 
+		// We still want to return true,
+		// even if we aren't playing, because
+		// a return of false here indicates
+		// exclusive mode itself failed
 		return true;
 	}
 

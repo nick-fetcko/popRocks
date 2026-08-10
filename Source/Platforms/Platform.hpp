@@ -132,7 +132,7 @@ public:
 	// Exclusive mode
 	virtual bool LoadExclusive(double pos);
 	virtual bool StartPlayingExclusive(bool fromPlaylist, bool fileLoaded, bool advanceOnNextLoop);
-	virtual bool StartExclusive();
+	virtual bool StartExclusive(bool wasPlaying);
 	virtual bool StopPlayingExclusive();
 	virtual std::size_t GetAvailable() const;
 

@@ -825,9 +825,16 @@ bool Linux::StopPlayingExclusive() {
 
 bool Linux::StartPlayingExclusive(bool fromPlaylist, bool fileLoaded, bool advanceOnNextLoop) {
 	if (app->GetControls().GetExclusiveIndicator().IsExclusive()) {
-		pw_thread_loop_lock(pwData.loop);
-		pw_stream_set_active(pwData.stream, true);
-		pw_thread_loop_unlock(pwData.loop);
+		if (PlayAfterLoad()) {
+			pw_thread_loop_lock(pwData.loop);
+			pw_stream_set_active(pwData.stream, true);
+			pw_thread_loop_unlock(pwData.loop);
+		}
+
+		// We still want to return true,
+		// even if we aren't playing, because
+		// a return of false here indicates
+		// exclusive mode itself failed
 		return true;
 	}
 

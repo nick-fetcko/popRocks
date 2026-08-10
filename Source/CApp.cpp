@@ -1704,7 +1704,7 @@ void CApp::OnInit() {
 
 	// Reserve space so returned Checkbox pointers
 	// don't get invalidated by reallocations
-	controls.GetCheckboxList().Reserve(6);
+	controls.GetCheckboxList().Reserve(7);
 
 	exclusiveCheckbox = controls.GetCheckboxList().AddItem(
 		"Exclusive output",
@@ -1796,6 +1796,16 @@ void CApp::OnInit() {
 		},
 		[](bool checked) {
 			Settings::settings.SetAutoFade(checked);
+		}
+	);
+
+	controls.GetCheckboxList().AddItem(
+		"Auto-play",
+		[] {
+			return Settings::settings.GetAutoPlay();
+		},
+		[](bool checked) {
+			Settings::settings.SetAutoPlay(checked);
 		}
 	);
 
@@ -3102,11 +3112,11 @@ void CApp::PlaylistLoaded(std::filesystem::path path, std::string extension, std
 
 		if (!fileLoaded || wasPlaying) {
 			if (!platform->StartPlayingExclusive(fromPlaylist, fileLoaded, advanceOnNextLoop)) {
-				if (platform->PlayAfterLoad())
+				if (wasPlaying || platform->PlayAfterLoad())
 					BASS_ChannelPlay(this->streamHandle, false);
 			}
 
-			if (platform->PlayAfterLoad())
+			if (wasPlaying || platform->PlayAfterLoad())
 				SetPlaying(true);
 			else SetPlaying(false);
 		}
@@ -3512,6 +3522,7 @@ void CApp::ToggleExclusive() {
 		BASS_ChannelGetPosition(streamHandle, BASS_POS_BYTE)
 	);
 
+	const auto wasPlaying = playing;
 	const auto exclusive = controls.GetExclusiveIndicator().IsExclusive();
 
 	if (exclusive)
@@ -3542,7 +3553,7 @@ void CApp::ToggleExclusive() {
 		BASS_POS_BYTE
 	);
 
-	if (!platform->StartExclusive()) {
+	if (!platform->StartExclusive(wasPlaying) && (platform->PlayAfterLoad() || wasPlaying)) {
 		BASS_Start();
 		BASS_ChannelPlay(streamHandle, false);
 

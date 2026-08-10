@@ -106,7 +106,7 @@ public:
 	// Exclusive mode
 	bool LoadExclusive(double pos) override;
 	bool StartPlayingExclusive(bool fromPlaylist, bool fileLoaded, bool advanceOnNextLoop) override;
-	bool StartExclusive() override;
+	bool StartExclusive(bool wasPlaying) override;
 	bool StopPlayingExclusive() override;
 	std::size_t GetAvailable() const override;
 

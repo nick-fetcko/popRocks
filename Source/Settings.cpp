@@ -915,6 +915,13 @@ void Settings::SetDisplayStats(bool displayStats, bool delayed) {
 	}
 }
 
+void Settings::SetAutoPlay(bool autoPlay, bool delayed) {
+	if (this->autoPlay != autoPlay) {
+		this->autoPlay = autoPlay;
+		if (!delayed) Save();
+	}
+}
+
 void Settings::Save() {
 	if (auto path = Filesystem::GetPath(); !path.empty()) {
 		LogInfo("Saving settings...");
@@ -1250,6 +1257,9 @@ const Node &operator>>(const Node &node, Settings &settings) {
 
 	if (node.has("displayStats"))
 		node["displayStats"]->get(settings.displayStats);
+
+	if (node.has("autoPlay"))
+		node["autoPlay"]->get(settings.autoPlay);
 		
 	return node;
 }
@@ -1359,6 +1369,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	else
 		node.remove("audioOffset");
 	node["displayStats"]->set(settings.displayStats);
+	node["autoPlay"]->set(settings.autoPlay);
 
 	return node;
 }

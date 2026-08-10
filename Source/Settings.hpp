@@ -405,6 +405,9 @@ public:
 	const bool &GetDisplayStats() const { return displayStats; }
 	void SetDisplayStats(bool displayStats, bool delayed = false);
 
+	const bool &GetAutoPlay() const { return autoPlay; }
+	void SetAutoPlay(bool autoPlay, bool delayed = false);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -600,4 +603,6 @@ private:
 	std::optional<float> audioOffset = std::nullopt;
 
 	bool displayStats = false;
+
+	bool autoPlay = true;
 };
