@@ -263,7 +263,8 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 			yOffset,
 			-((items[index].GetBounds().width - GetItemWidth()) / 2.0f),
 			-std::floor(items[index].GetBounds().overhang / 3.0f),
-			hovered && i == hoveredOffset
+			hovered && i == hoveredOffset,
+			alpha
 		);
 
 		yOffset += items[index].GetBounds().height + GetItemLeading();

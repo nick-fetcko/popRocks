@@ -109,12 +109,12 @@ float MiniPlayerCheckboxList::GetItemLeading() const {
 	else return std::round(checkboxes.begin()->checkbox.GetSize().y / 10.0f);
 }
 
-void MiniPlayerCheckboxList::DrawItem(const Delta &time, std::size_t index, int x, int y, int left, int top, bool hovered) {
+void MiniPlayerCheckboxList::DrawItem(const Delta &time, std::size_t index, int x, int y, int left, int top, bool hovered, const float &alpha) {
 	auto &setting = checkboxes.at(index);
 
 	setting.checkbox.SetHovered(hovered);
 
-	context->Blend(true, [this, &setting, &time, x, y, left, top] {
+	context->Blend(true, [this, &setting, &time, x, y, left, top, &alpha] {
 		setting.checkbox.OnLoop(
 			x + left - setting.checkbox.GetSize().x * 1.25f,
 			y + top + setting.checkbox.GetSize().y / 4,

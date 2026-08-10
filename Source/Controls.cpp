@@ -1040,18 +1040,24 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 					time,
 					{
 						windowWidth / 2 + (albumArt->GetRadius(miniPlayer) * MiniPlayerSeekbarRatio) / 2.0f + help.GetPrompt().GetBounds().width * 1.75f,
-						windowHeight / 2 + font->GetEm().height - (help.GetPrompt().GetBounds().height / 2) + outlineFont->GetOutlineRadius() * 1.5f,
+						windowHeight / 2 + font->GetEm().height - (help.GetPrompt().GetBounds().height / 2) + outlineFont->GetOutlineRadius() * 1.75f,
 					},
 					context,
 					alpha
 				);
 
-				// Need to call version with Pre and Post-loop functions
-				dynamic_cast<MiniPlayerList*>(&checkboxList)->OnLoop(
-					time,
-					{ windowWidth / 2, windowHeight / 2 - albumArt->GetRadius(miniPlayer) / 2 },
-					std::nullopt
-				);
+				checkboxList.PreLoop();
+
+				if (checkboxList.GetAlpha() > 0.0f) {
+					checkboxList.OnLoop(
+						time,
+						{ windowWidth / 2, windowHeight / 2 - albumArt->GetRadius(miniPlayer) / 2 },
+						std::nullopt,
+						volume.GetAlpha() == 0.0f ? checkboxList.GetAlpha() : inverseAlpha
+					);
+				}
+
+				checkboxList.PostLoop(time);
 			}
 
 #ifdef WIN32
