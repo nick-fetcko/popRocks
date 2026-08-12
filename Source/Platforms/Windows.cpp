@@ -224,6 +224,54 @@ void Windows::HandleScaleDelta(float scale, std::optional<float> &scaleDelta, in
 }
 
 std::optional<bool> Windows::OnLoop() {
+	if (desktopWidgetMode && desktopShown) {
+		if (const auto now = std::chrono::system_clock::now(); now - desktopShownTimer >= 100ms) {
+			desktopShownTimer = now;
+
+			const auto hwnd = reinterpret_cast<HWND>(
+				SDL_GetPointerProperty(
+					SDL_GetWindowProperties(app->GetSdlWindow()),
+					SDL_PROP_WINDOW_WIN32_HWND_POINTER,
+					NULL
+				)
+			);
+
+			// Adapted from Rainmeter:
+			// https://github.com/rainmeter/rainmeter/blob/8e06491aa8e9db4ca5a111097d32541136b78643/Library/System.cpp#L903
+			//
+			// Required to prevent the window from being hidden
+			// behind the "desktop" window on "Show Desktop" / Win+D
+			// in Win11 24H2
+			::SetWindowPos(
+				hwnd,
+				HWND_TOPMOST,
+				0, 0, 0, 0,
+				(SWP_NOMOVE | SWP_NOSIZE | SWP_NOOWNERZORDER | SWP_NOACTIVATE | SWP_NOSENDCHANGING)
+			);
+
+			// Find the "backmost" topmost window
+			HWND insertAfter = GetShellWindow();
+			while (insertAfter = ::GetNextWindow(insertAfter, GW_HWNDPREV)) {
+				if (GetWindowLongPtr(insertAfter, GWL_EXSTYLE) & WS_EX_TOPMOST) {
+					if (0 != ::SetWindowPos(hwnd, insertAfter, 0, 0, 0, 0, (SWP_NOMOVE | SWP_NOSIZE | SWP_NOOWNERZORDER | SWP_NOACTIVATE | SWP_NOSENDCHANGING))) {
+						--desktopShown;
+
+						// Window is in a completely noninteractive state
+						// until these style changes are made
+						if (LONG_PTR style = GetWindowLongPtr(hwnd, GWL_STYLE); style & WS_MINIMIZE) {
+							style |= WS_VISIBLE;
+							style ^= WS_MINIMIZE;
+							SetWindowLongPtr(hwnd, GWL_STYLE, style);
+						}
+
+						return true;
+					}
+				}
+			}
+			
+		}
+	}
+
 	if (!app->GetVulkan() && HDR::Enabled)
 		return dxgi.OnLoop();
 	else if (app->GetVulkan())
@@ -1169,6 +1217,42 @@ void Windows::HookWindow(bool miniPlayer) {
 
 	sdlWndProc = reinterpret_cast<WNDPROC>(GetWindowLongPtr(hwnd, GWLP_WNDPROC));
 	SetWindowLongPtr(hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(WndProc));
+
+	if (miniPlayer)
+		SetDesktopWidgetMode(desktopWidgetMode);
+}
+
+bool Windows::SupportsDesktopWidgetMode() const {
+	return true;
+}
+
+void Windows::SetDesktopWidgetMode(bool desktopWidgetMode) {
+	Platform::SetDesktopWidgetMode(desktopWidgetMode);
+
+	const auto hwnd = reinterpret_cast<HWND>(
+		SDL_GetPointerProperty(
+			SDL_GetWindowProperties(app->GetSdlWindow()),
+			SDL_PROP_WINDOW_WIN32_HWND_POINTER,
+			NULL
+		)
+	);
+
+	if (desktopWidgetMode)
+		::SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+	else
+		::SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+
+	BOOL peek = desktopWidgetMode ? TRUE : FALSE;
+
+	// Required to prevent window from being hidden
+	// on Win+, formerly refered to as "Aero Peek"
+	DwmSetWindowAttribute(hwnd, DWMWA_DISALLOW_PEEK, &peek, sizeof(peek));
+	DwmSetWindowAttribute(hwnd, DWMWA_EXCLUDED_FROM_PEEK, &peek, sizeof(peek));
+}
+
+void Windows::SetDesktopShown(uint8_t desktopShown) {
+	this->desktopShown = desktopShown;
+	desktopShownTimer = std::chrono::system_clock::now();
 }
 
 // -----------------------------------------------------
@@ -1381,7 +1465,26 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		platform->SetFilterPaused(false);
 	else if (msg == WM_EXITSIZEMOVE)
 		platform->SetFilterPaused(true);
+	else if (msg == WM_WINDOWPOSCHANGING && platform->GetDesktopWidgetMode()) {
+		auto *pos = reinterpret_cast<WINDOWPOS *>(lParam);
 
+		// Prior to Win11 24H2, this was enough to prevent
+		// the window being hidden on "Show Desktop" / Win+D
+		if (pos->x == -32000) {
+			pos->flags = SWP_NOMOVE | SWP_NOSIZE;
+			platform->SetDesktopShown(2);
+		}
+
+		pos->hwndInsertAfter = HWND_BOTTOM;
+
+		return 0;
+	} else if (msg == WM_SYSCOMMAND) {
+		if ((wParam & 0xFFF0) == SC_MINIMIZE) {
+			// Return 0 to block the minimize action
+			return 0;
+		}
+	}
+		
 	return platform->GetSdlWndProc()(hwnd, msg, wParam, lParam);
 }
 

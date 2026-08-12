@@ -120,6 +120,10 @@ public:
 
 	// Window Management
 	void HookWindow(bool miniPlayer) override;
+	bool SupportsDesktopWidgetMode() const override;
+	void SetDesktopWidgetMode(bool desktopWidgetMode) override;
+	const uint8_t GetDesktopShown() const { return desktopShown; }
+	void SetDesktopShown(uint8_t desktopShown);
 
 	// Bling
 	void SetStatus(Status status, int progress) override;
@@ -156,6 +160,9 @@ private:
 	WNDPROC sdlWndProc = nullptr;
 
 	float actualScale = 1.0f;
+
+	uint8_t desktopShown = 0;
+	std::chrono::system_clock::time_point desktopShownTimer;
 
 #ifndef _DEBUG
 	HKEY registryKey = nullptr;

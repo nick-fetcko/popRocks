@@ -64,8 +64,8 @@ void MiniPlayerCheckboxList::OnColorChanged(const Colour<float> &color, bool sil
 
 bool MiniPlayerCheckboxList::OnMouseClicked(const Vector2i &mousePos, Rectanglei bounds) {
 	if (miniPlayer && alpha > 0.0f) {
-		if (hoveredOffset > -1 && hoveredOffset < checkboxes.size()) {
-			auto &setting = checkboxes.at(hoveredOffset);
+		if (hoveredOffset > -1 && (hoveredOffset + scrollOffset) < checkboxes.size()) {
+			auto &setting = checkboxes.at(hoveredOffset + scrollOffset);
 
 			const auto newSetting = !setting.checkbox.GetChecked();
 

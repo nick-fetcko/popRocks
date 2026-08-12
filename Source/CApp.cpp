@@ -648,7 +648,8 @@ inline SDL_PropertiesID CApp::CreateSdlWindow(bool first) {
 	//			HDR doesn't play well with this, either.
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_TRANSPARENT_BOOLEAN, miniPlayer);
 
-	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_ALWAYS_ON_TOP_BOOLEAN, miniPlayer);
+	const bool alwaysOnTop = miniPlayer && !platform->GetDesktopWidgetMode();
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_ALWAYS_ON_TOP_BOOLEAN, alwaysOnTop);
 
 	sdlWindow = SDL_CreateWindowWithProperties(
 		props
@@ -1704,7 +1705,7 @@ void CApp::OnInit() {
 
 	// Reserve space so returned Checkbox pointers
 	// don't get invalidated by reallocations
-	controls.GetCheckboxList().Reserve(7);
+	controls.GetCheckboxList().Reserve(platform->SupportsDesktopWidgetMode() ? 8 : 7);
 
 	exclusiveCheckbox = controls.GetCheckboxList().AddItem(
 		"Exclusive output",
@@ -1808,6 +1809,19 @@ void CApp::OnInit() {
 			Settings::settings.SetAutoPlay(checked);
 		}
 	);
+
+	if (platform->SupportsDesktopWidgetMode()) {
+		controls.GetCheckboxList().AddItem(
+			"Desktop widget mode",
+			[] {
+				return Settings::settings.GetDesktopWidgetMode();
+			},
+			[this](bool checked) {
+				Settings::settings.SetDesktopWidgetMode(checked);
+				platform->SetDesktopWidgetMode(checked);
+			}
+		);
+	}
 
 	// After adding items, have to update size
 	controls.GetCheckboxList().OnRadiusChanged();

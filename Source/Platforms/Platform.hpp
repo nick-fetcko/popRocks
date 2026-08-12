@@ -166,6 +166,8 @@ public:
 	virtual void UpdateWindowShape();
 	virtual void DestroyWindow(SDL_Window *window);
 	virtual void HookWindow(bool miniPlayer);
+	virtual bool SupportsDesktopWidgetMode() const;
+	virtual void SetDesktopWidgetMode(bool desktopWidgetMode);
 
 	// Bling
 	enum class Status {
@@ -197,6 +199,9 @@ public:
 	// Max buffer length
 	void SetMaxLength(std::size_t maxLength);
 	const std::size_t &GetMaxLength() const;
+
+	// Window management
+	const bool &GetDesktopWidgetMode() const;
 
 	// =====================================================
 	// =============== Template Functions ==================
@@ -263,6 +268,8 @@ protected:
 	bool pauseFilter = true;
 
 	float scale = 1.0f;
+
+	bool desktopWidgetMode = Settings::settings.GetDesktopWidgetMode();
 };
 
 // =====================================================

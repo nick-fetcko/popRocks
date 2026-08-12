@@ -140,6 +140,14 @@ void Platform::HookWindow(bool miniPlayer) {
 
 }
 
+bool Platform::SupportsDesktopWidgetMode() const {
+	return false;
+}
+
+void Platform::SetDesktopWidgetMode(bool desktopWidgetMode) {
+	this->desktopWidgetMode = desktopWidgetMode;
+}
+
 // Bling
 void Platform::SetStatus(Status status, int progress) {
 
@@ -188,6 +196,11 @@ void Platform::SetMaxLength(std::size_t maxLength) {
 
 const std::size_t &Platform::GetMaxLength() const {
 	return maxLength; 
+}
+
+// Window management
+const bool &Platform::GetDesktopWidgetMode() const {
+	return desktopWidgetMode;
 }
 
 // =====================================================

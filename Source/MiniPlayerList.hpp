@@ -13,7 +13,7 @@
 class MiniPlayerList : public ColorChangeListener, public AlbumArt::BlackChangedListener {
 private:
 	constexpr static std::size_t ArcWidth = 75;
-	constexpr static std::array<float, 3> ArcStartAngles = { 233, 239, 233 };
+	constexpr static std::array<float, 3> ArcStartAngles = { 233, 239, 239 };
 
 	constexpr static float UpwardsBias = 0.515f;
 

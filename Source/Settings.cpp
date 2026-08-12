@@ -922,6 +922,13 @@ void Settings::SetAutoPlay(bool autoPlay, bool delayed) {
 	}
 }
 
+void Settings::SetDesktopWidgetMode(bool desktopWidgetMode, bool delayed) {
+	if (this->desktopWidgetMode != desktopWidgetMode) {
+		this->desktopWidgetMode = desktopWidgetMode;
+		if (!delayed) Save();
+	}
+}
+
 void Settings::Save() {
 	if (auto path = Filesystem::GetPath(); !path.empty()) {
 		LogInfo("Saving settings...");
@@ -1260,6 +1267,9 @@ const Node &operator>>(const Node &node, Settings &settings) {
 
 	if (node.has("autoPlay"))
 		node["autoPlay"]->get(settings.autoPlay);
+
+	if (node.has("desktopWidgetMode"))
+		node["desktopWidgetMode"]->get(settings.desktopWidgetMode);
 		
 	return node;
 }
@@ -1370,6 +1380,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 		node.remove("audioOffset");
 	node["displayStats"]->set(settings.displayStats);
 	node["autoPlay"]->set(settings.autoPlay);
+	node["desktopWidgetMode"]->set(settings.desktopWidgetMode);
 
 	return node;
 }

@@ -408,6 +408,9 @@ public:
 	const bool &GetAutoPlay() const { return autoPlay; }
 	void SetAutoPlay(bool autoPlay, bool delayed = false);
 
+	const bool &GetDesktopWidgetMode() const { return desktopWidgetMode; }
+	void SetDesktopWidgetMode(bool desktopWidgetMode, bool delayed = false);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -605,4 +608,5 @@ private:
 	bool displayStats = false;
 
 	bool autoPlay = true;
+	bool desktopWidgetMode = false;
 };
