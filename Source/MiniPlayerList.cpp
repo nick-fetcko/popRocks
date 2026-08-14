@@ -474,18 +474,22 @@ bool MiniPlayerList::OnMouseDragged(const Vector2i &mousePos) {
 
 	if (scrolling) {
 		const auto angle = GetAngle(mousePos);
-		const auto itemWidth = static_cast<float>(ArcWidth) / items.size();
 
-		const auto delta = angle - startAngle;
+		if (const auto start = ArcStartAngles[static_cast<uint8_t>(direction)];
+			angle >= start && angle <= start + ArcWidth) {
+			const auto itemWidth = static_cast<float>(ArcWidth) / items.size();
 
-		if (delta >= itemWidth || delta <= -itemWidth) {
-			const int offset = delta / itemWidth;
+			const auto delta = angle - startAngle;
 
-			startAngle += itemWidth * offset;
-			AddToScrollOffset(offset);
+			if (delta >= itemWidth || delta <= -itemWidth) {
+				const int offset = delta / itemWidth;
+
+				startAngle += itemWidth * offset;
+				AddToScrollOffset(offset);
+			}
+
+			return true;
 		}
-
-		return true;
 	}
 
 	return false;
