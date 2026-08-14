@@ -91,11 +91,11 @@ public:
 		square.Draw<false>(context);
 		if (checked) check.Draw<true>(context);
 
-		context.Use("texture"_hash);
-		context.LoadIdentity();
-
 		if (hovered) {
 			context.EndBlend();
+
+			context.Use("texture"_hash);
+			context.LoadIdentity();
 
 			context.Color(OutlineColor, OutlineColor, OutlineColor, alpha ? *alpha : this->alpha);
 			tooltipOutline.OnLoop(mousePos.x - tooltip.GetBounds().width / 2.0f, mousePos.y - tooltip.GetBounds().height * 1.5f);

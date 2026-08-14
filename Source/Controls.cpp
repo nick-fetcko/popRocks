@@ -132,10 +132,6 @@ void Controls::OnRadiusChanged(Context &context, bool miniPlayer) {
 	const auto maxWidth =
 		miniPlayer ? 2 * std::sqrt(std::pow(radius, 2) - std::pow(radius / 2 + font->GetEm().height + ScrollingText::BleedEdge * (radius / AlbumArt::BaseRadius), 2)) : windowWidth;
 
-	context.With("scrolling"_hash, [&](Context::Shader &shader) {
-		shader.program.Uniform1f("maxWidth"_hash, miniPlayer ? maxWidth : windowWidth);
-	});
-
 	artistText.SetMaxWidth(maxWidth);
 	artistOutline.SetMaxWidth(maxWidth);
 	albumText.SetMaxWidth(maxWidth);
@@ -317,10 +313,6 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 			)
 		);
 
-	context.With("scrolling"_hash, [&](Context::Shader &shader) {
-		shader.program.Uniform1f("maxWidth"_hash, miniPlayer ? maxWidth : windowWidth);
-	});
-
 	playlist.OnResize(windowWidth, windowHeight, scale, miniPlayer, maxWidth);
 
 	presetList.SetMiniPlayer(miniPlayer);
@@ -332,8 +324,8 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 	help.SetMaxWidth(maxWidth);
 
 	checkboxList.SetMiniPlayer(miniPlayer);
-	checkboxList.OnResize(windowWidth, windowHeight, scale, miniPlayer, maxWidth + checkboxList.GetItemWidth());
-	checkboxList.SetMaxWidth(maxWidth + checkboxList.GetItemWidth());
+	checkboxList.OnResize(windowWidth, windowHeight, scale, miniPlayer, maxWidth - checkboxList.GetItemWidth() * 2.0f);
+	checkboxList.SetMaxWidth(maxWidth - checkboxList.GetItemWidth() * 2.0f);
 
 	artistText.OnResize(windowWidth, windowHeight);
 	artistOutline.OnResize(windowWidth, windowHeight);
@@ -854,6 +846,7 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 			} else {
 				context.Use("scrolling"_hash);
 				context.GetShaderProgram().Uniform2f("screenSize"_hash, windowWidth, windowHeight);
+				context.GetShaderProgram().Uniform1f("maxWidth"_hash, artistText.GetMaxWidth());
 
 				if (!artistText.Empty()) {
 					context.Color(1.0f, 1.0f, 1.0f, alpha);

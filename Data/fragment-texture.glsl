@@ -16,10 +16,6 @@ uniform float brightness;
 
 uniform int bgr;
 
-// Currently unused
-// Only exists to match fragment-scrolling
-uniform vec2 origin;
-
 void main() {
     vec4 sampled = texture(text, TexCoords);
 

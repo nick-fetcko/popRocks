@@ -37,8 +37,6 @@ void ScrollingText::OnLoop(int x, int y, const Delta &time) {
 		);
 	}
 
-	// Our shader _could_ be "texture" instead of "scrolling",
-	// so we have a dummy uniform in fragment-texture to hold this
 	context->GetShaderProgram().Uniform2f("origin"_hash, x, y);
 
 	context->Blend(true, [this, x, y] {

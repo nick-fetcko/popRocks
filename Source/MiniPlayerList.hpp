@@ -41,7 +41,7 @@ public:
 	virtual void OnLoop(const Delta &time, Vector2i pos, std::optional<std::size_t> currentIndex, const float &alpha);
 	virtual float GetItemWidth() const { return 0.0f; }
 	virtual float GetItemLeading() const { return 0.0f; }
-	virtual void DrawItem(const Delta &time, std::size_t index, int x, int y, int left, int top, bool hovered, const float &alpha) {}
+	virtual bool DrawItem(const Delta &time, std::size_t index, int x, int y, int left, int top, bool hovered, const float &alpha) { return false; }
 	void PostLoop(const Delta &time);
 
 	virtual void OnDestroy();

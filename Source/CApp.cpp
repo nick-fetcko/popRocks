@@ -472,9 +472,6 @@ void CApp::LoadShaders() {
 
 			shader.program.CacheUniformLocation("bgr");
 			shader.program.Uniform1i("bgr"_hash, 0);
-
-			shader.program.CacheUniformLocation("origin");
-			shader.program.Uniform2f("origin"_hash, 0, 0);
 		}
 
 		if (hash == "basic"_hash) {

@@ -25,6 +25,7 @@ public:
 
 	bool SetText(const std::string &text, bool force = false, bool update = true);
 
+	const float &GetMaxWidth() const { return maxWidth; }
 	void SetMaxWidth(float maxWidth);
 
 	void SetFont(OpenGLFont *font) override;

@@ -27,7 +27,7 @@ public:
 	void OnLoop(const Delta &time, Vector2i pos, std::optional<std::size_t> currentIndex, const float &alpha) override;
 	float GetItemWidth() const override;
 	float GetItemLeading() const override;
-	void DrawItem(const Delta &time, std::size_t index, int x, int y, int left, int top, bool hovered, const float &alpha) override;
+	bool DrawItem(const Delta &time, std::size_t index, int x, int y, int left, int top, bool hovered, const float &alpha) override;
 
 private:
 	Controls *const controls = nullptr;

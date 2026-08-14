@@ -212,8 +212,13 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 
 	this->pos = pos;
 
+	context->Use("scrolling"_hash);
+	context->GetShaderProgram().Uniform1f("maxWidth"_hash, maxWidth);
+
 	// Bias upwards-facing lists toward the top
 	float yOffset = pos.y + (font->GetEm().height * (direction == Direction::Up ? UpwardsBias : 1));
+	bool scrolling = false;
+	int width = 0;
 	for (long i = 0; i < numberOfVisibleItems; ++i) {
 		const auto index = i + scrollOffset;
 
@@ -221,6 +226,8 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 			continue;
 		else if (index < 0)
 			continue;
+
+		scrolling = false;
 
 		const auto isCurrent = currentIndex && indices.at(index) == *currentIndex;
 
@@ -230,6 +237,13 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 			outlines[index].SetFont(outlineFont);
 
 		context->Color(1.0f, 1.0f, 1.0f, alpha);
+
+		width = items[index].GetBounds().width;
+		
+		if (const auto maxWidth = this->maxWidth; maxWidth < width) {
+			width = maxWidth;
+			scrolling = true;
+		}
 
 		outlines[index].OnLoop(
 			pos.x - ((outlines[index].GetBounds().width - GetItemWidth()) / 2.0f) + outlineFont->GetOutlineRadius() + GetItemWidth() / 2.0f,
@@ -251,21 +265,24 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 			context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 
 		items[index].OnLoop(
-			pos.x - ((items[index].GetBounds().width - GetItemWidth()) / 2.0f) + GetItemWidth() / 2.0f,
+			pos.x - ((outlines[index].GetBounds().width - GetItemWidth()) / 2.0f) + outlineFont->GetOutlineRadius() + GetItemWidth() / 2.0f,
 			yOffset - std::floor(items[index].GetBounds().overhang / 3.0f),
 			time
 		);
 
-		DrawItem(
+		if (DrawItem(
 			time,
 			index,
-			pos.x + GetItemWidth() / 2.0f,
+			pos.x + GetItemWidth() / 2.0f - (scrolling ? ScrollingText::BleedEdge / 4 : 0),
 			yOffset,
-			-((items[index].GetBounds().width - GetItemWidth()) / 2.0f),
+			-((width - GetItemWidth()) / 2.0f),
 			-std::floor(items[index].GetBounds().overhang / 3.0f),
 			hovered && i == hoveredOffset,
 			alpha
-		);
+		)) {
+			context->Use("scrolling"_hash);
+			context->LoadIdentity();
+		}
 
 		yOffset += items[index].GetBounds().height + GetItemLeading();
 	}
