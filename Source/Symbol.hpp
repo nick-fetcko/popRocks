@@ -50,9 +50,10 @@ public:
 	void OnColorChanged(const Colour<float> &color, bool silent) override {
 		auto hsv = color.ToHsv();
 		hsv.v = 0.334f;
-		darkColor = Colour<float>::FromHsv(hsv.h, hsv.s, hsv.v);
+		hoveredColor = Colour<float>::FromHsv(hsv.h, hsv.s, hsv.v);
 		hsv.v = 1.0f;
 		this->color = Colour<float>::FromHsv(hsv.h, hsv.s, hsv.v);
+		darkColor = color;
 
 		if (HDR::Enabled) {
 			this->color.Tone(
@@ -64,6 +65,9 @@ public:
 		}
 	}
 
+	void SetHoveredColor(const Colour<float> &hoveredColor) {
+		this->hoveredColor = hoveredColor;
+	}
 	void SetDarkColor(const Colour<float> &darkColor) {
 		this->darkColor = darkColor;
 	}
@@ -85,12 +89,13 @@ public:
 
 protected:
 	const Colour<float> &GetColor() const {
-		return ((hovered && !clicked) ? darkColor : color);
+		return ((hovered && !clicked) ? hoveredColor : (clicked ? darkColor : color));
 	}
 
 	float radius = 1.0f;
 
 	Colour<float> color = Colour<float>::White;
+	Colour<float> hoveredColor = Colour<float>::Grey;
 	Colour<float> darkColor = Colour<float>::Grey;
 
 	bool hovered = false;

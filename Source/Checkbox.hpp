@@ -91,6 +91,7 @@ public:
 		square.Draw<false>(context);
 		if (checked) check.Draw<true>(context);
 
+		/*
 		if (hovered) {
 			context.EndBlend();
 
@@ -102,6 +103,7 @@ public:
 			context.Color(1.0f, 1.0f, 1.0f, alpha ? *alpha : this->alpha);
 			tooltip.OnLoop(mousePos.x - tooltip.GetBounds().width / 2.0f, mousePos.y - tooltip.GetBounds().height * 1.5f);
 		}
+		*/
 	}
 
 	const Vector2f &GetSize() const { return size; }

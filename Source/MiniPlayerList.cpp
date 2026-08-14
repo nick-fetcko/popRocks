@@ -150,6 +150,7 @@ const Colourf &MiniPlayerList::GetColor() const {
 
 	if (hoverState == HoverState::Trigger)
 		return hoveredColor;
+
 	else return HDR::WhiteColor;
 }
 
@@ -259,9 +260,12 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 				items[index].SetFont(font);
 		}
 
-		if (hovered && i == hoveredOffset)
-			context->Color(hoveredColor.r, hoveredColor.g, hoveredColor.b, alpha);
-		else
+		if (hovered && i == hoveredOffset) {
+			if (clickTimer)
+				context->Color(darkColor.r, darkColor.g, darkColor.b, alpha);
+			else
+				context->Color(hoveredColor.r, hoveredColor.g, hoveredColor.b, alpha);
+		} else
 			context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 
 		items[index].OnLoop(
@@ -270,6 +274,8 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 			time
 		);
 
+		const auto itemHovered = hovered && i == hoveredOffset;
+
 		if (DrawItem(
 			time,
 			index,
@@ -277,7 +283,8 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 			yOffset,
 			-((width - GetItemWidth()) / 2.0f),
 			-std::floor(items[index].GetBounds().overhang / 3.0f),
-			hovered && i == hoveredOffset,
+			itemHovered,
+			itemHovered && clickTimer.has_value(),
 			alpha
 		)) {
 			context->Use("scrolling"_hash);

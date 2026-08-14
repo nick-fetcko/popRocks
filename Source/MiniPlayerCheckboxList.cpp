@@ -39,7 +39,8 @@ Checkbox *MiniPlayerCheckboxList::AddItem(const std::string &text, std::function
 	Checkbox checkbox(albumArt);
 
 	checkbox.OnInit(font, outlineFont, controls->GetIconSize(), *context);
-	checkbox.SetDarkColor(hoveredColor);
+	checkbox.SetHoveredColor(hoveredColor);
+	checkbox.SetDarkColor(darkColor);
 	checkbox.SetChecked(get());
 
 	const auto ret = &checkboxes.emplace_back(
@@ -58,8 +59,10 @@ Checkbox *MiniPlayerCheckboxList::AddItem(const std::string &text, std::function
 void MiniPlayerCheckboxList::OnColorChanged(const Colour<float> &color, bool silent) {
 	MiniPlayerList::OnColorChanged(color, silent);
 
-	for (auto &setting : checkboxes)
-		setting.checkbox.SetDarkColor(hoveredColor);
+	for (auto &setting : checkboxes) {
+		setting.checkbox.SetHoveredColor(hoveredColor);
+		setting.checkbox.SetDarkColor(darkColor);
+	}
 }
 
 bool MiniPlayerCheckboxList::OnMouseClicked(const Vector2i &mousePos, Rectanglei bounds) {
@@ -71,6 +74,8 @@ bool MiniPlayerCheckboxList::OnMouseClicked(const Vector2i &mousePos, Rectanglei
 
 			setting.checkbox.SetChecked(newSetting);
 			setting.set(newSetting);
+
+			clickTimer = std::chrono::system_clock::now();
 		} else if (hovered && alpha == 1.0f && alpha == targetAlpha) {
 			hovered = false;
 			hoverTimer = std::nullopt;
@@ -109,10 +114,11 @@ float MiniPlayerCheckboxList::GetItemLeading() const {
 	else return std::round(checkboxes.begin()->checkbox.GetSize().y / 10.0f);
 }
 
-bool MiniPlayerCheckboxList::DrawItem(const Delta &time, std::size_t index, int x, int y, int left, int top, bool hovered, const float &alpha) {
+bool MiniPlayerCheckboxList::DrawItem(const Delta &time, std::size_t index, int x, int y, int left, int top, bool hovered, bool clicked, const float &alpha) {
 	auto &setting = checkboxes.at(index);
 
 	setting.checkbox.SetHovered(hovered);
+	setting.checkbox.SetClicked(clicked);
 
 	context->Blend(true, [this, &setting, &time, x, y, left, top, &alpha] {
 		setting.checkbox.OnLoop(
