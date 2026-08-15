@@ -1697,6 +1697,7 @@ void CApp::OnInit() {
 			else SDL_HideCursor();
 		}
 	});
+	closeFader.SetWaitTime(Settings::settings.GetMiniPlayerWaitTime());
 
 	// Add settings
 
@@ -2058,7 +2059,7 @@ inline void CApp::DrawCloseButton(const Delta &time) {
 			windowHeight / 2 - albumArt.GetRadius(miniPlayer) + closeSize,
 			time,
 			*context,
-			(!fileLoaded && !platform->IsListening()) ? &one : &controls.GetAlpha()
+			(!fileLoaded && !platform->IsListening()) ? &one : &closeFader.GetAlpha()
 		);
 	}
 }
@@ -2163,6 +2164,8 @@ void CApp::OnLoop(const Delta &time) {
 
 			if (controls.Stick())
 				controls.Fade(true);
+			if (closeFader.Stick())
+				closeFader.Fade(true);
 
 			close.SetHovered(onClose);
 		} else if (!controls.GetHelp().IsHovered()) {
@@ -2174,15 +2177,18 @@ void CApp::OnLoop(const Delta &time) {
 				// Need to trigger a SINGLE, fresh event
 				if (controls.Unstick())
 					controls.Fade(true);
+				if (closeFader.Unstick())
+					closeFader.Fade(true);
 			}
 			else if (platform->SetTransparent(true)) {
 				if (controls.Unstick()) {
-
+					closeFader.Unstick();
 					// We want to fade _in_ so that the
 					// user-controlled wait time passes
 					// before the eventual fade _out_
 					if (controls.GetAlpha() > 0.0f) {
 						controls.Fade(true);
+						closeFader.Fade(true);
 
 						OnMouseLeave();
 					}
@@ -2193,11 +2199,14 @@ void CApp::OnLoop(const Delta &time) {
 		mouseCaptureAccum = 0.0;
 	} else if (!platform->IsPointerInWindow() && !platform->IsResizing() && platform->SetTransparent(true)) {
 		if (controls.Unstick()) {
+			closeFader.Unstick();
+
 			// We want to fade _in_ so that the
 			// user-controlled wait time passes
 			// before the eventual fade _out_
 			if (controls.GetAlpha() > 0.0f) {
 				controls.Fade(true);
+				closeFader.Fade(true);
 			}
 		}
 
@@ -2515,6 +2524,7 @@ void CApp::OnLoop(const Delta &time) {
 		miniPlayer ? brightColor : GetColor(),
 		playing
 	);
+	closeFader.OnLoop(time);
 
 	if (!controls.IsMessageVisible()) {
 		if (playlistLoading)

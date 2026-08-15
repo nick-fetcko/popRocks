@@ -524,4 +524,8 @@ private:
 	std::size_t pps = 0;
 
 	Checkbox *exclusiveCheckbox = nullptr;
+
+	// NOT user controlled because we
+	// want it to always fade out
+	AutoFader<false> closeFader;
 };
