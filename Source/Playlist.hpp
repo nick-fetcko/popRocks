@@ -320,7 +320,7 @@ private:
 		eab->Unbind();
 		vao->Unbind();
 
-		context.Use("texture"_hash);
+		context.Use("scrolling"_hash);
 		context.LoadIdentity();
 
 		// Add a line for our previous track

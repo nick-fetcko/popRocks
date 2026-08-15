@@ -791,6 +791,10 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 					yOffset += static_cast<int>(albumHeight * (3.0f / 8.0f));
 				}
 
+				context.Use("scrolling"_hash);
+				context.GetShaderProgram().Uniform2f("screenSize"_hash, windowWidth, windowHeight);
+				context.GetShaderProgram().Uniform1f("maxWidth"_hash, artistText.GetMaxWidth());
+
 				if (!albumText.Empty()) {
 					context.Color(0.0f, 0.0f, 0.0f, alpha);
 					albumOutline.OnLoop(
@@ -842,6 +846,7 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 					context
 				);
 
+				context.Use("texture"_hash);
 				exclusiveIndicator.OnLoop(margin, aboveMetadata, alpha, albumArt, context);
 			} else {
 				context.Use("scrolling"_hash);
