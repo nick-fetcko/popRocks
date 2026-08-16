@@ -983,10 +983,17 @@ void AlbumArt::ProcessColors(Histogram *destination, SDL_Surface *surface, const
 		if (destination->size() == 1 && processingColors) {
 			auto deeperColor = *destination->begin();
 
+			// Increase / decrease value
 			if (deeperColor.hsv.v >= 0.5)
 				deeperColor.hsv.v = std::clamp(deeperColor.hsv.v / 1.75f, 0.0f, 1.0f);
 			else
 				deeperColor.hsv.v = std::clamp(deeperColor.hsv.v * 1.75f, 0.0f, 1.0f);
+
+			// Increase / decrease saturation
+			if (deeperColor.hsv.s >= 0.5)
+				deeperColor.hsv.s = std::clamp(deeperColor.hsv.s / 1.5f, 0.0f, 1.0f);
+			else
+				deeperColor.hsv.s = std::clamp(deeperColor.hsv.s * 1.5f, 0.0f, 1.0f);
 
 			deeperColor.count -= 1;
 
