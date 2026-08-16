@@ -471,10 +471,16 @@ std::optional<Playlist::Track> Playlist::Next() {
 		return std::nullopt;
 	}
 
-	if (currentFile == files.end())
+	if (currentFile == files.end()) {
 		currentFile = files.begin();
-	else if (++currentFile == files.end())
-		currentFile = files.begin();
+	} else if (++currentFile == files.end()) {
+		if (Settings::settings.GetAutoPlay())
+			currentFile = files.begin();
+		else {
+			--currentFile;
+			return std::nullopt;
+		}
+	}
 
 	return Track{ *currentFile };
 }
@@ -488,8 +494,12 @@ const std::optional<Playlist::Track> Playlist::GetNext() const {
 		}
 	}
 
-	if (currentFile == files.end() || currentFile + 1 == files.end())
+	if (currentFile == files.end() || currentFile + 1 == files.end()) {
+		if (Settings::settings.GetAutoPlay())
+			return Track{ *files.begin() };
+
 		return std::nullopt;
+	}
 
 	return Track{ *(currentFile + 1) };
 }

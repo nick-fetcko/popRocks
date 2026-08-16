@@ -457,7 +457,7 @@ void Windows::LoadHeardSamples(Renderer *renderer, float *floatBuffer, short *sh
 // -----------------------------------------------------
 bool Windows::OpenExclusive(const std::filesystem::path &path, const std::string &extension, bool exclusive, HSTREAM &target, HSTREAM &visualTarget, bool force, const BASS_CHANNELINFO &channelInfo, void *data) {
 	if (wasapiInfo.freq != channelInfo.freq || force) {
-		if (wasapiInfo.freq != 0) StopExclusive(TRUE);
+		if (wasapiInfo.freq != 0) StopExclusive(true, false);
 
 		auto outputDevice = Platform::GetDeviceIndex<true>(Settings::settings.GetOutputDevice());
 
@@ -524,17 +524,18 @@ bool Windows::OpenExclusive(const std::filesystem::path &path, const std::string
 	return exclusive;
 }
 
-void Windows::StopExclusive(bool reset) {
-	BASS_WASAPI_Stop(reset ? TRUE : FALSE);
+void Windows::StopExclusive(bool reset, bool flush) {
+	BASS_WASAPI_Stop((reset || flush) ? TRUE : FALSE);
 
 	HookKeyboard();
 
 	if (reset && BASS_WASAPI_GetDevice() != -1)
 		BASS_WASAPI_Free();
 
-	wasapiInfo = { 0 };
-
-	exclusiveBufferBytes = 0;
+	if (reset) {
+		wasapiInfo = { 0 };
+		exclusiveBufferBytes = 0;
+	}
 
 	LogDebug("exclusiveBufferBytes = ", exclusiveBufferBytes);
 }
@@ -1070,8 +1071,8 @@ bool Windows::LoadExclusive(double pos) {
 	return false;
 }
 
-bool Windows::StartPlayingExclusive(bool fromPlaylist, bool fileLoaded, bool advanceOnNextLoop) {
-	if (app->GetControls().GetExclusiveIndicator().IsExclusive() && PlayAfterLoad()) {
+bool Windows::StartPlayingExclusive(bool fromPlaylist, bool fileLoaded, bool advanceOnNextLoop, bool wasPlaying) {
+	if (app->GetControls().GetExclusiveIndicator().IsExclusive() && (PlayAfterLoad() || wasPlaying)) {
 		// Only unmute if this is the first / only song
 		if (!fromPlaylist)
 			Unmute();

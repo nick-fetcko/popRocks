@@ -61,7 +61,7 @@ public:
 	
 	// Exclusive mode
 	bool OpenExclusive(const std::filesystem::path &path, const std::string &extension, bool exclusive, HSTREAM &target, HSTREAM &visualTarget, bool force, const BASS_CHANNELINFO &channelInfo, void *data) override;
-	void StopExclusive(bool reset) override;
+	void StopExclusive(bool reset, bool flush) override;
 	
 	// HDR
 	std::optional<std::tuple<bool, float, float>> GetHdrProperties(int display, bool force = false) override;
@@ -105,7 +105,7 @@ public:
 
 	// Exclusive mode
 	bool LoadExclusive(double pos) override;
-	bool StartPlayingExclusive(bool fromPlaylist, bool fileLoaded, bool advanceOnNextLoop) override;
+	bool StartPlayingExclusive(bool fromPlaylist, bool fileLoaded, bool advanceOnNextLoop, bool wasPlaying) override;
 	bool StartExclusive(bool wasPlaying) override;
 	bool StopPlayingExclusive() override;
 	std::size_t GetAvailable() const override;

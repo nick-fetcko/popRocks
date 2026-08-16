@@ -1803,8 +1803,16 @@ void CApp::OnInit() {
 		[] {
 			return Settings::settings.GetAutoPlay();
 		},
-		[](bool checked) {
+		[this](bool checked) {
 			Settings::settings.SetAutoPlay(checked);
+
+			if (!checked && nextStreamHandle) {
+				BASS_StreamFree(nextStreamHandle);
+				BASS_StreamFree(nextVisualStreamHandle);
+
+				nextStreamHandle = 0;
+				nextVisualStreamHandle = 0;
+			}
 		}
 	);
 
@@ -2879,7 +2887,7 @@ void CApp::StopExclusive() {
 }
 
 void CApp::StopExclusive(BOOL reset) {
-	platform->StopExclusive(reset == TRUE);
+	platform->StopExclusive(reset == TRUE, stopWasapiOnNextLoop);
 
 	if (reset == TRUE) {
 		BASS_StreamFree(streamHandle);
@@ -3132,7 +3140,7 @@ void CApp::PlaylistLoaded(std::filesystem::path path, std::string extension, std
 		controls.LoadFromCue();
 
 		if (!fileLoaded || wasPlaying) {
-			if (!platform->StartPlayingExclusive(fromPlaylist, fileLoaded, advanceOnNextLoop)) {
+			if (!platform->StartPlayingExclusive(fromPlaylist, fileLoaded, advanceOnNextLoop, wasPlaying)) {
 				if (wasPlaying || platform->PlayAfterLoad())
 					BASS_ChannelPlay(this->streamHandle, false);
 			}

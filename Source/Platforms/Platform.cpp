@@ -75,7 +75,7 @@ bool Platform::LoadExclusive(double pos) {
 	return false; 
 };
 
-bool Platform::StartPlayingExclusive(bool fromPlaylist, bool fileLoaded, bool advanceOnNextLoop) { 
+bool Platform::StartPlayingExclusive(bool fromPlaylist, bool fileLoaded, bool advanceOnNextLoop, bool wasPlaying) { 
 	return false; 
 }
 

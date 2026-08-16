@@ -397,7 +397,7 @@ void Linux::CreateInterop() {
 bool Linux::OpenExclusive(const std::filesystem::path &path, const std::string &extension, bool exclusive, HSTREAM &target, HSTREAM &visualTarget, bool force, const BASS_CHANNELINFO &channelInfo, void *data) {
 	exclusiveBufferSize = 0.0f;
 	if (exclusiveChannelInfo.freq == 0 || channelInfo.freq != exclusiveChannelInfo.freq) {
-		if (exclusiveChannelInfo.freq != 0) StopExclusive(TRUE);
+		if (exclusiveChannelInfo.freq != 0) StopExclusive(true, false);
 
 		int argc = 0;
 
@@ -540,7 +540,7 @@ bool Linux::OpenExclusive(const std::filesystem::path &path, const std::string &
 	return false;
 }
 
-void Linux::StopExclusive(bool reset) {
+void Linux::StopExclusive(bool reset, bool flush) {
 	pw_thread_loop_lock(pwData.loop);
 	pw_stream_set_active(pwData.stream, false);
 	pw_thread_loop_unlock(pwData.loop);
@@ -823,9 +823,9 @@ bool Linux::StopPlayingExclusive() {
 	return false;
 }
 
-bool Linux::StartPlayingExclusive(bool fromPlaylist, bool fileLoaded, bool advanceOnNextLoop) {
+bool Linux::StartPlayingExclusive(bool fromPlaylist, bool fileLoaded, bool advanceOnNextLoop, bool wasPlaying) {
 	if (app->GetControls().GetExclusiveIndicator().IsExclusive()) {
-		if (PlayAfterLoad()) {
+		if (PlayAfterLoad() || wasPlaying) {
 			pw_thread_loop_lock(pwData.loop);
 			pw_stream_set_active(pwData.stream, true);
 			pw_thread_loop_unlock(pwData.loop);
