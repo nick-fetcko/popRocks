@@ -172,6 +172,11 @@ void Controls::OnPresetsChanged(const std::vector<Preset> &presets) {
 
 void Controls::OnPresetChanged(const std::vector<Preset> &presets) {
 	if (auto presetIndex = Settings::settings.GetMiniPlayerPresetIndex()) {
+		if (*presetIndex > presets.size()) {
+			*presetIndex = Settings::DefaultMiniPlayerPresetIndex; // Reset to default
+			Settings::settings.SetMiniPlayerPresetIndex(*presetIndex);
+		}
+
 		const auto &name = presets.at(*presetIndex).GetName();
 
 		presetText.SetText(name);

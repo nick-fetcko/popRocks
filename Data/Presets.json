@@ -1,17 +1,17 @@
 {
   "0": {
-    "name": "Default",
-    "bufferSize": 2048,
+    "name": "Basic",
+    "bufferSize": 128,
     "fftSize": 8192,
-    "decayTime": 0.500000,
-    "fadeTime": 0.500000,
+    "decayTime": 0.100000,
+    "fadeTime": 0.100000,
     "pulse": false,
     "pulseBackground": false,
-    "pulseTime": 0.100000,
+    "pulseTime": 0.040000,
     "strobe": false,
     "strobeIntensity": 0.660000,
-    "rotating": null,
-    "rotationSpeed": 1.000000,
+    "rotating": true,
+    "rotationSpeed": 18.000000,
     "blur": null,
     "sourceFactor": 1,
     "destFactor": 0,
@@ -39,84 +39,6 @@
     "scale": 1.000000
   },
   "1": {
-    "name": "Fast",
-    "bufferSize": 128,
-    "fftSize": 8192,
-    "decayTime": 0.100000,
-    "fadeTime": 0.100000,
-    "pulse": false,
-    "pulseBackground": false,
-    "pulseTime": 0.040000,
-    "strobe": false,
-    "strobeIntensity": 0.660000,
-    "rotating": null,
-    "rotationSpeed": 1.000000,
-    "blur": null,
-    "sourceFactor": 1,
-    "destFactor": 0,
-    "blurIntensity": 0.500000,
-    "blurOpacity": 1.000000,
-    "effect": "noeffect",
-    "effectIntensity": 1.000000,
-    "effectXOffset": 0.000000,
-    "effectYOffset": 0.000000,
-    "effectRadiation": 0.000000,
-    "effectHorizontalSpread": 0.000000,
-    "effectVerticalSpread": 0.000000,
-    "effectRotation": 0.000000,
-    "availableInMiniPlayer": true,
-    "dynamicGain": {
-      "largeStep": 0.001000,
-      "smallStep": 0.000000,
-      "minReset": 0.000000,
-      "maxReset": 0.000000,
-      "adjustMin": false,
-      "adjustMax": true,
-      "reset": true
-    },
-    "renderer": "fft",
-    "scale": 1.000000
-  },
-  "2": {
-    "name": "Slow",
-    "bufferSize": 256,
-    "fftSize": 8192,
-    "decayTime": 7.500000,
-    "fadeTime": 5.000000,
-    "pulse": true,
-    "pulseBackground": false,
-    "pulseTime": 1.000000,
-    "strobe": false,
-    "strobeIntensity": 0.660000,
-    "rotating": null,
-    "rotationSpeed": 1.000000,
-    "blur": null,
-    "sourceFactor": 1,
-    "destFactor": 0,
-    "blurIntensity": 0.500000,
-    "blurOpacity": 1.000000,
-    "effect": "noeffect",
-    "effectIntensity": 1.000000,
-    "effectXOffset": 0.000000,
-    "effectYOffset": 0.000000,
-    "effectRadiation": 0.000000,
-    "effectHorizontalSpread": 0.000000,
-    "effectVerticalSpread": 0.000000,
-    "effectRotation": 0.000000,
-    "availableInMiniPlayer": true,
-    "dynamicGain": {
-      "largeStep": 0.001000,
-      "smallStep": 0.000000,
-      "minReset": 0.000000,
-      "maxReset": 0.000000,
-      "adjustMin": false,
-      "adjustMax": true,
-      "reset": true
-    },
-    "renderer": "fft",
-    "scale": 1.000000
-  },
-  "3": {
     "name": "Flower",
     "bufferSize": 256,
     "fftSize": 8192,
@@ -155,7 +77,7 @@
     "renderer": "fft",
     "scale": 1.000000
   },
-  "4": {
+  "2": {
     "name": "Neon Flower",
     "bufferSize": 256,
     "fftSize": 8192,
@@ -194,7 +116,7 @@
     "renderer": "fft",
     "scale": 1.000000
   },
-  "5": {
+  "3": {
     "name": "Smoke",
     "bufferSize": 95,
     "fftSize": 8192,
@@ -233,7 +155,7 @@
     "renderer": "fft",
     "scale": 1.000000
   },
-  "6": {
+  "4": {
     "name": "Mist",
     "bufferSize": 95,
     "fftSize": 8192,
@@ -272,7 +194,7 @@
     "renderer": "fft",
     "scale": 1.000000
   },
-  "7": {
+  "5": {
     "name": "Black Hole",
     "bufferSize": 95,
     "fftSize": 8192,
@@ -311,7 +233,7 @@
     "renderer": "fft",
     "scale": 1.000000
   },
-  "8": {
+  "6": {
     "name": "Ripples",
     "bufferSize": 95,
     "fftSize": 8192,
@@ -351,7 +273,7 @@
     "lineRendererStyle": 0,
     "scale": 1.150000
   },
-  "9": {
+  "7": {
     "name": "Conway",
     "bufferSize": 95,
     "fftSize": 8192,
@@ -391,7 +313,7 @@
     "lineRendererStyle": 0,
     "scale": 1.150000
   },
-  "10": {
+  "8": {
     "name": "Fountain",
     "bufferSize": 257,
     "fftSize": 8192,
@@ -430,7 +352,7 @@
     "renderer": "fft",
     "scale": 1.150000
   },
-  "11": {
+  "9": {
     "name": "Eye of the Storm",
     "bufferSize": 460,
     "fftSize": 8192,
@@ -470,7 +392,7 @@
     "lineRendererStyle": 0,
     "scale": 1.150000
   },
-  "12": {
+  "10": {
     "name": "Tunnel",
     "bufferSize": 460,
     "fftSize": 8192,
@@ -510,7 +432,7 @@
     "lineRendererStyle": 0,
     "scale": 1.150000
   },
-  "13": {
+  "11": {
     "name": "Sinkhole",
     "bufferSize": 460,
     "fftSize": 8192,
@@ -550,7 +472,7 @@
     "lineRendererStyle": 0,
     "scale": 1.150000
   },
-  "14": {
+  "12": {
     "name": "Horizon",
     "bufferSize": 460,
     "fftSize": 8192,
@@ -590,7 +512,7 @@
     "lineRendererStyle": 0,
     "scale": 1.150000
   },
-  "15": {
+  "13": {
     "name": "Galaxy",
     "bufferSize": 95,
     "fftSize": 8192,
@@ -630,7 +552,7 @@
     "lineRendererStyle": 0,
     "scale": 1.150000
   },
-  "16": {
+  "14": {
     "name": "Tubular",
     "bufferSize": 95,
     "fftSize": 8192,
@@ -670,7 +592,7 @@
     "lineRendererStyle": 0,
     "scale": 1.150000
   },
-  "17": {
+  "15": {
     "name": "In The Clouds",
     "bufferSize": 4096,
     "fftSize": 8192,
@@ -709,7 +631,7 @@
     "renderer": "fft",
     "scale": 0.250000
   },
-  "18": {
+  "16": {
     "name": "Hurricane",
     "bufferSize": 4096,
     "fftSize": 8192,
@@ -748,7 +670,7 @@
     "renderer": "fft",
     "scale": 0.170000
   },
-  "19": {
+  "17": {
     "name": "Sandstorm",
     "bufferSize": 4096,
     "fftSize": 8192,
@@ -787,7 +709,7 @@
     "renderer": "fft",
     "scale": 0.190000
   },
-  "20": {
+  "18": {
     "name": "Cotton Candy",
     "bufferSize": 95,
     "fftSize": 8192,
@@ -827,7 +749,7 @@
     "lineRendererStyle": 0,
     "scale": 1.150000
   },
-  "21": {
+  "19": {
     "name": "Sunburst",
     "bufferSize": 405,
     "fftSize": 8192,
@@ -866,7 +788,7 @@
     "renderer": "fft",
     "scale": 0.300000
   },
-  "22": {
+  "20": {
     "name": "Faultline",
     "bufferSize": 499,
     "fftSize": 8192,
@@ -906,7 +828,7 @@
     "lineRendererStyle": 0,
     "scale": 5.000000
   },
-  "23": {
+  "21": {
     "name": "Think Inside the Box",
     "bufferSize": 499,
     "fftSize": 8192,
@@ -947,7 +869,7 @@
     "scale": 5.000000,
     "rendererOffset": -94
   },
-  "24": {
+  "22": {
     "name": "Double Slit Experiment",
     "bufferSize": 499,
     "fftSize": 8192,
@@ -988,7 +910,7 @@
     "scale": 1.500000,
     "rendererOffset": 38
   },
-  "25": {
+  "23": {
     "name": "Starburst",
     "bufferSize": 256,
     "fftSize": 8192,
@@ -1027,7 +949,7 @@
     "renderer": "fft",
     "scale": 1.000000
   },
-  "26": {
+  "24": {
     "name": "Blast Off",
     "bufferSize": 95,
     "fftSize": 8192,
@@ -1067,7 +989,7 @@
     "lineRendererStyle": 0,
     "scale": 1.150000
   },
-  "27": {
+  "25": {
     "name": "Iris",
     "bufferSize": 95,
     "fftSize": 8192,
@@ -1106,7 +1028,7 @@
     "renderer": "fft",
     "scale": 0.380000
   },
-  "28": {
+  "26": {
     "name": "Square Tunnel",
     "bufferSize": 95,
     "fftSize": 8192,
@@ -1145,7 +1067,7 @@
     "renderer": "fft",
     "scale": 0.380000
   },
-  "29": {
+  "27": {
     "name": "X-Wing",
     "bufferSize": 499,
     "fftSize": 8192,
@@ -1186,7 +1108,7 @@
     "scale": 5.000000,
     "rendererOffset": 0
   },
-  "30": {
+  "28": {
     "name": "Doppler",
     "bufferSize": 460,
     "fftSize": 8192,
@@ -1227,7 +1149,7 @@
     "scale": 5.000000,
     "rendererOffset": 39
   },
-  "31": {
+  "29": {
     "name": "Pinwheel",
     "bufferSize": 95,
     "fftSize": 8192,
@@ -1266,7 +1188,7 @@
     "renderer": "fft",
     "scale": 0.540000
   },
-  "32": {
+  "30": {
     "name": "Comet",
     "bufferSize": 176,
     "fftSize": 8192,
@@ -1305,7 +1227,7 @@
     "renderer": "fft",
     "scale": 0.540000
   },
-  "33": {
+  "31": {
     "name": "Static",
     "bufferSize": 499,
     "fftSize": 8192,
@@ -1346,7 +1268,7 @@
     "scale": 5.000000,
     "rendererOffset": 0
   },
-  "34": {
+  "32": {
     "name": "Afterimage",
     "bufferSize": 499,
     "fftSize": 8192,
@@ -1386,7 +1308,7 @@
     "lineRendererStyle": 0,
     "scale": 2.590000
   },
-  "35": {
+  "33": {
     "name": "Earthquake",
     "bufferSize": 890,
     "fftSize": 8192,
@@ -1426,7 +1348,7 @@
     "lineRendererStyle": 0,
     "scale": 2.520000
   },
-  "36": {
+  "34": {
     "name": "Whirlpool",
     "bufferSize": 499,
     "fftSize": 8192,
@@ -1466,7 +1388,7 @@
     "lineRendererStyle": 0,
     "scale": 2.590000
   },
-  "37": {
+  "35": {
     "name": "Shoreline",
     "bufferSize": 1995,
     "fftSize": 8192,
@@ -1505,7 +1427,7 @@
     "renderer": "fft",
     "scale": 0.170000
   },
-  "38": {
+  "36": {
     "name": "Hazy",
     "bufferSize": 95,
     "fftSize": 8192,
@@ -1544,7 +1466,7 @@
     "renderer": "fft",
     "scale": 1.000000
   },
-  "39": {
+  "37": {
     "name": "Sailing",
     "bufferSize": 176,
     "fftSize": 8192,
@@ -1583,7 +1505,7 @@
     "renderer": "fft",
     "scale": 0.540000
   },
-  "40": {
+  "38": {
     "name": "Oil Paint",
     "bufferSize": 149,
     "fftSize": 8192,
@@ -1624,7 +1546,7 @@
     "scale": 5.000000,
     "rendererOffset": 26
   },
-  "41": {
+  "39": {
     "name": "Candystripe",
     "bufferSize": 176,
     "fftSize": 8192,
@@ -1663,7 +1585,7 @@
     "renderer": "fft",
     "scale": 0.540000
   },
-  "42": {
+  "40": {
     "name": "Tornado",
     "bufferSize": 176,
     "fftSize": 8192,
@@ -1702,7 +1624,7 @@
     "renderer": "fft",
     "scale": 0.380000
   },
-  "43": {
+  "41": {
     "name": "Fog Machine",
     "bufferSize": 944,
     "fftSize": 8192,
@@ -1741,7 +1663,7 @@
     "renderer": "fft",
     "scale": 0.360000
   },
-  "44": {
+  "42": {
     "name": "Twilight Zone",
     "bufferSize": 28,
     "fftSize": 8192,
@@ -1781,7 +1703,7 @@
     "lineRendererStyle": 0,
     "scale": 5.000000
   },
-  "45": {
+  "43": {
     "name": "Sprinkler",
     "bufferSize": 176,
     "fftSize": 8192,
@@ -1820,7 +1742,7 @@
     "renderer": "fft",
     "scale": 0.380000
   },
-  "46": {
+  "44": {
     "name": "Quicksand",
     "bufferSize": 176,
     "fftSize": 8192,
@@ -1859,7 +1781,7 @@
     "renderer": "fft",
     "scale": 0.380000
   },
-  "47": {
+  "45": {
     "name": "Neon Lights",
     "bufferSize": 499,
     "fftSize": 8192,
@@ -1900,7 +1822,7 @@
     "scale": 5.000000,
     "rendererOffset": 0
   },
-  "48": {
+  "46": {
     "name": "It's My Turn To Fly",
     "bufferSize": 176,
     "fftSize": 8192,
@@ -1939,7 +1861,7 @@
     "renderer": "fft",
     "scale": 0.540000
   },
-  "49": {
+  "47": {
     "name": "Bottle Rocket",
     "bufferSize": 176,
     "fftSize": 8192,
@@ -1978,7 +1900,7 @@
     "renderer": "fft",
     "scale": 0.380000
   },
-  "50": {
+  "48": {
     "name": "Fireflies",
     "bufferSize": 176,
     "fftSize": 8192,
@@ -2017,7 +1939,7 @@
     "renderer": "fft",
     "scale": 0.380000
   },
-  "51": {
+  "49": {
     "name": "Glider",
     "bufferSize": 217,
     "fftSize": 8192,
@@ -2056,7 +1978,7 @@
     "renderer": "fft",
     "scale": 0.380000
   },
-  "52": {
+  "50": {
     "name": "Stretch",
     "bufferSize": 176,
     "fftSize": 8192,
@@ -2095,7 +2017,7 @@
     "renderer": "fft",
     "scale": 0.380000
   },
-  "53": {
+  "51": {
     "name": "Color Wheel",
     "bufferSize": 176,
     "fftSize": 8192,
@@ -2134,7 +2056,7 @@
     "renderer": "fft",
     "scale": 0.380000
   },
-  "54": {
+  "52": {
     "name": "Fireball",
     "bufferSize": 176,
     "fftSize": 8192,
@@ -2173,7 +2095,7 @@
     "renderer": "fft",
     "scale": 0.380000
   },
-  "55": {
+  "53": {
     "name": "Supernova",
     "bufferSize": 4096,
     "fftSize": 8192,
@@ -2212,7 +2134,7 @@
     "renderer": "fft",
     "scale": 0.250000
   },
-  "56": {
+  "54": {
     "name": "Bullseye",
     "bufferSize": 176,
     "fftSize": 8192,
@@ -2251,7 +2173,7 @@
     "renderer": "fft",
     "scale": 0.130000
   },
-  "57": {
+  "55": {
     "name": "Milky Way",
     "bufferSize": 176,
     "fftSize": 8192,
@@ -2290,7 +2212,7 @@
     "renderer": "fft",
     "scale": 0.130000
   },
-  "58": {
+  "56": {
     "name": "Tsunami",
     "bufferSize": 176,
     "fftSize": 8192,
@@ -2329,7 +2251,7 @@
     "renderer": "fft",
     "scale": 0.410000
   },
-  "59": {
+  "57": {
     "name": "Falling Sand",
     "bufferSize": 176,
     "fftSize": 8192,
@@ -2368,7 +2290,7 @@
     "renderer": "fft",
     "scale": 0.410000
   },
-  "60": {
+  "58": {
     "name": "Eye of Ra",
     "bufferSize": 176,
     "fftSize": 8192,
@@ -2407,7 +2329,7 @@
     "renderer": "fft",
     "scale": 0.380000
   },
-  "61": {
+  "59": {
     "name": "Slushie",
     "bufferSize": 176,
     "fftSize": 8192,
@@ -2446,7 +2368,7 @@
     "renderer": "fft",
     "scale": 0.380000
   },
-  "62": {
+  "60": {
     "name": "Wormhole",
     "bufferSize": 176,
     "fftSize": 8192,
@@ -2485,7 +2407,7 @@
     "renderer": "fft",
     "scale": 0.380000
   },
-  "63": {
+  "61": {
     "name": "Wheel of Fortune",
     "bufferSize": 176,
     "fftSize": 8192,
@@ -2525,7 +2447,7 @@
     "lineRendererStyle": 0,
     "scale": 1.490000
   },
-  "64": {
+  "62": {
     "name": "Magic Eye",
     "bufferSize": 176,
     "fftSize": 8192,
@@ -2565,7 +2487,7 @@
     "lineRendererStyle": 0,
     "scale": 5.000000
   },
-  "65": {
+  "63": {
     "name": "Fireflower",
     "bufferSize": 256,
     "fftSize": 8192,
@@ -2604,7 +2526,7 @@
     "renderer": "fft",
     "scale": 1.000000
   },
-  "66": {
+  "64": {
     "name": "Acid Rain",
     "bufferSize": 176,
     "fftSize": 8192,
@@ -2643,7 +2565,7 @@
     "renderer": "fft",
     "scale": 0.380000
   },
-  "67": {
+  "65": {
     "name": "Sunspots",
     "bufferSize": 499,
     "fftSize": 8192,
@@ -2684,7 +2606,7 @@
     "scale": 5.000000,
     "rendererOffset": 0
   },
-  "68": {
+  "66": {
     "name": "Sarlacc",
     "bufferSize": 351,
     "fftSize": 8192,
@@ -2723,46 +2645,7 @@
     "renderer": "fft",
     "scale": 0.380000
   },
-  "69": {
-    "name": "Starfield",
-    "bufferSize": 499,
-    "fftSize": 8192,
-    "decayTime": 1.090000,
-    "fadeTime": 0.600000,
-    "pulse": true,
-    "pulseBackground": false,
-    "pulseTime": 0.110000,
-    "strobe": false,
-    "strobeIntensity": 0.660000,
-    "rotating": false,
-    "rotationSpeed": 6.000000,
-    "blur": true,
-    "sourceFactor": 1,
-    "destFactor": 0,
-    "blurIntensity": 1.750000,
-    "blurOpacity": 1.000000,
-    "effect": "smoke",
-    "effectIntensity": 0.000000,
-    "effectXOffset": 0.000000,
-    "effectYOffset": 0.000000,
-    "effectRadiation": 0.000000,
-    "effectHorizontalSpread": 0.000000,
-    "effectVerticalSpread": 0.000000,
-    "effectRotation": 0.000000,
-    "availableInMiniPlayer": true,
-    "dynamicGain": {
-      "largeStep": 0.001000,
-      "smallStep": 0.000000,
-      "minReset": 0.000000,
-      "maxReset": 0.000000,
-      "adjustMin": false,
-      "adjustMax": true,
-      "reset": true
-    },
-    "renderer": "fft",
-    "scale": 0.450000
-  },
-  "70": {
+  "67": {
     "name": "Big Bang",
     "bufferSize": 338,
     "fftSize": 8192,
@@ -2801,7 +2684,7 @@
     "renderer": "fft",
     "scale": 0.550000
   },
-  "71": {
+  "68": {
     "name": "Warp Drive",
     "bufferSize": 311,
     "fftSize": 8192,
@@ -2840,7 +2723,7 @@
     "renderer": "fft",
     "scale": 0.520000
   },
-  "72": {
+  "69": {
     "name": "Lapping Waves",
     "bufferSize": 176,
     "fftSize": 8192,
@@ -2879,7 +2762,7 @@
     "renderer": "fft",
     "scale": 0.340000
   },
-  "73": {
+  "70": {
     "name": "Antimatter",
     "bufferSize": 176,
     "fftSize": 8192,
@@ -2918,7 +2801,7 @@
     "renderer": "fft",
     "scale": 0.340000
   },
-  "74": {
+  "71": {
     "name": "Tie Dye",
     "bufferSize": 149,
     "fftSize": 512,
@@ -2959,7 +2842,7 @@
     "scale": 5.000000,
     "rendererOffset": 6
   },
-  "75": {
+  "72": {
     "name": "Icarus",
     "bufferSize": 499,
     "fftSize": 8192,
@@ -2998,7 +2881,7 @@
     "renderer": "fft",
     "scale": 1.000000
   },
-  "76": {
+  "73": {
     "name": "Acid Tornado",
     "bufferSize": 392,
     "fftSize": 8192,
@@ -3038,7 +2921,7 @@
     "lineRendererStyle": 0,
     "scale": 2.340000
   },
-  "77": {
+  "74": {
     "name": "Fuel Scoop",
     "bufferSize": 311,
     "fftSize": 8192,
@@ -3078,7 +2961,7 @@
     "lineRendererStyle": 0,
     "scale": 2.590000
   },
-  "78": {
+  "75": {
     "name": "Blender",
     "bufferSize": 128,
     "fftSize": 8192,
@@ -3117,7 +3000,7 @@
     "renderer": "fft",
     "scale": 0.980000
   },
-  "79": {
+  "76": {
     "name": "Plasma",
     "bufferSize": 1456,
     "fftSize": 8192,
@@ -3156,7 +3039,7 @@
     "renderer": "fft",
     "scale": 0.340000
   },
-  "80": {
+  "77": {
     "name": "Markers",
     "bufferSize": 68,
     "fftSize": 8192,
@@ -3195,46 +3078,7 @@
     "renderer": "fft",
     "scale": 0.340000
   },
-  "81": {
-    "name": "Highlighters",
-    "bufferSize": 28,
-    "fftSize": 256,
-    "decayTime": 0.250000,
-    "fadeTime": 0.200000,
-    "pulse": true,
-    "pulseBackground": false,
-    "pulseTime": 0.110000,
-    "strobe": false,
-    "strobeIntensity": 1.000000,
-    "rotating": true,
-    "rotationSpeed": 18.000000,
-    "blur": true,
-    "sourceFactor": 775,
-    "destFactor": 768,
-    "blurIntensity": 0.530000,
-    "blurOpacity": 1.000000,
-    "effect": "smoke",
-    "effectIntensity": 3.440000,
-    "effectXOffset": 0.000000,
-    "effectYOffset": 0.000000,
-    "effectRadiation": 0.000000,
-    "effectHorizontalSpread": 0.000000,
-    "effectVerticalSpread": 0.000000,
-    "effectRotation": 0.000000,
-    "availableInMiniPlayer": true,
-    "dynamicGain": {
-      "largeStep": 0.001000,
-      "smallStep": 0.000000,
-      "minReset": 0.000000,
-      "maxReset": 0.000000,
-      "adjustMin": false,
-      "adjustMax": true,
-      "reset": true
-    },
-    "renderer": "fft",
-    "scale": 0.340000
-  },
-  "82": {
+  "78": {
     "name": "Skyline",
     "bufferSize": 270,
     "fftSize": 8192,
@@ -3273,7 +3117,7 @@
     "renderer": "fft",
     "scale": 0.340000
   },
-  "83": {
+  "79": {
     "name": "Spraypaint",
     "bufferSize": 526,
     "fftSize": 8192,
@@ -3313,7 +3157,7 @@
     "renderer": "fft",
     "scale": 0.340000
   },
-  "84": {
+  "80": {
     "name": "Astral Paint",
     "bufferSize": 526,
     "fftSize": 8192,
@@ -3354,7 +3198,7 @@
     "renderer": "fft",
     "scale": 0.340000
   },
-  "85": {
+  "81": {
     "name": "Ring of Fire",
     "bufferSize": 526,
     "fftSize": 8192,
@@ -3396,7 +3240,7 @@
     "scale": 0.340000,
     "rendererOffset": 43
   },
-  "86": {
+  "82": {
     "name": "Vectrex",
     "bufferSize": 128,
     "fftSize": 8192,
@@ -3437,7 +3281,7 @@
     "scale": 1.000000,
     "rendererOffset": 43
   },
-  "87": {
+  "83": {
     "name": "Tesla Coil",
     "bufferSize": 128,
     "fftSize": 8192,
@@ -3478,7 +3322,7 @@
     "scale": 1.000000,
     "rendererOffset": 43
   },
-  "88": {
+  "84": {
     "name": "Slinky",
     "bufferSize": 4096,
     "fftSize": 8192,
@@ -3518,7 +3362,7 @@
     "lineRendererStyle": 1,
     "scale": 0.180000
   },
-  "89": {
+  "85": {
     "name": "Particle Accelerator",
     "bufferSize": 1092,
     "fftSize": 8192,
@@ -3558,7 +3402,7 @@
     "lineRendererStyle": 1,
     "scale": 0.180000
   },
-  "90": {
+  "86": {
     "name": "Ring Gate",
     "bufferSize": 432,
     "fftSize": 8192,
@@ -3598,7 +3442,7 @@
     "lineRendererStyle": 1,
     "scale": 0.180000
   },
-  "91": {
+  "87": {
     "name": "Centrifuge",
     "bufferSize": 4096,
     "fftSize": 8192,
@@ -3638,32 +3482,32 @@
     "lineRendererStyle": 1,
     "scale": 0.180000
   },
-  "92": {
-    "name": "Shooting Stars",
-    "bufferSize": 16000,
-    "fftSize": 8192,
-    "decayTime": 0.922800,
-    "fadeTime": 0.532599,
+  "88": {
+    "name": "Asteroids",
+    "bufferSize": 28,
+    "fftSize": 512,
+    "decayTime": 0.009999,
+    "fadeTime": 0.009999,
     "pulse": true,
     "pulseBackground": false,
-    "pulseTime": 1.097200,
+    "pulseTime": 0.009999,
     "strobe": false,
-    "strobeIntensity": 0.806064,
+    "strobeIntensity": 1.000000,
     "rotating": true,
-    "rotationSpeed": 30.000000,
+    "rotationSpeed": 18.000000,
     "blur": true,
     "sourceFactor": 1,
     "destFactor": 0,
     "blurIntensity": 0.250000,
     "blurOpacity": 1.000000,
     "effect": "smoke",
-    "effectIntensity": 2.000000,
+    "effectIntensity": 7.710000,
     "effectXOffset": 0.000000,
     "effectYOffset": 0.000000,
-    "effectRadiation": -1.760000,
+    "effectRadiation": 0.000000,
     "effectHorizontalSpread": 0.000000,
     "effectVerticalSpread": 0.000000,
-    "effectRotation": 0.530000,
+    "effectRotation": 0.000000,
     "availableInMiniPlayer": true,
     "dynamicGain": {
       "largeStep": 0.001000,
@@ -3674,8 +3518,9 @@
       "adjustMax": true,
       "reset": true
     },
-    "renderer": "osc",
+    "renderer": "fftline",
     "lineRendererStyle": 1,
-    "scale": 0.180000
+    "scale": 0.220000,
+    "rendererOffset": 43
   }
 }

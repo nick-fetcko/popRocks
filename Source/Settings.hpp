@@ -27,6 +27,10 @@ private:
 	static const DynamicGain<float> BaseDynamicGain;
 
 public:
+	// FIXME: Find better way to reference 
+	//        existing presets than by index
+	constexpr inline static std::size_t DefaultMiniPlayerPresetIndex = 5; // Black Hole
+
 	static std::map<GLenum, std::string> BlendModes;
 	static std::map<std::string, GLenum> Colorspaces;
 
@@ -461,9 +465,7 @@ private:
 
 	std::optional<std::size_t> presetIndex = std::nullopt;
 
-	// FIXME: Find better way to reference 
-	//        existing presets than by index
-	std::optional<std::size_t> miniPlayerPresetIndex = 7; // Black Hole
+	std::optional<std::size_t> miniPlayerPresetIndex = DefaultMiniPlayerPresetIndex;
 
 	uint8_t smooth = 0;
 	float gamma = 1.0f;

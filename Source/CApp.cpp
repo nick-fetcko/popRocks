@@ -784,8 +784,14 @@ void CApp::SetMiniPlayer(bool miniPlayer, bool inLoop) {
 	);
 	*/
 
-	if (auto index = miniPlayer ? Settings::settings.GetMiniPlayerPresetIndex() : Settings::settings.GetPresetIndex())
+	if (auto index = miniPlayer ? Settings::settings.GetMiniPlayerPresetIndex() : Settings::settings.GetPresetIndex()) {
+		if (miniPlayer && *index > Preset::GetPresets().size()) {
+			*index = Settings::DefaultMiniPlayerPresetIndex; // Reset to default
+			Settings::settings.SetMiniPlayerPresetIndex(*index);
+		}
+
 		LoadPreset(Preset::GetPresets().at(*index));
+	}
 
 	// Update scale to reflect radius change
 	if (albumArt.Loaded()) albumArt.Scale(true);
