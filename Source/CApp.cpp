@@ -596,11 +596,19 @@ void CApp::SetVulkan(bool vulkan) {
 	ImGui_ImplSDL3_InitForOpenGL(sdlWindow, openGlContext);
 	ImGui_ImplOpenGL3_Init();
 
+	// Force HDR setting
+	const auto hdr = HDR::Enabled;
+	HDR::Enabled = !hdr;
+	platform->SetHdr(hdr, nullptr, windowWidth, windowHeight);
+	HDR::Enabled = hdr;
+
 	if (miniPlayer)
 		platform->SetMiniPlayer(true, static_cast<uint8_t>(albumArt.GetChromaColor() * 0xFF));
 
 	// Force a resize to update projection matrix
 	OnResize(windowWidth, windowHeight, scale, true);
+
+	UpdateVsync();
 }
 
 inline SDL_PropertiesID CApp::CreateSdlWindow(bool first) {
