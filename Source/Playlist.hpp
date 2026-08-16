@@ -228,7 +228,7 @@ private:
 
 			outline.SetText(title.GetAltText());
 			context.Use("scrolling"_hash);
-			context.Color(1.0f, 1.0f, 1.0f, std::max(hidden ? 0.0f : 0.5f, alpha));
+			context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, std::max(hidden ? 0.0f : 0.5f, alpha));
 			outline.OnLoop(pos.x - bounds.width / 2, pos.y - bounds.height / 2, time);
 			const auto &color = GetColor();
 

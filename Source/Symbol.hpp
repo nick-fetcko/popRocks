@@ -94,7 +94,7 @@ protected:
 
 	float radius = 1.0f;
 
-	Colour<float> color = Colour<float>::White;
+	Colour<float> color = HDR::WhiteColor;
 	Colour<float> hoveredColor = Colour<float>::Grey;
 	Colour<float> darkColor = Colour<float>::Grey;
 

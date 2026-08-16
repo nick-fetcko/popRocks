@@ -80,7 +80,7 @@ void Volume::OnLoop(int x, int y, const Delta &time, const AlbumArt *const album
 
 	context.Color(OutlineColor, OutlineColor, OutlineColor, alpha);
 	labelOutline.OnLoop(x - label.GetBounds().width / 2, y - text.GetBounds().height / 2 + label.GetBounds().height / 2);
-	context.Color(1.0f, 1.0f, 1.0f, alpha);
+	context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 	label.OnLoop(x - label.GetBounds().width / 2, y - text.GetBounds().height / 2 + label.GetBounds().height / 2);
 }
 

@@ -237,7 +237,7 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 		else if (!isCurrent && outlines[index].GetFont() == boldOutlineFont)
 			outlines[index].SetFont(outlineFont);
 
-		context->Color(1.0f, 1.0f, 1.0f, alpha);
+		context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 
 		width = items[index].GetBounds().width;
 		

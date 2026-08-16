@@ -721,7 +721,7 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 
 			if (miniPlayer) context.StartBlend();
 
-			context.Color(1.0f, 1.0f, 1.0f, alpha);
+			context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 			for (const auto *text : { &elapsedOutline, &elapsedText }) {
 				text->OnLoop(
 					miniPlayer ? 
@@ -737,10 +737,10 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 						windowHeight / 2 - outlineFont->GetOutlineRadius() * 2:
 						(context.GetSafeArea().h + context.GetSafeArea().y) - yOffset - elapsedText.GetSize().y - outlineFont->GetOutlineRadius()
 				);
-				context.Color(1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, alpha);
+				context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 			}
 
-			context.Color(1.0f, 1.0f, 1.0f, alpha);
+			context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 			for (const auto *text : { &remainingOutline, &remainingText }) {
 				text->OnLoop(
 					miniPlayer ? 
@@ -750,7 +750,7 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 						windowHeight / 2 - outlineFont->GetOutlineRadius() * 2:
 						(context.GetSafeArea().h + context.GetSafeArea().y) - yOffset / 2 - remainingText.GetSize().y / 2 + outlineFont->GetOutlineRadius()
 				);
-				context.Color(1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, alpha);
+				context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 			}
 
 			if (miniPlayer) context.EndBlend();
@@ -802,7 +802,7 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 						(context.GetSafeArea().h + context.GetSafeArea().y) - (yOffset + albumText.GetBounds().height),
 						time
 					);
-					context.Color(1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, alpha);
+					context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 					albumText.OnLoop(
 						margin + xOffset,
 						(context.GetSafeArea().h + context.GetSafeArea().y) - (yOffset += albumText.GetBounds().height),
@@ -816,7 +816,7 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 						(context.GetSafeArea().h + context.GetSafeArea().y) - (yOffset + artistText.GetBounds().height),
 						time
 					);
-					context.Color(1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, alpha);
+					context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 					artistText.OnLoop(
 						margin + xOffset,
 						(context.GetSafeArea().h + context.GetSafeArea().y) - (yOffset += artistText.GetBounds().height),
@@ -829,7 +829,7 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 						margin + xOffset,
 						(context.GetSafeArea().h + context.GetSafeArea().y) - (yOffset + titleText.GetBounds().height)
 					);
-					context.Color(1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, alpha);
+					context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 					titleText.OnLoop(
 						margin + xOffset,
 						(context.GetSafeArea().h + context.GetSafeArea().y) - (yOffset += titleText.GetBounds().height)
@@ -854,13 +854,13 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 				context.GetShaderProgram().Uniform1f("maxWidth"_hash, artistText.GetMaxWidth());
 
 				if (!artistText.Empty()) {
-					context.Color(1.0f, 1.0f, 1.0f, alpha);
+					context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 					artistOutline.OnLoop(
 						windowWidth / 2 - artistText.GetBounds().width / 2,
 						windowHeight / 2 - albumText.GetBounds().height - artistText.GetBounds().height * 2,
 						time
 					);
-					context.Color(1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, alpha);
+					context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 					artistText.OnLoop(
 						windowWidth / 2 - artistText.GetBounds().width / 2,
 						windowHeight / 2 - albumText.GetBounds().height - artistText.GetBounds().height * 2,
@@ -869,13 +869,13 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 				}
 
 				if (!albumText.Empty()) {
-					context.Color(1.0f, 1.0f, 1.0f, alpha);
+					context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 					albumOutline.OnLoop(
 						windowWidth / 2 - albumText.GetBounds().width / 2,
 						windowHeight / 2 - albumText.GetBounds().height - artistText.GetBounds().height,
 						time
 					);
-					context.Color(1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, 1.0f * HDR::WhiteLevel, alpha);
+					context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 					albumText.OnLoop(
 						windowWidth / 2 - albumText.GetBounds().width / 2,
 						windowHeight / 2 - albumText.GetBounds().height - artistText.GetBounds().height,
@@ -883,7 +883,7 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 					);
 				}
 
-				context.Color(1.0f, 1.0f, 1.0f, presetList.GetAlpha() > 0.0f ? volume.GetAlpha() == 0.0f ? 1.0f : inverseAlpha : alpha);
+				context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, presetList.GetAlpha() > 0.0f ? volume.GetAlpha() == 0.0f ? 1.0f : inverseAlpha : alpha);
 				presetOutline.OnLoop(
 					windowWidth / 2 - presetText.GetBounds().width / 2,
 					iconY + albumArt->GetRadius(miniPlayer) * MiniPlayerIconRatio * 1.5f,
@@ -910,12 +910,12 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 
 				if (displayStats) {
 					statsWidth += stats.GetBounds().width;
-					context.Color(0.0f, 0.0f, 0.0f, alpha);
+					context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 					statsOutline.OnLoop(
 						windowWidth / 2 - statsWidth / 2 + fpsCounter.GetText().GetBounds().width,
 						windowHeight / 2 + font->GetEm().height * 1.98f
 					);
-					context.Color(1.0f, 1.0f, 1.0f, alpha);
+					context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 					stats.OnLoop(
 						windowWidth / 2 - statsWidth / 2 + fpsCounter.GetText().GetBounds().width,
 						windowHeight / 2 + font->GetEm().height * 1.98f
@@ -1032,7 +1032,7 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 				presetList.PostLoop(time);
 
 				context.Use("texture"_hash);
-				context.Color(1.0f, 1.0f, 1.0f, alpha);
+				context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 				
 				help.OnLoop(
 					time,
@@ -1067,7 +1067,7 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 #endif
 
 			if (messageAlpha > 0.0f) {
-				context.Color(1.0f, 1.0f, 1.0f, messageAlpha * alpha);
+				context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, messageAlpha * alpha);
 
 				context.Blend(true, [this] {
 					messageOutline.OnLoop(

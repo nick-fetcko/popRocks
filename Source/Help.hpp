@@ -62,7 +62,7 @@ public:
 		outline.Draw<false>(context);
 		arrowOutline.Draw<false>(context);
 
-		context.Color(1.0f, 1.0f, 1.0f, alpha);
+		context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 		line.Draw<false>(context);
 		arrow.Draw<false>(context);
 
@@ -78,7 +78,7 @@ public:
 			);
 		}
 
-		context.Color(1.0f, 1.0f, 1.0f, alpha);
+		context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 		for (const auto &[i, prompt] : Utils::Enumerate(prompts)) {
 			const auto offset = static_cast<int>(prompts.size() - i);
 			const auto inverse = static_cast<int>(prompts.size() - offset);
@@ -171,7 +171,7 @@ public:
 		MiniPlayerList::OnInit(font, boldFont, outlineFont, boldOutlineFont, context);
 
 		prompt.OnInit(font, context);
-		prompt.SetColor(Colour<float>::White);
+		prompt.SetColor(HDR::WhiteColor);
 		prompt.SetText("?");
 
 		promptOutline.OnInit(outlineFont, context);

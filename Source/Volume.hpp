@@ -8,6 +8,7 @@
 
 #include "AutoFader.hpp"
 #include "ColorChangeListener.hpp"
+#include "HDR.hpp"
 #include "Settings.hpp"
 #include "Text.hpp"
 
@@ -63,7 +64,7 @@ private:
 	Fetcko::Polyline outlineRing;
 	Fetcko::Polyline ring;
 
-	Colour<float> color = Colour<float>::White;
+	Colour<float> color = HDR::WhiteColor;
 
 	float scaledVolume = 0.0f;
 	float inverseVolume = 0.0f;

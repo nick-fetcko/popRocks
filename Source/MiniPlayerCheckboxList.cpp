@@ -97,7 +97,7 @@ void MiniPlayerCheckboxList::OnLoop(const Delta &time, Vector2i pos, std::option
 
 	context->Blend(true, [this, &pos, &alpha] {
 		outline.OnLoop(pos.x - title.GetBounds().width / 2, pos.y - title.GetBounds().height / 2);
-		context->Color(1.0f, 1.0f, 1.0f, alpha);
+		context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 		title.OnLoop(pos.x - title.GetBounds().width / 2, pos.y - title.GetBounds().height / 2);
 	});
 

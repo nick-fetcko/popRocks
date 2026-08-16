@@ -304,6 +304,7 @@ void AlbumArt::OnLoop(
 		});
 
 		if (!albumLoaded && !playing && !preLoaded) {
+			context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 			dragAndDropPrompt.OnLoop(
 				x - dragAndDropPrompt.GetBounds().width / 2,
 				y - dragAndDropPrompt.GetBounds().height / 2
@@ -319,7 +320,7 @@ void AlbumArt::OnLoop(
 
 			if (outlineAlpha > 0.0f || overrideOutlineAlpha > 0.0f) {
 				context.Use("basic"_hash);
-				context.Color(1.0f, 1.0f, 1.0f, overrideOutlineAlpha > 0.0f ? overrideOutlineAlpha : outlineAlpha);
+				context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, overrideOutlineAlpha > 0.0f ? overrideOutlineAlpha : outlineAlpha);
 				context.Translate(x, y, 0);
 				context.Apply();
 				outline.Draw<false>(context);

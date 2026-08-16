@@ -69,7 +69,7 @@ public:
 			context.Color(0.0f, 0.0f, 0.0f, alpha);
 			outline.Draw<false>(context);
 
-			context.Color(1.0f, 1.0f, 1.0f, alpha);
+			context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
 			line.Draw<true>(context);
 		} else {
 			context.LoadIdentity();
@@ -77,12 +77,12 @@ public:
 
 		context.Use("texture"_hash);
 
-		context.Color(1.0f, 1.0f, 1.0f, 0.5f * alpha);
+		context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, (HDR::Enabled ? 0.5f : 0.75f) * alpha);
 		context.Blend(true, [this, &x, &y] {
 			promptOutline.OnLoop(x - prompt.GetBounds().width / 2, y - prompt.GetBounds().height / 2 + radius / 4);
 			prompt.OnLoop(x - prompt.GetBounds().width / 2, y - prompt.GetBounds().height / 2 + radius / 4);
 		});
-		context.Color(1.0f, 1.0f, 1.0f, 1.0f);
+		context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, 1.0f);
 	}
 
 	void OnDestroy() {
