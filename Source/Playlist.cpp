@@ -495,7 +495,7 @@ const std::optional<Playlist::Track> Playlist::GetNext() const {
 	}
 
 	if (currentFile == files.end() || currentFile + 1 == files.end()) {
-		if (Settings::settings.GetAutoPlay())
+		if (Settings::settings.GetAutoPlay() && !files.empty())
 			return Track{ *files.begin() };
 
 		return std::nullopt;
