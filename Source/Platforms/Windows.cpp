@@ -40,6 +40,13 @@ enum class KeyboardHookMode {
 	Both
 };
 
+enum TaskBarID : uint8_t {
+	Prev = 101,
+	Play,
+	Pause,
+	Next
+};
+
 KeyboardHookMode keyboardHookMode = KeyboardHookMode::None;
 
 // =====================================================
@@ -142,6 +149,11 @@ void Windows::OnInit(Interop::InitArgs args, Context &context) {
 }
 
 void Windows::OnDestroy() {
+	if (taskbarList) {
+		taskbarList->Release();
+		taskbarList = nullptr;
+	}
+
 	if (taskbar) {
 		taskbar->Release();
 		taskbar = nullptr;
@@ -1221,6 +1233,36 @@ void Windows::HookWindow(bool miniPlayer) {
 
 	if (miniPlayer)
 		SetDesktopWidgetMode(desktopWidgetMode);
+
+	if (taskbarList) {
+		taskbarList->Release();
+		taskbarList = nullptr;
+	}
+
+	if (CoCreateInstance(CLSID_TaskbarList, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&taskbarList)) == S_OK) {
+		buttons[0].dwMask = buttons[1].dwMask = buttons[2].dwMask = buttons[3].dwMask = THB_ICON | THB_TOOLTIP | THB_FLAGS;
+		buttons[0].dwFlags = buttons[3].dwFlags = THBF_ENABLED;
+
+		buttons[1].dwFlags = lastStatus == Status::Playing ? THBF_HIDDEN : THBF_ENABLED;
+		buttons[2].dwFlags = lastStatus == Status::Playing ? THBF_ENABLED : THBF_HIDDEN;
+
+		buttons[0].iId = TaskBarID::Prev;
+		buttons[1].iId = TaskBarID::Play;
+		buttons[2].iId = TaskBarID::Pause;
+		buttons[3].iId = TaskBarID::Next;
+
+		buttons[0].hIcon = LoadIcon(GetModuleHandle(NULL), TEXT("IDI_PREV"));
+		buttons[1].hIcon = LoadIcon(GetModuleHandle(NULL), TEXT("IDI_PLAY"));
+		buttons[2].hIcon = LoadIcon(GetModuleHandle(NULL), TEXT("IDI_PAUSE"));
+		buttons[3].hIcon = LoadIcon(GetModuleHandle(NULL), TEXT("IDI_NEXT"));
+
+		wcscpy_s(buttons[0].szTip, L"Previous Track");
+		wcscpy_s(buttons[1].szTip, L"Play");
+		wcscpy_s(buttons[2].szTip, L"Pause");
+		wcscpy_s(buttons[3].szTip, L"Next Track");
+
+		taskbarList->ThumbBarAddButtons(hwnd, 4, buttons);
+	}
 }
 
 bool Windows::SupportsDesktopWidgetMode() const {
@@ -1281,6 +1323,13 @@ void Windows::SetStatus(Status status, int progress) {
 			default:
 				flag = TBPF_NOPROGRESS;
 				break;
+			}
+
+			if (taskbarList) {
+				buttons[1].dwFlags = status == Status::Playing ? THBF_HIDDEN : THBF_ENABLED;
+				buttons[2].dwFlags = status == Status::Playing ? THBF_ENABLED : THBF_HIDDEN;
+
+				taskbarList->ThumbBarUpdateButtons(hwnd, 4, buttons);
 			}
 		
 			taskbar->SetProgressState(hwnd, flag);
@@ -1484,6 +1533,21 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			// Return 0 to block the minimize action
 			return 0;
 		}
+	} else if (msg == WM_COMMAND) {
+		switch (wParam & 0xFF) {
+		case TaskBarID::Prev:
+			platform->GetApp()->PreviousTrack();
+			break;
+		case TaskBarID::Play:
+		case TaskBarID::Pause:
+			platform->GetApp()->TogglePlaying();
+			break;
+		case TaskBarID::Next:
+			platform->GetApp()->NextTrack();
+			break;
+		default:
+			break;
+		}	
 	}
 		
 	return platform->GetSdlWndProc()(hwnd, msg, wParam, lParam);

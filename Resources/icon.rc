@@ -1,1 +1,5 @@
 IDI_ICON1 ICON DISCARDABLE "popRocks.ico"
+IDI_PLAY ICON "play.ico"
+IDI_PAUSE ICON "pause.ico"
+IDI_PREV ICON "prev.ico"
+IDI_NEXT ICON "next.ico"

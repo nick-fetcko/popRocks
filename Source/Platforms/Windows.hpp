@@ -164,6 +164,9 @@ private:
 	uint8_t desktopShown = 0;
 	std::chrono::system_clock::time_point desktopShownTimer;
 
+	ITaskbarList3 *taskbarList = nullptr;
+	THUMBBUTTON buttons[4];
+
 #ifndef _DEBUG
 	HKEY registryKey = nullptr;
 	HANDLE mutex = nullptr;
