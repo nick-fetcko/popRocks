@@ -3673,6 +3673,22 @@ bool CApp::OnMouseClicked(const Vector2i &mousePos) {
 	return false;
 }
 
+bool CApp::OnMouseRightClicked(const Vector2i &mousePos) {
+	// On Linux (Wayland, specifically) right-clicking
+	// brings up the window menu (xdg_toplevel_show_window_menu)
+#ifdef WIN32
+	if (miniPlayer) {
+		const bool hovered = !controls.GetCheckboxList().IsHovered();
+
+		controls.GetCheckboxList().SetHovered(hovered, false, false);
+
+		if (hovered) controls.GetCheckboxList().Anchor();
+	}
+#endif
+
+	return true;
+}
+
 bool CApp::OnMouseDown(const Vector2i &mousePos, MouseDownState *state) {
 	if (controls.OnMouseDown(mousePos))
 		return true;

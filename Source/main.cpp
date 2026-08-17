@@ -283,6 +283,8 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 						mouseButtonDown = true;
 						mouseDragged = false;
 						mouseTimer = std::chrono::system_clock::now();
+					} else if (event.button.button == SDL_BUTTON_RIGHT) {
+						app.OnMouseRightClicked(mousePos);
 					}
 					break;
 				case SDL_EVENT_MOUSE_BUTTON_UP:

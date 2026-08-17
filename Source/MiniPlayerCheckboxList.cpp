@@ -78,6 +78,7 @@ bool MiniPlayerCheckboxList::OnMouseClicked(const Vector2i &mousePos, Rectanglei
 			clickTimer = std::chrono::system_clock::now();
 		} else if (hovered && alpha == 1.0f && alpha == targetAlpha) {
 			hovered = false;
+			anchored = false;
 			hoverTimer = std::nullopt;
 			targetAlpha = 0.0f;
 

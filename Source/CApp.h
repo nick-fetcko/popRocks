@@ -154,6 +154,7 @@ public:
 	void PreviousTrack();
 
 	bool OnMouseClicked(const Vector2i &mousePos);
+	bool OnMouseRightClicked(const Vector2i &mousePos);
 	enum class MouseDownState {
 		None,
 		Dragging,

@@ -73,6 +73,7 @@ public:
 	const bool IsHoveredOrWillBeHovered() const { return hovered || alpha != targetAlpha; }
 	const bool IsActive() const { return hovered || hoverTimer || alpha != targetAlpha; }
 	void SetHovered(bool hovered, bool sticky, bool ignoreNextTimeDelta, std::function<void()> afterFade = nullptr);
+	void Anchor() { anchored = true; }
 	const Colourf &GetColor() const;
 	const Colourf &GetHoveredColor() const { return hoveredColor; }
 
@@ -150,6 +151,8 @@ protected:
 
 	HoverState hoverState = HoverState::None;
 	std::optional<std::chrono::system_clock::time_point> clickTimer = std::nullopt;
+
+	bool anchored = false;
 
 	const bool &vulkan;
 };

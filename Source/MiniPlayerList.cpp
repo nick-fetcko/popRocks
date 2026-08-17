@@ -361,7 +361,7 @@ MiniPlayerList::HoverState MiniPlayerList::OnMouseMoved(const Vector2i &mousePos
 		hoverState = HoverState::Trigger;
 
 		return hoverState;
-	} else if (hovered && !scrollBarHovered && inX && inY) {
+	} else if (anchored || (hovered && !scrollBarHovered && inX && inY)) {
 		float yOffset = pos.y + (font->GetEm().height * (direction == Direction::Up ? UpwardsBias : 1));
 
 		for (long i = 0; i < numberOfVisibleItems; ++i) {
@@ -377,6 +377,11 @@ MiniPlayerList::HoverState MiniPlayerList::OnMouseMoved(const Vector2i &mousePos
 		}
 
 		hoverState = HoverState::Hovered;
+
+		// Remove anchor once mouse
+		// is within bounds
+		if (inX && inY && anchored)
+			anchored = false;
 
 		return hoverState;
 	} else if (!isHoverSticky && !scrollBarHovered) {
