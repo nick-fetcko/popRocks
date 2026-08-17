@@ -3961,6 +3961,10 @@ void CApp::OnMouseLeave() {
 	close.SetHovered(false);
 }
 
+bool CApp::IsEnteringText() const {
+	return !miniPlayer && menu && menu->IsPresetPopupVisible();
+}
+
 void CApp::LoadPreset(std::optional<std::size_t> index) {
 	const auto &presets = Preset::GetPresets();
 

@@ -186,7 +186,7 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 					break;
 				case SDL_EVENT_KEY_DOWN:
 #if GUI
-					if (io.WantCaptureKeyboard) break;
+					if (io.WantCaptureKeyboard || app.IsEnteringText() /* Disable hotkeys on text entry */) break;
 
 					else 
 #endif
@@ -240,6 +240,8 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 						app.GetControls().AddToScrollOffset(1);
 					break;
 				case SDL_EVENT_KEY_UP:
+					if (app.IsEnteringText() /* Disable hotkeys on text entry */) break;
+
 					// As we can potentially have multiple windows open
 					// while toggling these settings, we explicitly listen
 					// for key _up_ events. Key _down_ events may fire

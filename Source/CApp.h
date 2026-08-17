@@ -167,6 +167,8 @@ public:
 	bool OnMouseDragged(const Vector2i &mousePos);
 	void OnMouseLeave();
 
+	bool IsEnteringText() const;
+
 	void LoadPreset(std::optional<std::size_t> index);
 	void LoadPreset(const Preset &preset);
 
