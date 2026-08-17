@@ -75,7 +75,9 @@ bool MiniPlayerCheckboxList::OnMouseClicked(const Vector2i &mousePos, Rectanglei
 			setting.checkbox.SetChecked(newSetting);
 			setting.set(newSetting);
 
-			clickTimer = std::chrono::system_clock::now();
+			itemClickTimer = std::chrono::system_clock::now();
+
+			return false;
 		} else if (hovered && alpha == 1.0f && alpha == targetAlpha) {
 			hovered = false;
 			anchored = false;
@@ -83,9 +85,9 @@ bool MiniPlayerCheckboxList::OnMouseClicked(const Vector2i &mousePos, Rectanglei
 			targetAlpha = 0.0f;
 
 			clickTimer = std::chrono::system_clock::now();
-		}
 
-		return true;
+			return true;
+		}
 	}
 
 	return MiniPlayerList::OnMouseClicked(mousePos, bounds);

@@ -167,8 +167,13 @@ void MiniPlayerList::PreLoop(std::optional<std::size_t> currentIndex) {
 		hoverTimer = std::nullopt;
 	}
 
-	if (clickTimer && std::chrono::system_clock::now() - *clickTimer >= 75ms)
+	const auto now = std::chrono::system_clock::now();
+
+	if (clickTimer && now - *clickTimer >= ClickLength)
 		clickTimer = std::nullopt;
+
+	if (itemClickTimer && now - *itemClickTimer >= ClickLength)
+		itemClickTimer = std::nullopt;
 }
 
 void MiniPlayerList::PostLoop(const Delta &time) {
@@ -261,7 +266,7 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 		}
 
 		if (hovered && i == hoveredOffset) {
-			if (clickTimer)
+			if (itemClickTimer)
 				context->Color(darkColor.r, darkColor.g, darkColor.b, alpha);
 			else
 				context->Color(hoveredColor.r, hoveredColor.g, hoveredColor.b, alpha);
@@ -284,7 +289,7 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 			-((width - GetItemWidth()) / 2.0f),
 			-std::floor(items[index].GetBounds().overhang / 3.0f),
 			itemHovered,
-			itemHovered && clickTimer.has_value(),
+			itemHovered && itemClickTimer.has_value(),
 			alpha
 		)) {
 			context->Use("scrolling"_hash);

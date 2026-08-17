@@ -17,6 +17,8 @@ private:
 
 	constexpr static float UpwardsBias = 0.515f;
 
+	constexpr inline static std::chrono::duration ClickLength = 75ms;
+
 public:
 	enum class Direction : uint8_t {
 		Up = 0,
@@ -151,6 +153,7 @@ protected:
 
 	HoverState hoverState = HoverState::None;
 	std::optional<std::chrono::system_clock::time_point> clickTimer = std::nullopt;
+	std::optional<std::chrono::system_clock::time_point> itemClickTimer = std::nullopt;
 
 	bool anchored = false;
 
