@@ -405,8 +405,8 @@ public:
 					LogError("Could not clear detection cache! ", ec.message());
 			}
 
-			// Only update our cache info every second
-			if (auto now = std::chrono::system_clock::now(); Duration<Microseconds>(now - lastFrame).AsSeconds() > 1.0 && std::filesystem::exists(Filesystem::GetPath("cache"))) {
+			// Only update our cache info every 10 seconds
+			if (auto now = std::chrono::system_clock::now(); (Duration<Microseconds>(now - lastFrame).AsSeconds() > 10.0 || cacheSize.empty()) && std::filesystem::exists(Filesystem::GetPath("cache"))) {
 				auto dirIter = std::filesystem::directory_iterator(Filesystem::GetPath("cache"));
 				std::size_t bytes = 0;
 
