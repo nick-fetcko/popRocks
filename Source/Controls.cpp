@@ -1286,7 +1286,12 @@ bool Controls::OnMouseDown(const Vector2i &mousePos) {
 	return playlist.OnMouseDown(mousePos) || presetList.OnMouseDown(mousePos) || checkboxList.OnMouseDown(mousePos);
 }
 
-bool Controls::OnMouseDragged(const Vector2i &mousePos) {
+bool Controls::OnMouseDragged(const Vector2i &mousePos, std::function<void(float)> seekCallback) {
+	if (seekCallback) {
+		Seek(mousePos, seekCallback);
+		return true;
+	}
+
 	return playlist.OnMouseDragged(mousePos) || presetList.OnMouseDragged(mousePos) || checkboxList.OnMouseDragged(mousePos);
 }
 
@@ -1318,6 +1323,17 @@ void Controls::End() {
 	playlist.End();
 	presetList.End();
 	checkboxList.End();
+}
+
+inline void Controls::Seek(const Vector2i &mousePos, std::function<void(float)> seekCallback) {
+	float pos = mousePos.x - (windowWidth / 2 - (albumArt->GetRadius(miniPlayer) * MiniPlayerSeekbarRatio / 2));
+	pos /= (albumArt->GetRadius(miniPlayer) * MiniPlayerSeekbarRatio);
+
+	if (pos >= 0.0f && pos <= 1.0f) {
+		seekCallback(pos);
+
+		LogInfo("Click captured! Seekbar, ", pos * 100, "%");
+	}
 }
 
 Controls::ControlButton Controls::OnMouseClicked(const Vector2i &mousePos, std::function<void(float)> seekCallback, bool playing, bool canTakeAction) {
@@ -1375,14 +1391,7 @@ Controls::ControlButton Controls::OnMouseClicked(const Vector2i &mousePos, std::
 		} else if (mousePos.y >= seekbarPos &&
 			mousePos.y <= seekbarPos + SeekbarSize * scale) { // Seekbar
 
-			float pos = mousePos.x - (windowWidth / 2 - (albumArt->GetRadius(miniPlayer) * MiniPlayerSeekbarRatio / 2));
-			pos /= (albumArt->GetRadius(miniPlayer) * MiniPlayerSeekbarRatio);
-
-			if (pos >= 0.0f && pos <= 1.0f) {
-				seekCallback(pos);
-
-				LogInfo("Click captured! Seekbar, ", pos * 100, "%");
-			}
+			Seek(mousePos, seekCallback);
 		}
 	}
 

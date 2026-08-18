@@ -533,4 +533,6 @@ private:
 	// NOT user controlled because we
 	// want it to always fade out
 	AutoFader<false> closeFader;
+
+	bool isSeeking = false;
 };

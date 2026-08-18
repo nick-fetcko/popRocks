@@ -3714,6 +3714,7 @@ bool CApp::OnMouseDown(const Vector2i &mousePos, MouseDownState *state) {
 
 			if (fileLoaded) {
 				// Did we click the mini player's seekbar?
+				isSeeking = false;
 				controls.OnMouseClicked(mousePos, [this](float pos) {
 					auto time = pos * controls.GetCurrentSongLength();
 
@@ -3723,6 +3724,7 @@ bool CApp::OnMouseDown(const Vector2i &mousePos, MouseDownState *state) {
 					SeekTo(time);
 
 					lastMousePos = std::nullopt;
+					isSeeking = true;
 				}, playing, false);
 			}
 
@@ -3802,6 +3804,8 @@ void CApp::OnMouseUp(const Vector2i &mousePos) {
 	if (miniPlayer && !platform->IsResizing()) {
 		LogInfo("Mouse up...");
 
+		isSeeking = false;
+
 		resizeTimer = std::nullopt;
 		scaleTimer = std::nullopt;
 
@@ -3858,41 +3862,37 @@ void CApp::OnMouseMoved(const Vector2i &mousePos) {
 }
 
 bool CApp::OnMouseDragged(const Vector2i &mousePos) {
-	if (controls.OnMouseDragged(mousePos))
+	if (controls.OnMouseDragged(
+		mousePos,
+		// Did we drag the mini player's seekbar?
+		isSeeking ? 
+			[this](float pos) {
+				SeekTo(pos * controls.GetCurrentSongLength());
+			} : 
+			static_cast<std::function<void(float)>>(nullptr)
+	))
 		return false;
 
-	bool seek = false;
-
-	if (fileLoaded && !lastMousePos && !albumArt.IsResizing()) {
-		// Did we drag the mini player's seekbar?
-		controls.OnMouseClicked(mousePos, [this, &seek](float pos) {
-			seek = true;
-			SeekTo(pos * controls.GetCurrentSongLength());
-		}, playing);
-	}
-
 	if (lastMousePos) {
-		if (!seek) {
-			albumArt.TargetOverrideOutlineAlpha(0.334f);
+		albumArt.TargetOverrideOutlineAlpha(0.334f);
 
-			if (windowX == SDL_WINDOWPOS_CENTERED)
-				SDL_GetWindowPosition(sdlWindow, &windowX, &windowY);
+		if (windowX == SDL_WINDOWPOS_CENTERED)
+			SDL_GetWindowPosition(sdlWindow, &windowX, &windowY);
 
-			Vector2i delta = {
-				(mousePos.x - lastMousePos->x),
-				(mousePos.y - lastMousePos->y)
-			};
+		Vector2i delta = {
+			(mousePos.x - lastMousePos->x),
+			(mousePos.y - lastMousePos->y)
+		};
 
-			// Don't allow window to move further than halfway outside of the total display area
-			windowX = std::clamp(windowX + delta.x, displayBoundingBox.x - windowWidth / 2, displayBoundingBox.w - windowWidth / 2);
-			windowY = std::clamp(windowY + delta.y, displayBoundingBox.y - windowHeight / 2, displayBoundingBox.h - windowHeight / 2);
+		// Don't allow window to move further than halfway outside of the total display area
+		windowX = std::clamp(windowX + delta.x, displayBoundingBox.x - windowWidth / 2, displayBoundingBox.w - windowWidth / 2);
+		windowY = std::clamp(windowY + delta.y, displayBoundingBox.y - windowHeight / 2, displayBoundingBox.h - windowHeight / 2);
 
-			SDL_SetWindowPosition(sdlWindow, windowX, windowY);
+		SDL_SetWindowPosition(sdlWindow, windowX, windowY);
 
-			// The window moving is going to change
-			// our mouse pos by delta
-			lastMousePos = mousePos - delta;
-		}
+		// The window moving is going to change
+		// our mouse pos by delta
+		lastMousePos = mousePos - delta;
 	} else if(const auto now = std::chrono::system_clock::now();
 		// Only allow resizes to occur at 30FPS on Linux
 #ifdef __linux__

@@ -108,7 +108,7 @@ public:
 
 	void OnMouseMoved(const Vector2i &mousePos);
 	bool OnMouseDown(const Vector2i &mousePos);
-	bool OnMouseDragged(const Vector2i &mousePos);
+	bool OnMouseDragged(const Vector2i &mousePos, std::function<void(float)> seekCallback = nullptr);
 	ControlButton OnMouseClicked(const Vector2i &mousePos, std::function<void(float)> seekCallback, bool playing, bool canTakeAction = true);
 	void OnMouseUp(const Vector2i &mousePos);
 
@@ -154,6 +154,7 @@ private:
 	inline void OpenFont(Context *context, GLuint defaultFramebuffer);
 	std::string FormatSeconds(int seconds) const;
 	ControlButton GetButtonAtPos(const Vector2i &pos);
+	inline void Seek(const Vector2i &mousePos, std::function<void(float)> seekCallback);
 
 	AlbumArt * const albumArt = nullptr;
 	std::unique_ptr<Platform> &platform;
