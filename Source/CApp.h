@@ -309,6 +309,8 @@ private:
 
 	void OnAlbumArtLoaded(bool embedded);
 
+	inline int AdjustFftSize(int fftSize);
+
 	int windowWidth = 1920;
 	int windowHeight = 1080;
 

@@ -203,6 +203,8 @@ void CApp::SetFftLength(std::size_t length) {
 
 	Settings::settings.SetFftSize(fftLength * 2);
 
+	LogDebug("FFT length successfully set to ", fftLength * 2);
+
 	UpdateMaxBufferLength();
 }
 
@@ -3062,6 +3064,17 @@ void CApp::PlaylistLoaded(std::filesystem::path path, std::string extension, std
 			static_cast<uint8_t>(channelInfo.chans)
 		);
 
+		if (auto index = miniPlayer ? Settings::settings.GetMiniPlayerPresetIndex() : Settings::settings.GetPresetIndex()) {
+			if (miniPlayer && *index > Preset::GetPresets().size()) {
+				*index = Settings::DefaultMiniPlayerPresetIndex; // Reset to default
+				Settings::settings.SetMiniPlayerPresetIndex(*index);
+			}
+
+			const auto fftSize = Preset::GetPresets().at(*index).GetFftSize();
+			if (const auto adjusted = AdjustFftSize(fftSize); adjusted != fftSize || fftLength * 2 != adjusted)
+				SetFftLength(adjusted);
+		}
+
 		// If our number of channels changed,
 		// we need to update the buffer
 		UpdateMaxBufferLength();
@@ -3983,6 +3996,17 @@ void CApp::LoadPreset(std::optional<std::size_t> index) {
 	}
 }
 
+inline int CApp::AdjustFftSize(int fftSize) {
+	// If our sampling rate exceeds 48KHz, double the size
+	// of the FFT to give us an equivalent number of bins
+	if (channelInfo.freq > 48000 && fftSize * 2 <= 16384) {
+		LogDebug("Sampling rate > 48000 (", channelInfo.freq, ") detected! Preset's FFT size (", fftSize, ") adjusted to ", fftSize * 2);
+		return fftSize * 2;
+	}
+
+	return fftSize;
+}
+
 void CApp::LoadPreset(const Preset &preset) {
 	LogDebug("Loading preset '", preset.GetName(), "'");
 
@@ -4012,7 +4036,8 @@ void CApp::LoadPreset(const Preset &preset) {
 	// FFTRenderer needs to be reset
 	// with the new DynamicGain
 	renderer->Reset();
-	SetFftLength(preset.GetFftSize());
+
+	SetFftLength(AdjustFftSize(preset.GetFftSize()));
 	SetDecayTime(preset.GetDecayTime());
 	SetFadeTime(preset.GetFadeTime());
 	renderer->SetPulse(preset.GetPulse());
