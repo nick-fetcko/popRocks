@@ -3033,10 +3033,14 @@ void CApp::PlaylistLoaded(std::filesystem::path path, std::string extension, std
 
 	const auto wasPlaying = playing;
 
-	if (fileLoaded && !controls.GetExclusiveIndicator().IsExclusive()) {
-		Stop();
+	if (fileLoaded) {
+		// In exclusive mode we handle
+		// opening the next file in OnLoop
+		if (!controls.GetExclusiveIndicator().IsExclusive()) {
+			Stop();
 
-		Open(path, extension, controls.GetExclusiveIndicator().IsExclusive(), streamHandle, visualStreamHandle);
+			Open(path, extension, controls.GetExclusiveIndicator().IsExclusive(), streamHandle, visualStreamHandle);
+		}
 
 		// Don't reset gain if we're changing songs
 		// in a playlist.
