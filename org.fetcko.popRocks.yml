@@ -55,8 +55,6 @@ finish-args:
   - --socket=wayland
   # Direct Rendering for OpenGL / Vulkan
   - --device=dri
-  # Configuration data is currently stored in $HOME
-  - --filesystem=home
   # PulseAudio / PipeWire for output device selection and exclusive audio output
   - --socket=pulseaudio
   - --filesystem=xdg-run/pipewire-0
