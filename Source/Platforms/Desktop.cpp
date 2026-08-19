@@ -67,7 +67,7 @@ bool Desktop::LoadGlad() {
 // -----------------------------------------------------
 // ---------------------- HDR --------------------------
 // -----------------------------------------------------
-void Desktop::SetHdr(bool enabled, void *hwnd, int width, int height) {
+void Desktop::SetHdr(bool enabled, bool miniPlayer, void *hwnd, int width, int height) {
 	if (!enabled && HDR::Enabled) {
 		GetInterop()->SetHdr(enabled, nullptr, width, height);
 
@@ -110,7 +110,7 @@ void Desktop::SetHdr(bool enabled, void *hwnd, int width, int height) {
 	}
 }
 
-void Desktop::UpdateHdrProperties(int displayId, bool force) {
+void Desktop::UpdateHdrProperties(bool miniPlayer, int displayId, bool force) {
 	if (auto properties = GetHdrProperties(displayId, force)) {
 		auto &[enabled, whitePoint, headroom] = *properties;
 
@@ -119,7 +119,7 @@ void Desktop::UpdateHdrProperties(int displayId, bool force) {
 		LogDebug("\tWhitePoint: ", whitePoint);
 		LogDebug("\tHeadroom: ", headroom);
 
-		SetHdr(enabled, nullptr, app->GetWindowSize().first, app->GetWindowSize().second);
+		SetHdr(enabled, miniPlayer, nullptr, app->GetWindowSize().first, app->GetWindowSize().second);
 
 		HDR::Enabled = enabled;
 		HDR::WhiteLevel = whitePoint;

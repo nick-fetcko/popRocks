@@ -345,9 +345,9 @@ inline void CApp::SetHdr(bool enabled) {
 	}
 
 	if (HDR::Enabled && !enabled)
-		platform->SetHdr(enabled, nullptr, width, height);
+		platform->SetHdr(enabled, miniPlayer, nullptr, width, height);
 	else if (!HDR::Enabled && enabled)
-		platform->SetHdr(enabled, nullptr, width, height);
+		platform->SetHdr(enabled, miniPlayer, nullptr, width, height);
 }
 
 void CApp::LoadShaders() {
@@ -601,7 +601,7 @@ void CApp::SetVulkan(bool vulkan) {
 	// Force HDR back on, if needed
 	if (const auto hdr = HDR::Enabled) {
 		HDR::Enabled = !hdr;
-		platform->SetHdr(hdr, nullptr, windowWidth, windowHeight);
+		platform->SetHdr(hdr, miniPlayer, nullptr, windowWidth, windowHeight);
 		HDR::Enabled = hdr;
 	}
 

@@ -66,7 +66,7 @@ public:
 	
 	// HDR
 	std::optional<std::tuple<bool, float, float>> GetHdrProperties(int display, bool force = false) override;
-	void UpdateHdrProperties(bool force = false) override;
+	void UpdateHdrProperties(bool miniPlayer, bool force = false) override;
 
 	// File opening
 	HSTREAM OpenWithFlags(const std::filesystem::path &path, const std::string &extension, DWORD flags) override;

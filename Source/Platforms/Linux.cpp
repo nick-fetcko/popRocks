@@ -577,10 +577,10 @@ std::optional<std::tuple<bool, float, float>> Linux::GetHdrProperties(int displa
 	return std::make_tuple(enabled, whitePoint, headroom);
 }
 
-void Linux::UpdateHdrProperties(bool force) {
+void Linux::UpdateHdrProperties(bool miniPlayer, bool force) {
 	auto displayId = SDL_GetDisplayForWindow(app->GetSdlWindow());
 
-	Desktop::UpdateHdrProperties(displayId, force);
+	Desktop::UpdateHdrProperties(miniPlayer, displayId, force);
 }
 
 // -----------------------------------------------------

@@ -25,7 +25,7 @@ public:
 	bool LoadGlad() override;
 
 	// HDR
-	void SetHdr(bool enabled, void *hwnd, int width, int height) override;
+	void SetHdr(bool enabled, bool miniPlayer, void *hwnd, int width, int height) override;
 
 	// =====================================================
 	// ===================== Virtuals ======================
@@ -42,7 +42,7 @@ public:
 
 protected:
 	// Helper for UpdateHdrProperties()
-	void UpdateHdrProperties(int displayId, bool force = false);
+	void UpdateHdrProperties(bool miniPlayer, int displayId, bool force = false);
 
 	float *in = nullptr;
 	fftwf_complex *out = nullptr;

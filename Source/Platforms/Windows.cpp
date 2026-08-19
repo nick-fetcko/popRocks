@@ -559,12 +559,12 @@ std::optional<std::tuple<bool, float, float>> Windows::GetHdrProperties(int disp
 	return dxgi.GetHdrProperties(display, force);
 }
 
-void Windows::SetHdr(bool enabled, void *hwnd, int width, int height) {
+void Windows::SetHdr(bool enabled, bool miniPlayer, void *hwnd, int width, int height) {
 	hwnd = SDL_GetPointerProperty(SDL_GetWindowProperties(app->GetSdlWindow()), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
 
 	if (!enabled && HDR::Enabled) {
 		if (app->GetVulkan())
-			Desktop::SetHdr(enabled, hwnd, width, height);
+			Desktop::SetHdr(enabled, miniPlayer, hwnd, width, height);
 		else {
 			if (auto &blurFbo = app->GetBlurFbo())
 				blurFbo->SetDefaultFramebuffer(0);
@@ -590,6 +590,8 @@ void Windows::SetHdr(bool enabled, void *hwnd, int width, int height) {
 			ImGui_ImplOpenGL3_Shutdown();
 			ImGui_ImplSDL3_Shutdown();
 
+			dxgi.OnDestroy();
+
 			// FIXME: It appears that calling swapChain->Present(1, 0)
 			//        prevents us from restoring the window's original
 			//        OpenGL context.
@@ -603,10 +605,16 @@ void Windows::SetHdr(bool enabled, void *hwnd, int width, int height) {
 			SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "popRocks");
 			SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, app->GetWindowSize().first);
 			SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, app->GetWindowSize().second);
-			SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, Settings::settings.GetWindowX());
-			SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, Settings::settings.GetWindowY());
+			SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, miniPlayer ? Settings::settings.GetMiniPlayerX() : Settings::settings.GetWindowX());
+			SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, miniPlayer ? Settings::settings.GetMiniPlayerY() : Settings::settings.GetWindowY());
 			SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_OPENGL_BOOLEAN, true);
 			SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
+			SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_BORDERLESS_BOOLEAN, miniPlayer);
+
+			SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_TRANSPARENT_BOOLEAN, miniPlayer);
+
+			const bool alwaysOnTop = miniPlayer && !GetDesktopWidgetMode();
+			SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_ALWAYS_ON_TOP_BOOLEAN, alwaysOnTop);
 
 			app->SetSdlWindow(SDL_CreateWindowWithProperties(
 				props
@@ -618,7 +626,7 @@ void Windows::SetHdr(bool enabled, void *hwnd, int width, int height) {
 			ImGui_ImplSDL3_InitForOpenGL(app->GetSdlWindow(), app->GetOpenGlContext());
 			ImGui_ImplOpenGL3_Init();
 		}
-	} else if (enabled && !HDR::Enabled) {	
+	} else if (enabled && !HDR::Enabled) {
 		int width = 0, height = 0;
 		SDL_GetWindowSize(app->GetSdlWindow(), &width, &height);
 		if (app->GetBlur()) {
@@ -636,16 +644,16 @@ void Windows::SetHdr(bool enabled, void *hwnd, int width, int height) {
 				height
 #endif
 			);
-		} else {
+		} else if (!dxgi.IsActive()) {
 			dxgi.OnCreate(reinterpret_cast<HWND>(hwnd), width, height);
 			dxgi.OnResize(width, height);
 		}
 
-		Desktop::SetHdr(enabled, hwnd, width, height);
+		Desktop::SetHdr(enabled, miniPlayer, hwnd, width, height);
 	}
 }
 
-void Windows::UpdateHdrProperties(bool force) {
+void Windows::UpdateHdrProperties(bool miniPlayer, bool force) {
 	// SDL does NOT update white level or headroom
 	// when the window moves between monitors with 
 	// different HDR properties on Windows
@@ -661,7 +669,7 @@ void Windows::UpdateHdrProperties(bool force) {
 
 		ShowDialogBox("SDL_DXGIGetOutputInfo() failed!", SDL_GetError());
 	}
-	Desktop::UpdateHdrProperties(outputIndex, force);
+	Desktop::UpdateHdrProperties(miniPlayer, outputIndex, force);
 }
 
 // -----------------------------------------------------
@@ -1262,6 +1270,13 @@ void Windows::HookWindow(bool miniPlayer) {
 		wcscpy_s(buttons[3].szTip, L"Next Track");
 
 		taskbarList->ThumbBarAddButtons(hwnd, 4, buttons);
+	}
+
+	if (!app->GetVulkan() && HDR::Enabled && !dxgi.IsActive()) {
+		const auto [width, height] = app->GetWindowSize();
+
+		dxgi.OnCreate(hwnd, width, height);
+		dxgi.OnResize(width, height);
 	}
 }
 
