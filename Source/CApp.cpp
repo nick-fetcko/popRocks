@@ -3200,8 +3200,19 @@ void CApp::PlaylistLoaded(std::filesystem::path path, std::string extension, std
 
 		// If this is our first load and Help
 		// has never been dismissed, show it
-		if (!lastFileLoaded && !Settings::settings.GetHelpDismissed())
+		if (!lastFileLoaded && !Settings::settings.GetHelpDismissed()) {
+			// Also load our default preset on first launch
+			if (auto index = miniPlayer ? Settings::settings.GetMiniPlayerPresetIndex() : Settings::settings.GetPresetIndex()) {
+				if (miniPlayer && *index > Preset::GetPresets().size()) {
+					*index = Settings::DefaultMiniPlayerPresetIndex; // Reset to default
+					Settings::settings.SetMiniPlayerPresetIndex(*index);
+				}
+
+				LoadPreset(Preset::GetPresets().at(*index));
+			}
+
 			controls.GetHelp().SetHovered(true, true, true /* bypass loading lag */);
+		}
 
 		loadedFile = path;
 		loadedFileExtension = extension;
