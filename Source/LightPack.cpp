@@ -86,13 +86,19 @@ LightPack::~LightPack() {
 }
 
 void LightPack::OnInit() {
+	// Avoid potential off-by-one-millisecond
+	sleepTime = 0s;
+
 	running = true;
 
 	thread = std::thread([this] {
 		while (running) {
 			{
-				if (queue.size() > 16)
-					LogWarning("LightPack is running over a second late!");
+				if (queue.size() > 16) {
+					LogWarning("LightPack is running over a second late! Flushing queue...");
+					while (queue.size())
+						queue.pop();
+				}
 
 				if (queue.size()) {
 					if (auto &front = queue.front())
@@ -104,7 +110,7 @@ void LightPack::OnInit() {
 
 			std::unique_lock lock(condMutex);
 			cond.wait_for(lock, sleepTime);
-			sleepTime = 1ms;
+			if (lightBin) sleepTime = 1ms;
 		}
 
 		// Process whatever's left in the queue
@@ -112,6 +118,16 @@ void LightPack::OnInit() {
 			queue.front()(this);
 			queue.pop();
 		}
+
+		delete[] lightBin;
+		lightBin = nullptr;
+
+		if (tcpsock) {
+			NET_DestroyStreamSocket(tcpsock);
+			tcpsock = nullptr;
+		}
+
+		NET_Quit();
 	});
 
 	std::unique_lock lock(mutex);
@@ -185,8 +201,6 @@ void LightPack::_OnInit() {
 			auto status = NET_WaitUntilResolved(ip, -1);
 			if (CanConnect())
 				tcpsock = NET_CreateClient(ip, 3636);
-
-			SDL_free(ip);
 
 			if (status = NET_WaitUntilConnected(tcpsock, -1); status != NET_SUCCESS) {
 				NET_DestroyStreamSocket(tcpsock);
@@ -273,7 +287,11 @@ void LightPack::RetryConnection() {
 	std::unique_lock lock(mutex);
 	std::unique_lock condLock(condMutex);
 
-	sleepTime = 5s;
+	if (sleepTime < 10s)
+		sleepTime += 1s;
+
+	const auto inSeconds = std::chrono::duration_cast<std::chrono::seconds>(sleepTime).count();
+	LogInfo("Retrying in ", inSeconds , " second", inSeconds > 1 ? "s" : "", "...");
 
 	queue.emplace([](LightPack *lp) {
 		lp->_OnInit();
@@ -300,6 +318,7 @@ void LightPack::OnDestroy() {
 			lp->WriteString(stream.str());
 			lp->WriteString("unlock\r\n");
 			NET_DestroyStreamSocket(lp->tcpsock);
+			lp->tcpsock = nullptr;
 		});
 	}
 
@@ -339,10 +358,28 @@ void LightPack::NextSample(const float &sample) {
 	}
 }
 
+void LightPack::OnDisconnect() {
+	LogError("Forcibly disconnecting from LightPack socket!");
+
+	running = false;
+}
+
 void LightPack::OnLoop(const Colour<float> &color) {
 	std::unique_lock lock(mutex);
 
-	if (!lightBin) return;
+	if (!lightBin) {
+		// If we've been disconnected,
+		// start searching again
+		if (!running) {
+			lock.unlock();
+
+			if (thread.joinable())
+				thread.join();
+
+			OnInit();
+		}
+		return;
+	}
 
 	if (captureTimer++ == CaptureFreq) {
 		this->color = color;
@@ -437,7 +474,8 @@ void LightPack::_OnLoop() {
 	}
 	stream << "\r\n";
 
-	WriteString(stream.str(), false);
+	if (!WriteString(stream.str(), false))
+		OnDisconnect();
 
 	currentSample = 0;
 	currentLight = 1;
@@ -585,7 +623,10 @@ std::optional<std::string> LightPack::ReadString(bool block) const {
 
 std::optional<std::string> LightPack::WriteString(std::string str, bool response) const {
 	if (tcpsock) {
-		NET_WriteToStreamSocket(tcpsock, str.c_str(), static_cast<int>(str.length()));
+		if (!NET_WriteToStreamSocket(tcpsock, str.c_str(), static_cast<int>(str.length()))) {
+			LogError("Error writing to LightPack socket: ", SDL_GetError());
+			return std::nullopt;
+		}
 
 		if (response) {
 			while (NET_GetStreamSocketPendingWrites(tcpsock))
@@ -595,5 +636,5 @@ std::optional<std::string> LightPack::WriteString(std::string str, bool response
 		}
 	}
 
-	return std::nullopt;
+	return "";
 }

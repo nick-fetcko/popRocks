@@ -65,6 +65,8 @@ public:
 	void OnLoop(const Colour<float> &color);
 
 	std::optional<std::string> ReadString(bool block = false) const;
+
+	// Returns std::nullopt on error and "" when response = false
 	std::optional<std::string> WriteString(std::string str, bool response = true) const;
 
 	std::string GetStringForMassColorChangeCommand(int start, int end, unsigned char r, unsigned char g, unsigned char b) const;
@@ -88,6 +90,8 @@ private:
 	void _OnLoop();
 
 	bool CanConnect();
+
+	void OnDisconnect();
 
 	std::atomic<bool> running = false;
 	std::thread thread;
@@ -125,7 +129,7 @@ private:
 
 	float saturationMultiplier = 1.25f;
 
-	std::chrono::milliseconds sleepTime = 1ms;
+	std::chrono::milliseconds sleepTime = 0s;
 
 	std::condition_variable cond;
 	std::mutex condMutex;
