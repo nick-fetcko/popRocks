@@ -290,7 +290,7 @@ public:
 				hotkeyOutlines[i].first.OnLoop(windowWidth / 2 - width / 2, yOffset);
 				hotkeyOutlines[i].second.OnLoop(windowWidth / 2 - width / 2 + hotkeyOutlines[i].first.GetBounds().width, yOffset);
 
-				context.Color(color.r, color.g, color.b, alpha);
+				context.Color(hoveredColor.r, hoveredColor.g, hoveredColor.b, alpha);
 
 				hotkeys[i].first.OnLoop(windowWidth / 2 - width / 2, yOffset);
 
