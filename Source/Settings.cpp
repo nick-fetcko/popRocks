@@ -929,6 +929,13 @@ void Settings::SetDesktopWidgetMode(bool desktopWidgetMode, bool delayed) {
 	}
 }
 
+void Settings::SetRotationOffset(int rotationOffset, bool delayed) {
+	if (this->rotationOffset != rotationOffset) {
+		this->rotationOffset = rotationOffset;
+		if (!delayed) Save();
+	}
+}
+
 void Settings::Save() {
 	if (auto path = Filesystem::GetPath(); !path.empty()) {
 		LogInfo("Saving settings...");
@@ -1283,6 +1290,9 @@ const Node &operator>>(const Node &node, Settings &settings) {
 
 	if (node.has("desktopWidgetMode"))
 		node["desktopWidgetMode"]->get(settings.desktopWidgetMode);
+
+	if (node.has("rotationOffset"))
+		node["rotationOffset"]->get(settings.rotationOffset);
 		
 	return node;
 }
@@ -1403,6 +1413,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["displayStats"]->set(settings.displayStats);
 	node["autoPlay"]->set(settings.autoPlay);
 	node["desktopWidgetMode"]->set(settings.desktopWidgetMode);
+	node["rotationOffset"]->set(settings.rotationOffset);
 
 	return node;
 }

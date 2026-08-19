@@ -1416,6 +1416,7 @@ void Controls::ShowMessage(const std::string &text) {
 	messageOutline.SetText(text);
 
 	messageTargetAlpha = 1.0f;
+	messageTimer = std::chrono::system_clock::now();
 }
 
 bool Controls::Unstick() {

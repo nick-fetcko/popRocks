@@ -2373,7 +2373,7 @@ void CApp::OnLoop(const Delta &time) {
 			*context,
 			!darkenPulseOnBrightColors || hsv.v < 0.66 * (HDR::Enabled ? HDR::WhiteLevel * HDR::Headroom : 1.0f) ? color : darkColor,
 			((strobe && playing) ? Colour<float>::FromHsv(brightHsv) : ((!darkenPulseOnBrightColors || hsv.v < 0.66 * (HDR::Enabled ? HDR::WhiteLevel * HDR::Headroom : 1.0f)) ? this->brightColor : color)),
-			frameCount,
+			frameCount + rotationOffset,
 			platform->GetMaxHeardSample(),
 			resetGain,
 			miniPlayer
@@ -2461,7 +2461,7 @@ void CApp::OnLoop(const Delta &time) {
 				shader.program.Uniform1i("normalized"_hash, 1);
 		});
 
-		renderer->Draw(time, frameCount, color, blurOffset, *context);
+		renderer->Draw(time, frameCount + rotationOffset, color, blurOffset, *context);
 
 		if ((Settings::IsColorBlend(sourceFactor) || Settings::IsColorBlend(destFactor)) && HDR::Enabled)
 			context->GetShaderProgram().Uniform1i("expand"_hash, 1);
@@ -2512,7 +2512,7 @@ void CApp::OnLoop(const Delta &time) {
 		});
 	}
 
-	renderer->Draw(time, frameCount, color, {0, 0}, *context);
+	renderer->Draw(time, frameCount + rotationOffset, color, {0, 0}, *context);
 
 	if (!shuttingDown)
 		lightPack.OnLoop((albumArt.Loaded() && !overrideColor) ? albumArt.GetColor() : visColor);
@@ -4190,6 +4190,21 @@ bool CApp::AddToScrollOffset(int offset) {
 			controls.ShowMessage(stream.str());
 
 			Settings::settings.SetAudioOffset(audioOffset);
+		} else if (modState & SDL_KMOD_ALT) {
+			rotationOffset += offset * 5;
+			if (rotationOffset < 0)
+				rotationOffset = 355;
+			else if (rotationOffset > 359)
+				rotationOffset = 0;
+
+			std::stringstream stream;
+			stream << "Rotating visualizer " << rotationOffset << u8"\u00B0";
+
+			controls.ShowMessage(stream.str());
+
+			Settings::settings.SetRotationOffset(rotationOffset);
+
+			updateRenderer = true;
 		}
 
 		return false;

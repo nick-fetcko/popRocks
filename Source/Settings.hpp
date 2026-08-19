@@ -415,6 +415,9 @@ public:
 	const bool &GetDesktopWidgetMode() const { return desktopWidgetMode; }
 	void SetDesktopWidgetMode(bool desktopWidgetMode, bool delayed = false);
 
+	const int &GetRotationOffset() const { return rotationOffset; }
+	void SetRotationOffset(int rotationoffset, bool delayed = false);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -613,4 +616,6 @@ private:
 	bool desktopWidgetMode = false;
 
 	LogLevel logLevel = LogLevel::Debug;
+
+	int rotationOffset = 0;
 };

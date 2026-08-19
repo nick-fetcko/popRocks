@@ -535,4 +535,6 @@ private:
 	AutoFader<false> closeFader;
 
 	bool isSeeking = false;
+
+	int rotationOffset = Settings::settings.GetRotationOffset();
 };
