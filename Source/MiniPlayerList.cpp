@@ -361,7 +361,7 @@ MiniPlayerList::HoverState MiniPlayerList::OnMouseMoved(const Vector2i &mousePos
 	hoveredOffset = -1;
 
 	if (inTriggerX &&
-		mousePos.y >= bounds.y && mousePos.y <= bounds.h + font->GetEm().height / 4) {
+		mousePos.y >= bounds.y && mousePos.y <= bounds.h + font->GetEm().height / 4 && (hovered || alpha == 0.0f)) {
 		hoverTimer = std::chrono::system_clock::now();
 		hoverState = HoverState::Trigger;
 
