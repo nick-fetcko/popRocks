@@ -611,4 +611,6 @@ private:
 
 	bool autoPlay = true;
 	bool desktopWidgetMode = false;
+
+	LogLevel logLevel = LogLevel::Debug;
 };

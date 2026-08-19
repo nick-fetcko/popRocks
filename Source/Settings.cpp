@@ -983,6 +983,19 @@ Node &operator<<(Node &node, const Settings::ColorSelection &colorSelection) {
 }
 
 const Node &operator>>(const Node &node, Settings &settings) {
+	if (node.has("logLevel")) {
+		const auto logLevel = node["logLevel"]->get<std::string>();
+
+		if (logLevel == "info")
+			Logger::logLevel = LogLevel::Info;
+		else if (logLevel == "warning")
+			Logger::logLevel = LogLevel::Warning;
+		else if (logLevel == "error")
+			Logger::logLevel = LogLevel::Error;
+		else
+			Logger::logLevel = LogLevel::Debug;
+	}
+
 	if (node.has("volume"))
 		node["volume"]->get(settings.volume);
 
@@ -1275,6 +1288,15 @@ const Node &operator>>(const Node &node, Settings &settings) {
 }
 
 Node &operator<<(Node &node, const Settings &settings) {
+	node["logLevel"]->set(
+		Logger::logLevel == LogLevel::Info ?
+			"info" :
+			Logger::logLevel == LogLevel::Warning ?
+				"warning" :
+				Logger::logLevel == LogLevel::Error ?
+					"error" :
+					"debug"
+	);
 	node["volume"]->set(settings.volume);
 	node["exclusive"]->set(settings.exclusive);
 	node["colorSelection"]->set(settings.colorSelection);
