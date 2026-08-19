@@ -105,6 +105,10 @@ CApp::CApp() :
 		, this
 	);
 
+	Logger::errorHandler = [this](const std::string &title, const std::string &message) {
+		platform->ShowDialogBox(title, message);
+	};
+
 	menu = std::make_unique<Menu>(platform);
 
 	renderer = RendererFactory::Build(
