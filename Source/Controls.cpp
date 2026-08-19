@@ -401,12 +401,12 @@ void Controls::OnResize(int windowWidth, int windowHeight, Context &context, flo
 	const auto closeSize = GetIconSize() / Close::GetLowestRatio();
 	help.AddArrow(
 		{ 
-			windowWidth / 2 + radius * 1.25f,
-			windowHeight / 2 - radius * 1.25f
+			windowWidth / 2 + radius * 1.45f,
+			windowHeight / 2 - radius
 		},
 		{ 
-			windowWidth / 2 + radius + closeSize / 2,
-			windowHeight / 2 - radius - closeSize / 2, 
+			windowWidth / 2 + radius + closeSize,
+			windowHeight / 2 - radius + closeSize,
 		},
 		"close",
 		{ "Click to close" },
@@ -1046,7 +1046,9 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 						windowHeight / 2 + font->GetEm().height - (help.GetPrompt().GetBounds().height / 2) + outlineFont->GetOutlineRadius() * 1.75f,
 					},
 					context,
-					alpha
+					alpha,
+					help.GetAlpha() == 0.0f ? 0.0f : albumArt->GetRadius(miniPlayer) * (Settings::settings.GetMiniPlayerVisualizerRatio() - 2) / 3,
+					albumArt->GetRadius(miniPlayer)
 				);
 
 				checkboxList.PreLoop();

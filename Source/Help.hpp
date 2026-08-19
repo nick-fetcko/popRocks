@@ -178,6 +178,40 @@ public:
 		promptOutline.SetColor({ outlineColor, outlineColor, outlineColor});
 		promptOutline.SetText("?");
 
+		for (const auto &[key, action] : std::vector<std::pair<std::string, std::string>>{
+			{ "Hotkeys:", "" },
+			{ "R", u8" \u2014 Reset this window" },
+			{ "M", u8" \u2014 Toggles player and visualizer editor (beta)" },
+			{ "V", u8" \u2014 Toggles Vulkan interop (beta)" },
+			{ "Scroll Wheel + Shift", u8" \u2014 Adjust audio delay" },
+			{ "Scroll Wheel + Control", u8" \u2014 Adjust visualizer line width" },
+			{ "Scroll Wheel + Alt", u8" \u2014 Adjust visualizer rotation" }
+		}) {
+			Text keyText;
+			keyText.OnInit(font, context);
+			keyText.SetColor(HDR::WhiteColor);
+			keyText.SetText(key);
+
+			Text text;
+			text.OnInit(font, context);
+			text.SetColor(HDR::WhiteColor);
+			text.SetText(action);
+
+			hotkeys.emplace_back(std::make_pair(std::move(keyText), std::move(text)));
+
+			Text keyOutline;
+			keyOutline.OnInit(outlineFont, context);
+			keyOutline.SetColor({ outlineColor, outlineColor, outlineColor });
+			keyOutline.SetText(key);
+
+			Text outline;
+			outline.OnInit(outlineFont, context);
+			outline.SetColor({ outlineColor, outlineColor, outlineColor });
+			outline.SetText(action);
+
+			hotkeyOutlines.emplace_back(std::make_pair(std::move(keyOutline), std::move(outline)));
+		}
+
 		backdrop.OnInit(albumArt->GetRadius(true) * Settings::settings.GetMiniPlayerVisualizerRatio() / 2 - albumArt->GetOutline().GetWidth());
 	}
 
@@ -194,7 +228,7 @@ public:
 		return ret;
 	}
 
-	void OnLoop(const Delta &time, Vector2i pos, Context &context, float controlAlpha) {
+	void OnLoop(const Delta &time, Vector2i pos, Context &context, float controlAlpha, float maxHeight, float radius) {
 		this->pos = pos;
 
 		const auto &color = GetColor();
@@ -247,6 +281,27 @@ public:
 			prompt.OnLoop(pos.x, pos.y);
 		});
 
+		if (const auto hotkeyHeight = hotkeys.size() * font->GetEm().height; hotkeyHeight < maxHeight - font->GetEm().height / 2) {
+			context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
+			float yOffset = font->GetEm().height * 2;
+			for (std::size_t i = 0; i < hotkeys.size(); ++i) {
+				const auto width = hotkeys[i].first.GetBounds().width + hotkeys[i].second.GetBounds().width;
+
+				hotkeyOutlines[i].first.OnLoop(windowWidth / 2 - width / 2, yOffset);
+				hotkeyOutlines[i].second.OnLoop(windowWidth / 2 - width / 2 + hotkeyOutlines[i].first.GetBounds().width, yOffset);
+
+				context.Color(color.r, color.g, color.b, alpha);
+
+				hotkeys[i].first.OnLoop(windowWidth / 2 - width / 2, yOffset);
+
+				context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
+
+				hotkeys[i].second.OnLoop(windowWidth / 2 - width / 2 + hotkeyOutlines[i].first.GetBounds().width, yOffset);
+
+				yOffset += std::max(hotkeys[i].first.GetBounds().height, hotkeys[i].second.GetBounds().height);
+			}
+		}
+
 		context.Use("basic"_hash);
 		
 		for (const auto &[text, arrow] : arrows)
@@ -264,6 +319,16 @@ public:
 
 		for (auto &arrow : arrows)
 			arrow.second.OnDestroy();
+
+		for (auto &hotkey : hotkeys) {
+			hotkey.first.OnDestroy();
+			hotkey.second.OnDestroy();
+		}
+
+		for (auto &outline : hotkeyOutlines) {
+			outline.first.OnDestroy();
+			outline.second.OnDestroy();
+		}
 	}
 
 	bool OnMouseMoved(const Vector2i &mousePos) {
@@ -326,6 +391,9 @@ private:
 	Text promptOutline;
 
 	std::map<std::string, Arrow> arrows;
+
+	std::vector<std::pair<Text, Text>> hotkeys;
+	std::vector<std::pair<Text, Text>> hotkeyOutlines;
 
 	Vector2i pos = { 0, 0 };
 };
