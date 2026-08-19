@@ -1592,8 +1592,6 @@ void Linux::XdgTopLevelConfigure(void *data, struct xdg_toplevel *toplevel, int3
 		if (*state == XDG_TOPLEVEL_STATE_RESIZING) {
 			hadResize = true;
 
-			SDL_SetWindowSize(platform->GetApp()->GetSdlWindow(), width, height);
-
 			const auto min = std::min(width, height);
 
 			if (platform->GetApp()->GetAlbumArt().GetActiveOutline() == AlbumArt::Outline::Art) {
@@ -1612,9 +1610,13 @@ void Linux::XdgTopLevelConfigure(void *data, struct xdg_toplevel *toplevel, int3
 
 				const auto ratio = min * platform->GetApp()->GetScale() / radius;
 
-				Settings::settings.SetMiniPlayerVisualizerRatio(ratio);
+				if (ratio >= 3.0f && ratio <= 15.0f) {
+					SDL_SetWindowSize(platform->GetApp()->GetSdlWindow(), width, height);
 
-				platform->GetApp()->GetAlbumArt().SetRadius(radius, true);
+					Settings::settings.SetMiniPlayerVisualizerRatio(ratio);
+
+					platform->GetApp()->GetAlbumArt().SetRadius(radius, true);
+				}
 			}
 			break;
 		}
