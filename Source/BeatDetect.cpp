@@ -22,6 +22,15 @@ void BeatDetect::OnLoad(
 	});
 }
 
+void BeatDetect::SetUseOtherHalf(bool useOtherHalf) {
+	this->useOtherHalf = useOtherHalf;
+
+	if (useOtherHalf && !eventList.empty() && eventListIter != eventList.end())
+		++eventListIter;
+	else if (!useOtherHalf && !eventList.empty() && eventListIter != eventList.begin())
+		--eventListIter;
+}
+
 bool BeatDetect::OnLoop(double elapsed) {
 	if (mutex.try_lock()) {
 		if (detectBpm && eventListIter != eventList.end() && elapsed >= eventListIter->time) {
@@ -339,6 +348,8 @@ inline void BeatDetect::_OnLoad(
 				);
 
 				eventListIter = eventList.begin();
+				if (useOtherHalf && eventListIter != eventList.end())
+					++eventListIter;
 			} else if (!hopTime) {
 				// I've only encountered one song (Halestorm's "Scream") that can't be processed
 				// with a hopTime of fftTime/2, so this is hopefully just an edge case.

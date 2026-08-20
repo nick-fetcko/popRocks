@@ -57,6 +57,8 @@ public:
 
 	const uint64_t &GetHash() const { return hash; }
 
+	void SetUseOtherHalf(bool useOtherHalf);
+
 private:
 	inline void _OnLoad(
 		const std::filesystem::path &path,
@@ -75,6 +77,7 @@ private:
 	inline std::tuple<double, double, double> GetTimeBetweenBeats() const;
 
 	bool detectBpm = Settings::settings.GetDetectBpm();
+	bool useOtherHalf = Settings::settings.GetUseOtherHalf();
 
 	EventList eventList;
 	EventList::iterator eventListIter = eventList.end();

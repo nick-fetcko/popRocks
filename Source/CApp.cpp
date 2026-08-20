@@ -1727,7 +1727,7 @@ void CApp::OnInit() {
 
 	// Reserve space so returned Checkbox pointers
 	// don't get invalidated by reallocations
-	controls.GetCheckboxList().Reserve(platform->SupportsDesktopWidgetMode() ? 9 : 8);
+	controls.GetCheckboxList().Reserve(platform->SupportsDesktopWidgetMode() ? 10 : 9);
 
 	exclusiveCheckbox = controls.GetCheckboxList().AddItem(
 		"Exclusive output",
@@ -1821,14 +1821,31 @@ void CApp::OnInit() {
 		}
 	);
 
+	const auto useOtherHalfIndex = controls.GetCheckboxList().GetItemCount() + 1;
+
 	controls.GetCheckboxList().AddItem(
 		"Halve detected BPM",
 		Settings::settings.GetDetectBpm(),
 		[] {
 			return Settings::settings.GetHalveBpm();
 		},
-		[this](bool checked) {
+		[this, useOtherHalfIndex](bool checked) {
 			Settings::settings.SetHalveBpm(checked);
+			controls.GetCheckboxList().SetEnabled(useOtherHalfIndex, checked && Settings::settings.GetDetectBpm());
+		}
+	);
+
+	controls.GetCheckboxList().AddItem(
+		"Use the other half",
+		Settings::settings.GetDetectBpm() && Settings::settings.GetHalveBpm(),
+		[] {
+			return Settings::settings.GetUseOtherHalf();
+		},
+		[this](bool checked) {
+			for (auto &detector : beatDetectors)
+				detector.SetUseOtherHalf(checked);
+
+			Settings::settings.SetUseOtherHalf(checked);
 		}
 	);
 

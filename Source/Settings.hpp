@@ -173,6 +173,9 @@ public:
 	const bool &GetHalveBpm() const { return halveBpm; }
 	void SetHalveBpm(bool halveBpm, bool delayed = false);
 
+	const bool &GetUseOtherHalf() const { return useOtherHalf; }
+	void SetUseOtherHalf(bool useOtherHalf, bool delayed = false);
+
 	const float &GetWidth() const { return width; }
 	void SetWidth(float width, bool delayed = false);
 
@@ -460,6 +463,7 @@ private:
 	bool detectBpm = true;
 	bool cacheDetectionResults = true;
 	bool halveBpm = false;
+	bool useOtherHalf = false;
 
 	float width = 4.0f;
 

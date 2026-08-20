@@ -360,6 +360,13 @@ void Settings::SetHalveBpm(bool halveBpm, bool delayed) {
 	}
 }
 
+void Settings::SetUseOtherHalf(bool useOtherHalf, bool delayed) {
+	if (useOtherHalf != this->useOtherHalf) {
+		this->useOtherHalf = useOtherHalf;
+		if (!delayed) Save();
+	}
+}
+
 void Settings::SetWidth(float width, bool delayed) {
 	if (width != this->width) {
 		this->width = width;
@@ -1074,6 +1081,8 @@ const Node &operator>>(const Node &node, Settings &settings) {
 		node["cacheDetectionResults"]->get(settings.cacheDetectionResults);
 	if (node.has("halveBpm"))
 		node["halveBpm"]->get(settings.halveBpm);
+	if (node.has("useOtherHalf"))
+		node["useOtherHalf"]->get(settings.useOtherHalf);
 
 	if (node.has("width"))
 		node["width"]->get(settings.width);
@@ -1330,6 +1339,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["detectBpm"]->set(settings.detectBpm);
 	node["cacheDetectionResults"]->set(settings.cacheDetectionResults);
 	node["halveBpm"]->set(settings.halveBpm);
+	node["useOtherHalf"]->set(settings.useOtherHalf);
 	node["width"]->set(settings.width);
 	node["renderer"]->set(settings.renderer);
 	node["lineRendererStyle"]->set(settings.lineRendererStyle);
