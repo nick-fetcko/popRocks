@@ -63,7 +63,8 @@ public:
 
 	const float &GetAlpha() const { return alpha; }
 
-	const OpenGLFont::Bounds &AddItem(const std::string &text, std::optional<std::size_t> index = std::nullopt, std::string altText = "");
+	const OpenGLFont::Bounds &AddItem(const std::string &text, bool enabled = true, std::optional<std::size_t> index = std::nullopt, std::string altText = "");
+	void SetEnabled(std::size_t index, bool enabled);
 	void Clear();
 
 	bool AddToScrollOffset(int offset);
@@ -92,6 +93,8 @@ public:
 	void DeselectCurrent(std::optional<std::size_t> currentIndex);
 
 	void SetFadeSpeed(float fadeSpeed) { this->fadeSpeed = fadeSpeed; }
+
+	const std::size_t GetItemCount() const { return items.size(); }
 
 protected:
 	inline float GetAngle(const Vector2i &mousePos) const;
@@ -133,7 +136,7 @@ protected:
 	float alpha = 0.0f;
 	float targetAlpha = 0.0f;
 
-	std::vector<ScrollingText> items;
+	std::vector<std::pair<ScrollingText, bool>> items;
 	std::vector<ScrollingText> outlines;
 
 	Fetcko::Polyline scrollBar;

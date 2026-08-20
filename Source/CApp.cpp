@@ -1193,6 +1193,9 @@ void CApp::OnInit() {
 
 			Settings::settings.SetDetectBpm(beatDetect->IsDetecting());
 
+			if (halveDetectedIndex)
+				controls.GetCheckboxList().SetEnabled(*halveDetectedIndex, detectBpm);
+
 			if (beatDetect->IsDetecting() && !loadedFile.empty()) {
 				for (auto &detector : beatDetectors)
 					detector.Cancel();
@@ -1724,10 +1727,11 @@ void CApp::OnInit() {
 
 	// Reserve space so returned Checkbox pointers
 	// don't get invalidated by reallocations
-	controls.GetCheckboxList().Reserve(platform->SupportsDesktopWidgetMode() ? 8 : 7);
+	controls.GetCheckboxList().Reserve(platform->SupportsDesktopWidgetMode() ? 9 : 8);
 
 	exclusiveCheckbox = controls.GetCheckboxList().AddItem(
 		"Exclusive output",
+		true,
 		[this] {
 			return controls.GetExclusiveIndicator().IsExclusive();
 		},
@@ -1738,6 +1742,7 @@ void CApp::OnInit() {
 
 	controls.GetCheckboxList().AddItem(
 		"Display stats",
+		true,
 		[] {
 			return Settings::settings.GetDisplayStats();
 		},
@@ -1749,6 +1754,7 @@ void CApp::OnInit() {
 
 	controls.GetCheckboxList().AddItem(
 		"Rotate album art",
+		true,
 		[] {
 			return Settings::settings.GetMiniPlayerRotating();
 		},
@@ -1762,6 +1768,7 @@ void CApp::OnInit() {
 
 	controls.GetCheckboxList().AddItem(
 		"Capture keyboard media keys",
+		true,
 		[] {
 			return Settings::settings.GetCaptureKeyboardMediaKeys();
 		},
@@ -1776,12 +1783,17 @@ void CApp::OnInit() {
 		}
 	);
 
+	halveDetectedIndex = controls.GetCheckboxList().GetItemCount() + 1;
+
 	controls.GetCheckboxList().AddItem(
 		"Change colors to the beat",
+		true,
 		[] {
 			return Settings::settings.GetDetectBpm();
 		},
 		[this](bool checked) {
+			controls.GetCheckboxList().SetEnabled(*halveDetectedIndex, checked);
+
 			// Reset to primary bin
 			albumArt.ResetBin(true);
 
@@ -1810,7 +1822,19 @@ void CApp::OnInit() {
 	);
 
 	controls.GetCheckboxList().AddItem(
+		"Halve detected BPM",
+		Settings::settings.GetDetectBpm(),
+		[] {
+			return Settings::settings.GetHalveBpm();
+		},
+		[this](bool checked) {
+			Settings::settings.SetHalveBpm(checked);
+		}
+	);
+
+	controls.GetCheckboxList().AddItem(
 		"Auto-fade controls",
+		true,
 		[] {
 			return Settings::settings.GetAutoFade();
 		},
@@ -1821,6 +1845,7 @@ void CApp::OnInit() {
 
 	controls.GetCheckboxList().AddItem(
 		"Auto-play",
+		true,
 		[] {
 			return Settings::settings.GetAutoPlay();
 		},
@@ -1840,6 +1865,7 @@ void CApp::OnInit() {
 	if (platform->SupportsDesktopWidgetMode()) {
 		controls.GetCheckboxList().AddItem(
 			"Desktop widget mode",
+			true,
 			[] {
 				return Settings::settings.GetDesktopWidgetMode();
 			},
@@ -3141,7 +3167,7 @@ void CApp::PlaylistLoaded(std::filesystem::path path, std::string extension, std
 
 		if (controls.GetPlaylist().Empty()) {
 			controls.GetPlaylist().AddFile(path);
-			controls.GetPlaylist().AddItem(controls.GetTitle(), 0, controls.GetTitle());
+			controls.GetPlaylist().AddItem(controls.GetTitle(), true, 0, controls.GetTitle());
 		}
 
 		// Update the metadata we can before album

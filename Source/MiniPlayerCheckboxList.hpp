@@ -19,7 +19,7 @@ public:
 	// space for all checkboxes first
 	void Reserve(std::size_t size) { checkboxes.reserve(size); }
 
-	Checkbox *AddItem(const std::string &text, std::function<bool()> &&get, std::function<void(bool)> &&set, std::optional<std::size_t> index = std::nullopt, std::string altText = "");
+	Checkbox *AddItem(const std::string &text, bool enabled, std::function<bool()> &&get, std::function<void(bool)> &&set, std::optional<std::size_t> index = std::nullopt, std::string altText = "");
 
 	void OnColorChanged(const Colour<float> &color, bool silent = false) override;
 	bool OnMouseClicked(const Vector2i &mousePos, Rectanglei bounds) override;

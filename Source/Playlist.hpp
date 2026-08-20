@@ -92,7 +92,7 @@ public:
 	const std::unique_ptr<Cue> &GetCue() const;
 	const std::filesystem::path &GetPath() const;
 
-	const std::vector<ScrollingText> &GetTitles() const { return items; }
+	const std::vector<std::pair<ScrollingText, bool>> &GetTitles() const { return items; }
 
 	const bool IsHovered() const { return hovered; }
 
@@ -183,7 +183,7 @@ private:
 				<< " - " 
 				<< title;
 
-			const auto &bounds = AddItem(stream.str(), i, title.title);
+			const auto &bounds = AddItem(stream.str(), true, i, title.title);
 
 			size.y += bounds.height;
 			if (bounds.width > size.x)
@@ -222,11 +222,11 @@ private:
 			const auto currentIndex = std::distance(tracks.begin(), current);
 			const auto &title = items.at(currentIndex);
 
-			currentTitle.SetText(title.GetAltText());
+			currentTitle.SetText(title.first.GetAltText());
 
 			const auto &bounds = currentTitle.GetBounds();
 
-			outline.SetText(title.GetAltText());
+			outline.SetText(title.first.GetAltText());
 			context.Use("scrolling"_hash);
 			context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, std::max(hidden ? 0.0f : 0.5f, alpha));
 			outline.OnLoop(pos.x - bounds.width / 2, pos.y - bounds.height / 2, time);
@@ -330,19 +330,19 @@ private:
 		std::size_t maxIndex = static_cast<std::size_t>(
 			items.empty() ?
 				0 :
-				(maxHeight - pos.y) / items.begin()->GetBounds().height
+				(maxHeight - pos.y) / items.begin()->first.GetBounds().height
 		);
 
-		pos.y -= items.begin()->GetBounds().height * distance;
+		pos.y -= items.begin()->first.GetBounds().height * distance;
 
 		auto iter = tracks.begin();
 		for (const auto &[i, title] : Fetcko::Utils::Enumerate(items)) {
-			if (pos.y + title.GetBounds().height > maxHeight)
+			if (pos.y + title.first.GetBounds().height > maxHeight)
 				return;
 
 			if (iter == current) {
 				if (currentSongVisible) {
-					outline.SetText(title.GetText());
+					outline.SetText(title.first.GetText());
 					context.Color(0.0f, 0.0f, 0.0f, std::max(0.5f, alpha));
 					outline.OnLoop(pos.x, pos.y, time);
 					context.Color(
@@ -373,7 +373,7 @@ private:
 				);
 			}
 
-			title.OnLoop(pos.x, pos.y, time);
+			title.first.OnLoop(pos.x, pos.y, time);
 
 			// Reduce the height as we near the end of the playlist
 			if (i == items.size() - 2 && pos.y < maxHeight - this->pos.y) {
@@ -406,7 +406,7 @@ private:
 				vbo->Unbind();
 			}
 
-			pos.y += title.GetBounds().height;
+			pos.y += title.first.GetBounds().height;
 
 			++iter;
 		}

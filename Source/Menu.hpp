@@ -1007,7 +1007,7 @@ public:
 
 				for (const auto &[i, title] : Utils::Enumerate(titles)) {
 					bool selected = (i == controls.GetPlaylist().GetCurrentIndex());
-					if (ImGui::MenuItem(title.GetText().c_str(), nullptr, &selected)) {
+					if (ImGui::MenuItem(title.first.GetText().c_str(), nullptr, &selected)) {
 						if (onPlaylistItemChanged)
 							onPlaylistItemChanged(i);
 					}

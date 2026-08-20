@@ -24,14 +24,14 @@ bool MiniPlayerList::OnResize(int windowWidth, int windowHeight, float scale, bo
 	this->windowHeight = windowHeight;
 
 	for (auto &item : items)
-		item.OnResize(windowWidth, windowHeight);
+		item.first.OnResize(windowWidth, windowHeight);
 
 	for (auto &outline : outlines)
 		outline.OnResize(windowWidth, windowHeight);
 
 	if ((this->scale != scale || this->miniPlayer != miniPlayer)) {
 		for (auto &title : items)
-			title.OnInit(font, context);
+			title.first.OnInit(font, context);
 
 		for (auto &outline : outlines)
 			outline.OnInit(outlineFont, context);
@@ -49,7 +49,7 @@ bool MiniPlayerList::OnResize(int windowWidth, int windowHeight, float scale, bo
 
 void MiniPlayerList::OnDestroy() {
 	for (auto &item : items)
-		item.OnDestroy();
+		item.first.OnDestroy();
 	for (auto &outline : outlines)
 		outline.OnDestroy();
 
@@ -65,7 +65,7 @@ void MiniPlayerList::SetMaxWidth(float maxWidth) {
 	this->maxWidth = maxWidth;
 
 	for (auto &text : items)
-		text.SetMaxWidth(miniPlayer ? maxWidth : windowWidth);
+		text.first.SetMaxWidth(miniPlayer ? maxWidth : windowWidth);
 
 	for (auto &outline : outlines)
 		outline.SetMaxWidth(miniPlayer ? maxWidth : windowWidth);
@@ -75,7 +75,7 @@ void MiniPlayerList::SetAlpha(float alpha) {
 	this->alpha = alpha;
 }
 
-const OpenGLFont::Bounds &MiniPlayerList::AddItem(const std::string &text, std::optional<std::size_t> index, std::string altText) {
+const OpenGLFont::Bounds &MiniPlayerList::AddItem(const std::string &text, bool enabled, std::optional<std::size_t> index, std::string altText) {
 	const auto &black = albumArt->GetBlackColor();
 
 	ScrollingText item(vulkan, true);
@@ -102,12 +102,17 @@ const OpenGLFont::Bounds &MiniPlayerList::AddItem(const std::string &text, std::
 		reverseIndices.emplace(std::make_pair(items.size(), items.size()));
 	}
 
-	return items.emplace_back(std::move(item)).GetBounds();
+	return items.emplace_back(std::make_pair(std::move(item), enabled)).first.GetBounds();
+}
+
+void MiniPlayerList::SetEnabled(std::size_t index, bool enabled) {
+	if (index < items.size())
+		items[index].second = enabled;
 }
 
 void MiniPlayerList::Clear() {
 	for (auto &title : items)
-		title.OnDestroy();
+		title.first.OnDestroy();
 
 	items.clear();
 
@@ -208,7 +213,7 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 
 void MiniPlayerList::DeselectCurrent(std::optional<std::size_t> currentIndex) {
 	if (currentIndex) {
-		items[reverseIndices[*currentIndex]].SetFont(font);
+		items[reverseIndices[*currentIndex]].first.SetFont(font);
 		outlines[reverseIndices[*currentIndex]].SetFont(outlineFont);
 	}
 }
@@ -242,9 +247,9 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 		else if (!isCurrent && outlines[index].GetFont() == boldOutlineFont)
 			outlines[index].SetFont(outlineFont);
 
-		context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
+		context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, items[index].second ? alpha : alpha / 2);
 
-		width = items[index].GetBounds().width;
+		width = items[index].first.GetBounds().width;
 		
 		if (const auto maxWidth = this->maxWidth; maxWidth < width) {
 			width = maxWidth;
@@ -258,24 +263,24 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 		);
 
 		if (isCurrent) {
-			if (items[index].GetFont() != boldFont)
-				items[index].SetFont(boldFont);
+			if (items[index].first.GetFont() != boldFont)
+				items[index].first.SetFont(boldFont);
 		} else {
-			if (items[index].GetFont() == boldFont)
-				items[index].SetFont(font);
+			if (items[index].first.GetFont() == boldFont)
+				items[index].first.SetFont(font);
 		}
 
-		if (hovered && i == hoveredOffset) {
+		if (items[index].second && hovered && i == hoveredOffset) {
 			if (itemClickTimer)
 				context->Color(darkColor.r, darkColor.g, darkColor.b, alpha);
 			else
 				context->Color(hoveredColor.r, hoveredColor.g, hoveredColor.b, alpha);
 		} else
-			context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
+			context->Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, items[index].second ? alpha : alpha / 2);
 
-		items[index].OnLoop(
+		items[index].first.OnLoop(
 			pos.x - ((outlines[index].GetBounds().width - GetItemWidth()) / 2.0f) + outlineFont->GetOutlineRadius() + GetItemWidth() / 2.0f,
-			yOffset - std::floor(items[index].GetBounds().overhang / 3.0f),
+			yOffset - std::floor(items[index].first.GetBounds().overhang / 3.0f),
 			time
 		);
 
@@ -287,7 +292,7 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 			pos.x + GetItemWidth() / 2.0f - (scrolling ? ScrollingText::BleedEdge / 4 : 0),
 			yOffset,
 			-((width - GetItemWidth()) / 2.0f),
-			-std::floor(items[index].GetBounds().overhang / 3.0f),
+			-std::floor(items[index].first.GetBounds().overhang / 3.0f),
 			itemHovered,
 			itemHovered && itemClickTimer.has_value(),
 			alpha
@@ -296,7 +301,7 @@ void MiniPlayerList::OnLoop(const Delta &time, Vector2i pos, std::optional<std::
 			context->LoadIdentity();
 		}
 
-		yOffset += items[index].GetBounds().height + GetItemLeading();
+		yOffset += items[index].first.GetBounds().height + GetItemLeading();
 	}
 
 	if (miniPlayer && alpha > 0.0f && items.size() > numberOfVisibleItems) {
@@ -372,13 +377,13 @@ MiniPlayerList::HoverState MiniPlayerList::OnMouseMoved(const Vector2i &mousePos
 		for (long i = 0; i < numberOfVisibleItems; ++i) {
 			const auto &title = items[i + scrollOffset];
 
-			if (mousePos.x >= pos.x - (title.GetBounds().width + GetItemWidth() * 2.25f) / 2 && mousePos.x <= pos.x + (title.GetBounds().width + GetItemWidth()) / 2 &&
-				mousePos.y >= yOffset - title.GetBounds().height / 2 && mousePos.y <= yOffset + title.GetBounds().height / 2 + title.GetBounds().overhang) {
+			if (mousePos.x >= pos.x - (title.first.GetBounds().width + GetItemWidth() * 2.25f) / 2 && mousePos.x <= pos.x + (title.first.GetBounds().width + GetItemWidth()) / 2 &&
+				mousePos.y >= yOffset - title.first.GetBounds().height / 2 && mousePos.y <= yOffset + title.first.GetBounds().height / 2 + title.first.GetBounds().overhang) {
 				hoveredOffset = i;
 				break;
 			}
 
-			yOffset += title.GetBounds().height + GetItemLeading();
+			yOffset += title.first.GetBounds().height + GetItemLeading();
 		}
 
 		hoverState = HoverState::Hovered;
@@ -517,7 +522,7 @@ void MiniPlayerList::OnMouseUp(const Vector2i &mousePos, bool updateCache) {
 
 	if (updateCache) {
 		for (auto &item : items)
-			item.SetText(item.GetText(), true);
+			item.first.SetText(item.first.GetText(), true);
 
 		for (auto &outline : outlines)
 			outline.SetText(outline.GetText(), true);

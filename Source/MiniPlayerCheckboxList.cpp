@@ -35,7 +35,7 @@ void MiniPlayerCheckboxList::OnDestroy() {
 	outline.OnDestroy();
 }
 
-Checkbox *MiniPlayerCheckboxList::AddItem(const std::string &text, std::function<bool()> &&get, std::function<void(bool)> &&set, std::optional<std::size_t> index, std::string altText) {
+Checkbox *MiniPlayerCheckboxList::AddItem(const std::string &text, bool enabled, std::function<bool()> &&get, std::function<void(bool)> &&set, std::optional<std::size_t> index, std::string altText) {
 	Checkbox checkbox(albumArt);
 
 	checkbox.OnInit(font, outlineFont, controls->GetIconSize(), *context);
@@ -51,7 +51,7 @@ Checkbox *MiniPlayerCheckboxList::AddItem(const std::string &text, std::function
 		}
 	).checkbox;
 
-	MiniPlayerList::AddItem(text, index, altText);
+	MiniPlayerList::AddItem(text, enabled, index, altText);
 
 	return ret;
 }
@@ -69,6 +69,9 @@ bool MiniPlayerCheckboxList::OnMouseClicked(const Vector2i &mousePos, Rectanglei
 	if (miniPlayer && alpha > 0.0f) {
 		if (hoveredOffset > -1 && (hoveredOffset + scrollOffset) < checkboxes.size()) {
 			auto &setting = checkboxes.at(hoveredOffset + scrollOffset);
+
+			if (!items.at(hoveredOffset + scrollOffset).second)
+				return false;
 
 			const auto newSetting = !setting.checkbox.GetChecked();
 
@@ -120,16 +123,20 @@ float MiniPlayerCheckboxList::GetItemLeading() const {
 bool MiniPlayerCheckboxList::DrawItem(const Delta &time, std::size_t index, int x, int y, int left, int top, bool hovered, bool clicked, const float &alpha) {
 	auto &setting = checkboxes.at(index);
 
-	setting.checkbox.SetHovered(hovered);
-	setting.checkbox.SetClicked(clicked);
+	const bool enabled = items[index].second;
 
-	context->Blend(true, [this, &setting, &time, x, y, left, top, &alpha] {
+	setting.checkbox.SetHovered(enabled && hovered);
+	setting.checkbox.SetClicked(enabled && clicked);
+
+	context->Blend(true, [this, &setting, &time, enabled, x, y, left, top, &alpha] {
+		const auto enabledAlpha = enabled ? alpha : alpha / 2;
+
 		setting.checkbox.OnLoop(
 			x + left - setting.checkbox.GetSize().x * 1.25f,
 			y + top + setting.checkbox.GetSize().y / 4,
 			time,
 			*context,
-			&alpha
+			&enabledAlpha
 		);
 	});
 

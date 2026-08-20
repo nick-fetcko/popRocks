@@ -472,6 +472,9 @@ void CApp::AddCommands() {
 
 				Settings::settings.SetDetectBpm(beatDetect->IsDetecting());
 
+				if (halveDetectedIndex)
+					controls.GetCheckboxList().SetEnabled(*halveDetectedIndex, beatDetect->IsDetecting());
+
 				if (beatDetect->IsDetecting() && !loadedFile.empty()) {
 					for (auto &detector : beatDetectors)
 						detector.Cancel();

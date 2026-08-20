@@ -537,4 +537,6 @@ private:
 	bool isSeeking = false;
 
 	int rotationOffset = Settings::settings.GetRotationOffset();
+
+	std::optional<std::size_t> halveDetectedIndex = std::nullopt;
 };

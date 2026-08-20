@@ -373,9 +373,9 @@ bool Playlist::OnResize(int windowWidth, int windowHeight, float scale, bool min
 		size = { 0, 0 };
 
 		for (auto &title : items) {
-			size.y += title.GetBounds().height;
-			if (title.GetBounds().width > size.x)
-				size.x = title.GetBounds().width;
+			size.y += title.first.GetBounds().height;
+			if (title.first.GetBounds().width > size.x)
+				size.x = title.first.GetBounds().width;
 		}
 
 		outline.OnInit(outlineFont, context);
@@ -575,12 +575,12 @@ std::optional<Playlist::Track> Playlist::OnMouseClicked(const Vector2i &mousePos
 				std::distance(cue->GetCurrentTrack(), cue->GetTracks().end()) :
 				std::distance(currentFile, files.end());
 
-		auto &bounds = items.begin()->GetBounds();
+		auto &bounds = items.begin()->first.GetBounds();
 
 		// If our offset is not 0, we need to account for the previous track
 		if (auto index = (mousePos.y - pos.y + bounds.y / 2) / bounds.height - (offset != 0 ? 1 : 0);
 			index < distance) {
-			if (mousePos.x >= pos.x && mousePos.x <= pos.x + items[offset + index].GetSize().x) {
+			if (mousePos.x >= pos.x && mousePos.x <= pos.x + items[offset + index].first.GetSize().x) {
 				if (!files.empty()) {
 					currentFile += index;
 
@@ -608,9 +608,9 @@ void Playlist::OnMouseUp(const Vector2i &mousePos, bool updateCache) {
 		size = { 0, 0 };
 
 		for (auto &title : items) {
-			size.y += title.GetBounds().height;
-			if (title.GetBounds().width > size.x)
-				size.x = title.GetBounds().width;
+			size.y += title.first.GetBounds().height;
+			if (title.first.GetBounds().width > size.x)
+				size.x = title.first.GetBounds().width;
 		}
 
 		UpdateSize();
