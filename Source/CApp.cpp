@@ -3769,7 +3769,7 @@ bool CApp::OnMouseRightClicked(const Vector2i &mousePos) {
 	// On Linux (Wayland, specifically) right-clicking
 	// brings up the window menu (xdg_toplevel_show_window_menu)
 #ifdef WIN32
-	if (miniPlayer) {
+	if (miniPlayer && !(SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON_MASK(SDL_BUTTON_LEFT))) {
 		const bool hovered = !controls.GetCheckboxList().IsHovered();
 
 		controls.GetCheckboxList().SetHovered(hovered, false, false);
