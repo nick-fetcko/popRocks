@@ -3371,6 +3371,9 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 
 				platform->ShowDialogBox("Could not load files! ", "\"" + loadFilePath.u8string() + "\" could not be loaded.");
 
+				playlistLoading = false;
+				playlistLoaded = true;
+
 				return;
 			}
 
