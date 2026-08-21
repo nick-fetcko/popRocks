@@ -166,7 +166,7 @@ void Controls::OnPresetsChanged(const std::vector<Preset> &presets) {
 	for (const auto &[i, preset] : Utils::Enumerate(presets)) {
 		if (!preset.GetPulseBackground() &&
 			preset.GetAvailableInMiniPlayer())
-			presetList.AddItem(preset.GetName(), i);
+			presetList.AddItem(preset.GetName(), true, i);
 	}
 }
 
