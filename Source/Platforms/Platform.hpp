@@ -104,6 +104,7 @@ public:
 
 	// System management
 	virtual float GetCpuUsage() = 0;
+	virtual int64_t GetRamUsage() = 0;
 
 	// =====================================================
 	// ===================== Virtuals ======================

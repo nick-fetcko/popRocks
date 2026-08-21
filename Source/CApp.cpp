@@ -2370,13 +2370,17 @@ void CApp::OnLoop(const Delta &time) {
 
 			if (auto now = std::chrono::system_clock::now(); now - posTimer >= 1s) {
 				const float cpuUsage = platform->GetCpuUsage();
+				const int64_t ramUsage = platform->GetRamUsage();
 
 				std::stringstream stream;
 
-				stream << " / " /* padding */ << std::to_string(pps) << " SPS";
+				stream << " / " << std::to_string(pps) << " SPS";
 
 				if (cpuUsage > 0.0f)
-					stream << " / " << std::setprecision(1) << std::fixed << std::setfill('0') << cpuUsage << "% CPU";
+					stream << " / " << std::setprecision(1) << std::fixed << std::setfill('0') << cpuUsage << "%";
+
+				if (ramUsage > 0)
+					stream << " / " << Utils::GetFriendlyBytes(ramUsage, false);
 
 				controls.SetStats(stream.str());
 				pps = 0;

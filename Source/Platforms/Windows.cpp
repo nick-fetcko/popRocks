@@ -4,6 +4,7 @@
 
 #include <winuser.h>
 #include <shellapi.h>
+#include <psapi.h>
 
 #define SDL_MAIN_HANDLED
 #include <SDL3/SDL_main.h>
@@ -17,6 +18,7 @@
 #pragma comment(lib, "dwmapi.lib")
 #pragma comment(lib, "Comctl32.lib")
 #pragma comment(lib, "pdh.lib")
+#pragma comment(lib, "Psapi.lib")
 
 #if defined _M_IX86
 #pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='x86' publicKeyToken='6595b64144ccf1df' language='*'\"")
@@ -1045,6 +1047,16 @@ float Windows::GetCpuUsage() {
 	}
 
 	return 0.0f;
+}
+
+int64_t Windows::GetRamUsage() {
+	PROCESS_MEMORY_COUNTERS_EX2 pmc = { 0 };
+	pmc.cb = sizeof(PROCESS_MEMORY_COUNTERS_EX2);
+
+	if (GetProcessMemoryInfo(GetCurrentProcess(), reinterpret_cast<PROCESS_MEMORY_COUNTERS *>(&pmc), sizeof(pmc)))
+		return pmc.PrivateWorkingSetSize;
+
+	return 0;
 }
 
 // =====================================================

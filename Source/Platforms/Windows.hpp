@@ -93,6 +93,7 @@ public:
 
 	// System management
 	float GetCpuUsage() override;
+	int64_t GetRamUsage() override;
 
 	// =====================================================
 	// ===================== Virtuals ======================
