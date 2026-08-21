@@ -102,6 +102,9 @@ public:
 	virtual void ShowDialogBox(const std::string &title, const std::string &message) = 0;
 	virtual bool HandleExistingWindow(int argc, char *argv[]) = 0;
 
+	// System management
+	virtual float GetCpuUsage() = 0;
+
 	// =====================================================
 	// ===================== Virtuals ======================
 	// =====================================================

@@ -16,6 +16,7 @@
 
 #pragma comment(lib, "dwmapi.lib")
 #pragma comment(lib, "Comctl32.lib")
+#pragma comment(lib, "pdh.lib")
 
 #if defined _M_IX86
 #pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='x86' publicKeyToken='6595b64144ccf1df' language='*'\"")
@@ -140,6 +141,22 @@ void Windows::OnInit(Interop::InitArgs args, Context &context) {
 			IID_ITaskbarList3, reinterpret_cast<void**>(&taskbar));
 	}
 
+	
+	// https://stackoverflow.com/questions/19818339/using-pdh-functions-to-get-multiple-performance-counters
+	if (PdhOpenQuery(NULL, 0, &query) == ERROR_SUCCESS) {
+		queryingCpuUsage = (
+			PdhAddCounter(
+				query,
+				L"\\Process(popRocks)\\% Processor Time",
+				0,
+				&counter
+			) == ERROR_SUCCESS
+		);
+
+		if (queryingCpuUsage)
+			queryingCpuUsage = (PdhCollectQueryData(query) == ERROR_SUCCESS);
+	}
+	
 	dxgi.OnInit(args);
 
 	HookKeyboard();
@@ -149,6 +166,11 @@ void Windows::OnInit(Interop::InitArgs args, Context &context) {
 }
 
 void Windows::OnDestroy() {
+	if (queryingCpuUsage) {
+		PdhRemoveCounter(&counter);
+		PdhCloseQuery(&query);
+	}
+
 	if (taskbarList) {
 		taskbarList->Release();
 		taskbarList = nullptr;
@@ -883,6 +905,10 @@ bool Windows::SetTransparent(bool transparent) {
 	return true;
 }
 
+// -----------------------------------------------------
+// ---------------- Window Management ------------------
+// -----------------------------------------------------
+
 bool Windows::AllowsWindowMovement() const {
 	return true;
 }
@@ -1002,6 +1028,23 @@ bool Windows::HandleExistingWindow(int argc, char *argv[]) {
 #endif
 
 	return false;
+}
+
+// -----------------------------------------------------
+// ---------------- System Management ------------------
+// -----------------------------------------------------
+float Windows::GetCpuUsage() {
+	if (queryingCpuUsage) {
+		PDH_FMT_COUNTERVALUE value;
+		DWORD type;
+
+		PdhCollectQueryData(query);
+		PdhGetFormattedCounterValue(counter, PDH_FMT_DOUBLE | PDH_FMT_NOSCALE | PDH_FMT_NOCAP100, &type, &value);
+
+		return value.doubleValue / std::thread::hardware_concurrency();
+	}
+
+	return 0.0f;
 }
 
 // =====================================================

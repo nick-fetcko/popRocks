@@ -11,6 +11,8 @@
 #include <shlobj.h>
 #include <Mmdeviceapi.h>
 #include <dwmapi.h>
+#include <pdh.h>
+#include <pdhmsg.h>
 
 #include <basswasapi.h>
 
@@ -89,6 +91,9 @@ public:
 	void ShowDialogBox(const std::string &title, const std::string &message) override;
 	bool HandleExistingWindow(int argc, char *argv[]) override;
 
+	// System management
+	float GetCpuUsage() override;
+
 	// =====================================================
 	// ===================== Virtuals ======================
 	// =====================================================
@@ -166,6 +171,11 @@ private:
 
 	ITaskbarList3 *taskbarList = nullptr;
 	THUMBBUTTON buttons[4];
+
+	HQUERY query = NULL;
+	HCOUNTER counter;
+
+	bool queryingCpuUsage = false;
 
 #ifndef _DEBUG
 	HKEY registryKey = nullptr;

@@ -2369,7 +2369,16 @@ void CApp::OnLoop(const Delta &time) {
 				++pps;
 
 			if (auto now = std::chrono::system_clock::now(); now - posTimer >= 1s) {
-				controls.SetStats("  " /* padding */ + std::to_string(pps) + " PPS"); // POSITIONS per second
+				const float cpuUsage = platform->GetCpuUsage();
+
+				std::stringstream stream;
+
+				stream << " / " /* padding */ << std::to_string(pps) << " SPS";
+
+				if (cpuUsage > 0.0f)
+					stream << " / " << std::setprecision(1) << std::fixed << std::setfill('0') << cpuUsage << "% CPU";
+
+				controls.SetStats(stream.str());
 				pps = 0;
 				posTimer = now;
 			}

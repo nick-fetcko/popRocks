@@ -87,6 +87,9 @@ public:
 	bool AllowsWindowMovement() const override;
 	std::optional<Vector2i> SetWindowPos(int x, int y, int width, int height, int *windowWidth = nullptr, int *windowHeight = nullptr, bool alreadyRespawned = false) override;
 
+	// System management
+	float GetCpuUsage() override;
+	
 	// =====================================================
 	// ===================== Virtuals ======================
 	// =====================================================
