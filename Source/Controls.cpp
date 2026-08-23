@@ -916,24 +916,28 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 				if (displayStats) {
 					statsWidth += stats.GetBounds().width;
 					context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
-					statsOutline.OnLoop(
-						windowWidth / 2 - statsWidth / 2 + fpsCounter.GetText().GetBounds().width,
-						windowHeight / 2 + font->GetEm().height * 1.98f
-					);
-					context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
-					stats.OnLoop(
-						windowWidth / 2 - statsWidth / 2 + fpsCounter.GetText().GetBounds().width,
-						windowHeight / 2 + font->GetEm().height * 1.98f
-					);
+					context.Blend(true, [this, &context, &statsWidth, &alpha] {
+						statsOutline.OnLoop(
+							windowWidth / 2 - statsWidth / 2 + fpsCounter.GetText().GetBounds().width,
+							windowHeight / 2 + font->GetEm().height * 1.98f
+						);
+						context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
+						stats.OnLoop(
+							windowWidth / 2 - statsWidth / 2 + fpsCounter.GetText().GetBounds().width,
+							windowHeight / 2 + font->GetEm().height * 1.98f
+						);
+					});
 				}
 			}
 
 			if (!miniPlayer || displayStats) {
-				fpsCounter.Draw(
-					miniPlayer ? windowWidth / 2 - statsWidth / 2 : 0,
-					miniPlayer ? windowHeight / 2 + font->GetEm().height * 1.98f : 0,
-					alpha
-				);
+				context.Blend(miniPlayer, [this, &statsWidth, &alpha] {
+					fpsCounter.Draw(
+						miniPlayer ? windowWidth / 2 - statsWidth / 2 : 0,
+						miniPlayer ? windowHeight / 2 + font->GetEm().height * 1.98f : 0,
+						alpha
+					);
+				});
 			}
 
 			if (miniPlayer) {
