@@ -77,10 +77,14 @@ protected:
 				if (auto split = Utils::SplitOnce(std::string(commentString, commentString + commentLength), '=');
 					split.size() > 1) {
 					std::transform(split[0].begin(), split[0].end(), split[0].begin(), tolower);
-					if (split[0] == "metadata_block_picture")
+					if (split[0] == "metadata_block_picture") {
 						ret["art"] = split[1];
-					else
-						ret[split[0]] = split[1];
+					} else {
+						if (auto iter = ret.find(split[0]); iter != ret.end())
+							iter->second += " / " + split[1];
+						else
+							ret[split[0]] = split[1];
+					}
 				}
 
 				delete[] commentString;
