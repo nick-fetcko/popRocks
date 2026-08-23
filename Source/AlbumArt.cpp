@@ -469,7 +469,7 @@ std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder, std
 			auto front = filename.find("front");
 			auto folder = filename.find("folder");
 
-			if (!fileName || (fileName && fileName->parent_path() == entry.path().parent_path())) {
+			if (!fileName || (fileName && fileName->parent_path().u8string().find(entry.path().parent_path().u8string()) != std::string::npos)) {
 				if (cover != std::string::npos ||
 					front != std::string::npos ||
 					folder == 0) {
