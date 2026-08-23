@@ -421,6 +421,9 @@ public:
 	const int &GetRotationOffset() const { return rotationOffset; }
 	void SetRotationOffset(int rotationoffset, bool delayed = false);
 
+	const bool &GetDiscordIntegration() const { return discordIntegration; }
+	void SetDiscordIntegration(bool discordIntegration, bool delayed = false);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -622,4 +625,6 @@ private:
 	LogLevel logLevel = LogLevel::Debug;
 
 	int rotationOffset = 0;
+
+	bool discordIntegration = false;
 };

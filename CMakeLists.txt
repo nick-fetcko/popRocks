@@ -170,6 +170,8 @@ set(_poprocks_cpp_sources
 	)
 
 if (WIN32)
+	list(APPEND _poprocks_cpp_headers Source/Integrations/Discord.hpp)
+	list(APPEND _poprocks_cpp_sources Source/Integrations/Discord.cpp)
 	list(APPEND _poprocks_cpp_headers Source/Platforms/Windows.hpp)
 	list(APPEND _poprocks_cpp_sources Source/Platforms/Windows.cpp)
 else()
@@ -403,6 +405,17 @@ else()
 		)
 endif()
 
+if (WIN32)
+	add_library(discord SHARED IMPORTED)
+	set_target_properties(discord PROPERTIES
+		INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/discord/include"
+		IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/discord/lib/discord_partner_sdk.dll"
+		IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/discord/lib/discord_partner_sdk.dll"
+		IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/discord/lib/discord_partner_sdk.lib"
+		IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/discord/lib/discord_partner_sdk.lib"
+		)
+endif()
+
 target_include_directories(popRocks PRIVATE
 		"${CMAKE_CURRENT_SOURCE_DIR}/third_party/bass/include"
 		"${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassflac/include"
@@ -454,7 +467,8 @@ else()
 endif()
 
 if (WIN32)
-	target_link_libraries(popRocks PRIVATE FFTW3::fftw3f basswasapi)
+	target_link_libraries(popRocks PRIVATE FFTW3::fftw3f basswasapi discord)
+	target_include_directories(popRocks PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/discord/include")
 
 	# For some reason multicore compilation
 	# is still not the default for MSVC
@@ -486,6 +500,7 @@ add_custom_command(TARGET popRocks POST_BUILD
 if (WIN32)
 	add_custom_command(TARGET popRocks POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:basswasapi> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CONFIGURATION_TYPES}
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:discord> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CONFIGURATION_TYPES}
 		)
 else()
 	add_custom_command(TARGET popRocks POST_BUILD

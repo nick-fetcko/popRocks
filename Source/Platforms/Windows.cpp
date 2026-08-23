@@ -165,9 +165,17 @@ void Windows::OnInit(Interop::InitArgs args, Context &context) {
 
 	if (app->GetVulkan())
 		Desktop::OnInit(args, context);
+
+	SetDiscordIntegration(Settings::settings.GetDiscordIntegration(), 0.0);
 }
 
 void Windows::OnDestroy() {
+	if (discord) {
+		discord->Disable();
+		discord->OnDestroy();
+		discord.reset();
+	}
+
 	if (queryingCpuUsage) {
 		PdhRemoveCounter(&counter);
 		PdhCloseQuery(&query);
@@ -910,7 +918,6 @@ bool Windows::SetTransparent(bool transparent) {
 // -----------------------------------------------------
 // ---------------- Window Management ------------------
 // -----------------------------------------------------
-
 bool Windows::AllowsWindowMovement() const {
 	return true;
 }
@@ -1410,6 +1417,23 @@ void Windows::SetStatus(Status status, int progress) {
 			taskbar->SetProgressValue(hwnd, progress, 100);
 			lastProgress = progress;
 		}
+	}
+}
+
+void Windows::SetDiscordIntegration(bool enabled, double seconds) {
+	if (enabled && !discord) {
+		discord = std::make_unique<Discord>(app);
+		discord->SetPosition(seconds * 1000000);
+		discord->Enable();
+
+		if (lastStatus == Status::Playing)
+			discord->OnPlay();
+		else
+			discord->OnPause();
+	} else if (!enabled && discord) {
+		discord->Disable();
+		discord->OnDestroy();
+		discord.reset();
 	}
 }
 

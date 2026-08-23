@@ -1727,7 +1727,34 @@ void CApp::OnInit() {
 
 	// Reserve space so returned Checkbox pointers
 	// don't get invalidated by reallocations
-	controls.GetCheckboxList().Reserve(platform->SupportsDesktopWidgetMode() ? 10 : 9);
+	std::size_t checkboxes = 9;
+	if (platform->SupportsDesktopWidgetMode())
+		++checkboxes;
+
+#ifdef WIN32
+	++checkboxes;
+#endif
+
+	controls.GetCheckboxList().Reserve(checkboxes);
+
+	controls.GetCheckboxList().AddItem(
+		"Auto-play",
+		true,
+		[] {
+			return Settings::settings.GetAutoPlay();
+		},
+		[this](bool checked) {
+			Settings::settings.SetAutoPlay(checked);
+
+			if (!checked && nextStreamHandle) {
+				BASS_StreamFree(nextStreamHandle);
+				BASS_StreamFree(nextVisualStreamHandle);
+
+				nextStreamHandle = 0;
+				nextVisualStreamHandle = 0;
+			}
+		}
+	);
 
 	exclusiveCheckbox = controls.GetCheckboxList().AddItem(
 		"Exclusive output",
@@ -1737,18 +1764,6 @@ void CApp::OnInit() {
 		},
 		[this](bool checked) {
 			ToggleExclusive();
-		}
-	);
-
-	controls.GetCheckboxList().AddItem(
-		"Display stats",
-		true,
-		[] {
-			return Settings::settings.GetDisplayStats();
-		},
-		[this](bool checked) {
-			controls.SetDisplayStats(checked);
-			Settings::settings.SetDisplayStats(checked);
 		}
 	);
 
@@ -1763,23 +1778,6 @@ void CApp::OnInit() {
 
 			rotating = checked;
 			if (!rotating) frameCount = 0;
-		}
-	);
-
-	controls.GetCheckboxList().AddItem(
-		"Capture keyboard media keys",
-		true,
-		[] {
-			return Settings::settings.GetCaptureKeyboardMediaKeys();
-		},
-		[this](bool checked) {
-			Settings::settings.SetCaptureKeyboardMediaKeys(checked);
-
-			platform->HookKeyboard();
-
-			OnAlbumArtLoaded(
-				wasLastAlbumArtLoadEmbedded
-			);
 		}
 	);
 
@@ -1850,34 +1848,48 @@ void CApp::OnInit() {
 	);
 
 	controls.GetCheckboxList().AddItem(
-		"Auto-fade controls",
+		"Capture keyboard media keys",
 		true,
 		[] {
-			return Settings::settings.GetAutoFade();
-		},
-		[](bool checked) {
-			Settings::settings.SetAutoFade(checked);
-		}
-	);
-
-	controls.GetCheckboxList().AddItem(
-		"Auto-play",
-		true,
-		[] {
-			return Settings::settings.GetAutoPlay();
+			return Settings::settings.GetCaptureKeyboardMediaKeys();
 		},
 		[this](bool checked) {
-			Settings::settings.SetAutoPlay(checked);
+			Settings::settings.SetCaptureKeyboardMediaKeys(checked);
 
-			if (!checked && nextStreamHandle) {
-				BASS_StreamFree(nextStreamHandle);
-				BASS_StreamFree(nextVisualStreamHandle);
+			platform->HookKeyboard();
 
-				nextStreamHandle = 0;
-				nextVisualStreamHandle = 0;
-			}
+			OnAlbumArtLoaded(
+				wasLastAlbumArtLoadEmbedded
+			);
 		}
 	);
+
+#ifdef WIN32
+	controls.GetCheckboxList().AddItem(
+		"Discord integration",
+		true,
+		[] {
+			return Settings::settings.GetDiscordIntegration();
+		},
+		[this](bool enabled) {
+			Settings::settings.SetDiscordIntegration(enabled);
+
+			if (streamHandle) {
+				dynamic_cast<Windows *>(platform.get())->SetDiscordIntegration(
+					enabled,
+					BASS_ChannelBytes2Seconds(
+						streamHandle,
+						BASS_ChannelGetPosition(streamHandle, BASS_POS_BYTE)
+					)
+				);
+			}
+
+			OnAlbumArtLoaded(
+				wasLastAlbumArtLoadEmbedded
+			);
+		}
+	);
+#endif
 
 	if (platform->SupportsDesktopWidgetMode()) {
 		controls.GetCheckboxList().AddItem(
@@ -1892,6 +1904,29 @@ void CApp::OnInit() {
 			}
 		);
 	}
+
+	controls.GetCheckboxList().AddItem(
+		"Auto-fade controls",
+		true,
+		[] {
+			return Settings::settings.GetAutoFade();
+		},
+		[](bool checked) {
+			Settings::settings.SetAutoFade(checked);
+		}
+	);
+
+	controls.GetCheckboxList().AddItem(
+		"Display stats",
+		true,
+		[] {
+			return Settings::settings.GetDisplayStats();
+		},
+		[this](bool checked) {
+			controls.SetDisplayStats(checked);
+			Settings::settings.SetDisplayStats(checked);
+		}
+	);
 
 	// After adding items, have to update size
 	controls.GetCheckboxList().OnRadiusChanged();
@@ -2948,7 +2983,7 @@ bool CApp::Open(const std::filesystem::path &path, const std::string &extension,
 	return exclusive;
 }
 
-void CApp::Stop(BOOL reset) {
+void CApp::Stop(BOOL reset, bool updateIntegrations) {
 	BASS_ChannelStop(streamHandle);
 
 	if (reset == TRUE) {
@@ -2956,7 +2991,8 @@ void CApp::Stop(BOOL reset) {
 		streamHandle = 0;
 	}
 
-	SetPlaying(false);
+	if (updateIntegrations)
+		SetPlaying(false);
 }
 
 void CApp::StopExclusive() {
@@ -3098,7 +3134,7 @@ void CApp::PlaylistLoaded(std::filesystem::path path, std::string extension, std
 		// In exclusive mode we handle
 		// opening the next file in OnLoop
 		if (!controls.GetExclusiveIndicator().IsExclusive()) {
-			Stop();
+			Stop(TRUE, false);
 
 			Open(path, extension, controls.GetExclusiveIndicator().IsExclusive(), streamHandle, visualStreamHandle);
 		}
@@ -4064,7 +4100,16 @@ void CApp::LoadPreset(std::optional<std::size_t> index) {
 		const auto &preset = presets.at(*index);
 
 		LoadPreset(preset);
-	} else index = std::nullopt;
+	} else {
+		index = std::nullopt;
+
+		// Only call this the FIRST time we're set to nullopt
+		if ((miniPlayer && Settings::settings.GetMiniPlayerPresetIndex()) || 
+		   (!miniPlayer && Settings::settings.GetPresetIndex())) {
+			for (auto integration : integrations)
+				integration->OnVisualizerChanged("");
+		}
+	}
 
 	if (miniPlayer) {
 		Settings::settings.SetMiniPlayerPresetIndex(index);
@@ -4093,6 +4138,9 @@ void CApp::LoadPreset(const Preset &preset) {
 		presetIndex = std::nullopt;
 		Settings::settings.SetPresetIndex(presetIndex, true);
 	}
+
+	for (auto integration : integrations)
+		integration->OnVisualizerChanged(preset.GetName());
 
 	if (auto renderer = preset.GetRenderer()) {
 		LoadRenderer(*renderer);

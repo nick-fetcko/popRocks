@@ -943,6 +943,13 @@ void Settings::SetRotationOffset(int rotationOffset, bool delayed) {
 	}
 }
 
+void Settings::SetDiscordIntegration(bool discordIntegration, bool delayed) {
+	if (this->discordIntegration != discordIntegration) {
+		this->discordIntegration = discordIntegration;
+		if (!delayed) Save();
+	}
+}
+
 void Settings::Save() {
 	if (auto path = Filesystem::GetPath(); !path.empty()) {
 		LogInfo("Saving settings...");
@@ -1302,6 +1309,9 @@ const Node &operator>>(const Node &node, Settings &settings) {
 
 	if (node.has("rotationOffset"))
 		node["rotationOffset"]->get(settings.rotationOffset);
+
+	if (node.has("discordIntegration"))
+		node["discordIntegration"]->get(settings.discordIntegration);
 		
 	return node;
 }
@@ -1424,6 +1434,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["autoPlay"]->set(settings.autoPlay);
 	node["desktopWidgetMode"]->set(settings.desktopWidgetMode);
 	node["rotationOffset"]->set(settings.rotationOffset);
+	node["discordIntegration"]->set(settings.discordIntegration);
 
 	return node;
 }

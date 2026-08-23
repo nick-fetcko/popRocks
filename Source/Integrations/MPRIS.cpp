@@ -251,6 +251,10 @@ void MPRIS::OnSongChanged(
 	PropertyChanged("Metadata", GetMetadata());
 }
 
+void MPRIS::OnVisualizerChanged(const std::string &name) {
+	// Does nothing
+}
+
 void MPRIS::OnPlay() {
 	PropertyChanged("PlaybackStatus", "Playing");
 }

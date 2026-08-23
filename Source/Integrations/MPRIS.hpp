@@ -36,6 +36,8 @@ public:
 		bool hasArt = true
 	) override;
 
+	void OnVisualizerChanged(const std::string &name) override;
+
 	void OnPlay() override;
 	void OnPause() override;
 

@@ -270,7 +270,7 @@ private:
 
 	inline void SwapBuffers(const Delta &time);
 
-	void Stop(BOOL reset = TRUE);
+	void Stop(BOOL reset = TRUE, bool updateIntegrations = true);
 	void StopExclusive(BOOL reset);
 
 	void LoadBeats(HSTREAM streamHandle, std::filesystem::path path, bool pingPong = true);
