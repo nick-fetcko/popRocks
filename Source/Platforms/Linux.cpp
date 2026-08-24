@@ -1318,8 +1318,6 @@ float Linux::GetCpuUsage() {
 	lastProcessTime = processTime;
 	lastSystemTime = systemTime;
 
-	LogDebug("CPU usage = ", ret);
-
 	return ret;
 }
 
