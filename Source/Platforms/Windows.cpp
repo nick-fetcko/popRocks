@@ -1437,6 +1437,11 @@ void Windows::SetDiscordIntegration(bool enabled, double seconds) {
 	}
 }
 
+void Windows::SetShowVisualizerNameOnDiscord(bool showVisualizerNameOnDiscord) {
+	if (discord)
+		discord->SetShowVisualizerName(showVisualizerNameOnDiscord);
+}
+
 // =====================================================
 // ================= Private Functions =================
 // =====================================================

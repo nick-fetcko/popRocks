@@ -424,6 +424,9 @@ public:
 	const bool &GetDiscordIntegration() const { return discordIntegration; }
 	void SetDiscordIntegration(bool discordIntegration, bool delayed = false);
 
+	const bool &GetShowVisualizerNameOnDiscord() const { return showVisualizerNameOnDiscord; }
+	void SetShowVisualizerNameOnDiscord(bool showVisualizerNameOnDiscord, bool delayed = false);
+
 	friend const Node &operator>>(const Node &node, Settings &settings);
 	friend Node &operator<<(Node &node, const Settings &settings);
 
@@ -627,4 +630,5 @@ private:
 	int rotationOffset = 0;
 
 	bool discordIntegration = false;
+	bool showVisualizerNameOnDiscord = false;
 };

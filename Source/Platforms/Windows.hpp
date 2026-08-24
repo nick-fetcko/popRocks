@@ -136,6 +136,7 @@ public:
 	void SetStatus(Status status, int progress) override;
 
 	void SetDiscordIntegration(bool enabled, double seconds);
+	void SetShowVisualizerNameOnDiscord(bool showVisualizerNameOnDiscord);
 
 protected:
 	// Polymorphic helper for GetDeviceIndex<Output>

@@ -1,7 +1,9 @@
 #pragma once
 
 #include "Integration.hpp"
+#include "../Settings.hpp"
 #include "Utils/Logger.hpp"
+
 #include <discordpp.h>
 
 class CApp;
@@ -24,6 +26,7 @@ public:
 		bool hasArt = true
 	) override;
 
+	void SetShowVisualizerName(bool showVisualizerName);
 	void OnVisualizerChanged(const std::string &name) override;
 
 	void SetPosition(int64_t position) override;
@@ -32,7 +35,8 @@ public:
 	void OnPause() override;
 private:
 	inline void UpdateRichPresence();
-	inline void UpdateVisualizerName(const std::string &name, bool andSet = true);
+	inline void UpdateVisualizerName(bool andSet);
+	inline void SetVisualizerName(const std::string &name, bool andSet = true);
 
 	std::unique_ptr<discordpp::Client> client;
 
@@ -44,5 +48,9 @@ private:
 
 	std::chrono::system_clock::time_point positionTimer = std::chrono::system_clock::now();
 
+	bool showVisualizerName = Settings::settings.GetShowVisualizerNameOnDiscord();
+
 	bool firstChange = true;
+
+	std::string album;
 };

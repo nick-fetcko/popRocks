@@ -1742,7 +1742,7 @@ void CApp::OnInit() {
 		++checkboxes;
 
 #ifdef WIN32
-	++checkboxes;
+	checkboxes += 2;
 #endif
 
 	controls.GetCheckboxList().Reserve(checkboxes);
@@ -1875,13 +1875,17 @@ void CApp::OnInit() {
 	);
 
 #ifdef WIN32
+	const auto showVisualizerNameIndex = controls.GetCheckboxList().GetItemCount() + 1;
+
 	controls.GetCheckboxList().AddItem(
 		"Discord integration",
 		true,
 		[] {
 			return Settings::settings.GetDiscordIntegration();
 		},
-		[this](bool enabled) {
+		[this, showVisualizerNameIndex](bool enabled) {
+			controls.GetCheckboxList().SetEnabled(showVisualizerNameIndex, enabled);
+
 			Settings::settings.SetDiscordIntegration(enabled);
 
 			if (streamHandle) {
@@ -1897,6 +1901,18 @@ void CApp::OnInit() {
 			OnAlbumArtLoaded(
 				wasLastAlbumArtLoadEmbedded
 			);
+		}
+	);
+	controls.GetCheckboxList().AddItem(
+		"Show visualizer name on Discord",
+		Settings::settings.GetDiscordIntegration(),
+		[] {
+			return Settings::settings.GetShowVisualizerNameOnDiscord();
+		},
+		[this](bool enabled) {
+			Settings::settings.SetShowVisualizerNameOnDiscord(enabled);
+
+			dynamic_cast<Windows *>(platform.get())->SetShowVisualizerNameOnDiscord(enabled);
 		}
 	);
 #endif

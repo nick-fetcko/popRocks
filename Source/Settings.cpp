@@ -950,6 +950,13 @@ void Settings::SetDiscordIntegration(bool discordIntegration, bool delayed) {
 	}
 }
 
+void Settings::SetShowVisualizerNameOnDiscord(bool showVisualizerNameOnDiscord, bool delayed) {
+	if (this->showVisualizerNameOnDiscord != showVisualizerNameOnDiscord) {
+		this->showVisualizerNameOnDiscord = showVisualizerNameOnDiscord;
+		if (!delayed) Save();
+	}
+}
+
 void Settings::Save() {
 	if (auto path = Filesystem::GetPath(); !path.empty()) {
 		LogInfo("Saving settings...");
@@ -1312,6 +1319,8 @@ const Node &operator>>(const Node &node, Settings &settings) {
 
 	if (node.has("discordIntegration"))
 		node["discordIntegration"]->get(settings.discordIntegration);
+	if (node.has("showVisualizerNameOnDiscord"))
+		node["showVisualizerNameOnDiscord"]->get(settings.showVisualizerNameOnDiscord);
 		
 	return node;
 }
@@ -1435,6 +1444,7 @@ Node &operator<<(Node &node, const Settings &settings) {
 	node["desktopWidgetMode"]->set(settings.desktopWidgetMode);
 	node["rotationOffset"]->set(settings.rotationOffset);
 	node["discordIntegration"]->set(settings.discordIntegration);
+	node["showVisualizerNameOnDiscord"]->set(settings.showVisualizerNameOnDiscord);
 
 	return node;
 }

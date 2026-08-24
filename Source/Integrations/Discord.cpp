@@ -2,6 +2,8 @@
 
 #include "../CApp.h"
 
+#include "Utils/Italics.hpp"
+
 #define DISCORDPP_IMPLEMENTATION
 #include "discordpp.h"
 
@@ -39,17 +41,45 @@ void Discord::Enable() {
 	client->SetStatusChangedCallback([this](discordpp::Client::Status status, discordpp::Client::Error error, int32_t errorDetail) {
 		LogDebug(discordpp::Client::StatusToString(status));
 	});
+
+	activity.SetName("popRocks");
+	activity.SetType(discordpp::ActivityTypes::Listening);
+	activity.SetDetails("Selecting an album...");
+
+	UpdateRichPresence();
 }
 void Discord::Disable() {
 	client->Disconnect();
 	client.reset();
 }
 
-inline void Discord::UpdateVisualizerName(const std::string &name, bool andSet) {
+void Discord::SetShowVisualizerName(bool showVisualizerName) {
+	this->showVisualizerName = showVisualizerName;
+
+	if (showVisualizerName)
+		UpdateVisualizerName(true);
+	else {
+		activity.SetState("on the album " + Italics::ToItalics(album));
+		UpdateRichPresence();
+	}
+}
+
+inline void Discord::UpdateVisualizerName(bool andSet) {
+	auto index =
+		Settings::settings.GetMiniPlayer() ?
+		Settings::settings.GetMiniPlayerPresetIndex() :
+		Settings::settings.GetPresetIndex();
+
+	SetVisualizerName(index ? Preset::GetPresets().at(*index).GetName() : "", andSet);
+}
+
+inline void Discord::SetVisualizerName(const std::string &name, bool andSet) {
+	if (!showVisualizerName) return;
+
 	if (name.empty())
 		activity.SetState("Creating new visualizer...");
 	else
-		activity.SetState(u8"Visualizing with \uFF62" + name + u8"\uFF63");
+		activity.SetState("Visualizing with " + Italics::ToItalics(name));
 
 	if (andSet) UpdateRichPresence();
 }
@@ -71,18 +101,17 @@ void Discord::OnSongChanged(
 	const int64_t length, // in microseconds
 	bool hasArt
 ) {
+	this->album = album;
+
 	activity = discordpp::Activity();
 
 	activity.SetName("popRocks");
 	activity.SetType(discordpp::ActivityTypes::Listening);
 	activity.SetDetails("\"" + title + "\" by " + artist);
 
-	auto index = 
-		Settings::settings.GetMiniPlayer() ?
-			Settings::settings.GetMiniPlayerPresetIndex() :
-			Settings::settings.GetPresetIndex();
-	
-	UpdateVisualizerName(index ? Preset::GetPresets().at(*index).GetName() : "", false);
+	if (!showVisualizerName)
+		activity.SetState("on the album " + Italics::ToItalics(album));
+	else UpdateVisualizerName(false);
 
 	this->length = length / 1000000 /* Discord wants the time in SECONDS */;
 
@@ -113,7 +142,7 @@ void Discord::OnSongChanged(
 }
 
 void Discord::OnVisualizerChanged(const std::string &name) {
-	UpdateVisualizerName(name);
+	SetVisualizerName(name);
 }
 
 void Discord::SetPosition(int64_t position) {
