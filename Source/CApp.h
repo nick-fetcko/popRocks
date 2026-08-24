@@ -53,6 +53,7 @@
 #include "Preset.hpp"
 #include "Renderer.hpp"
 #include "SampleRNG.hpp"
+#include "SongSettings.hpp"
 #include "Text.hpp"
 #include "Volume.hpp"
 
@@ -539,4 +540,6 @@ private:
 	int rotationOffset = Settings::settings.GetRotationOffset();
 
 	std::optional<std::size_t> halveDetectedIndex = std::nullopt;
+
+	SongSettings songSettings;
 };

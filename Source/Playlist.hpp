@@ -106,6 +106,8 @@ public:
 
 	void DeselectCurrent();
 
+	std::set<std::filesystem::path> GetFiles();
+
 	static constexpr bool IsCue(const std::string_view &lowercaseExtension) {
 		return lowercaseExtension == ".cue";
 	}

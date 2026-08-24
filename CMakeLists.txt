@@ -124,6 +124,7 @@ set(_poprocks_cpp_headers
 	Source/SampleRNG.hpp
 	Source/ScrollingText.hpp
 	Source/Settings.hpp
+	Source/SongSettings.hpp
 	Source/Symbol.hpp
 	Source/TagLoader.hpp
 	Source/Text.hpp
@@ -162,6 +163,7 @@ set(_poprocks_cpp_sources
 	Source/SampleRNG.cpp
 	Source/ScrollingText.cpp
 	Source/Settings.cpp
+	Source/SongSettings.cpp
 	Source/Text.cpp
 	Source/Volume.cpp
 	Source/Integrations/Integration.cpp

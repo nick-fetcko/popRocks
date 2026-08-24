@@ -128,7 +128,14 @@ public:
 	//     track1.flac
 	//     track2.flac
 	//     ...
-	bool Load(const std::filesystem::path &fileName, const std::filesystem::path &parentPath = "", bool force = false);
+	bool Load(
+		const std::filesystem::path &fileName,
+		const std::filesystem::path &parentPath = "",
+		bool force = false,
+		const std::filesystem::path &songPath = "",
+		bool preload = false,
+		std::function<void()> matchesDefaultCallback = nullptr
+	);
 
 	bool Load(const std::string &mimeType, const void *data, std::size_t length, bool force = false);
 	bool Load(const std::string mimeType, std::vector<uint8_t> &&data);

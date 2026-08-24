@@ -1146,16 +1146,23 @@ void AlbumArt::UpdateParentPath(const std::filesystem::path &parentPath) {
 	}
 }
 
-bool AlbumArt::Load(const std::filesystem::path &fileName, const std::filesystem::path &parentPath, bool force) {
+bool AlbumArt::Load(
+	const std::filesystem::path &fileName,
+	const std::filesystem::path &parentPath,
+	bool force,
+	const std::filesystem::path &songPath,
+	bool preload,
+	std::function<void()> matchesDefaultCallback
+) {
 	if (loadingExternal)
 		loadingExternal = false;
 
 	if (externalLoadThread.joinable())
 		externalLoadThread.join();
 
-	loadingExternal = true;
+	loadingExternal = !preload;
 
-	externalLoadThread = std::thread([this, fileName, parentPath, force] {
+	externalLoadThread = std::thread([this, fileName, parentPath, force, songPath, preload, matchesDefaultCallback] {
 		// Wait for embedded to finish loading
 		while (loadingEmbedded)
 			std::this_thread::sleep_for(1ms);
@@ -1164,9 +1171,21 @@ bool AlbumArt::Load(const std::filesystem::path &fileName, const std::filesystem
 		std::transform(extension.begin(), extension.end(), extension.begin(), tolower);
 
 		// Do we have cover art?
-		if (IsSupported(extension))
+		if (IsSupported(extension)) {
 			currentFile = fileName;
-		else if (!parentPath.empty()) {
+
+			// We still want to search for album art
+			// files at the original path. We just
+			// won't use any as the current file.
+			if (!force) {
+				const auto default = FindArt(parentPath, songPath);
+
+				// If our setting matches the
+				// default, let the caller know
+				if (currentFile == default && matchesDefaultCallback)
+					matchesDefaultCallback();
+			}
+		} else if (!parentPath.empty()) {
 			// If we're in a different path than the last file,
 			// reset the hashes
 			currentFile = FindArt(parentPath, fileName);
@@ -1194,6 +1213,8 @@ bool AlbumArt::Load(const std::filesystem::path &fileName, const std::filesystem
 				UpdateBin(true);
 
 				loadState = LoadState::External;
+
+				currentFile.clear();
 
 				return true;
 			}
@@ -1231,13 +1252,13 @@ bool AlbumArt::Load(const std::filesystem::path &fileName, const std::filesystem
 			auto imageExtension = currentFile.extension().u8string();
 			std::transform(imageExtension.begin(), imageExtension.end(), imageExtension.begin(), tolower);
 
-			{
+			if (!preload) {
 				std::unique_lock lock(externalLoadingMutex);
 
 				externalArtToLoad = surface;
 				externalArtFile = currentFile;
 				externalFileExtension = imageExtension;
-			}
+			} else currentFile.clear();
 
 			loadState = LoadState::External;
 		} else {

@@ -1031,6 +1031,9 @@ public:
 					albumArt.SetHidden(false);
 					albumArt.LoadEmbedded();
 					albumArt.Scale();
+
+					if (onAlbumArtChanged)
+						onAlbumArtChanged("Embedded");
 				}
 			}
 
@@ -1043,6 +1046,9 @@ public:
 					albumArt.SetHidden(false);
 					albumArt.Load(art.second, art.second.parent_path(), true);
 					albumArt.Scale();
+
+					if (onAlbumArtChanged)
+						onAlbumArtChanged(art.second.generic_u8string());
 				}
 			}
 			for (const auto &art : albumArt.GetFound()) {
@@ -1054,7 +1060,17 @@ public:
 					albumArt.SetHidden(false);
 					albumArt.Load(art, art.parent_path(), true);
 					albumArt.Scale();
+
+					if (onAlbumArtChanged)
+						onAlbumArtChanged(art.generic_u8string());
 				}
+			}
+
+			ImGui::Separator();
+
+			if (ImGui::MenuItem("Apply setting to entire folder")) {
+				if (onSetAlbumArtForFolder)
+					onSetAlbumArtForFolder();
 			}
 
 			ImGui::Separator();
@@ -1540,6 +1556,8 @@ public:
 	void SetOnAlbumArtGammaChanged(std::function<void(float)> f) { onAlbumArtGammaChanged = f; }
 	void SetOnAlbumArtContrastChanged(std::function<void(float)> f) { onAlbumArtContrastChanged = f; }
 	void SetOnAlbumArtBrightnessChanged(std::function<void(float)> f) { onAlbumArtBrightnessChanged = f; }
+	void SetOnAlbumArtChanged(std::function<void(const std::string &)> f) { onAlbumArtChanged = f; }
+	void SetOnSetAlbumArtForFolder(std::function<void()> f) { onSetAlbumArtForFolder = f; }
 
 	void SetOnHdrWhitePointChanged(std::function<void(std::optional<float>)> f) { onHdrWhitePointChanged = f; }
 
@@ -1763,6 +1781,8 @@ private:
 	std::function<void(float)> onAlbumArtGammaChanged;
 	std::function<void(float)> onAlbumArtContrastChanged;
 	std::function<void(float)> onAlbumArtBrightnessChanged;
+	std::function<void(const std::string &)> onAlbumArtChanged;
+	std::function<void()> onSetAlbumArtForFolder;
 	std::function<void(std::optional<float>)> onHdrWhitePointChanged;
 	std::function<void()> onRescanAlbumArt;
 	std::function<void(bool)> onPulseUiChanged;

@@ -1580,6 +1580,16 @@ void CApp::OnInit() {
 				shader.program.Uniform1f("brightness"_hash, brightness);
 			});
 		});
+		menu->SetOnAlbumArtChanged([this](const std::string &art) {
+			songSettings.SetPreferredAlbumArt(loadedFile, art);
+		});
+		menu->SetOnSetAlbumArtForFolder([this] {
+			for (const auto &file : controls.GetPlaylist().GetFiles()) {
+				auto art = albumArt.GetCurrentFile().generic_u8string();
+				if (art.empty()) art = "Embedded";
+				songSettings.SetPreferredAlbumArt(file, art);
+			}
+		});
 		menu->SetOnHdrWhitePointChanged([this](std::optional<float> hdrWhitePoint) {
 			Settings::settings.SetHdrWhitePoint(hdrWhitePoint);
 
@@ -1949,6 +1959,8 @@ void CApp::OnInit() {
 	UpdateMiniPlayer(true);
 
 	OnResize(windowWidth, windowHeight, scale, true);
+
+	songSettings.Load();
 
 	if (Settings::settings.GetListening())
 		platform->Listen();
@@ -3257,10 +3269,32 @@ void CApp::PlaylistLoaded(std::filesystem::path path, std::string extension, std
 		// Always look for external art,
 		// in case it's higher resolution
 		// than the embedded
-		albumArt.Load(
-			platform->GetNativePath(path),
-			originalPath
-		);
+		auto settings = songSettings.GetSettings(path);
+		if (!settings) {
+			albumArt.Load(
+				platform->GetNativePath(path),
+				originalPath
+			);
+		} else if (settings->albumArt != "Embedded") {
+			albumArt.Load(
+#ifdef WIN32
+				Utils::ToUTF16(settings->albumArt),
+#else
+				settings->albumArt,
+#endif
+				originalPath,
+				false,
+				path,
+				false,
+				[this, path] {
+					LogWarning("User's album art setting matches the default! Removing setting...");
+					songSettings.RemoveSetting(path);
+				}
+			);
+		} else {
+			// Preload external album art, but don't use it
+			albumArt.Load(platform->GetNativePath(path), originalPath, false, path, true /* preload */);
+		}
 
 		// If we have any tags from the cue
 		// sheet, load them _after_ everything

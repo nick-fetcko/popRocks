@@ -511,6 +511,20 @@ void Playlist::DeselectCurrent() {
 		MiniPlayerList::DeselectCurrent(std::distance(cue->GetTracks().begin(), cue->GetCurrentTrack()));
 }
 
+std::set<std::filesystem::path> Playlist::GetFiles() {
+	std::set<std::filesystem::path> ret;
+
+	for (const auto &file : files)
+		ret.emplace(file);
+
+	if (cue) {
+		for (const auto &track : cue->GetTracks())
+			ret.emplace(track.filePath);
+	}
+
+	return ret;
+}
+
 void Playlist::OnLoop(const Delta &time, Vector2i pos, float maxHeight, float alpha, Context &context, bool miniPlayer, bool hidden) {
 	if (!visible && !miniPlayer) return;
 
