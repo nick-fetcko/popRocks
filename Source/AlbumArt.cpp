@@ -1178,11 +1178,11 @@ bool AlbumArt::Load(
 			// files at the original path. We just
 			// won't use any as the current file.
 			if (!force) {
-				const auto default = FindArt(parentPath, songPath);
+				const auto defaultArt = FindArt(parentPath, songPath);
 
 				// If our setting matches the
 				// default, let the caller know
-				if (currentFile == default && matchesDefaultCallback)
+				if (currentFile == defaultArt && matchesDefaultCallback)
 					matchesDefaultCallback();
 			}
 		} else if (!parentPath.empty()) {
