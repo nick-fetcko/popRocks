@@ -304,6 +304,9 @@ private:
 	constexpr static std::string_view SharedMemoryName = "/popRocks";
 	int sharedFd = -1;
 	uint8_t *sharedMemory = nullptr;
+
+	clock_t lastProcessTime = 0;
+	std::chrono::steady_clock::time_point lastSystemTime;
 };
 
 #endif

@@ -6,6 +6,7 @@
 
 #include <linux/input-event-codes.h>
 #include <sys/mman.h>
+#include <sys/times.h>
 #include <fcntl.h>
 
 #include <SDL3/SDL.h>
@@ -1299,11 +1300,53 @@ bool Linux::HandleExistingWindow(int argc, char *argv[]) {
 // ---------------- System Management ------------------
 // -----------------------------------------------------
 float Linux::GetCpuUsage() {
-	return 0.0f;
+	float ret = 0.0f;
+
+	tms now;
+	times(&now);
+
+	auto processTime = now.tms_utime + now.tms_stime;
+	auto systemTime = std::chrono::steady_clock::now();
+
+	if (lastProcessTime) {
+		const auto processDelta = processTime - lastProcessTime;
+		const auto systemDelta = std::chrono::duration<double>(systemTime - lastSystemTime);
+
+		ret = static_cast<double>(processDelta) / sysconf(_SC_CLK_TCK) / systemDelta.count() * 100.0 / std::thread::hardware_concurrency();
+	}
+
+	lastProcessTime = processTime;
+	lastSystemTime = systemTime;
+
+	LogDebug("CPU usage = ", ret);
+
+	return ret;
 }
 
 int64_t Linux::GetRamUsage() {
-	return 0;
+	if (std::ifstream inFile{"/proc/self/smaps_rollup"}) {
+		std::string line;
+		while (std::getline(inFile, line)) {
+			const auto split = Utils::Split(line, isspace);
+			if (split.size() > 1 && split[0] == "Pss:") {
+				// Convert from KB -> bytes
+				return std::stoll(split[1]) * 1024;
+			}
+		}
+	} else {
+		long pages = 0;
+		if (std::ifstream inFile{"/proc/self/statm"}) {
+			long virtualMemory;
+
+			// We want Resident Set Size (RSS, not to be
+			// confused with Really Simple Syndication),
+			// which is the second value
+			inFile >> virtualMemory >> pages;
+		}
+
+		// Convert from pages -> bytes
+		return pages * (sysconf(_SC_PAGESIZE));
+	}
 }
 
 // -----------------------------------------------------
