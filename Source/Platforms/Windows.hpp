@@ -18,7 +18,6 @@
 
 #include "OpenGL/Interops/DXGI.hpp"
 #include "Source/RecordAudioStream.h"
-#include "Source/Integrations/Discord.hpp"
 
 using namespace Fetcko;
 
@@ -135,9 +134,6 @@ public:
 	// Bling
 	void SetStatus(Status status, int progress) override;
 
-	void SetDiscordIntegration(bool enabled, double seconds);
-	void SetShowVisualizerNameOnDiscord(bool showVisualizerNameOnDiscord);
-
 protected:
 	// Polymorphic helper for GetDeviceIndex<Output>
 	bool GetInputDeviceIndex(int &index, const std::string &device) override;
@@ -181,8 +177,6 @@ private:
 	HCOUNTER counter;
 
 	bool queryingCpuUsage = false;
-
-	std::unique_ptr<Discord> discord;
 
 #ifndef _DEBUG
 	HKEY registryKey = nullptr;

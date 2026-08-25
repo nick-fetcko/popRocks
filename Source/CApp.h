@@ -57,6 +57,8 @@
 #include "Text.hpp"
 #include "Volume.hpp"
 
+#include "Integrations/Discord.hpp"
+
 #ifdef __ANDROID__
 #define GUI 1
 #define VULKAN 0
@@ -312,6 +314,8 @@ private:
 
 	inline int AdjustFftSize(int fftSize);
 
+	inline void SetDiscordIntegration(bool enabled, double seconds);
+
 	int windowWidth = 1920;
 	int windowHeight = 1080;
 
@@ -542,4 +546,6 @@ private:
 	std::optional<std::size_t> halveDetectedIndex = std::nullopt;
 
 	SongSettings songSettings;
+
+	std::unique_ptr<Discord> discord;
 };

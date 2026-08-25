@@ -131,6 +131,7 @@ set(_poprocks_cpp_headers
 	Source/Volume.hpp
 	Source/WV.hpp
 	Source/Integrations/Integration.hpp
+	Source/Integrations/Discord.hpp
 	Source/Platforms/Platform.hpp
 	Source/Platforms/Desktop.hpp
 	)
@@ -167,13 +168,12 @@ set(_poprocks_cpp_sources
 	Source/Text.cpp
 	Source/Volume.cpp
 	Source/Integrations/Integration.cpp
+	Source/Integrations/Discord.cpp
 	Source/Platforms/Platform.cpp
 	Source/Platforms/Desktop.cpp
 	)
 
 if (WIN32)
-	list(APPEND _poprocks_cpp_headers Source/Integrations/Discord.hpp)
-	list(APPEND _poprocks_cpp_sources Source/Integrations/Discord.cpp)
 	list(APPEND _poprocks_cpp_headers Source/Platforms/Windows.hpp)
 	list(APPEND _poprocks_cpp_sources Source/Platforms/Windows.cpp)
 else()
@@ -407,14 +407,19 @@ else()
 		)
 endif()
 
+add_library(discord SHARED IMPORTED)
 if (WIN32)
-	add_library(discord SHARED IMPORTED)
 	set_target_properties(discord PROPERTIES
 		INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/discord/include"
 		IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/discord/lib/discord_partner_sdk.dll"
 		IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/discord/lib/discord_partner_sdk.dll"
 		IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/third_party/discord/lib/discord_partner_sdk.lib"
 		IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/discord/lib/discord_partner_sdk.lib"
+		)
+else()
+	set_target_properties(discord PROPERTIES
+		INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/discord/include"
+		IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/third_party/discord/lib/libdiscord_partner_sdk.so"
 		)
 endif()
 
@@ -426,6 +431,7 @@ target_include_directories(popRocks PRIVATE
 		"${CMAKE_CURRENT_SOURCE_DIR}/third_party/basswv/include"
 		"${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassaac/include"
 		"${CMAKE_CURRENT_SOURCE_DIR}/third_party/basstta/include"
+		"${CMAKE_CURRENT_SOURCE_DIR}/third_party/discord/include"
 		)
 
 if (USING_FLATPAK)
@@ -447,6 +453,7 @@ if (USING_FLATPAK)
 			serial
 			nfd
 			SDL3::SDL3
+			"${CMAKE_CURRENT_SOURCE_DIR}/third_party/discord/lib/libdiscord_partner_sdk.so"
 			)
 else()
 	target_link_libraries(popRocks PRIVATE
@@ -465,12 +472,12 @@ else()
 			serial
 			nfd
 			SDL3::SDL3
+			discord
 			)
 endif()
 
 if (WIN32)
-	target_link_libraries(popRocks PRIVATE FFTW3::fftw3f basswasapi discord)
-	target_include_directories(popRocks PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/discord/include")
+	target_link_libraries(popRocks PRIVATE FFTW3::fftw3f basswasapi)
 
 	# For some reason multicore compilation
 	# is still not the default for MSVC
@@ -497,12 +504,12 @@ add_custom_command(TARGET popRocks POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:bassape> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CONFIGURATION_TYPES}
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:basswv> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CONFIGURATION_TYPES}
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:basstta> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CONFIGURATION_TYPES}
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:discord> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CONFIGURATION_TYPES}
 	)
 
 if (WIN32)
 	add_custom_command(TARGET popRocks POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:basswasapi> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CONFIGURATION_TYPES}
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:discord> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CONFIGURATION_TYPES}
 		)
 else()
 	add_custom_command(TARGET popRocks POST_BUILD
@@ -510,7 +517,7 @@ else()
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:bassaac> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CONFIGURATION_TYPES}
 		)
 
-	install(IMPORTED_RUNTIME_ARTIFACTS bass bassflac bassape basswv bassalac bassaac basstta)
+	install(IMPORTED_RUNTIME_ARTIFACTS bass bassflac bassape basswv bassalac bassaac basstta discord)
 	install(TARGETS popRocks)
 endif()
 
@@ -534,6 +541,7 @@ elseif(USING_FLATPAK)
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassalac/lib/libbassalac.so" ${CMAKE_INSTALL_PREFIX}/bin/libbassalac.so
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bassaac/lib/libbass_aac.so" ${CMAKE_INSTALL_PREFIX}/bin/libbass_aac.so
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/third_party/basstta/lib/libbass_tta.so" ${CMAKE_INSTALL_PREFIX}/bin/libbass_tta.so
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/third_party/discord/lib/libdiscord_partner_sdk.so" ${CMAKE_INSTALL_PREFIX}/bin/libdiscord_partner_sdk.so
 	)
 else()
 	add_custom_command(TARGET popRocks POST_BUILD

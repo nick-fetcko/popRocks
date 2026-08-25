@@ -66,3 +66,7 @@ finish-args:
   # Shared memory to allow one instance to defer to another
   - --share=ipc
   - --device=shm
+  # Discord IPC for rich presence
+  - --filesystem=xdg-run/discord-ipc-0
+  # If Discord is installed as a Flatpak
+  - --filesystem=xdg-run/app/com.discordapp.Discord/discord-ipc-0

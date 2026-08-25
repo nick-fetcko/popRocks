@@ -1017,6 +1017,8 @@ void CApp::OnInit() {
 
 	platform->SetMiniPlayer(miniPlayer, static_cast<uint8_t>(albumArt.GetChromaColor() * 0xFF));
 
+	SetDiscordIntegration(Settings::settings.GetDiscordIntegration(), 0.0);
+
 	if (platform->CreateOpenGlContext()) {
 		LogDebug("gladLoadGL() returned ", platform->LoadGlad());
 
@@ -1737,13 +1739,9 @@ void CApp::OnInit() {
 
 	// Reserve space so returned Checkbox pointers
 	// don't get invalidated by reallocations
-	std::size_t checkboxes = 9;
+	std::size_t checkboxes = 11;
 	if (platform->SupportsDesktopWidgetMode())
 		++checkboxes;
-
-#ifdef WIN32
-	checkboxes += 2;
-#endif
 
 	controls.GetCheckboxList().Reserve(checkboxes);
 
@@ -1874,7 +1872,6 @@ void CApp::OnInit() {
 		}
 	);
 
-#ifdef WIN32
 	const auto showVisualizerNameIndex = controls.GetCheckboxList().GetItemCount() + 1;
 
 	controls.GetCheckboxList().AddItem(
@@ -1889,7 +1886,7 @@ void CApp::OnInit() {
 			Settings::settings.SetDiscordIntegration(enabled);
 
 			if (streamHandle) {
-				dynamic_cast<Windows *>(platform.get())->SetDiscordIntegration(
+				SetDiscordIntegration(
 					enabled,
 					BASS_ChannelBytes2Seconds(
 						streamHandle,
@@ -1912,10 +1909,10 @@ void CApp::OnInit() {
 		[this](bool enabled) {
 			Settings::settings.SetShowVisualizerNameOnDiscord(enabled);
 
-			dynamic_cast<Windows *>(platform.get())->SetShowVisualizerNameOnDiscord(enabled);
+			if (discord)
+				discord->SetShowVisualizerName(enabled);
 		}
 	);
-#endif
 
 	if (platform->SupportsDesktopWidgetMode()) {
 		controls.GetCheckboxList().AddItem(
@@ -2930,6 +2927,12 @@ void CApp::SyncToNearestBeat() {
 
 void CApp::OnDestroy(bool includingLog) {
 	LogDebug("Shutting down...");
+	
+	if (discord) {
+		discord->Disable();
+		discord->OnDestroy();
+		discord.reset();
+	}
 
 	playlistLoaded = false;
 	playlistLoading = false;
@@ -4379,6 +4382,23 @@ bool CApp::AddToScrollOffset(int offset) {
 	}
 
 	return true;
+}
+
+inline void CApp::SetDiscordIntegration(bool enabled, double seconds) {
+	if (enabled && !discord) {
+		discord = std::make_unique<Discord>(this);
+		discord->SetPosition(seconds * 1000000);
+		discord->Enable();
+
+		if (playing)
+			discord->OnPlay();
+		else
+			discord->OnPause();
+	} else if (!enabled && discord) {
+		discord->Disable();
+		discord->OnDestroy();
+		discord.reset();
+	}
 }
 
 void CApp::OnColorChanged(const MathsCPP::Colour<float> &color, bool silent) {
