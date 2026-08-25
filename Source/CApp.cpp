@@ -3406,6 +3406,11 @@ void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
 			path
 		);
 
+		// Update any integrations
+		OnAlbumArtLoaded(
+			wasLastAlbumArtLoadEmbedded
+		);
+
 		return;
 	}
 
