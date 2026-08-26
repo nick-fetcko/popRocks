@@ -217,15 +217,15 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 					else if (event.key.key == SDLK_LEFT ||
 						event.key.key == SDLK_A)
 						app.GetAlbumArt().PreviousBin();
-					else if (event.key.key == SDLK_P)
+					else if (event.key.key == SDLK_P && !app.GetMiniPlayer())
 						app.SaveBlurFBO();
 					else if (event.key.key == SDLK_SPACE || event.key.key == SDLK_MEDIA_PLAY || event.key.key == SDLK_MEDIA_PLAY_PAUSE)
 						app.TogglePlaying();
-					else if (event.key.key == SDLK_RETURN && event.key.mod & SDL_KMOD_ALT)
+					else if (event.key.key == SDLK_RETURN && event.key.mod & SDL_KMOD_ALT && !app.GetMiniPlayer())
 						app.ToggleFullscreen();
 					else if (event.key.key == SDLK_ESCAPE)
 						running = false;
-					else if (event.key.key >= SDLK_F1 && event.key.key <= SDLK_F12)
+					else if (event.key.key >= SDLK_F1 && event.key.key <= SDLK_F12 && !app.GetMiniPlayer())
 						app.LoadPreset(event.key.key - SDLK_F1);
 					else if (event.key.key == SDLK_S)
 						app.SyncToNearestBeat();
