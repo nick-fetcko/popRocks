@@ -594,7 +594,7 @@
   },
   "15": {
     "name": "In The Clouds",
-    "bufferSize": 4096,
+    "bufferSize": 3072,
     "fftSize": 8192,
     "decayTime": 0.209999,
     "fadeTime": 0.209999,
@@ -672,7 +672,7 @@
   },
   "17": {
     "name": "Sandstorm",
-    "bufferSize": 4096,
+    "bufferSize": 3072,
     "fftSize": 8192,
     "decayTime": 0.209999,
     "fadeTime": 0.209999,
