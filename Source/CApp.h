@@ -103,6 +103,7 @@ public:
 	void OnDestroy(bool includingLog = true);
 
 	void SetPreLoaded(bool preLoaded) { this->preLoaded = preLoaded; }
+	bool IsPreLoaded() const { return preLoaded; }
 	void LoadFile(std::filesystem::path path, bool fromPlaylist = false);
 	void PrepareFile(std::wstring fileName);
 	void PlayPreparedFile();

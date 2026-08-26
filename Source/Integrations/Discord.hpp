@@ -35,8 +35,9 @@ public:
 	void OnPause() override;
 private:
 	inline void UpdateRichPresence();
-	inline void UpdateVisualizerName(bool andSet);
-	inline void SetVisualizerName(const std::string &name, bool andSet = true);
+	inline void UpdateVisualizerName();
+	inline void UpdateAlbumName();
+	inline void SetVisualizerName(const std::string &name);
 
 	std::unique_ptr<discordpp::Client> client;
 
@@ -46,11 +47,13 @@ private:
 
 	int64_t length = 0;
 
-	std::chrono::system_clock::time_point positionTimer = std::chrono::system_clock::now();
+	std::chrono::system_clock::time_point updateTimer = std::chrono::system_clock::now();
 
 	bool showVisualizerName = Settings::settings.GetShowVisualizerNameOnDiscord();
 
 	bool firstChange = true;
 
+	std::string title;
+	std::string artist;
 	std::string album;
 };

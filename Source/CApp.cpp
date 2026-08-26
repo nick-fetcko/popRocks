@@ -4392,7 +4392,8 @@ bool CApp::AddToScrollOffset(int offset) {
 inline void CApp::SetDiscordIntegration(bool enabled, double seconds) {
 	if (enabled && !discord) {
 		discord = std::make_unique<Discord>(this);
-		discord->SetPosition(seconds * 1000000);
+		if (fileLoaded)
+			discord->SetPosition(seconds * 1000000);
 		discord->Enable();
 
 		if (playing)

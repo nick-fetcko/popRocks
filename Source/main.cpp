@@ -95,6 +95,12 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 	logger.SetObject(&loggableClass);
 	//logger.LogDebug(argv[0]);
 
+	// Have to set preLoaded _before_ OnInit(),
+	// else our integrations might try to start in
+	// a "no song loaded" state
+	if (argc > 1)
+		app.SetPreLoaded(true);
+
 	app.OnInit();
 
 #ifdef WIN32
@@ -107,14 +113,11 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 	if(argc > 1) {
 #ifdef WIN32
 		int wargc;
-		if (LPWSTR *wargv = CommandLineToArgvW(GetCommandLineW(), &wargc); wargv && wargc > 1) {
-			app.SetPreLoaded(true);
+		if (LPWSTR *wargv = CommandLineToArgvW(GetCommandLineW(), &wargc); wargv && wargc > 1)
 			app.LoadFile(wargv[1]);
-		}
 #else
 		logger.LogDebug("File prepared: ", argv[1]);
 		auto utf8 = std::string(argv[1]);
-		app.SetPreLoaded(true);
 		app.LoadFile(utf8);
 #endif
 	}
