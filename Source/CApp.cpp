@@ -1546,6 +1546,9 @@ void CApp::OnInit() {
 			controls.GetVolume().SetVolume(volume);
 		});
 		menu->SetOnHalveBpmChanged([this](bool halveBpm) {
+			for (auto &detector : beatDetectors)
+				detector.SetHalveDetected(halveBpm);
+
 			Settings::settings.SetHalveBpm(halveBpm);
 		});
 		menu->SetOnRendererOffsetChanged([this](int rendererOffset) {
@@ -1827,17 +1830,22 @@ void CApp::OnInit() {
 		}
 	);
 
-	const auto useOtherHalfIndex = controls.GetCheckboxList().GetItemCount() + 1;
+	useOtherHalfIndex = controls.GetCheckboxList().GetItemCount() + 1;
 
 	controls.GetCheckboxList().AddItem(
-		"Halve detected BPM",
+		"Halve this song's BPM",
 		Settings::settings.GetDetectBpm(),
 		[] {
 			return Settings::settings.GetHalveBpm();
 		},
-		[this, useOtherHalfIndex](bool checked) {
+		[this](bool checked) {
+			for (auto &detector : beatDetectors)
+				detector.SetHalveDetected(checked);
+
+			songSettings.SetHalveDetected(loadedFile, checked);
+
 			Settings::settings.SetHalveBpm(checked);
-			controls.GetCheckboxList().SetEnabled(useOtherHalfIndex, checked && Settings::settings.GetDetectBpm());
+			controls.GetCheckboxList().SetEnabled(*useOtherHalfIndex, checked && Settings::settings.GetDetectBpm());
 		}
 	);
 
@@ -1850,6 +1858,8 @@ void CApp::OnInit() {
 		[this](bool checked) {
 			for (auto &detector : beatDetectors)
 				detector.SetUseOtherHalf(checked);
+
+			songSettings.SetUseOtherHalf(loadedFile, checked);
 
 			Settings::settings.SetUseOtherHalf(checked);
 		}
@@ -3213,6 +3223,35 @@ void CApp::PlaylistLoaded(std::filesystem::path path, std::string extension, std
 
 		controls.OnLoad(streamHandle);
 
+		const auto settings = songSettings.GetSettings(path);
+
+		// Load beat detection settings for song
+		if (settings) {
+			Settings::settings.SetHalveBpm(settings->halveDetected);
+			Settings::settings.SetUseOtherHalf(settings->useOtherHalf);
+
+			controls.GetCheckboxList().GetItem(*halveDetectedIndex)->SetChecked(settings->halveDetected);
+			controls.GetCheckboxList().SetEnabled(*useOtherHalfIndex, settings->halveDetected);
+			controls.GetCheckboxList().GetItem(*useOtherHalfIndex)->SetChecked(settings->useOtherHalf);
+
+			for (auto &detector : beatDetectors) {
+				detector.SetHalveDetected(settings->halveDetected);
+				detector.SetUseOtherHalf(settings->useOtherHalf);
+			}
+		} else {
+			Settings::settings.SetHalveBpm(false);
+			Settings::settings.SetUseOtherHalf(false);
+
+			controls.GetCheckboxList().GetItem(*halveDetectedIndex)->SetChecked(false);
+			controls.GetCheckboxList().SetEnabled(*useOtherHalfIndex, false);
+			controls.GetCheckboxList().GetItem(*useOtherHalfIndex)->SetChecked(false);
+
+			for (auto &detector : beatDetectors) {
+				detector.SetHalveDetected(false);
+				detector.SetUseOtherHalf(false);
+			}
+		}
+
 		LoadBeats(streamHandle, path);
 
 		// If we're loading our first file
@@ -3288,7 +3327,6 @@ void CApp::PlaylistLoaded(std::filesystem::path path, std::string extension, std
 		// Always look for external art,
 		// in case it's higher resolution
 		// than the embedded
-		auto settings = songSettings.GetSettings(path);
 		if (!settings) {
 			albumArt.Load(
 				platform->GetNativePath(path),
@@ -3307,10 +3345,11 @@ void CApp::PlaylistLoaded(std::filesystem::path path, std::string extension, std
 				false,
 				[this, path] {
 					LogWarning("User's album art setting matches the default! Removing setting...");
-					songSettings.RemoveSetting(path);
+					if (auto *setting = songSettings.GetSettings(path); setting && !setting->halveDetected && !setting->useOtherHalf)
+						songSettings.RemoveSetting(path);
 				}
 			);
-		} else {
+		} else if (settings->albumArt.size()) {
 			// Preload external album art, but don't use it
 			albumArt.Load(platform->GetNativePath(path), originalPath, false, path, true /* preload */);
 		}

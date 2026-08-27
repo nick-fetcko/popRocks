@@ -545,6 +545,7 @@ private:
 	int rotationOffset = Settings::settings.GetRotationOffset();
 
 	std::optional<std::size_t> halveDetectedIndex = std::nullopt;
+	std::optional<std::size_t> useOtherHalfIndex = std::nullopt;
 
 	SongSettings songSettings;
 

@@ -57,6 +57,7 @@ public:
 
 	const uint64_t &GetHash() const { return hash; }
 
+	void SetHalveDetected(bool halveDetected);
 	void SetUseOtherHalf(bool useOtherHalf);
 
 private:
@@ -77,6 +78,7 @@ private:
 	inline std::tuple<double, double, double> GetTimeBetweenBeats() const;
 
 	bool detectBpm = Settings::settings.GetDetectBpm();
+	bool halveDetected = Settings::settings.GetHalveBpm();
 	bool useOtherHalf = Settings::settings.GetUseOtherHalf();
 
 	EventList eventList;

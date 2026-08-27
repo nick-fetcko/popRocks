@@ -12,11 +12,15 @@ class SongSettings {
 public:
 	struct SongSetting {
 		std::string albumArt;
+		bool halveDetected = false;
+		bool useOtherHalf = false;
 	};
 
 	void Load();
 
 	void SetPreferredAlbumArt(const std::filesystem::path &path, const std::string &art);
+	void SetHalveDetected(const std::filesystem::path &path, bool halveDetected);
+	void SetUseOtherHalf(const std::filesystem::path &path, bool useOtherHalf);
 
 	const bool HasSettings(const std::filesystem::path &path) const;
 	SongSetting *GetSettings(const std::filesystem::path &path);

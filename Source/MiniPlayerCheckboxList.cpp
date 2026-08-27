@@ -56,6 +56,13 @@ Checkbox *MiniPlayerCheckboxList::AddItem(const std::string &text, bool enabled,
 	return ret;
 }
 
+Checkbox *MiniPlayerCheckboxList::GetItem(std::size_t index) {
+	if (index < checkboxes.size())
+		return &checkboxes[index].checkbox;
+
+	return nullptr;
+}
+
 void MiniPlayerCheckboxList::OnColorChanged(const Colour<float> &color, bool silent) {
 	MiniPlayerList::OnColorChanged(color, silent);
 

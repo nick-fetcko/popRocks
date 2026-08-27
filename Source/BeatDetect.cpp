@@ -22,20 +22,40 @@ void BeatDetect::OnLoad(
 	});
 }
 
+void BeatDetect::SetHalveDetected(bool halveDetected) {
+	this->halveDetected = halveDetected;
+
+	if (eventListIter == eventList.end()) return;
+
+	// Make sure we always start on an EVEN beat
+	if (const auto distance = std::distance(eventList.begin(), eventListIter); distance % 2)
+		--eventListIter;
+}
+
 void BeatDetect::SetUseOtherHalf(bool useOtherHalf) {
 	this->useOtherHalf = useOtherHalf;
 
-	if (useOtherHalf && !eventList.empty() && eventListIter != eventList.end())
-		++eventListIter;
-	else if (!useOtherHalf && !eventList.empty() && eventListIter != eventList.begin())
+	const auto distance = std::distance(eventList.begin(), eventListIter);
+
+	if (eventListIter == eventList.end()) return;
+
+	// If we're odd, make even again
+	if (!useOtherHalf && (distance % 2))
 		--eventListIter;
+	// If we're even, make odd
+	else if (useOtherHalf && !(distance % 2)) {
+		if (eventListIter != eventList.begin())
+			--eventListIter;
+		else
+			++eventListIter;
+	}
 }
 
 bool BeatDetect::OnLoop(double elapsed) {
 	if (mutex.try_lock()) {
 		if (detectBpm && eventListIter != eventList.end() && elapsed >= eventListIter->time) {
 			++eventListIter;
-			if (Settings::settings.GetHalveBpm()) ++eventListIter;
+			if (halveDetected) ++eventListIter;
 			mutex.unlock();
 			return true;
 		}
@@ -49,7 +69,7 @@ bool BeatDetect::OnLoop(double elapsed) {
 int BeatDetect::SeekTo(double time) {
 	int ret = 0;
 	for (eventListIter = eventList.begin(); eventListIter != eventList.end(); ++eventListIter, ++ret) {
-		if (eventListIter->time > time)
+		if (eventListIter->time > time && ((std::distance(eventList.begin(), eventListIter) % 2) == (useOtherHalf ? 1 : 0)))
 			return ret;
 	}
 
@@ -348,6 +368,7 @@ inline void BeatDetect::_OnLoad(
 				);
 
 				eventListIter = eventList.begin();
+
 				if (useOtherHalf && eventListIter != eventList.end())
 					++eventListIter;
 			} else if (!hopTime) {
