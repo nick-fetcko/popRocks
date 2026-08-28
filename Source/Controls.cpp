@@ -760,7 +760,7 @@ double Controls::OnLoop(const Delta &time, HSTREAM streamHandle, Context &contex
 
 			if (miniPlayer) context.EndBlend();
 
-			iconY = windowHeight / 2.0f + (miniPlayer ? SeekbarSize + albumArt->GetRadius(miniPlayer) * MiniPlayerIconRatio * 2.0f : 0.0f);
+			iconY = windowHeight / 2.0f + (miniPlayer ? yOffset + albumArt->GetRadius(miniPlayer) * MiniPlayerIconRatio * 2.0f : 0.0f);
 
 			int statsWidth = fpsCounter.GetText().GetBounds().width;
 
