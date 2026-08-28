@@ -55,7 +55,7 @@ bool BeatDetect::OnLoop(double elapsed) {
 	if (mutex.try_lock()) {
 		if (detectBpm && eventListIter != eventList.end() && elapsed >= eventListIter->time) {
 			++eventListIter;
-			if (halveDetected) ++eventListIter;
+			if (halveDetected && eventListIter != eventList.end()) ++eventListIter;
 			mutex.unlock();
 			return true;
 		}
