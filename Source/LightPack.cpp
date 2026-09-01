@@ -13,7 +13,7 @@
 #pragma comment (lib, "AdvApi32.lib")
 #endif
 
-#include "CConsole.h"
+#include "Settings.hpp"
 
 LightPack::LightPack() {
 	// Purple
@@ -45,21 +45,60 @@ LightPack::LightPack() {
 	intensityColors[5].r = 255;
 	intensityColors[5].g = 0;
 	intensityColors[5].b = 0;
+
+	const auto &type = Settings::settings.GetLightPackVisualizationType();
+	if (type == "intensity")
+		currentLightType = LightType::Intensity;
+	else if (type == "color")
+		currentLightType = LightType::Color;
+	else if (type == "colorintensity")
+		currentLightType = LightType::ColorIntensity;
+
+	const auto &mapping = Settings::settings.GetLightPackMapping();
+	if (mapping == "default")
+		currentMapping = Mappings::DEFAULT;
+	else if (mapping == "mine")
+		currentMapping = Mappings::MINE;
+	else if (mapping == "ttb")
+		currentMapping = Mappings::TOP_TO_BOTTOM;
+	else if (mapping == "btt")
+		currentMapping = Mappings::BOTTOM_TO_TOP;
+
+	const auto &focusArea = Settings::settings.GetLightPackFocusArea();
+	if (focusArea == "superbass")
+		SetFocusArea(FocusArea::SuperBass);
+	else if (focusArea == "subbass")
+		SetFocusArea(FocusArea::SubBass);
+	else if (focusArea == "bass")
+		SetFocusArea(FocusArea::Bass);
+	else if (focusArea == "bassandmid")
+		SetFocusArea(FocusArea::BassAndMid);
+	else if (focusArea == "bassmidandalittlehighend")
+		SetFocusArea(FocusArea::BassMidAndHigh);
+	else if (focusArea == "halfnyquist")
+		SetFocusArea(FocusArea::HalfNyquist);
+	else if (focusArea == "nyquist")
+		SetFocusArea(FocusArea::Nyquist);
 }
 
 LightPack::~LightPack() {
 	delete[] lightBin;
-	if (socketSet) SDLNet_FreeSocketSet(socketSet);
 }
 
 void LightPack::OnInit() {
+	// Avoid potential off-by-one-millisecond
+	sleepTime = 0s;
+
 	running = true;
 
 	thread = std::thread([this] {
 		while (running) {
 			{
-				if (queue.size() > 16)
-					CConsole::Console.Print("LightPack is running over a second late!", MSG_ALERT);
+				if (queue.size() > 16) {
+					LogWarning("LightPack is running over a second late! Flushing queue...");
+					while (queue.size())
+						queue.pop();
+				}
 
 				if (queue.size()) {
 					if (auto &front = queue.front())
@@ -71,7 +110,7 @@ void LightPack::OnInit() {
 
 			std::unique_lock lock(condMutex);
 			cond.wait_for(lock, sleepTime);
-			sleepTime = 1ms;
+			if (lightBin) sleepTime = 1ms;
 		}
 
 		// Process whatever's left in the queue
@@ -79,6 +118,16 @@ void LightPack::OnInit() {
 			queue.front()(this);
 			queue.pop();
 		}
+
+		delete[] lightBin;
+		lightBin = nullptr;
+
+		if (tcpsock) {
+			NET_DestroyStreamSocket(tcpsock);
+			tcpsock = nullptr;
+		}
+
+		NET_Quit();
 	});
 
 	std::unique_lock lock(mutex);
@@ -100,14 +149,14 @@ bool LightPack::CanConnect() {
 
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData)) {
-		CConsole::Console.Print("Could not initialize WSA!", MSG_ERROR);
+		LogError("Could not initialize WSA!");
 		return false;
 	}
 
 	PADDRINFOA addr;
 
 	if (getaddrinfo("localhost", "3636", NULL, &addr)) {
-		CConsole::Console.Print("Could not get address info!", MSG_ERROR);
+		LogError("Could not get address info!");
 		return false;
 	}
 
@@ -147,11 +196,18 @@ bool LightPack::CanConnect() {
 void LightPack::_OnInit() {
 	if (!running) return;
 
-	if (SDLNet_Init() != -1) {
-		IPaddress ip;
-		if (SDLNet_ResolveHost(&ip, "localhost", 3636) != -1) {
+	if (NET_Init()) {
+		if (auto ip = NET_ResolveHostname("127.0.0.1")) {
+			auto status = NET_WaitUntilResolved(ip, -1);
 			if (CanConnect())
-				tcpsock = SDLNet_TCP_Open(&ip);
+				tcpsock = NET_CreateClient(ip, 3636);
+
+			if (status = NET_WaitUntilConnected(tcpsock, -1); status != NET_SUCCESS) {
+				NET_DestroyStreamSocket(tcpsock);
+				tcpsock = nullptr;
+			}
+
+			auto error = SDL_GetError();
 
 			if (tcpsock) {
 				// Only lock if we manage to open a socket
@@ -159,30 +215,27 @@ void LightPack::_OnInit() {
 				// timeout.
 				std::unique_lock lock(mutex);
 
-				socketSet = SDLNet_AllocSocketSet(1);
-				SDLNet_TCP_AddSocket(socketSet, tcpsock);
-
 				// Flush whatever's in the buffer
 				ReadString();
 
 				// Get previous settings first
 				auto gammaString = WriteString("getgamma\r\n");
 				gammaString->erase(gammaString->size() - 2); // Trim the lazy way
-				CConsole::Console.Print(*gammaString, MSG_DIAG);
+				LogDebug(*gammaString);
 				previousGamma = std::stof(
 					gammaString->substr(gammaString->find(':') + 1)
 				);
 
 				auto smoothString = WriteString("getsmooth\r\n");
 				smoothString->erase(smoothString->size() - 2); // Trim the lazy way
-				CConsole::Console.Print(*smoothString, MSG_DIAG);
+				LogDebug(*smoothString);
 				previousSmooth = std::stoi(
 					smoothString->substr(smoothString->find(':') + 1)
 				);
 
 				auto countLeds = WriteString("getcountleds\r\n");
 				countLeds->erase(countLeds->size() - 2); // Trim the lazy way
-				CConsole::Console.Print(*countLeds, MSG_DIAG);
+				LogDebug(*countLeds);
 				numberOfLights = std::stoi(
 					countLeds->substr(countLeds->find(':') + 1)
 				);
@@ -193,20 +246,22 @@ void LightPack::_OnInit() {
 				WriteString("apikey:\r\n");
 				WriteString("lock\r\n");
 
-				// Set our preferred settings right away,
-				// let the user change them later
+				// Set user-defined settings
 				auto ret = WriteString("setbrightness:100\r\n");
-				CConsole::Console.Print("setbrightness:100 = " + ret->substr(0, ret->size() - 2), MSG_DIAG);
-				ret = WriteString("setgamma:1\r\n");
-				CConsole::Console.Print("setgamma:1 = " + ret->substr(0, ret->size() - 2), MSG_DIAG);
-				ret = WriteString("setsmooth:0\r\n");
-				CConsole::Console.Print("setsmooth:0 = " + ret->substr(0, ret->size() - 2), MSG_DIAG);
+				LogDebug("setbrightness:100 = ", ret->substr(0, ret->size() - 2));
 
+				std::stringstream gamma;
+				gamma << "setgamma:" << std::fixed << std::setprecision(2) << std::setfill('0') << Settings::settings.GetGamma();
+				ret = WriteString(gamma.str() + "\r\n");
+				LogDebug(gamma.str() + " = ", ret->substr(0, ret->size() - 2));
+
+				auto smooth = "setsmooth:" + std::to_string(static_cast<int>(Settings::settings.GetSmooth()));
+				ret = WriteString(smooth + "\r\n");
+				LogDebug(smooth + " = ", ret->substr(0, ret->size() - 2));
 			} else {
 				if (firstTry) {
-					CConsole::Console.Print(
-						"Could not open a socket to LightPack host. Retrying until we can...",
-						MSG_ALERT
+					LogWarning(
+						"Could not open a socket to LightPack host. Retrying until we can..."
 					);
 
 					firstTry = false;
@@ -215,17 +270,15 @@ void LightPack::_OnInit() {
 					RetryConnection();
 			}
 		} else {
-			CConsole::Console.Print(
-				std::string("Could not connect to LightPack host. Error: ").append(SDLNet_GetError()) + ". Retrying in 5 seconds...",
-				MSG_ALERT
+			LogWarning(
+				"Could not connect to LightPack host. Error: ", SDL_GetError(), ". Retrying in 5 seconds..."
 			);
 			if (running)
 				RetryConnection();
 		}
 	} else {
-		CConsole::Console.Print(
-			std::string("Could not initialize SDL_Net! Error: ").append(SDLNet_GetError()),
-			MSG_ERROR
+		LogError(
+			"Could not initialize SDL_Net! Error: ", SDL_GetError()
 		);
 	}
 }
@@ -234,7 +287,11 @@ void LightPack::RetryConnection() {
 	std::unique_lock lock(mutex);
 	std::unique_lock condLock(condMutex);
 
-	sleepTime = 5s;
+	if (sleepTime < 10s)
+		sleepTime += 1s;
+
+	const auto inSeconds = std::chrono::duration_cast<std::chrono::seconds>(sleepTime).count();
+	LogInfo("Retrying in ", inSeconds , " second", inSeconds > 1 ? "s" : "", "...");
 
 	queue.emplace([](LightPack *lp) {
 		lp->_OnInit();
@@ -260,8 +317,8 @@ void LightPack::OnDestroy() {
 			stream << "setgamma:" << std::setprecision(2) << std::fixed << std::setfill('0') << lp->previousGamma << "\r\n";
 			lp->WriteString(stream.str());
 			lp->WriteString("unlock\r\n");
-			SDLNet_TCP_Close(lp->tcpsock);
-			SDLNet_Quit();
+			NET_DestroyStreamSocket(lp->tcpsock);
+			lp->tcpsock = nullptr;
 		});
 	}
 
@@ -301,10 +358,28 @@ void LightPack::NextSample(const float &sample) {
 	}
 }
 
+void LightPack::OnDisconnect() {
+	LogError("Forcibly disconnecting from LightPack socket!");
+
+	running = false;
+}
+
 void LightPack::OnLoop(const Colour<float> &color) {
 	std::unique_lock lock(mutex);
 
-	if (!lightBin) return;
+	if (!lightBin) {
+		// If we've been disconnected,
+		// start searching again
+		if (!running) {
+			lock.unlock();
+
+			if (thread.joinable())
+				thread.join();
+
+			OnInit();
+		}
+		return;
+	}
 
 	if (captureTimer++ == CaptureFreq) {
 		this->color = color;
@@ -399,7 +474,8 @@ void LightPack::_OnLoop() {
 	}
 	stream << "\r\n";
 
-	WriteString(stream.str(), false);
+	if (!WriteString(stream.str(), false))
+		OnDisconnect();
 
 	currentSample = 0;
 	currentLight = 1;
@@ -419,18 +495,59 @@ void LightPack::SetBufferLength(std::size_t bufferLength) {
 void LightPack::SetLightType(LightType type) {
 	std::unique_lock lock(mutex);
 	currentLightType = type;
+
+	Settings::settings.SetLightPackVisualizationType(
+		type == LightType::Intensity ?
+			"intensity" :
+			type == LightType::Color ?
+				"color" :
+				"colorintensity"
+	);
 }
 void LightPack::SetFocusArea(FocusArea focus) {
 	std::unique_lock lock(mutex);
 	focusArea = focus;
 	binsPerLight = bufferLength / static_cast<int>(focus) / numberOfLights;
+
+	// These might look like bitwise flags, but they aren't
+	// ... I just like powers of 2.
+#pragma warning(push)
+#pragma warning(disable:26813)
+	Settings::settings.SetLightPackFocusArea(
+		focus == FocusArea::SuperBass ?
+			"superbass" :
+			focus == FocusArea::SubBass ?
+				"subbass" :
+				focus == FocusArea::Bass ?
+					"bass" :
+					focus == FocusArea::BassAndMid ?
+						"bassandmid" :
+						focus == FocusArea::BassMidAndHigh ?
+							"bassmidandalittlehighend" :
+							focus == FocusArea::HalfNyquist ?
+								"halfnyquist" :
+								"nyquist"
+	);
+#pragma warning(pop)
 }
 void LightPack::SetMapping(const int *mapping) {
 	std::unique_lock lock(mutex);
 	currentMapping = mapping;
+
+	Settings::settings.SetLightPackMapping(
+		mapping == Mappings::DEFAULT ?
+			"default" :
+			mapping == Mappings::MINE ?
+				"mine" :
+				mapping == Mappings::TOP_TO_BOTTOM ?
+					"ttb" :
+					"btt"
+	);
 }
 
 void LightPack::SetSmooth(uint8_t smooth) {
+	Settings::settings.SetSmooth(smooth);
+
 	std::unique_lock lock(mutex);
 
 	if (!tcpsock) return;
@@ -445,16 +562,18 @@ void LightPack::SetSmooth(uint8_t smooth) {
 }
 
 void LightPack::SetGamma(float gamma, bool silent) {
+	if (!silent) Settings::settings.SetGamma(gamma);
+
 	std::unique_lock lock(mutex);
 
 	if (!tcpsock) return;
 
-	queue.emplace([gamma, silent](LightPack *lp) {
+	queue.emplace([gamma, silent, this](LightPack *lp) {
 		std::unique_lock lock(lp->mutex);
 
 		std::stringstream stream;
 		stream << "setgamma:" << std::fixed << std::setprecision(2) << std::setfill('0') << gamma;
-		if (!silent) CConsole::Console.Print(stream.str(), MSG_DIAG);
+		if (!silent) LogDebug(stream.str());
 		stream << "\r\n";
 		lp->WriteString(stream.str());
 	});
@@ -485,11 +604,16 @@ std::string LightPack::GetStringForMassColorChangeCommand(int start, int end, un
 	return stream.str();
 }
 
-std::optional<std::string> LightPack::ReadString() const {
-	if (tcpsock && SDLNet_CheckSockets(socketSet, 250) > 0) {
+std::optional<std::string> LightPack::ReadString(bool block) const {
+	if (tcpsock) {
 		char msg[128] = { 0 };
-		if (SDLNet_TCP_Recv(tcpsock, msg, 127) <= 0)
-			return std::nullopt;
+		if (!block) {
+			if (NET_ReadFromStreamSocket(tcpsock, msg, 127) <= 0)
+				return std::nullopt;
+		} else {
+			while (NET_ReadFromStreamSocket(tcpsock, msg, 127) <= 0)
+				std::this_thread::sleep_for(1ms);
+		}
 
 		return std::string(msg);
 	}
@@ -499,11 +623,18 @@ std::optional<std::string> LightPack::ReadString() const {
 
 std::optional<std::string> LightPack::WriteString(std::string str, bool response) const {
 	if (tcpsock) {
-		SDLNet_TCP_Send(tcpsock, str.c_str(), static_cast<int>(str.length()));
+		if (!NET_WriteToStreamSocket(tcpsock, str.c_str(), static_cast<int>(str.length()))) {
+			LogError("Error writing to LightPack socket: ", SDL_GetError());
+			return std::nullopt;
+		}
 
-		if (response)
-			return ReadString();
+		if (response) {
+			while (NET_GetStreamSocketPendingWrites(tcpsock))
+				std::this_thread::sleep_for(1ms);
+
+			return ReadString(true);
+		}
 	}
 
-	return std::nullopt;
+	return "";
 }

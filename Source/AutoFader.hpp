@@ -5,56 +5,86 @@
 
 #include "MathCPP/Duration.hpp"
 
+#include "Settings.hpp"
+
 using namespace MathsCPP;
 
+template<bool UserControlled>
 class AutoFader {
 public:
 	void OnLoop(const Delta &time) {
 		if (targetAlpha) {
 			if (alpha < *targetAlpha) {
-				alpha += static_cast<float>(time.change.AsSeconds() * 2.0);
+				alpha += static_cast<float>(time.change.AsSeconds() * autoFadeSpeed);
 				if (alpha >= *targetAlpha) {
 					alpha = *targetAlpha;
 					targetAlpha = std::nullopt;
 				}
 			} else if (alpha > *targetAlpha) {
-				alpha -= static_cast<float>(time.change.AsSeconds() * 2.0);
+				alpha -= static_cast<float>(time.change.AsSeconds() * autoFadeSpeed);
 				if (alpha <= *targetAlpha) {
 					alpha = *targetAlpha;
 					targetAlpha = std::nullopt;
 				}
+			} else targetAlpha = std::nullopt;
+		} else if (auto now = std::chrono::system_clock::now(); !paused && lastFade == true && (now - lastEventTime) > waitTime) {
+			if constexpr (UserControlled) {
+				if (Settings::settings.GetAutoFade())
+					Fade(false);
+			} else {
+				Fade(false);
 			}
-		}
 
-		if (auto now = std::chrono::system_clock::now(); (now - lastEventTime) > waitTime) {
-			Fade(false);
 			lastEventTime = now;
 		}
 	}
 
 	void Fade(bool in) {
-		if (in) {
-			targetAlpha = 1.0f;
-			lastEventTime = std::chrono::system_clock::now();
-		} else {
-			targetAlpha = 0.0f;
-		}
+		if (in) lastEventTime = std::chrono::system_clock::now();
 
-		if (fadeCallback)
-			fadeCallback(in);
+		if (!lastFade || *lastFade != in) {
+			if (in)
+				targetAlpha = 1.0f;
+			else
+				targetAlpha = 0.0f;
+
+			if (fadeCallback)
+				fadeCallback(in);
+
+			lastFade = in;
+		}
+	}
+
+	void SetWaitTime(Duration<Microseconds> waitTime) {
+		this->waitTime = waitTime;
 	}
 
 	void SetFadeCallback(std::function<void(bool)> &&callback) { 
 		this->fadeCallback = std::move(callback); 
 	}
 
-protected:
-	std::chrono::seconds waitTime = 2s;
+	void SetAutoFadeSpeed(float autoFadeSpeed) { this->autoFadeSpeed = autoFadeSpeed; }
 
-	float alpha = 1.0f;
+	virtual const float &GetAlpha() const { return alpha; }
+
+	bool Stick() { if (paused) return false; paused = true; return true; }
+	virtual bool Unstick() { if (!paused) return false; paused = false; return true; }
+
+	const bool &IsPaused() const { return paused; }
+
+protected:
+	std::chrono::seconds waitTime = Settings::settings.GetWaitTime();
+
+	float alpha = 0.0f;
 	std::optional<float> targetAlpha = std::nullopt;
 
 	std::chrono::system_clock::time_point lastEventTime = std::chrono::system_clock::now();
 
 	std::function<void(bool)> fadeCallback;
+
+	std::optional<bool> lastFade = std::nullopt;
+
+	float autoFadeSpeed = Settings::settings.GetAutoFadeSpeed();
+
+	bool paused = false;
 };

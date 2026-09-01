@@ -1,16 +1,23 @@
 {
   "dependencies": [
+    "vulkan",
+    "glm",
     "fftw3",
-    "libjpeg-turbo",
-    "sdl2",
-    {
-      "name": "sdl2-image",
-      "features": [
-        "libjpeg-turbo"
+    { 
+      "name" : "sdl3",
+      "features" : [
+        "vulkan"
       ]
     },
-    "sdl2-mixer",
-    "sdl2-net",
-    "sdl2-ttf"
+    {
+      "name": "sdl3-image",
+      "features": [
+        "jpeg",
+        "png",
+        "webp",
+        "tiff"
+      ]
+    },
+    "freetype"
   ]
 }

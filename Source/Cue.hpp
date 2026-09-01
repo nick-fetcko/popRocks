@@ -4,15 +4,18 @@
 #include <filesystem>
 #include <fstream>
 #include <locale>
+#include <set>
 #include <string>
 
-#include "CConsole.h"
-#include "Utils.hpp"
+#include "Utils/Logger.hpp"
+#include "Utils/Utils.hpp"
+
+using namespace Fetcko;
 
 // https://wyday.com/cuesharp/specification.php
 // https://en.wikipedia.org/wiki/Cue_sheet_%28computing%29
 
-class Cue {
+class Cue : public LoggableClass {
 private:
 	struct Track {
 		std::string title;
@@ -26,14 +29,20 @@ private:
 
 		double startTime = 0.0;
 
+		std::filesystem::path filePath;
+
 		friend std::ostream &operator<<(std::ostream &left, const Track &right) {
 			left << right.title;
 			return left;
 		}
 	};
 
+	std::vector<Track> tracks;
+	std::set<std::filesystem::path> files;
+	std::vector<Track>::const_iterator currentTrack = tracks.end();
+
 public:
-	std::optional<std::filesystem::path> OnLoad(const std::filesystem::path &path);
+	std::optional<std::filesystem::path> OnLoad(const std::filesystem::path &path, bool append = false);
 
 	const Track &Next() const;
 	const Track &Next();
@@ -60,65 +69,85 @@ public:
 
 private:
 	template<typename C>
-	std::vector<std::vector<std::string>> ReadLines(std::basic_istream<C> &stream) {
+	std::basic_string<C> GetLine(std::basic_filebuf<C> &buf) {
+		std::basic_string<C> ret;
+
+		if (!buf.is_open()) return ret;
+
+		C c = buf.sbumpc();
+		while(c != static_cast<C>(EOF) && c != static_cast<C>('\r') && c != static_cast<C>('\n')) {
+			ret += c;
+
+			c = buf.sbumpc();
+		}
+
+		c = buf.sbumpc();
+		while(c != static_cast<C>(EOF) && (c == static_cast<C>('\r') || c == static_cast<C>('\n'))) {
+			c = buf.sbumpc();
+		}
+
+		// If we found a non-newline character,
+		// put it back
+		if (c != static_cast<C>(EOF))
+			buf.sputbackc(c);
+
+		return ret;
+	}
+
+	template<typename C>
+	std::vector<std::vector<std::string>> ReadLines(std::basic_filebuf<C> &stream) {
 		std::vector<std::vector<std::string>> lines;
-
-		std::basic_string<C> line;
-
-		while (std::getline(stream, line)) {
+		
+		for (auto line = GetLine(stream); !line.empty(); line = GetLine(stream)) {
 			// Files with Windows newlines cause \r to show
 			// up at the end of the line since getline()
 			// reads up to \n
 			Fetcko::Utils::rtrim(line);
 
 			// Split each line by whitespace
-			auto split = Fetcko::Utils::Split(line, isblank);
-
-			std::vector<std::basic_string<C>> merged;
-			std::basic_string<C> merger;
-
-			// Find quoted sections and merge them
+			std::vector<std::basic_string<C>> split;
+			std::basic_string<C> token;
 			std::optional<C> startQuote = std::nullopt;
-			for (auto &&item : split) {
-				if (!startQuote && (item[0] == static_cast<C>('\'') || item[0] == static_cast<C>(L'\"'))) {
-					startQuote = item[0];
-					if (auto last = item.find_last_of(*startQuote); last > 1) {
-						merger = item.substr(1, last - 1);
-						merged.emplace_back(std::move(merger));
-						merger = std::basic_string<C>();
-						startQuote.reset();
-					} else merger = item.substr(1);
-				} else if (!merger.empty()) {
-					if (item[item.size() - 1] == startQuote) {
-						merger += static_cast<C>(' ') + item.substr(0, item.size() - 1);
-						merged.emplace_back(std::move(merger));
-						merger = std::basic_string<C>();
-						startQuote.reset();
-					} else merger += static_cast<C>(' ') + item;
-				} else {
-					merged.emplace_back(std::move(item));
-				}
+			for (const auto &c : line) {
+				if ((c >= -1 && c <= 255) && isblank(c) && !startQuote) {
+					if (!token.empty()) {
+						split.emplace_back(std::move(token));
+						token = std::basic_string<C>();
+					}
+				} else if (c == static_cast<C>('\'') || c == static_cast<C>('\"')) {
+					if (startQuote) {
+						if (*startQuote == c)
+							startQuote = std::nullopt;
+						else
+							token += c;
+					} else startQuote = c;
+				} else token += c;
 			}
 
-			if constexpr (std::is_same<C, wchar_t>::value) {
-				std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+			if (!token.empty())
+				split.emplace_back(std::move(token));
+
+			if constexpr (std::is_same<C, wchar_t>::value || std::is_same<C, char16_t>::value) {
 				std::vector<std::string> utf8;
-				for (const auto &utf16 : merged)
-					utf8.emplace_back(converter.to_bytes(utf16));
+				for (const auto &utf16 : split)
+					utf8.emplace_back(Utils::ToUTF8(utf16));
 				lines.emplace_back(std::move(utf8));
 			} else {
-				lines.emplace_back(std::move(merged));
+				lines.emplace_back(std::move(split));
 			}
 		}
 
 		return lines;
 	}
 
+	inline std::string Parse(const std::string &string);
+
 	std::filesystem::path filePath;
 
 	std::string title;
 	std::string performer;
 
-	std::vector<Track> tracks;
-	std::vector<Track>::iterator currentTrack;
+	uint8_t discIndex = 1;
+
+	std::optional<Utils::Encoding> encoding = std::nullopt;
 };

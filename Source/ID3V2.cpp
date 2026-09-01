@@ -1,7 +1,7 @@
 #include "ID3V2.hpp"
 
-#include "CConsole.h"
-#include "Utils.hpp"
+#include <cmath>
+#include <cstring>
 
 // ===============================================
 // ================ ID3V2::Header ================
@@ -33,13 +33,29 @@ ID3V2::ExtendedHeader *ID3V2::Header::Read(const char **tag) {
 
 	parent.currentOffset += (*tag - start);
 
-	return HasExtendedHeader() ? new ExtendedHeader() : nullptr;
+	return (IsValid() && HasExtendedHeader() ? new ExtendedHeader() : nullptr);
 }
 
 bool ID3V2::Header::HasExtendedHeader() const {
 	auto ret = flags & 0x40;
 	if (ret) throw std::runtime_error("extended headers not yet supported");
 	return ret;
+}
+
+bool ID3V2::Header::IsValid() const {
+	return id[0] == 'I' &&
+		id[1] == 'D' &&
+		id[2] == '3' &&
+		majorVersion >= 2 &&
+		majorVersion <= 4;
+}
+
+bool ID3V2::Header::IsFooter() const {
+	return id[0] == '3' &&
+		id[1] == 'D' &&
+		id[2] == 'I' &&
+		majorVersion >= 2 &&
+		majorVersion <= 4;
 }
 
 // ===============================================
@@ -50,11 +66,25 @@ ID3V2::Art::Art(ID3V2::Frame &parent) : parent(parent) {
 }
 
 ID3V2::Art::~Art() {
-	delete[] data;
 }
 
 bool ID3V2::Art::Read(const char **tag) {
 	auto *start = *tag;
+
+	uint32_t syncDataLength = 0;
+	bool unsync = false;
+	
+	// ID3v2.4 flags
+	if (parent.parent.header.majorVersion > 3) {
+		unsync = static_cast<bool>(parent.flags & 0x0200);
+
+		// We have a data length indicator
+		if (parent.flags & 0x0100) {
+			syncDataLength = *reinterpret_cast<const uint32_t *>(*tag);
+			Fix32Bit(&syncDataLength, unsync);
+			*tag += sizeof(uint32_t);
+		}
+	}
 
 	parent.ReadEncoding(tag, &textEncoding);
 
@@ -83,16 +113,51 @@ bool ID3V2::Art::Read(const char **tag) {
 	// This one's also null terminated
 	description = *tag;
 
+	// Description has no defined length,
+	// so we just have to find the null
+	// terminator
+	while ((*tag)[0] != '\0')
+		*tag += 1;
+
 	// Even when the encoding is Latin, there's
 	// sometimes a double terminator
 	while ((*tag)[0] == '\0')
 		*tag += 1;
 
 	auto offset = static_cast<uint32_t>(*tag - start);
-	dataLength = parent.size - offset;
+	auto dataLength = parent.size - offset;
 
-	data = new uint8_t[dataLength];
-	memcpy(data, *tag, dataLength);
+	if (syncDataLength)
+		syncDataLength -= offset - sizeof(uint32_t); // Need the 4 data length bytes
+
+	bool skipped = false;
+	if (unsync) {
+		data.resize(syncDataLength);
+
+		std::size_t j = 0;
+		for (std::size_t i = 0; i < dataLength && j < syncDataLength; ++i) {
+			if ((*tag)[i] == 0 && i > 0 && ((*tag)[i - 1] & 0xFF) == 0xFF && i < dataLength - 2) {
+				if (((*tag)[i + 1] & 0xe0) == 0xe0)
+					continue;
+				// All 0xFF00 sequences are followed by another 0
+				else if ((*tag)[i + 1] == 0) {
+					data[j++] = (*tag)[i];
+					++i;
+					continue;
+				}
+			}
+
+			data[j++] = (*tag)[i];
+		}
+
+		if (j != syncDataLength)
+			LogWarning("Real data length (", j, ") does not match expected data length (", syncDataLength, ")");
+
+		dataLength = syncDataLength;
+	} else {
+		data.resize(dataLength);
+		memcpy(data.data(), *tag, dataLength);
+	}
 	
 	parent.size -= offset;
 	parent.parent.currentOffset += offset;
@@ -107,7 +172,7 @@ ID3V2::Frame::Frame(ID3V2 &parent) : parent(parent) {
 
 }
 
-ID3V2::Frame::Frame(Frame &&other) noexcept : parent(std::move(other.parent)) {
+ID3V2::Frame::Frame(Frame &&other) noexcept : parent(other.parent) {
 	id = std::move(other.id);
 	size = std::move(other.size);
 	flags = std::move(other.flags);
@@ -159,7 +224,7 @@ bool ID3V2::Frame::Read(const char **tag, bool textOnly) {
 			ReadEncoding(tag);
 
 			textData = ToUTF8(*tag, size, encoding);
-		} else if (!textOnly && id == "APIC" || id == "PIC") {
+		} else if (!textOnly && (id == "APIC" || id == "PIC")) {
 			artData = new Art(*this);
 			if (!artData->Read(tag)) {
 				delete artData;
@@ -213,7 +278,7 @@ std::map<std::string, std::string> ID3V2::Read(const char **tag, bool textOnly) 
 			if (frame.id.empty() || frame.id[0] == '\0') // we hit padding
 				break;
 
-			CConsole::Console.Print("Skipping frame " + frame.id, MSG_DIAG);
+			LogInfo("Skipping frame ", frame.id);
 		}
 	}
 
@@ -239,34 +304,7 @@ void ID3V2::Fix32Bit(uint32_t *num, bool unsynch) {
 }
 
 std::string ID3V2::ToUTF8(const char *tag, uint32_t size, Encoding encoding) {
-	// Size needs to be rounded to the nearest _even_ number,
-	// since we divide by 2 later on.
-	// 
-	// FIXME: A better option might be to use an istringstream
-	//        by default and _only_ switch to a wistringstream when
-	//        we encounter UTF-16.
-	bool rounded = false;
-	if (auto round = static_cast<uint32_t>(std::round(std::round(size) / sizeof(wchar_t)) * sizeof(wchar_t));
-		round != size) {
-		size = round;
-		rounded = true;
-	}
-
-	std::wistringstream stream(
-		std::wstring(
-			reinterpret_cast<const wchar_t *>(tag),
-			reinterpret_cast<const wchar_t *>(tag + size)
-		),
-		std::ios::in | std::ios::binary
-	);
-
-	// Imbue with UTF-8 to start with
-	stream.imbue(
-		std::locale(
-			stream.getloc(),
-			new std::codecvt_utf8<wchar_t>
-		)
-	);
+	std::stringstream stream(std::string(tag, tag + size));
 
 	if (encoding == Encoding::UTF_16) {
 		if (auto bom = Fetcko::Utils::GetBom(stream)) {
@@ -276,7 +314,7 @@ std::string ID3V2::ToUTF8(const char *tag, uint32_t size, Encoding encoding) {
 				stream.imbue(
 					std::locale(
 						stream.getloc(),
-						new std::codecvt_utf16<wchar_t, 0x10ffff>
+						new std::codecvt_utf16<char16_t, 0x10ffff>
 					)
 				);
 
@@ -287,7 +325,7 @@ std::string ID3V2::ToUTF8(const char *tag, uint32_t size, Encoding encoding) {
 				stream.imbue(
 					std::locale(
 						stream.getloc(),
-						new std::codecvt_utf16<wchar_t, 0x10ffff, std::little_endian>
+						new std::codecvt_utf16<char16_t, 0x10ffff, std::little_endian>
 					)
 				);
 
@@ -305,25 +343,153 @@ std::string ID3V2::ToUTF8(const char *tag, uint32_t size, Encoding encoding) {
 		}
 	}
 
-	size /= sizeof(wchar_t);
-
 	if (encoding == Encoding::Latin || encoding == Encoding::UTF_8) {
-		auto *chars = new char[size * sizeof(wchar_t) + (rounded ? 0 : 1)];
-		stream.read(reinterpret_cast<wchar_t*>(chars), size);
+		auto *chars = new char[size * sizeof(char) + 1];
+
+		stream.read(chars, size);
 
 		// The spec _says_ these should already
 		// be null-terminated, but I've found
 		// multiple examples of no terminator
-		chars[size * sizeof(wchar_t) - (rounded ? 1 : 0)] = '\0';
+		chars[size * sizeof(char)] = '\0';
 
-		auto ret = std::string(chars, chars + size * sizeof(wchar_t));
+		// I've encountered a single malformed file
+		// (MisterWives' "Reflection") that wrongly
+		// encodes the TALB tag. It claims to be Latin1,
+		// but is UTF-16. Furthermore: its BOM isn't 
+		// 0xFFFE, but rather 0xFF00FE.
+		if (chars[0] == '\0') {
+			delete[] chars;
+			return "";
+		}
+
+		auto ret = std::string(chars, chars + size * sizeof(char));
 		delete[] chars;
 
 		return ret;
 	} else {
-		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+		char16_t *wideChars = new char16_t[std::lround(size / 2.0f) + 1];
+		stream.read(reinterpret_cast<char*>(wideChars), size);
 
-		wchar_t *wideChars = new wchar_t[size + 1];
+		// The spec _says_ these should already
+		// be null-terminated, but I've found
+		// multiple examples of no terminator
+		wideChars[std::lround(size / 2.0f)] = L'\0';
+
+		auto ret = Utils::ToUTF8(wideChars);
+		delete[] wideChars;
+		return ret;
+	}
+
+	/*
+	// Size needs to be rounded to the nearest _even_ number,
+	// since we divide by 2 later on.
+	// 
+	// FIXME: A better option might be to use an istringstream
+	//        by default and _only_ switch to a wistringstream when
+	//        we encounter UTF-16.
+	bool rounded = false;
+	if (auto round = static_cast<uint32_t>(std::round(std::round(size) / sizeof(char16_t)) * sizeof(char16_t));
+		round != size) {
+		size = round;
+		rounded = true;
+	}
+
+	//std::wistringstream stream(
+#ifndef __ANDROID__
+	std::basic_istringstream<char16_t> stream(
+		std::basic_string<char16_t>(
+			reinterpret_cast<const char16_t *>(tag),
+			reinterpret_cast<const char16_t *>(tag + size)
+		),
+		std::ios::in | std::ios::binary
+	);
+
+	// Imbue with UTF-8 to start with
+	stream.imbue(
+		std::locale(
+			stream.getloc(),
+			new std::codecvt_utf8<char16_t>
+		)
+	);
+#else
+	std::stringstream stream;
+#endif
+
+	if (encoding == Encoding::UTF_16) {
+#ifndef __ANDROID__
+		if (auto bom = Fetcko::Utils::GetBom(stream)) {
+			switch (*bom) {
+			case Fetcko::Utils::BOM::UTF_16_BE:
+				//std::cout << "UTF-16 BE" << std::endl;
+				encoding = Encoding::UTF_16_BE;
+				stream.imbue(
+					std::locale(
+						stream.getloc(),
+						new std::codecvt_utf16<char16_t, 0x10ffff>
+					)
+				);
+
+				// UTF-16 BOMs are two bytes wide
+				size -= 2;
+				break;
+			case Fetcko::Utils::BOM::UTF_16_LE:
+				//std::cout << "UTF-16 LE" << std::endl;
+				stream.imbue(
+					std::locale(
+						stream.getloc(),
+						new std::codecvt_utf16<char16_t, 0x10ffff, std::little_endian>
+					)
+				);
+
+				// UTF-16 BOMs are two bytes wide
+				size -= 2;
+				break;
+			case Fetcko::Utils::BOM::UTF_8:
+				// UTF-8 BOM is three bytes wide
+				size -= 3;
+				[[fallthrough]];
+			default:
+				encoding = Encoding::UTF_8;
+				break;
+			}
+		}
+#endif
+	}
+
+	size /= sizeof(char16_t);
+
+	if (encoding == Encoding::Latin || encoding == Encoding::UTF_8) {
+		auto *chars = new char[size * sizeof(char16_t) + (rounded ? 0 : 1)];
+
+#ifndef __ANDROID__
+		stream.read(reinterpret_cast<char16_t*>(chars), size);
+#else
+		stream.read(chars, size);
+#endif
+
+		// The spec _says_ these should already
+		// be null-terminated, but I've found
+		// multiple examples of no terminator
+		chars[size * sizeof(char16_t) - (rounded ? 1 : 0)] = '\0';
+
+		// I've encountered a single malformed file
+		// (MisterWives' "Reflection") that wrongly
+		// encodes the TALB tag. It claims to be Latin1,
+		// but is UTF-16. Furthermore: its BOM isn't 
+		// 0xFFFE, but rather 0xFF00FE.
+		if (chars[0] == '\0') {
+			delete[] chars;
+			return "";
+		}
+
+		auto ret = std::string(chars, chars + size * sizeof(char16_t));
+		delete[] chars;
+
+		return ret;
+	} else {
+#ifndef __ANDROID__
+		char16_t *wideChars = new char16_t[size + 1];
 		stream.read(wideChars, size);
 
 		// The spec _says_ these should already
@@ -331,9 +497,12 @@ std::string ID3V2::ToUTF8(const char *tag, uint32_t size, Encoding encoding) {
 		// multiple examples of no terminator
 		wideChars[size] = L'\0';
 
-		auto ret = converter.to_bytes(wideChars);
+		auto ret = Utils::ToUTF8(wideChars);
 		delete[] wideChars;
-
+#else
+		std::string ret;
+#endif
 		return ret;
 	}
+	*/
 }

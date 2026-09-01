@@ -1,28 +1,44 @@
 #include "Volume.hpp"
 
-void Volume::OnInit(const std::filesystem::path &fontFile) {
-	auto string = fontFile.u8string();
+#include "AlbumArt.hpp"
+#include "Hash.hpp"
+#include "HDR.hpp"
 
-	ring.SetWidth(radius / 10);
-	outlineRing.SetWidth(radius / 10 + (radius / 25) * 2);
-	font = TTF_OpenFont(string.c_str(), static_cast<int>(radius / 2));
-	outlineFont = TTF_OpenFont(string.c_str(), static_cast<int>(radius / 2));
-
-	TTF_SetFontOutline(outlineFont, static_cast<int>(radius / 25));
-	text.OnInit(font);
-	outlineText.OnInit(outlineFont);
-	outlineText.SetColor(Colour<float>::Black);
-	UpdateVolume();
+Volume::Volume() {
+	radius = AlbumArt::BaseRadius;
 }
 
-void Volume::OnLoop(int x, int y, const Delta &time) {
+void Volume::OnInit(const std::string &fontRoot, OpenGLFont *font, OpenGLFont *outlineFont, Context *context) {
+	ring.SetWidth(radius / 10);
+	outlineRing.SetWidth(radius / 10 + (radius / 25) * 2);
+	this->font = new OpenGLFont();
+	this->font->OnInit(fontRoot, static_cast<int>(radius / 2));
+	this->outlineFont = new OpenGLFont();
+	this->outlineFont->OnInit(fontRoot, static_cast<int>(radius / 2), static_cast<int>(radius / 25));
+
+	text.OnInit(this->font, context);
+	outlineText.OnInit(this->outlineFont, context);
+	outlineText.SetColor(Colour<float>::Black);
+
+	label.OnInit(font, context);
+	label.SetText("Volume:");
+	labelOutline.OnInit(outlineFont, context);
+	labelOutline.SetText("Volume:");
+
+	UpdateVolume(false);
+}
+
+void Volume::OnLoop(int x, int y, const Delta &time, const AlbumArt *const albumArt, bool miniPlayer, Context &context) {
 	AutoFader::OnLoop(time);
 
-	glColor4f(color.r, color.g, color.b, alpha);
 	//glTranslatef(x, y, 0);
 
-	outlineText.OnLoop(x - outlineText.GetSize().x / 2, y - outlineText.GetSize().y / 2);
-	text.OnLoop(x - text.GetSize().x / 2, y - text.GetSize().y / 2);
+	const auto OutlineColor = miniPlayer ? albumArt->GetBlackColor() : 0.0f;
+
+	context.Color(OutlineColor, OutlineColor, OutlineColor, alpha);
+	outlineText.OnLoop(x - text.GetBounds().width / 2, y - text.GetSize().y / 2 + label.GetBounds().height);
+	context.Color(color.r, color.g, color.b, alpha);
+	text.OnLoop(x - text.GetBounds().width / 2, y - text.GetSize().y / 2 + label.GetBounds().height);
 	/*
 	glColor4f(1.0f, 1.0f, 1.0f, alpha);
 
@@ -40,74 +56,109 @@ void Volume::OnLoop(int x, int y, const Delta &time) {
 
 	glLoadIdentity();
 	*/
+	context.Use("basic"_hash);
 
-	glColor4f(0.0f, 0.0f, 0.0f, alpha);
-	glTranslatef(
+	context.Color(OutlineColor, OutlineColor, OutlineColor, alpha);
+	context.Translate(
 		static_cast<GLfloat>(x),
 		static_cast<GLfloat>(y),
 		0
 	);
-	outlineRing.Draw();
+	context.Apply();
+	outlineRing.Draw<true>(context);
 
-	glColor4f(color.r, color.g, color.b, alpha);
-	glTranslatef(
+	context.Color(color.r, color.g, color.b, alpha);
+	context.Translate(
 		static_cast<GLfloat>(x),
 		static_cast<GLfloat>(y),
 		0
 	);
-	ring.Draw();
+	context.Apply();
+	ring.Draw<true>(context);
+
+	context.Use("texture"_hash);
+
+	context.Color(OutlineColor, OutlineColor, OutlineColor, alpha);
+	labelOutline.OnLoop(x - label.GetBounds().width / 2, y - text.GetBounds().height / 2 + label.GetBounds().height / 2);
+	context.Color(HDR::WhiteLevel, HDR::WhiteLevel, HDR::WhiteLevel, alpha);
+	label.OnLoop(x - label.GetBounds().width / 2, y - text.GetBounds().height / 2 + label.GetBounds().height / 2);
 }
 
 void Volume::SetRadius(float radius) {
 	this->radius = radius;
-	TTF_SetFontSize(font, static_cast<int>(radius / 2));
-	TTF_SetFontSize(outlineFont, static_cast<int>(radius / 2));
-	TTF_SetFontOutline(outlineFont, static_cast<int>(std::max(1.0f, radius / 25.0f)));
+	font->SetFontSize(static_cast<int>(radius / 2));
+	outlineFont->SetFontSize(static_cast<int>(radius / 2));
+	outlineFont->SetOutlineRadius(static_cast<int>(std::max(1.0f, radius / 25.0f)));
 	ring.SetWidth(radius / 10);
 	outlineRing.SetWidth(radius / 10 + (radius / 25) * 2);
-	UpdateVolume(true);
+	UpdateVolume(false, true);
 }
 
 void Volume::ToggleVolumeControl() { volumeControl = !volumeControl; }
 const bool Volume::GetVolumeControl() const { return volumeControl; }
 
 void Volume::VolumeUp() {
-	Settings::settings.SetVolume(std::clamp(GetVolume() + 0.02f + FLT_EPSILON, 0.0f, 1.0f));
-	UpdateVolume();
+	Settings::settings.SetVolume(std::clamp(GetVolume() + 0.01f + FLT_EPSILON, 0.0f, 1.0f));
+	UpdateVolume(true);
 }
 void Volume::VolumeDown() {
-	Settings::settings.SetVolume(std::clamp(GetVolume() - 0.02f - FLT_EPSILON, 0.0f, 1.0f));
-	UpdateVolume();
+	Settings::settings.SetVolume(std::clamp(GetVolume() - 0.01f - FLT_EPSILON, 0.0f, 1.0f));
+	UpdateVolume(true);
+}
+
+void Volume::SetVolume(int volume) {
+	Settings::settings.SetVolume(volume / 100.0f);
+	UpdateVolume(true);
 }
 const float &Volume::GetVolume() const { return Settings::settings.GetVolume(); }
 
 // https://stackoverflow.com/a/1165188
 const float Volume::GetScaledVolume() const {
-	return ((std::exp(GetVolume()) - 1.0f) / (std::exp(1.0f) - 1.0f));
+	return scaledVolume;
 }
 
 const float Volume::GetInverseVolume() const {
-	const auto scaled = GetScaledVolume();
-
-	if (scaled <= FLT_EPSILON)
-		return 0.0f;
-
-	return 1.0f / scaled;
+	return inverseVolume;
 }
 
 void Volume::OnDestroy() {
+	ring.OnDestroy();
+	outlineRing.OnDestroy();
+
 	text.OnDestroy();
-	TTF_CloseFont(font);
+
+	delete font;
+	font = nullptr;
+	delete outlineFont;
+	font = nullptr;
+
+	labelOutline.OnDestroy();
+	label.OnDestroy();
 }
 
 void Volume::OnColorChanged(const Colour<float> &color, bool silent) {
 	auto hsv = color.ToHsv();
 	hsv.v = 1.0f;
 	this->color = Colour<float>::FromHsv(hsv.h, hsv.s, hsv.v);
+
+	if (HDR::Enabled) {
+		this->color.Tone(
+			Settings::settings.GetAlbumArtGamma(),
+			Settings::settings.GetAlbumArtContrast(),
+			Settings::settings.GetAlbumArtBrightness(),
+			HDR::WhiteLevel * HDR::Headroom
+		);
+	}
 }
 
-inline void Volume::UpdateVolume(bool force) {
+inline void Volume::UpdateVolume(bool fade, bool force) {
 	const auto string = std::to_string(static_cast<int>(GetVolume() * 100));
+
+	scaledVolume = ((std::exp(GetVolume()) - 1.0f) / (std::exp(1.0f) - 1.0f));
+	if (scaledVolume <= FLT_EPSILON)
+		inverseVolume = 0.0f;
+	else
+		inverseVolume = 1.0f / scaledVolume;
 
 	outlineText.SetText(string, force);
 	text.SetText(string, force);
@@ -150,7 +201,5 @@ inline void Volume::UpdateVolume(bool force) {
 	delete[] points;
 	delete[] outlinePoints;
 
-	// Update setting here
-
-	Fade(true);
+	if (fade) Fade(true);
 }

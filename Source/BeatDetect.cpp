@@ -1,24 +1,61 @@
 #include "BeatDetect.hpp"
 
+#include "Utils/Filesystem.hpp"
+#include "Utils/Hash.hpp"
+#include "Utils/Utils.hpp"
+
 void BeatDetect::OnLoad(
+	const std::filesystem::path &path,
+	bool cache,
 	HSTREAM streamHandle,
 	const DWORD freq,
 	const DWORD chans,
 	std::function<void()> onLoaded,
 	std::optional<double> startTime,
-	std::optional<double> endTime
+	std::optional<double> endTime,
+	std::optional<uint8_t> index
 ) {
 	canceled = false;
 
-	thread = std::thread([this, streamHandle, freq, chans, onLoaded, startTime, endTime] {
-		_OnLoad(streamHandle, freq, chans, onLoaded, startTime, endTime);
+	thread = std::thread([this, path, cache, streamHandle, freq, chans, onLoaded, startTime, endTime, index] {
+		_OnLoad(path, cache, streamHandle, freq, chans, onLoaded, startTime, endTime, index);
 	});
+}
+
+void BeatDetect::SetHalveDetected(bool halveDetected) {
+	this->halveDetected = halveDetected;
+
+	if (eventListIter == eventList.end()) return;
+
+	// Make sure we always start on an EVEN beat
+	if (const auto distance = std::distance(eventList.begin(), eventListIter); distance % 2)
+		--eventListIter;
+}
+
+void BeatDetect::SetUseOtherHalf(bool useOtherHalf) {
+	this->useOtherHalf = useOtherHalf;
+
+	const auto distance = std::distance(eventList.begin(), eventListIter);
+
+	if (eventListIter == eventList.end()) return;
+
+	// If we're odd, make even again
+	if (!useOtherHalf && (distance % 2))
+		--eventListIter;
+	// If we're even, make odd
+	else if (useOtherHalf && !(distance % 2)) {
+		if (eventListIter != eventList.begin())
+			--eventListIter;
+		else
+			++eventListIter;
+	}
 }
 
 bool BeatDetect::OnLoop(double elapsed) {
 	if (mutex.try_lock()) {
 		if (detectBpm && eventListIter != eventList.end() && elapsed >= eventListIter->time) {
 			++eventListIter;
+			if (halveDetected && eventListIter != eventList.end()) ++eventListIter;
 			mutex.unlock();
 			return true;
 		}
@@ -29,23 +66,42 @@ bool BeatDetect::OnLoop(double elapsed) {
 	return false;
 }
 
-void BeatDetect::SeekTo(double time) {
-	for (eventListIter = eventList.begin(); eventListIter != eventList.end(); ++eventListIter) {
-		if (eventListIter->time > time)
-			return;
+int BeatDetect::SeekTo(double time) {
+	int ret = 0;
+	for (eventListIter = eventList.begin(); eventListIter != eventList.end(); ++eventListIter, ++ret) {
+		if (eventListIter->time > time && ((std::distance(eventList.begin(), eventListIter) % 2) == (useOtherHalf ? 1 : 0)))
+			return ret;
 	}
+
+	return ret;
 }
 
-void BeatDetect::ToggleDetection() {
+const int BeatDetect::GetNumberOfElapsedBeats() const {
+	return std::distance(eventList.begin(), EventList::const_iterator(eventListIter));
+}
+
+const bool BeatDetect::IsNextBeatCloser(double elapsed) const {
+	if (eventListIter == eventList.end()) return true;
+
+	auto tempIter = eventListIter;
+	if (tempIter != eventList.begin())
+		std::advance(tempIter, -1);
+
+	return eventListIter->time - elapsed < elapsed - tempIter->time;
+}
+
+void BeatDetect::SetDetecting(bool detecting) {
+	if (!detecting) Cancel();
+
 	std::unique_lock lock(mutex);
-	detectBpm = !detectBpm;
+	detectBpm = detecting;
 }
 
 bool BeatDetect::IsDetecting() const { return detectBpm; }
 
 void BeatDetect::Cancel() {
 	if (!canceled && thread.joinable()) {
-		CConsole::Console.Print("Canceling beat detection thread", MSG_DIAG);
+		LogDebug("Canceling beat detection thread");
 
 		// Only set our state to idle
 		// if we actually canceled
@@ -68,27 +124,115 @@ void BeatDetect::Reset() {
 const BeatDetect::State BeatDetect::GetState() const { return state; }
 
 inline void BeatDetect::_OnLoad(
+	const std::filesystem::path &path,
+	bool cache,
 	HSTREAM streamHandle,
 	DWORD freq,
 	DWORD chans,
 	std::function<void()> onLoaded,
 	std::optional<double> startTime,
 	std::optional<double> endTime,
+	std::optional<uint8_t> index,
 	std::optional<double> hopTime,
 	std::optional<AgentParameters> parameters
 ) {
+	std::filesystem::path cachePath;
+	bool collision = false;
 	if (detectBpm) {
 		std::unique_lock lock(mutex);
 
 		state = State::Loading;
 
+		// Do we have cached results?
+		if (cache) {
+			auto start = std::chrono::system_clock::now();
+
+			auto data = Utils::GetStringFromFile(path, 50 * 1024 * 1024); // Limit to 50MB
+			hash = hash_64_fnv1a_const(data.data(), data.size());
+			std::stringstream stream;
+			stream << std::setw(sizeof(hash) * 2) << std::setfill('0') << std::uppercase << std::hex << hash;
+			if (index) stream << std::dec << "-" << static_cast<int>(*index);
+			if (auto cacheFolder = Filesystem::GetPath("cache/"); !std::filesystem::exists(cacheFolder))
+				std::filesystem::create_directory(cacheFolder);
+
+			cachePath = Filesystem::GetPath("cache/" + stream.str());
+			if (std::filesystem::exists(cachePath)) {
+				std::ifstream inFile(cachePath, std::ios::in | std::ios::binary);
+				eventList.clear();
+
+				double nan = 0.0;
+				inFile.read(reinterpret_cast<char *>(&nan), sizeof(double));
+
+				if (std::isnan(nan)) {
+					std::string::size_type size = 0;
+					inFile.read(reinterpret_cast<char *>(&size), sizeof(std::string::size_type));
+
+					char *filenameBytes = new char[size];
+					inFile.read(filenameBytes, size);
+
+					std::string filename(filenameBytes, filenameBytes + size);
+
+					delete[] filenameBytes;
+
+					if (auto current = path.filename().u8string(); current != filename) {
+						LogWarning(
+							"Collision detected in cache! Hash matches filename of \"",
+							filename,
+							"\" while current filename is \"",
+							current,
+							"\""
+						);
+
+						collision = true;
+					}
+
+				} else {
+					inFile.seekg(-sizeof(double), std::ios::cur);
+				}
+
+				// If we have a collision, we want
+				// to ignore what's in the cache.
+				if (!collision) {
+					while (inFile) {
+						Event event;
+						inFile.read(reinterpret_cast<char *>(&event), sizeof(Event));
+						eventList.emplace_back(std::move(event));
+					}
+					eventListIter = eventList.begin();
+					state = State::Loaded;
+					canceled = true;
+
+					auto end = std::chrono::system_clock::now();
+
+					LogDebug("Loading BeatRoot cache took ", Duration<Microseconds>(end - start).AsSeconds(), " seconds");
+
+					onLoaded();
+
+					return;
+				}
+			}
+		}
+
+		// Are we an APE file (and thus hate seeking backwards)?
+		bool likesSeekingBackwards = true;
+
+		auto extension = path.extension().u8string();
+		std::transform(extension.begin(), extension.end(), extension.begin(), tolower);
+		if (extension == ".ape" || extension == ".wv")
+			likesSeekingBackwards = false;
+
 		BeatRootProcessor beatRootProcessor(
 			static_cast<float>(freq),
-			parameters ? *parameters : AgentParameters()
+			parameters ? *parameters : AgentParameters(),
+			// Change the hop ratio to prevent overlap
+			// if we don't like seeking backwards
+			likesSeekingBackwards ? 2.0f : 1.0f
 		);
 
 		if (hopTime)
 			beatRootProcessor.setHopTime(*hopTime);
+
+		LogDebug("fftTime = ", beatRootProcessor.getFFTTime(), " hopTime = ", beatRootProcessor.getHopTime());
 
 		const auto hopBytes = BASS_ChannelSeconds2Bytes(
 			streamHandle,
@@ -131,7 +275,7 @@ inline void BeatDetect::_OnLoad(
 		else if (beatRootProcessor.getFFTSize() >= 256)
 			flags |= BASS_DATA_FFT256;
 		else
-			CConsole::Console.Print("Beatroot is asking for an FFT size of " + std::to_string(beatRootProcessor.getFFTSize()) + ", which isn't supported", MSG_ERROR);
+			LogError("Beatroot is asking for an FFT size of ", beatRootProcessor.getFFTSize(), ", which isn't supported");
 
 		float **bufferWrapper = new float *[1];
 		bufferWrapper[0] = new float[beatRootProcessor.getFFTSize() * 2 /* real and imaginary parts */ * chans];
@@ -148,7 +292,8 @@ inline void BeatDetect::_OnLoad(
 			beatRootProcessor.processFrame(bufferWrapper);
 
 			totalBytes += hopBytes;
-			BASS_ChannelSetPosition(streamHandle, offset + totalBytes, BASS_POS_BYTE);
+			if (likesSeekingBackwards || hopTime)
+				BASS_ChannelSetPosition(streamHandle, offset + totalBytes, BASS_POS_BYTE);
 
 			bytes = BASS_ChannelGetData(streamHandle, bufferWrapper[0], flags);
 		}
@@ -194,30 +339,38 @@ inline void BeatDetect::_OnLoad(
 		if (!canceled) {
 			auto end = std::chrono::system_clock::now();
 
-			CConsole::Console.Print("Populating BeatRoot took " + std::to_string(Duration<Microseconds>(end - start).AsSeconds()) + " seconds", MSG_DIAG);
+			LogDebug("Populating BeatRoot took ", Duration<Microseconds>(end - start).AsSeconds(), " seconds");
 
 			start = end;
 
-			eventList = beatRootProcessor.beatTrack();
+			eventList = beatRootProcessor.beatTrack(canceled);
+
+			if (eventList.size() % 2) {
+				eventList.erase(eventList.begin());
+				LogDebug("Song had an odd number of beats! Removing the first one...");
+			}
 
 			end = std::chrono::system_clock::now();
 
-			CConsole::Console.Print("BeatRoot processing took " + std::to_string(Duration<Microseconds>(end - start).AsSeconds()) + " seconds", MSG_DIAG);
+			LogDebug("BeatRoot processing took ", Duration<Microseconds>(end - start).AsSeconds(), " seconds");
 
 			// Calculate BPM
 			if (!eventList.empty()) {
 				auto [min, average, max] = GetTimeBetweenBeats();
 
-				CConsole::Console.Print(
-					"Song's estimated BPM is " +
-					std::to_string(static_cast<int>(1.0 / average * 60.0)) +
-					" based on " +
-					std::to_string(eventList.size()) +
+				LogDebug(
+					"Song's estimated BPM is ",
+					static_cast<int>(1.0 / average * 60.0) / (Settings::settings.GetHalveBpm() ? 2.0 : 1.0),
+					" based on ",
+					eventList.size(),
 					" beats",
-					MSG_DIAG
+					Settings::settings.GetHalveBpm() ? " (divided by 2)" : ""
 				);
 
 				eventListIter = eventList.begin();
+
+				if (useOtherHalf && eventListIter != eventList.end())
+					++eventListIter;
 			} else if (!hopTime) {
 				// I've only encountered one song (Halestorm's "Scream") that can't be processed
 				// with a hopTime of fftTime/2, so this is hopefully just an edge case.
@@ -230,27 +383,27 @@ inline void BeatDetect::_OnLoad(
 				// 3Oh!3's "Photofinnish" also requires a higher expiry time, but 50 is adequate here.
 				// Should we try 50 before 100? We'd probably waste too much time at that point. The goal
 				// here is to detect beats as quickly as possible.
-				CConsole::Console.Print("No beats detected. Trying again with a hop time of 10ms...", MSG_ALERT);
+				LogWarning("No beats detected. Trying again with a hop time of 10ms...");
 
 				lock.unlock();
 
-				_OnLoad(streamHandle, freq, chans, onLoaded, startTime ? startTime : 0.0, endTime, 0.010);
+				_OnLoad(path, cache, streamHandle, freq, chans, onLoaded, startTime ? startTime : 0.0, endTime, index, 0.010);
 
 				// Return so we don't try to free the stream twice
 				return;
 			} else if (!parameters) {
-				CConsole::Console.Print("No beats detected even with a smaller hop size! Increasing expiry time next...", MSG_ALERT);
+				LogWarning("No beats detected even with a smaller hop size! Increasing expiry time next...");
 
 				lock.unlock();
 
 				AgentParameters newParameters;
 				newParameters.expiryTime = 100.0;
-				_OnLoad(streamHandle, freq, chans, onLoaded, startTime ? startTime : 0.0, endTime, 0.010, newParameters);
+				_OnLoad(path, cache, streamHandle, freq, chans, onLoaded, startTime ? startTime : 0.0, endTime, index, 0.010, newParameters);
 
 				// Return so we don't try to free the stream twice
 				return;
 			} else {
-				CConsole::Console.Print("No beats detected with a smaller hop size and larger expiry time!", MSG_ERROR);
+				LogError("No beats detected with a smaller hop size and larger expiry time!");
 			}
 
 			state = State::Loaded;
@@ -262,10 +415,31 @@ inline void BeatDetect::_OnLoad(
 	BASS_StreamFree(streamHandle);
 
 	// Only call the callback if we're
-	// actually detecting and weren't
-	// canceled
-	if (detectBpm && !canceled)
+	// actually detecting, weren't
+	// canceled, and aren't colliding
+	// with an already-existing file
+	if (detectBpm && !canceled && !collision) {
+		if (!cachePath.empty()) {
+			std::ofstream outFile(cachePath, std::ios::out | std::ios::binary);
+
+			// Use NaN to signal we have additional data
+			constexpr double nan = std::numeric_limits<double>::quiet_NaN();
+			outFile.write(reinterpret_cast<const char *>(&nan), sizeof(double));
+
+			const auto filename = path.filename().u8string();
+			const auto size = filename.size();
+
+			// Leave length of filename
+			outFile.write(reinterpret_cast<const char *>(&size), sizeof(std::string::size_type));
+
+			// Leave filename
+			outFile.write(reinterpret_cast<const char *>(filename.c_str()), size);
+
+			for (const auto &event : eventList)
+				outFile.write(reinterpret_cast<const char *>(&event), sizeof(Event));
+		}
 		onLoaded();
+	}
 
 	canceled = true;
 }

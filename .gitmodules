@@ -1,6 +1,27 @@
-[submodule "MathCPP"]
-	path = MathCPP
-	url = https://github.com/nick-fetcko/MathCPP
 [submodule "Serial"]
 	path = Serial
 	url = https://github.com/nick-fetcko/Serial
+[submodule "Utils"]
+	path = Utils
+	url = https://github.com/nick-fetcko/Utils
+[submodule "OpenGL"]
+	path = OpenGL
+	url = https://github.com/nick-fetcko/OpenGL
+[submodule "imgui"]
+	path = imgui
+	url = https://github.com/ocornut/imgui
+[submodule "nativefiledialog-extended"]
+	path = nativefiledialog-extended
+	url = https://github.com/btzy/nativefiledialog-extended
+[submodule "Android/app/src/main/cpp/SDL"]
+	path = Android/app/src/main/cpp/SDL
+	url = https://github.com/libsdl-org/SDL.git
+[submodule "Android/app/src/main/cpp/SDL_image"]
+	path = Android/app/src/main/cpp/SDL_image
+	url = https://github.com/libsdl-org/SDL_image.git
+[submodule "Android/app/src/main/cpp/glm"]
+	path = Android/app/src/main/cpp/glm
+	url = https://github.com/g-truc/glm.git
+[submodule "Android/app/src/main/cpp/freetype"]
+	path = Android/app/src/main/cpp/freetype
+	url = https://github.com/freetype/freetype.git

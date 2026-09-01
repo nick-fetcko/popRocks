@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=popRocks Visualizer
+GenericName=popRocks
+Comment=An audiovisual music player, with an emphasis on the visual
+Exec=/app/bin/popRocks
+Type=Application
+Terminal=false
+Categories=AudioVideo;Audio
+Icon=org.fetcko.popRocks
+MimeType=audio/flac;audio/ogg;audio/mpeg;audio/mp4;inode/directory
+StartupWMClass=org.fetcko.popRocks

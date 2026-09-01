@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/.." vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/app/src/main/cpp/SDL" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/app/src/main/cpp/SDL_image" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/app/src/main/cpp/freetype" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/app/src/main/cpp/glm" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../OpenGL" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../OpenGL/MathCPP" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../Serial" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../Utils" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../imgui" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../nativefiledialog-extended" vcs="Git" />
+  </component>
+</project>

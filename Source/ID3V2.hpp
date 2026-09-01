@@ -5,9 +5,12 @@
 #include <locale>
 #include <map>
 
-#include "Utils.hpp"
+#include "Utils/Logger.hpp"
+#include "Utils/Utils.hpp"
 
-class ID3V2 {
+using namespace Fetcko;
+
+class ID3V2 : public LoggableClass{
 public:
 	// https://mutagen-specs.readthedocs.io/en/latest/id3/id3v2.4.0-structure.html#id3v2-frame-overview
 	enum class Encoding : uint8_t {
@@ -39,6 +42,9 @@ public:
 
 		bool HasExtendedHeader() const;
 
+		bool IsValid() const;
+		bool IsFooter() const;
+
 	private:
 		ID3V2 &parent;
 	};
@@ -46,7 +52,7 @@ public:
 	// Forward declare Frame to avoid circular dependency
 	class Frame;
 
-	class Art {
+	class Art : public LoggableClass {
 	public:
 		enum class Type : uint8_t {
 			Other				=	0x00,
@@ -73,16 +79,19 @@ public:
 		};
 
 		Art(Frame &parent);
-		~Art();
+		virtual ~Art();
 
 		Encoding textEncoding = Encoding::Latin;
 		std::string mimeType; // does NOT use textEncoding
 		Type type = Type::Other;
 		std::string description; // DOES use textEncoding
-		uint8_t *data = nullptr;
-		std::size_t dataLength = 0;
+		std::vector<uint8_t> data;
 
 		bool Read(const char **tag);
+
+		std::vector<uint8_t> &&TakeData() {
+			return std::move(data);
+		}
 
 	private:
 		Frame &parent;
@@ -99,7 +108,7 @@ public:
 		// but we only care about the numerator
 		// for now
 		static inline const auto TrackNumber = [](const std::string &str) {
-			return Fetcko::Utils::Split(str, '/')[0];
+			return str.empty() ? "1" : Fetcko::Utils::Split(str, '/')[0];
 		};
 
 	public:
@@ -157,7 +166,6 @@ public:
 	ExtendedHeader *extendedHeader = nullptr;
 	std::map<std::string, Frame> frames;
 	uint8_t *padding = nullptr;
-	uint8_t *footer = nullptr;
 
 	std::size_t currentOffset = 0;
 

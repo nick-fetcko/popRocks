@@ -1,14 +1,27 @@
 #include "Playlist.hpp"
 
-Playlist::Sorter::iterator Playlist::GuessDisc(Sorter &sorter, std::size_t index) {
+#include "APE.hpp"
+#include "FLAC.hpp"
+#include "HDR.hpp"
+#include "MP3.hpp"
+#include "MP4.hpp"
+#include "OGG.hpp"
+#include "WV.hpp"
+
+#include "Circle.hpp"
+#include "Controls.hpp"
+
+Playlist::Sorter::iterator Playlist::GuessDisc(Sorter &sorter, std::optional<std::size_t> &index) {
 	std::size_t discGuess = 1;
 
 	// If we already have a track with
 	// the same index on another disc,
 	// make a new one.
-	for (const auto &disc : sorter) {
-		if (auto track = disc.second.find(index); track != disc.second.end())
-			++discGuess;
+	if (index) {
+		for (const auto &disc : sorter) {
+			if (auto track = disc.second.find(*index); track != disc.second.end())
+				++discGuess;
+		}
 	}
 
 	auto discSorter = sorter.find(discGuess);
@@ -22,33 +35,62 @@ Playlist::Sorter::iterator Playlist::GuessDisc(Sorter &sorter, std::size_t index
 		).first;
 	}
 
+	// If we don't have an index, make it the last
+	// track on the last disc.
+	if (!index)
+		index = sorter.rbegin()->second.size() + 1;
+
 	return discSorter;
+}
+
+void Playlist::AddFile(const std::filesystem::path &path) {
+	currentFile = files.emplace(files.end(), path);
+	numberOfVisibleItems = files.size();
 }
 
 std::optional<Playlist::Track> Playlist::OnLoad(
 	const std::filesystem::path &path,
 	const std::string_view &extension,
+	const bool &loading,
 	std::function<HSTREAM(const std::filesystem::path &, const std::string &, DWORD)> openWithFlags
 ) {
-	Clear();
+	loaded = false;
 
-	if (auto file = FindCue(path); file || IsCue(extension)) {
-		cue = std::make_unique<Cue>();
+	if (auto files = FindCue(path); !files.empty() || IsCue(extension)) {
+		auto cue = std::make_unique<Cue>();
 
-		if (cue->OnLoad(file ? *file : path)) {
-			LoadTitles(cue->GetTracks());
-			this->path = path;
+		bool loaded = true;
+		if (!files.empty()) {
+			for (const auto &[i, file] : Utils::Enumerate(files)) {
+				if (!loading) return std::nullopt;
 
-			return Track{ cue->GetFilePath(), cue->GetTracks().empty() ? 0.0 : cue->GetTracks().begin()->startTime };
+				loaded = loaded && cue->OnLoad(file, i != 0);
+			}
 		} else {
-			cue.reset();
+			loaded = cue->OnLoad(path).has_value();
+		}
+
+		if (loaded) {
+			this->cue = std::move(cue);
+			this->path = std::filesystem::is_directory(path) ? path : path.parent_path();
+
+			if (this->cue->GetTracks().empty())
+				return Track{ this->cue->GetFilePath(), this->cue->GetFilePath().stem().u8string(), 0.0};
+			else
+				return Track{ this->cue->GetTracks().begin()->filePath, this->cue->GetTracks().begin()->title, this->cue->GetTracks().begin()->startTime };
+		} else {
+			this->cue.reset();
 		}
 	}
 
 	Metadata metadata;
 
-	class Loader : public TagLoader {
+	class Loader : public TagLoader, public LoggableClass {
 	public:
+		void ClearTags() override {
+			// Not needed here
+		}
+
 		void LoadFromTags(const std::map<std::string, std::string> &tags) override {
 			if (auto title = tags.find("title"); title != tags.end())
 				SetTitle(title->second);
@@ -60,7 +102,7 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 					index = std::stoll(Fetcko::Utils::Split(track->second, '/')[0]);
 				}
 				catch (std::exception &e) {
-					CConsole::Console.Print("Track number '" + track->second + "' is not a number: " + e.what(), MSG_ALERT);
+					LogWarning("Track number '", track->second, "' is not a number: ", e.what());
 				}
 			}
 			auto disc = tags.find("discnumber");
@@ -71,7 +113,7 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 					this->disc = std::stoll(Fetcko::Utils::Split(disc->second, '/')[0]);
 				}
 				catch (std::exception &e) {
-					CConsole::Console.Print("Disc number '" + disc->second + "' is not a number: " + e.what(), MSG_ALERT);
+					LogWarning("Disc number '", disc->second + "' is not a number: ", e.what());
 				}
 			}
 		}
@@ -109,22 +151,61 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 		std::optional<std::size_t> index = std::nullopt;
 	};
 
-	std::vector<Title> titles;
+	titles.clear();
 
 	Sorter sorter;
-	for (const auto &iter : std::filesystem::recursive_directory_iterator(path)) {
-		auto extension = iter.path().extension().u8string();
+
+	const auto loadFile = [this, &openWithFlags, &metadata, &sorter] (const std::filesystem::path &path) {
+		auto extension = path.extension().u8string();
 		std::transform(extension.begin(), extension.end(), extension.begin(), tolower);
 
-		if (auto filename = iter.path().filename().u8string();
+		if (auto filename = path.filename().u8string();
 			IsSupported(extension) &&
 			// Ignore HFS attribute files (filenames that start with "._")
 			(filename.size() <= 1 || filename[0] != '.' || filename[1] != '_')
-		) {
-			auto streamHandle = openWithFlags(iter.path(), extension, BASS_STREAM_PRESCAN);
-
+			) {
 			Loader loader;
-			metadata.OnLoad(iter.path(), extension, streamHandle, &loader);
+
+			if (extension == ".flac") {
+				FLAC flac(path);
+
+				loader.LoadFromTags(flac.GetTags());
+			} else if (extension == ".mp3") {
+				MP3 mp3(path);
+
+				loader.LoadFromTags(mp3.GetTags());
+			} else if (extension == ".mp4" || extension == ".m4a") {
+				MP4 mp4(path);
+
+				loader.LoadFromTags(mp4.GetTags());
+			} else if (extension == ".ape" || extension == ".tta" /* TTA files can use APE tags */) {
+				APE ape(path);
+
+				loader.LoadFromTags(ape.GetTags());
+
+				// TTA files can use ID3 tags, too
+				if (extension == ".tta" && loader.AreThereEmptyTags()) {
+					MP3 tta(path);
+
+					loader.LoadFromTags(tta.GetTags());
+				}
+			} else if (extension == ".wv") {
+				WV wv(path);
+
+				loader.LoadFromTags(wv.GetTags());
+			} else if (extension == ".ogg") {
+				OGG ogg(path);
+
+				loader.LoadFromTags(ogg.GetTags());
+			} else {
+				auto streamHandle = openWithFlags(path, extension, 0);
+				metadata.OnLoad(path, extension, streamHandle, &loader);
+				BASS_StreamFree(streamHandle);
+			}
+
+			// If title is STILL empty, use the filename
+			if (!loader.HasTitle())
+				loader.SetTitle(path.stem().u8string());
 
 			Sorter::iterator discSorter = sorter.end();
 
@@ -143,10 +224,12 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 							)
 						).first;
 					}
-				} else discSorter = GuessDisc(sorter, *index);
+				} else discSorter = GuessDisc(sorter, index);
 			} else {
-				index = titles.size() + 1;
-				discSorter = GuessDisc(sorter, *index);
+				if (auto [success, number] = Utils::ExtractDigitsFromString(path.stem().u8string(), true); success)
+					index = number;
+
+				discSorter = GuessDisc(sorter, index);
 			}
 
 			discSorter->second.emplace(
@@ -154,28 +237,34 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 					*index,
 					std::make_pair(
 						loader.GetTitle(),
-						iter.path()
+						path
 					)
 				)
 			);
-
-			BASS_StreamFree(streamHandle);
 		}
-	}
+	};
+
+	if (std::filesystem::is_directory(path)) {
+		for (const auto &iter : std::filesystem::recursive_directory_iterator(path)) {
+			if (!loading) return std::nullopt;
+
+			loadFile(iter.path());
+		}
+	} else loadFile(path);
 
 	for (auto &&[number, disc] : sorter) {
 		for (auto &&track : disc) {
+			if (!loading) return std::nullopt;
+
 			titles.emplace_back(Title{ number, track.first, std::move(track.second.first) });
 			files.emplace_back(std::move(track.second.second));
 		}
 	}
 
-	LoadTitles(titles);
-
 	currentFile = files.end();
 
 	if (auto next = Next()) {
-		this->path = path;
+		this->path = std::filesystem::is_directory(path) ? path : path.parent_path();
 		return next;
 	}
 
@@ -183,51 +272,143 @@ std::optional<Playlist::Track> Playlist::OnLoad(
 }
 
 inline void Playlist::UpdateSize() {
-	em = this->titles.begin()->MeasureText("M");
+	height = size.y + font->GetEm().height / 2;
+	std::vector<float> rect = {
+		// Top half
+		-font->GetEm().width / 2.0f,
+		-font->GetEm().height / 2.0f,
+		0.0f,
+		0.0f,
+		0.0f,
+		0.75f,
+		-font->GetEm().width / 2.0f,
+		height - font->GetEm().height,
+		0.0f,
+		0.0f,
+		0.0f,
+		0.0f,
+		size.x + font->GetEm().width / 2.0f,
+		height - font->GetEm().height,
+		0.0f,
+		0.0f,
+		0.0f,
+		0.0f,
+		size.x + font->GetEm().width / 2.0f,
+		-font->GetEm().height / 2.0f,
+		0.0f,
+		0.0f,
+		0.0f,
+		0.75f,
+		// Bottom half
+		-font->GetEm().width / 2.0f,
+		height - font->GetEm().height,
+		0.0f,
+		0.0f,
+		0.0f,
+		0.0f,
+		-font->GetEm().width / 2.0f,
+		height,
+		0.0f,
+		0.0f,
+		0.0f,
+		0.0f,
+		size.x + font->GetEm().width / 2.0f,
+		height,
+		0.0f,
+		0.0f,
+		0.0f,
+		0.0f,
+		size.x + font->GetEm().width / 2.0f,
+		height -font->GetEm().height,
+		0.0f,
+		0.0f,
+		0.0f,
+		0.0f
+	};
 
-	rect[0] = -em.x / 2;
-	rect[1] = -em.y / 2;
-	rect[2] = -em.x / 2;
-	rect[3] = size.y + em.y / 2;
-	rect[4] = size.x + em.x / 2;
-	rect[5] = size.y + em.y / 2;
-	rect[6] = size.x + em.x / 2;
-	rect[7] = -em.x / 2;
+	vbo->Bind();
+	vbo->BufferData(rect, GL_DYNAMIC_DRAW);
+	vbo->Unbind();
 }
 
-void Playlist::OnInit(int windowWidth, int windowHeight, TTF_Font *font, float scale) {
+void Playlist::OnInit(int windowWidth, int windowHeight, OpenGLFont *font, OpenGLFont *boldFont, OpenGLFont *outlineFont, OpenGLFont *boldOutlineFont, Context *context, float scale) {
 	this->windowWidth = windowWidth;
 	this->windowHeight = windowHeight;
 	this->font = font;
+	this->boldFont = boldFont;
+	this->outlineFont = outlineFont;
+	this->boldOutlineFont = boldOutlineFont;
+	this->context = context;
 	this->scale = scale;
+
+	MiniPlayerList::OnInit(font, boldFont, outlineFont, boldOutlineFont, context);
+
+	currentTitle.OnInit(font, context);
+	outline.OnInit(outlineFont, context);
+
+	vao = std::make_unique<VertexArray>();
+	vbo = std::make_unique<ArrayBuffer>();
+	eab = std::make_unique<ElementBuffer>();
+
+	vao->Bind();
+	vbo->Bind();
+	vao->AddAttribute(VertexArray::Attribute(0, 2, 6 * sizeof(float)));
+	vao->AddAttribute(VertexArray::Attribute(1, 4, 6 * sizeof(float), 2 * sizeof(float)));
+	vbo->Unbind();
+	vao->Unbind();
+
+	eab->Bind();
+	auto squareBuffer = std::vector(Buffers::SquareBuffer.begin(), Buffers::SquareBuffer.end());
+	//std::vector<unsigned short> squareBuffer;
+	for (std::size_t i = 0; i < Buffers::SquareBuffer.size(); ++i)
+		squareBuffer.emplace_back(Buffers::SquareBuffer[i] + 4);
+	eab->BufferData(squareBuffer);
+	eab->Unbind();
 }
 
-void Playlist::OnResize(int windowWidth, int windowHeight, float scale) {
-	this->windowWidth = windowWidth;
-	this->windowHeight = windowHeight;
-	if (this->scale != scale && !titles.empty()) {
-		size = { 0, 0 };
-		for (auto &title : titles) {
-			title.OnInit(font);
+bool Playlist::OnResize(int windowWidth, int windowHeight, float scale, bool miniPlayer, float maxWidth) {
+	const auto ret = MiniPlayerList::OnResize(windowWidth, windowHeight, scale, miniPlayer, maxWidth);
 
-			size.y += title.GetSize().y;
-			if (title.GetSize().x > size.x)
-				size.x = title.GetSize().x;
+	if (ret) {
+		size = { 0, 0 };
+
+		for (auto &title : items) {
+			size.y += title.first.GetBounds().height;
+			if (title.first.GetBounds().width > size.x)
+				size.x = title.first.GetBounds().width;
 		}
 
-		UpdateSize();
+		outline.OnInit(outlineFont, context);
 	}
-	this->scale = scale;
+	MiniPlayerList::SetMaxWidth(maxWidth);
+
+	currentTitle.SetMaxWidth(miniPlayer ? maxWidth : windowWidth);
+	currentTitle.OnResize(windowWidth, windowHeight);
+	outline.SetMaxWidth(miniPlayer ? maxWidth : windowWidth);
+	outline.OnResize(windowWidth, windowHeight);
+
+	UpdateSize();
+
+	return ret;
+}
+
+void Playlist::OnDestroy() {
+	MiniPlayerList::OnDestroy();
+
+	vao.reset();
+	vbo.reset();
+	eab.reset();
 }
 
 void Playlist::Clear() {
+	loaded = false;
+
 	path.clear();
 	files.clear();
-
-	for (auto &title : titles)
-		title.OnDestroy();
-
 	titles.clear();
+	currentFile = files.end();
+
+	MiniPlayerList::Clear();
 
 	cue.reset();
 }
@@ -239,10 +420,36 @@ std::optional<Playlist::Track> Playlist::Current() {
 	return std::nullopt;
 }
 
+const std::optional<std::size_t> Playlist::GetCurrentIndex() const {
+	if (cue) 
+		return std::distance(cue->GetTracks().begin(), cue->GetCurrentTrack());
+	else if (currentFile != files.end()) 
+		return std::distance(files.begin(), static_cast<std::vector<std::filesystem::path>::const_iterator>(currentFile));
+
+	return std::nullopt;
+}
+
+std::optional<Playlist::Track> Playlist::TrackAtIndex(std::size_t index) {
+	if (cue) {
+		const auto track = cue->TrackAtIndex(index);
+
+		return Track{ track.filePath, track.title, track.startTime };
+	} else if (currentFile != files.end()) {
+		currentFile = files.begin() + index;
+
+		return Track{ *currentFile };
+	}
+
+	return std::nullopt;
+}
+
 std::optional<Playlist::Track> Playlist::Previous() {
 	if (files.empty()) {
-		if (cue)
-			return Track{ cue->GetFilePath(), cue->Previous().startTime };
+		if (cue) {
+			const auto &previous = cue->Previous();
+
+			return Track{ previous.filePath, previous.title, previous.startTime };
+		}
 
 		return std::nullopt;
 	}
@@ -255,44 +462,123 @@ std::optional<Playlist::Track> Playlist::Previous() {
 
 std::optional<Playlist::Track> Playlist::Next() {
 	if (files.empty()) {
-		if (cue)
-			return Track{ cue->GetFilePath(), cue->Next().startTime };
+		if (cue) {
+			const auto &next = cue->Next();
+
+			return Track{ next.filePath, next.title, next.startTime };
+		}
 
 		return std::nullopt;
 	}
 
-	if (currentFile == files.end())
+	if (currentFile == files.end()) {
 		currentFile = files.begin();
-	else if (++currentFile == files.end())
-		currentFile = files.begin();
+	} else if (++currentFile == files.end()) {
+		if (Settings::settings.GetAutoPlay())
+			currentFile = files.begin();
+		else {
+			--currentFile;
+			return std::nullopt;
+		}
+	}
 
 	return Track{ *currentFile };
 }
 
-const std::optional<Playlist::Track> Playlist::Next() const {
+const std::optional<Playlist::Track> Playlist::GetNext() const {
 	if (files.empty()) {
-		if (cue)
-			return Track{ cue->GetFilePath(), const_cast<const Cue *>(cue.get())->Next().startTime };
+		if (cue) {
+			const auto &next = const_cast<const Cue *>(cue.get())->Next();
+
+			return Track{ next.filePath, next.title, next.startTime };
+		}
 	}
 
-	if (currentFile == files.end() || currentFile + 1 == files.end())
+	if (currentFile == files.end() || currentFile + 1 == files.end()) {
+		if (Settings::settings.GetAutoPlay() && !files.empty())
+			return Track{ *files.begin() };
+
 		return std::nullopt;
+	}
 
 	return Track{ *(currentFile + 1) };
 }
 
-void Playlist::OnLoop(Vector2i pos, float maxHeight, float alpha) {
+void Playlist::DeselectCurrent() {
+	if (!files.empty())
+		MiniPlayerList::DeselectCurrent(std::distance(files.begin(), currentFile));
+	else if (cue)
+		MiniPlayerList::DeselectCurrent(std::distance(cue->GetTracks().begin(), cue->GetCurrentTrack()));
+}
+
+std::set<std::filesystem::path> Playlist::GetFiles() {
+	std::set<std::filesystem::path> ret;
+
+	for (const auto &file : files)
+		ret.emplace(file);
+
+	if (cue) {
+		for (const auto &track : cue->GetTracks())
+			ret.emplace(track.filePath);
+	}
+
+	return ret;
+}
+
+void Playlist::OnLoop(const Delta &time, Vector2i pos, float maxHeight, float alpha, Context &context, bool miniPlayer, bool hidden) {
+	if (!visible && !miniPlayer) return;
+
 	// We want to store its _origin_
 	this->pos = pos;
 
 	if (!files.empty())
-		OnLoop(files, currentFile, pos, maxHeight, alpha);
+		OnLoop(time, files, currentFile, pos, maxHeight, alpha, context, miniPlayer, hidden);
 	else if (cue)
-		OnLoop(cue->GetTracks(), cue->GetCurrentTrack(), pos, maxHeight, alpha);
+		OnLoop(time, cue->GetTracks(), cue->GetCurrentTrack(), pos, maxHeight, alpha, context, miniPlayer, hidden);
+}
+
+bool Playlist::OnMouseMoved(const Vector2i &mousePos) {
+	return MiniPlayerList::OnMouseMoved(
+		mousePos,
+		{
+			pos.x - currentTitle.GetBounds().width / 2,
+			pos.y - currentTitle.GetBounds().height,
+			pos.x + currentTitle.GetBounds().width / 2,
+			pos.y 
+		}
+	) != MiniPlayerList::HoverState::None;
 }
 
 std::optional<Playlist::Track> Playlist::OnMouseClicked(const Vector2i &mousePos) {
-	if (!titles.empty() && mousePos.y >= pos.y) {
+	if (miniPlayer) {
+		if (hovered && hoveredOffset >= 0) {
+			if (!files.empty()) {
+				currentFile = files.begin() + (hoveredOffset + scrollOffset);
+
+				LogInfo("Click captured! Mini-player playlist, files route");
+
+				return currentFile == files.end() ? Track{ *(--currentFile) } : Track{ *currentFile };
+			} else if (cue) {
+				const auto &track = cue->TrackAtIndex(hoveredOffset + scrollOffset);
+
+				LogInfo("Click captured! Mini-player playlist, .cue route");
+
+				return Track{ track.filePath, track.title, track.startTime };
+			}
+		} else if (hovered && alpha == 1.0f && alpha == targetAlpha) { // Clicking without a hover target dismisses the Playlist
+			hovered = false;
+			hoverTimer = std::nullopt;
+			targetAlpha = 0.0f;
+			clickTimer = std::chrono::system_clock::now();
+		} else if (MiniPlayerList::OnMouseClicked(mousePos, {
+			pos.x - currentTitle.GetBounds().width / 2,
+			pos.y - currentTitle.GetBounds().height,
+			pos.x + currentTitle.GetBounds().width / 2,
+			pos.y
+		})) {
+			return std::nullopt;
+		}
+	} else if (!miniPlayer && visible && !items.empty() && mousePos.y >= pos.y && mousePos.y <= maxHeight) {
 		const auto offset = 
 			cue ?
 				std::distance(cue->GetTracks().begin(), cue->GetCurrentTrack()) :
@@ -303,13 +589,24 @@ std::optional<Playlist::Track> Playlist::OnMouseClicked(const Vector2i &mousePos
 				std::distance(cue->GetCurrentTrack(), cue->GetTracks().end()) :
 				std::distance(currentFile, files.end());
 
-		if (auto index = (mousePos.y - pos.y) / titles.begin()->GetSize().y; index < distance) {
-			if (mousePos.x >= pos.x && mousePos.x <= pos.x + titles[offset + index].GetSize().x) {
+		auto &bounds = items.begin()->first.GetBounds();
+
+		// If our offset is not 0, we need to account for the previous track
+		if (auto index = (mousePos.y - pos.y + bounds.y / 2) / bounds.height - (offset != 0 ? 1 : 0);
+			index < distance) {
+			if (mousePos.x >= pos.x && mousePos.x <= pos.x + items[offset + index].first.GetSize().x) {
 				if (!files.empty()) {
 					currentFile += index;
+
+					LogInfo("Click captured! Playlist, files route");
+
 					return currentFile == files.end() ? Track{ *(--currentFile) } : Track{ *currentFile };
 				} else if (cue) {
-					return Track{ cue->GetFilePath(), cue->TrackAtOffset(index).startTime };
+					const auto &track = cue->TrackAtOffset(index);
+
+					LogInfo("Click captured! Playlist, .cue route");
+
+					return Track{ track.filePath, track.title, track.startTime };
 				} else return std::nullopt;
 			}
 		}
@@ -318,19 +615,62 @@ std::optional<Playlist::Track> Playlist::OnMouseClicked(const Vector2i &mousePos
 	return std::nullopt;
 }
 
+void Playlist::OnMouseUp(const Vector2i &mousePos, bool updateCache) {
+	MiniPlayerList::OnMouseUp(mousePos, updateCache);
+
+	if (font && updateCache) {
+		size = { 0, 0 };
+
+		for (auto &title : items) {
+			size.y += title.first.GetBounds().height;
+			if (title.first.GetBounds().width > size.x)
+				size.x = title.first.GetBounds().width;
+		}
+
+		UpdateSize();
+	}
+}
+
 const std::unique_ptr<Cue> &Playlist::GetCue() const { return cue; }
 const std::filesystem::path &Playlist::GetPath() const { return path; }
 
-std::optional<std::filesystem::path> Playlist::FindCue(const std::filesystem::path &path) {
-	if (!std::filesystem::is_directory(path))
-		return std::nullopt;
+std::vector<std::filesystem::path> Playlist::FindCue(const std::filesystem::path &path) {
+	const auto start = std::chrono::system_clock::now();
 
-	for (const auto &iter : std::filesystem::directory_iterator(path)) {
+	std::vector<std::filesystem::path> ret;
+
+	const auto checkIter = [&ret](const std::filesystem::directory_entry &iter) {
 		auto extension = iter.path().extension().u8string();
 		std::transform(extension.begin(), extension.end(), extension.begin(), tolower);
 		if (IsCue(extension))
-			return iter.path();
+			ret.emplace_back(iter.path());
+	};
+
+	if (!std::filesystem::is_directory(path)) {
+		for (const auto &iter : std::filesystem::directory_iterator(path.parent_path()))
+			checkIter(iter);
+	} else {
+		for (const auto &iter : std::filesystem::recursive_directory_iterator(path))
+			checkIter(iter);
 	}
 
-	return std::nullopt;
+	LogDebug("Searching for .cue files took ", Duration<Microseconds>(std::chrono::system_clock::now() - start).AsSeconds(), " seconds");
+
+	return ret;
+}
+
+void Playlist::OnBlackChanged(const float &black) {
+	outline.SetColor({ black, black, black });
+	outline.SetText(outline.GetText(), true);
+
+	MiniPlayerList::OnBlackChanged(black);
+}
+
+void Playlist::LoadTitles() {
+	if (cue) {
+		LoadTitles(cue->GetTracks());
+	} else {
+		LoadTitles(titles);
+		titles.clear();
+	}
 }

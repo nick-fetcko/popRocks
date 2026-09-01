@@ -3,24 +3,28 @@
 #include <glad/glad.h>
 
 #include "MathCPP/Colour.hpp"
+#include "OpenGL/Context.hpp"
+#include "OpenGL/Polyline.hpp"
 
 #include "AutoFader.hpp"
 #include "ColorChangeListener.hpp"
-#include "Polyline.hpp"
+#include "HDR.hpp"
 #include "Settings.hpp"
 #include "Text.hpp"
 
 using namespace MathsCPP;
+using namespace Fetcko;
 
-class Volume : public ColorChangeListener, public AutoFader {
+class AlbumArt;
+class Volume : public ColorChangeListener, public AutoFader<false> {
 public:
-	Volume() = default;
+	Volume();
 
 	virtual ~Volume() = default;
 
-	void OnInit(const std::filesystem::path &fontFile);
+	void OnInit(const std::string &fontRoot, OpenGLFont *font, OpenGLFont *outlineFont, Context *context);
 
-	void OnLoop(int x, int y, const Delta &time);
+	void OnLoop(int x, int y, const Delta &time, const AlbumArt *const albumArt, bool miniPlayer, Context &context);
 
 	void SetRadius(float radius);
 
@@ -29,6 +33,8 @@ public:
 
 	void VolumeUp();
 	void VolumeDown();
+
+	void SetVolume(int volume);
 	const float &GetVolume() const;
 
 	const float GetScaledVolume() const;
@@ -40,20 +46,26 @@ public:
 	void OnColorChanged(const Colour<float> &color, bool silent = false) override;
 
 private:
-	inline void UpdateVolume(bool force = false);
+	inline void UpdateVolume(bool fade = true, bool force = false);
 
 	float radius = 200.0f;
 
-	TTF_Font *font = nullptr, *outlineFont = nullptr;
+	OpenGLFont *font = nullptr, *outlineFont = nullptr;
 
 	bool volumeControl = true;
 
 	Text text;
 	Text outlineText;
 
-	//float rect[8] = { 0 };
-	Polyline outlineRing;
-	Polyline ring;
+	Text labelOutline;
+	Text label;
 
-	Colour<float> color = Colour<float>::White;
+	//float rect[8] = { 0 };
+	Fetcko::Polyline outlineRing;
+	Fetcko::Polyline ring;
+
+	Colour<float> color = HDR::WhiteColor;
+
+	float scaledVolume = 0.0f;
+	float inverseVolume = 0.0f;
 };

@@ -1,5 +1,9 @@
 #include "Metadata.hpp"
 
+#include "APE.hpp"
+#include "OGG.hpp"
+#include "WV.hpp"
+
 void Metadata::OnLoad(
 	const std::filesystem::path &path,
 	const std::string &extension,
@@ -7,6 +11,77 @@ void Metadata::OnLoad(
 	TagLoader *tagLoader,
 	AlbumArt *albumArt
 ) {
+	if (extension == ".flac") {
+		FLAC flac(path);
+
+		auto tags = flac.GetTags(false);
+		tagLoader->LoadFromTags(tags);
+		if (auto &&data = flac.TakeArt(); data.size()) {
+			const auto mimeType = flac.GetArt().first;
+			albumArt->Load(mimeType, std::move(data));
+		} else albumArt->ClearEmbedded();
+
+		return;
+	}
+	else if (extension == ".mp4" || extension == ".m4a") {
+		MP4 mp4(path);
+
+		auto tags = mp4.GetTags(false);
+		tagLoader->LoadFromTags(tags);
+		if (auto &&art = mp4.TakeArt(); art && albumArt->Load(art->mimeType, std::move(art->data)))
+			LogDebug("Found iTunes-style embedded album art");
+
+		return;
+	} else if (extension == ".ape" || extension == ".tta" /* TTA uses APE tags */) {
+		APE ape(path);
+
+		auto tags = ape.GetTags(false);
+		tagLoader->LoadFromTags(tags);
+		if (auto &&art = ape.GetItems().find("art"); art != ape.GetItems().end()) {
+			albumArt->Load(
+				art->second.mimeType,
+				std::move(ape.TakeArt())
+			);
+		} else albumArt->ClearEmbedded();
+
+		// TTA files can use ID3 tags, too
+		if (extension == ".tta" && tagLoader->AreThereEmptyTags()) {
+			MP3 tta(path);
+
+			tagLoader->LoadFromTags(tta.GetTags());
+		}
+		
+		return;
+	} else if (extension == ".wv") {
+		WV wv(path);
+
+		auto tags = wv.GetTags(false);
+		tagLoader->LoadFromTags(tags);
+		if (auto art = wv.GetItems().find("art"); art != wv.GetItems().end()) {
+			albumArt->Load(
+				art->second.mimeType,
+				std::move(wv.TakeArt())
+			);
+		} else albumArt->ClearEmbedded();
+
+		return;
+	} else if (extension == ".ogg") {
+		OGG ogg(path);
+
+		auto tags = ogg.GetTags(false);
+		tagLoader->LoadFromTags(tags);
+		if (auto art = tags.find("art"); art != tags.end()) {
+			auto &&[mimeType, data] = ogg.GetArt(art->second);
+
+			albumArt->Load(
+				mimeType,
+				std::move(data)
+			);
+		} else albumArt->ClearEmbedded();
+
+		return;
+	}
+
 	// Prefer ID3v2, since it doesn't have a character limit
 	auto id3v2 = BASS_ChannelGetTags(streamHandle, BASS_TAG_ID3V2);
 	if (id3v2) {
@@ -19,8 +94,7 @@ void Metadata::OnLoad(
 		if (auto art = frames.find("art"); art != frames.end() && art->second.artData) {
 			albumArt->Load(
 				art->second.artData->mimeType,
-				art->second.artData->data,
-				art->second.artData->dataLength
+				std::move(art->second.artData->TakeData())
 			);
 		}
 	}
@@ -37,21 +111,14 @@ void Metadata::OnLoad(
 
 				tagLoader->LoadFromTags(tags);
 			} else {
-				auto mp4 = BASS_ChannelGetTags(streamHandle, BASS_TAG_MP4);
-				if (mp4) {
-					auto tags = GetTags(mp4);
-
-					tagLoader->LoadFromTags(tags);
-				} else {
-					CConsole::Console.Print("Could not fully populate tags!", MSG_ERROR);
-				}
+				LogWarning("Could not fully populate tags!");
 			}
 		}
 	}
 
 	// If title is STILL empty, use the filename
 	if (!tagLoader->HasTitle()) {
-		CConsole::Console.Print("Using filename in lieu of title", MSG_ALERT);
+		LogWarning("Using filename in lieu of title");
 		tagLoader->SetTitle(path.stem().u8string());
 	}
 
@@ -60,22 +127,11 @@ void Metadata::OnLoad(
 		if (extension == ".flac") {
 			auto art = reinterpret_cast<const TAG_FLAC_PICTURE *>(BASS_ChannelGetTags(streamHandle, BASS_TAG_FLAC_PICTURE));
 			if (art) {
-				albumArt->Load(
-					art->mime,
-					const_cast<void *>(art->data),
+				albumArt->LoadEmbedded(
+					std::string(art->mime, art->mime + strlen(art->mime)),
+					reinterpret_cast<const void *>(art->data),
 					art->length
 				);
-			}
-		} else if (extension == ".mp4" || extension == ".m4a") {
-			MP4 mp4(path);
-
-			// For now, we just want to grab "iTunes style" album art
-			auto atom = mp4.GetAtomAtPath({ "moov", "udta", "meta", "ilst", "covr", "data" });
-
-			if (atom) {
-				atom->ReadData();
-				if (albumArt->Load(atom->mimeType, atom->data, atom->dataSize))
-					CConsole::Console.Print("Found iTunes-style embedded album art", MSG_DIAG);
 			}
 		}
 	}

@@ -8,18 +8,22 @@
 #include <queue>
 #include <functional>
 #include <chrono>
+#include <condition_variable>
 
-#include <SDL_net.h>
+#include <SDL3_net/SDL_net.h>
 
 #include "MathCPP/Colour.hpp"
+
+#include "Utils/Logger.hpp"
 
 #include "Mappings.h"
 
 using namespace std::literals::chrono_literals;
 
 using namespace MathsCPP;
+using namespace Fetcko;
 
-class LightPack {
+class LightPack : public LoggableClass{
 public:
 	// Grab 1 out of every CaptureFreq _frames_
 	inline constexpr static uint8_t CaptureFreq = 16;
@@ -60,7 +64,9 @@ public:
 
 	void OnLoop(const Colour<float> &color);
 
-	std::optional<std::string> ReadString() const;
+	std::optional<std::string> ReadString(bool block = false) const;
+
+	// Returns std::nullopt on error and "" when response = false
 	std::optional<std::string> WriteString(std::string str, bool response = true) const;
 
 	std::string GetStringForMassColorChangeCommand(int start, int end, unsigned char r, unsigned char g, unsigned char b) const;
@@ -76,12 +82,16 @@ public:
 	void SetMethod(Method method);
 	void SetSaturationMultiplier(float saturationMultiplier);
 
+	const bool IsActive() const { return lightBin; }
+
 private:
 	void _OnInit();
 	void RetryConnection();
 	void _OnLoop();
 
 	bool CanConnect();
+
+	void OnDisconnect();
 
 	std::atomic<bool> running = false;
 	std::thread thread;
@@ -90,8 +100,7 @@ private:
 
 	uint8_t numberOfLights = 20;
 
-	TCPsocket tcpsock = nullptr;
-	SDLNet_SocketSet socketSet = nullptr;
+	NET_StreamSocket *tcpsock = nullptr;
 
 	std::size_t bufferLength = 0;
 
@@ -120,7 +129,7 @@ private:
 
 	float saturationMultiplier = 1.25f;
 
-	std::chrono::milliseconds sleepTime = 1ms;
+	std::chrono::milliseconds sleepTime = 0s;
 
 	std::condition_variable cond;
 	std::mutex condMutex;

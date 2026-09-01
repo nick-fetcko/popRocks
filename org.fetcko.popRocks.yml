@@ -1,0 +1,72 @@
+id: org.fetcko.popRocks
+runtime: org.freedesktop.Platform
+runtime-version: '25.08'
+sdk: org.freedesktop.Sdk
+command: /app/bin/popRocks
+modules:
+  - name: sdl
+    buildsystem: cmake
+    sources:
+      - type: git
+        url: https://github.com/libsdl-org/SDL
+        commit: 61bf7087f5ad4f1fdd418e58adc023fd8252e678
+  - name: sdl_image
+    buildsystem: cmake
+    sources:
+      - type: git
+        url: https://github.com/libsdl-org/SDL_image
+        commit: 11491dda68bfb9a9a270ee000fa1c13485c45384
+  - name: freetype
+    buildsystem: cmake
+    builddir: true
+    sources:
+      - type: git
+        url: https://github.com/freetype/freetype
+        commit: 6d4977d66033e7841219bdc2b686a97552091ade
+  - name: fftw
+    buildsystem: cmake
+    sources:
+      - type: archive
+        url: https://fftw.org/fftw-3.3.10.tar.gz
+        sha256: 56c932549852cddcfafdab3820b0200c7742675be92179e59e6215b340e26467
+    config-opts:
+      - -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+      - -DENABLE_FLOAT=ON
+  - name: glm
+    buildsystem: cmake
+    sources:
+      - type: git
+        url: https://github.com/g-truc/glm
+        commit: a583c59e1616a628b18195869767ea4d6faca5f4
+  - name: popRocks
+    buildsystem: cmake
+    sources:
+      - type: dir
+        path: .
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DCMAKE_INSTALL_PREFIX=/app
+      - -DUSING_FLATPAK=ON
+    build-commands:
+      - install -Dm644 Resources/org.fetcko.popRocks.desktop /app/share/applications/org.fetcko.popRocks.desktop
+      - install -Dm644 Data/popRocks.svg /app/share/icons/hicolor/scalable/apps/org.fetcko.popRocks.svg
+finish-args:
+  # popRocks does not currently support X11
+  - --socket=wayland
+  # Direct Rendering for OpenGL / Vulkan
+  - --device=dri
+  # PulseAudio / PipeWire for output device selection and exclusive audio output
+  - --socket=pulseaudio
+  - --filesystem=xdg-run/pipewire-0
+  #  MPRIS support via DBus
+  - --own-name=org.mpris.MediaPlayer2.popRocks.*
+  - --talk-name=org.gnome.SessionManager
+  # Unity LauncherEntry via DBus for taskbar progress bar
+  - --talk-name=com.canonical.Unity.LauncherEntry
+  # Shared memory to allow one instance to defer to another
+  - --share=ipc
+  - --device=shm
+  # Discord IPC for rich presence
+  - --filesystem=xdg-run/discord-ipc-0
+  # If Discord is installed as a Flatpak
+  - --filesystem=xdg-run/app/com.discordapp.Discord/discord-ipc-0

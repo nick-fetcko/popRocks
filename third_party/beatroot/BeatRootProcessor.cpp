@@ -31,7 +31,7 @@ void BeatRootProcessor::processFrame(const float *const *inputBuffers) {
     
 } // processFrame()
 
-EventList BeatRootProcessor::beatTrack() {
+EventList BeatRootProcessor::beatTrack(std::atomic<bool> &canceled) {
 
 #ifdef DEBUG_BEATROOT
     std::cerr << "Spectral flux:" << std::endl;
@@ -49,7 +49,7 @@ EventList BeatRootProcessor::beatTrack() {
     auto it = peaks.begin();
     onsetList.clear();
     double minSalience = Peaks::min(spectralFlux);
-    for (int i = 0; i < (int)onsets.size(); i++) {
+    for (int i = 0; i < (int)onsets.size() && !canceled; i++) {
         auto index = *it;
         ++it;
         onsets[i] = index * hop;
@@ -67,7 +67,9 @@ EventList BeatRootProcessor::beatTrack() {
     std::cerr << "Onsets: " << onsetList.size() << std::endl;
 #endif
 
-    return BeatTracker::beatTrack(agentParameters, onsetList);
+	if (canceled) return {};
+
+    return BeatTracker::beatTrack(agentParameters, onsetList, canceled);
 
 } // processFile()
 

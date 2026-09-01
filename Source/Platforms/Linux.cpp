@@ -1,0 +1,1923 @@
+#if defined(__linux__) && !defined(__ANDROID__)
+
+#include "Source/Platforms/Linux.hpp"
+
+#include <unistd.h>
+
+#include <linux/input-event-codes.h>
+#include <sys/mman.h>
+#include <sys/times.h>
+#include <fcntl.h>
+
+#include <SDL3/SDL.h>
+
+#include <bassalac.h>
+#include <bass_aac.h>
+
+#include <imgui.h>
+#include <backends/imgui_impl_sdl3.h>
+#include <backends/imgui_impl_opengl3.h>
+
+#include <spa-0.2/spa/param/props.h>
+#include <spa-0.2/spa/pod/vararg.h>
+
+#include "Source/CApp.h"
+
+#define DEBUG_RASTERIZATION 0
+
+constexpr std::string_view DesktopFileTemplate = 
+R"([Desktop Entry]
+Name=popRocks Visualizer (Standalone)
+GenericName=popRocks
+Comment=An audiovisual music player, with an emphasis on the visual
+MimeType=audio/mpeg
+Path=${POPROCKS_PATH}
+Exec=${POPROCKS_PATH}/popRocks
+Type=Application
+Terminal=false
+Categories=AudioVideo;Audio
+Icon=${POPROCKS_ICON}
+MimeType=audio/flac;audio/ogg;audio/mpeg;audio/mp4;inode/directory)";
+
+constexpr std::string_view ServiceMenuTemplate = 
+#ifdef USING_FLATPAK
+R"([Desktop Entry]
+Type=Service
+MimeType=inode/directory
+Actions=org.fetcko.popRocks.visualizeWith
+
+[Desktop Action org.fetcko.popRocks.visualizeWith]
+Name=Visualize with popRocks
+Icon=org.fetcko.popRocks
+Exec=flatpak run org.fetcko.popRocks %u)";
+#else
+R"([Desktop Entry]
+Type=Service
+MimeType=inode/directory
+Actions=visualizeWithPopRocks
+
+[Desktop Action visualizeWithPopRocks]
+Name=Visualize with popRocks (Standalone)
+Icon=${POPROCKS_ICON}
+Exec=bash -c 'cd ${POPROCKS_PATH} && ./popRocks "$1"' -- %f)";
+#endif
+
+const std::string PathPlaceholder = "${POPROCKS_PATH}";
+const std::string IconPlaceholder = "${POPROCKS_ICON}";
+
+// =====================================================
+// ================ Factory Registration ===============
+// =====================================================
+bool Linux::Register() {
+	PlatformFactory::Register("linux", [](CApp *app) {
+		return std::make_unique<Linux>(app);
+	});
+
+	return true;
+}
+bool Linux::registered = Register();
+
+// =====================================================
+// =================== Implementation ==================
+// =====================================================
+Linux::Linux(CApp *app) : Desktop(app), mpris(app) {
+	CreateInterop();
+}
+
+Linux::~Linux() {
+	if (!lastTempFile.empty())
+		unlink(lastTempFile.c_str());
+}
+
+// =====================================================
+// =================== Pure Virtuals ===================
+// =====================================================
+
+// -----------------------------------------------------
+// ------------------- CApp Helpers --------------------
+// -----------------------------------------------------
+void Linux::OnInit(Interop::InitArgs args, Context &context) {
+	char path[PATH_MAX];
+	std::size_t count = readlink("/proc/self/exe", path, PATH_MAX);
+
+	if (count != -1) {
+
+		const auto pathPath = std::filesystem::path(path, path + count);
+		const auto iconPath = (pathPath.parent_path() / "Data" / "popRocks.svg").u8string();
+		const auto basePath = pathPath.parent_path().u8string();
+
+#ifndef USING_FLATPAK
+		// Create .desktop file
+		auto desktopPath = std::filesystem::path(getenv("HOME")) / ".local" / "share" / "applications";
+		if (!std::filesystem::exists(desktopPath))
+			std::filesystem::create_directories(desktopPath);
+		
+		if (std::filesystem::exists(desktopPath)) {
+			desktopPath /= "popRocks.desktop";
+
+			const auto pathStart = DesktopFileTemplate.find(PathPlaceholder);
+			const auto path2Start = DesktopFileTemplate.find(PathPlaceholder, pathStart + PathPlaceholder.length());
+			const auto iconStart = DesktopFileTemplate.find(IconPlaceholder);
+
+			std::string desktopFileContents =
+				std::string(
+					DesktopFileTemplate.begin(),
+					DesktopFileTemplate.begin() + pathStart
+				);
+
+			desktopFileContents += basePath;
+
+			desktopFileContents += 
+				std::string(
+					DesktopFileTemplate.begin() + pathStart + PathPlaceholder.length(),
+					DesktopFileTemplate.begin() + path2Start
+				);
+
+			desktopFileContents += basePath;
+
+			desktopFileContents += 
+				std::string(
+					DesktopFileTemplate.begin() + path2Start + PathPlaceholder.length(),
+					DesktopFileTemplate.begin() + iconStart
+				);
+
+			desktopFileContents += iconPath;
+
+			desktopFileContents +=
+				std::string(
+					DesktopFileTemplate.begin() + iconStart + IconPlaceholder.length(),
+					DesktopFileTemplate.end()
+				);
+
+			std::ofstream outFile(desktopPath);
+			outFile << desktopFileContents << std::endl;
+		}
+#endif
+
+		// Servicemenu superceeded by normal .desktop file with added "inode/directory" MIME type
+#if 0
+		// Create servicemenu .desktop file
+		auto serviceMenuPath = std::filesystem::path(getenv("HOME")) / ".local" / "share" / "kio" / "servicemenus";
+		if (!std::filesystem::exists(serviceMenuPath))
+			std::filesystem::create_directories(serviceMenuPath);
+
+		if (std::filesystem::exists(serviceMenuPath)) {
+#ifdef USING_FLATPAK
+			serviceMenuPath /= "org.fetcko.popRocks.visualizeWith.desktop";
+
+			std::string serviceMenuContents =
+				std::string(
+					ServiceMenuTemplate.begin(),
+					ServiceMenuTemplate.end()
+				);
+#else
+			serviceMenuPath /= "visualizeWithPopRocks.desktop";
+
+			const auto iconStart = ServiceMenuTemplate.find(IconPlaceholder);
+			const auto pathStart = ServiceMenuTemplate.find(PathPlaceholder);
+
+			std::string serviceMenuContents =
+				std::string(
+					ServiceMenuTemplate.begin(),
+					ServiceMenuTemplate.begin() + iconStart
+				);
+
+			serviceMenuContents += iconPath;
+
+			serviceMenuContents +=
+				std::string(
+					ServiceMenuTemplate.begin() + iconStart + IconPlaceholder.length(),
+					ServiceMenuTemplate.begin() + pathStart
+				);
+
+			serviceMenuContents += basePath;
+
+			serviceMenuContents +=
+				std::string(
+					ServiceMenuTemplate.begin() + pathStart + PathPlaceholder.length(),
+					ServiceMenuTemplate.end()
+				);
+#endif
+
+			std::ofstream outFile(serviceMenuPath);
+			outFile << serviceMenuContents << std::endl;
+			outFile.close();
+
+			std::filesystem::permissions(
+				serviceMenuPath,
+				std::filesystem::perms::owner_exec | std::filesystem::perms::group_exec,
+				std::filesystem::perm_options::add
+			);
+		}
+#endif
+	}
+
+	HookKeyboard();
+
+	if (app->GetVulkan())
+		Desktop::OnInit(args, context);
+
+	GetDefaultDevice();
+}
+
+bool Linux::NeedsToResize(int &width, int &height, int windowWidth, int windowHeight, float scale, const std::optional<float> &scaleDelta, bool force) {
+	const auto ret = !(
+		std::lround(width * scale) == windowWidth && std::lround(height * scale) == windowHeight && !scaleDelta && !force
+	);
+
+	if (ret) {
+		width = std::lround(width * scale);
+		height = std::lround(height * scale);
+	}
+
+	return ret;
+}
+
+void Linux::OnResize(int windowWidth, int windowHeight) {
+	if (auto &context = app->GetContext()) {
+		if (!app->GetVulkan()) {
+			context->SetIdentity(glm::ortho(0.0f, static_cast<float>(windowWidth), static_cast<float>(windowHeight), 0.0f));
+			context->Apply();
+		} else {
+			Desktop::OnResize(windowWidth, windowHeight);
+		}
+	}
+}
+
+void Linux::HandleScaleDelta(float scale, std::optional<float> &scaleDelta, int &width, int &height, std::optional<Vector2i> &lastMousePos, int &windowX, int &windowY) {
+	scaleDelta = std::nullopt;
+	
+	UpdateWindowShape();
+}
+
+void Linux::OnDestroy() {
+	if (sharedFd != -1) {
+		pthread_mutex_destroy(reinterpret_cast<pthread_mutex_t*>(sharedMemory));
+		munmap(sharedMemory, SharedMemorySize);
+		close(sharedFd);
+		shm_unlink(SharedMemoryName.data());
+		sharedFd = -1;
+	}
+
+	StopPipeWire();
+	
+	DestroyInterop();
+
+	if (listening) {
+		if (listenThread.joinable())
+			listenThread.join();
+		listening = false;
+	}
+
+	DestroyWindow(app->GetSdlWindow());
+
+	mpris.Disable();
+	mpris.OnDestroy();
+
+	if (statusConnection) {
+		dbus_connection_flush(statusConnection);
+		dbus_connection_unref(statusConnection);
+
+		statusConnection = nullptr;
+	}
+}
+
+std::optional<bool> Linux::OnLoop() {
+	if (sharedMemory) {
+		pthread_mutex_lock(reinterpret_cast<pthread_mutex_t*>(sharedMemory));
+		if (auto size = *reinterpret_cast<std::size_t*>(&sharedMemory[sizeof(pthread_mutex_t)]); size != 0) {
+			const auto path = std::string(
+				reinterpret_cast<char *>(&sharedMemory[sizeof(pthread_mutex_t) + sizeof(std::size_t)]),
+				reinterpret_cast<char *>(&sharedMemory[sizeof(pthread_mutex_t) + sizeof(std::size_t)]) + size
+			);
+			LogDebug("Recieved argument from another popRocks instance: \"", path, "\"");
+			app->LoadFile(path);
+
+			// Reset size to signal we got the message
+			*reinterpret_cast<std::size_t*>(&sharedMemory[sizeof(pthread_mutex_t)]) = 0;
+		}
+		pthread_mutex_unlock(reinterpret_cast<pthread_mutex_t*>(sharedMemory));
+	}
+
+	mpris.OnLoop();
+	
+	if (app->GetVulkan())
+		return interop->OnLoop();
+
+	return true;
+}
+
+void Linux::SwapBuffers() {
+	SDL_GL_SwapWindow(app->GetSdlWindow());
+}
+
+// -----------------------------------------------------
+// ------------------ Keyboard hooks -------------------
+// -----------------------------------------------------
+void Linux::HookKeyboard() {
+	if (!Settings::settings.GetCaptureKeyboardMediaKeys() && mpris.IsEnabled())
+		mpris.Disable();
+	else if (Settings::settings.GetCaptureKeyboardMediaKeys() && !mpris.IsEnabled())
+		mpris.Enable();
+}
+
+// -----------------------------------------------------
+// ---------------------- OpenGL -----------------------
+// -----------------------------------------------------
+void Linux::OpenOpenGlWindow(SDL_PropertiesID &props) {
+	if (app->GetVulkan())
+		Desktop::OpenOpenGlWindow(props);
+}
+
+bool Linux::CreateOpenGlContext() {
+	app->SetOpenGlContext(SDL_GL_CreateContext(
+		app->GetVulkan() ? 
+			app->GetOpenGlWindow() :
+			app->GetSdlWindow()
+	));
+
+	return app->GetOpenGlContext() != nullptr;
+}
+
+// -----------------------------------------------------
+// ---------------- Device listening -------------------
+// -----------------------------------------------------
+void Linux::Listen(bool loopback) {
+	StopListening();
+
+	SetGain(1.0f);
+
+	in = reinterpret_cast<float *>(fftwf_malloc(sizeof(float) * maxLength * 2));
+	out = reinterpret_cast<fftwf_complex *>(fftwf_malloc(sizeof(fftwf_complex) * maxLength * 2));
+	plan = fftwf_plan_dft_r2c_1d(static_cast<int>(maxLength * 2), in, out, FFTW_MEASURE);
+
+    // TODO: Listening on Linux
+
+	listening = true;
+}
+
+void Linux::StopListening() {
+	if (listening) {
+		//audioSink->done = true;
+		if (listenThread.joinable())
+			listenThread.join();
+
+		fftwf_free(in);
+		fftwf_free(out);
+		fftwf_destroy_plan(plan);
+
+		//delete audioSink;
+
+		listening = false;
+	}
+}
+
+void Linux::LoadHeardSamples(Renderer *renderer, float *floatBuffer, short *shortBuffer, const std::size_t bufferLength) {
+	
+}
+
+// -----------------------------------------------------
+// --------------------- Interops ----------------------
+// -----------------------------------------------------
+void Linux::DestroyInterop() {
+	if (interop) {
+		interop->OnDestroy();
+		delete interop;
+		interop = nullptr;
+	}
+}
+
+void Linux::CreateInterop() {
+	if (app->GetVulkan())
+		interop = new Vulkan();
+}
+
+// -----------------------------------------------------
+// ----------------- Exclusive mode --------------------
+// -----------------------------------------------------
+bool Linux::OpenExclusive(const std::filesystem::path &path, const std::string &extension, bool exclusive, HSTREAM &target, HSTREAM &visualTarget, bool force, const BASS_CHANNELINFO &channelInfo, void *data) {
+	exclusiveBufferSize = 0.0f;
+	if (exclusiveChannelInfo.freq == 0 || channelInfo.freq != exclusiveChannelInfo.freq) {
+		if (exclusiveChannelInfo.freq != 0) StopExclusive(true, false);
+
+		int argc = 0;
+
+		uint8_t buffer[1024];
+		struct spa_pod_builder b = SPA_POD_BUILDER_INIT(buffer, sizeof(buffer));
+		const struct spa_pod *params[1];
+
+		const auto audioInfo = SPA_AUDIO_INFO_RAW_INIT(
+			.format = SPA_AUDIO_FORMAT_F32,
+			.flags = 0,
+			.rate = channelInfo.freq,
+			.channels = channelInfo.chans
+		);
+
+		params[0] = spa_format_audio_raw_build(
+			&b,
+			SPA_PARAM_EnumFormat,
+			&audioInfo
+		);
+
+		exclusiveChannelInfo = channelInfo;
+
+		BASS_Free();
+		
+		pw_init(&argc, nullptr);
+
+		pwData.loop = pw_thread_loop_new("popRocks Exclusive Audio Thread", nullptr);
+		if (!pwData.loop)
+			return false;
+
+		pw_thread_loop_lock(pwData.loop);
+
+		if (pw_thread_loop_start(pwData.loop) < 0) {
+			pw_thread_loop_unlock(pwData.loop);
+			pw_thread_loop_destroy(pwData.loop);
+			return false;
+		}
+		
+		streamEvents.version = PW_VERSION_STREAM_EVENTS;
+		streamEvents.state_changed = &Linux::PipeWireStateChanged;
+		streamEvents.process = &Linux::PipeWireProcess;
+
+		const auto &targetSinkName = Settings::settings.GetOutputDevice().empty() ?
+			defaultSinkName :
+			Settings::settings.GetOutputDevice();
+
+		pwData.stream = pw_stream_new_simple(
+			pw_thread_loop_get_loop(pwData.loop),
+			"popRocks Visualizer",
+			pw_properties_new(
+				PW_KEY_MEDIA_TYPE, "Audio",
+				PW_KEY_MEDIA_CATEGORY, "Playback",
+				PW_KEY_MEDIA_ROLE, "Music",
+				PW_KEY_NODE_EXCLUSIVE, "true",
+				PW_KEY_NODE_DONT_RECONNECT, "true",
+				PW_KEY_NODE_TARGET, targetSinkName.c_str(),
+				NULL
+			),
+			&streamEvents,
+			this
+		);
+
+		const auto ret = pw_stream_connect(
+			pwData.stream,
+			PW_DIRECTION_OUTPUT,
+			PW_ID_ANY,
+			static_cast<pw_stream_flags>(
+				PW_STREAM_FLAG_AUTOCONNECT |
+				PW_STREAM_FLAG_MAP_BUFFERS |
+				PW_STREAM_FLAG_EXCLUSIVE
+			),
+			params,
+			1
+		);
+
+		pw_thread_loop_unlock(pwData.loop);
+
+		if (ret >= 0) {
+			const auto start = std::chrono::system_clock::now();
+			
+			while (streamState != PW_STREAM_STATE_STREAMING &&
+				   streamState != PW_STREAM_STATE_UNCONNECTED) {
+				// Timeout after 1s
+				if (const auto now = std::chrono::system_clock::now(); now - start > 1s) {
+					streamState = PW_STREAM_STATE_UNCONNECTED;
+					ShowDialogBox("Could not initialize exclusive mode!", "Timed out waiting for device.");
+				}
+			}
+
+			if (streamState != PW_STREAM_STATE_UNCONNECTED) {
+				BASS_Init(
+					0 /* no sound */,
+					app->GetFreq() /* technically doesn't matter */,
+					0,
+					0,
+					nullptr
+				);
+
+				target = OpenWithFlags(path, extension, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+				visualTarget = OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE);
+
+				return true;
+			} else {
+				StopPipeWire();
+
+				BASS_Free();
+				BASS_Init(
+					Platform::GetDeviceIndex<true>(Settings::settings.GetOutputDevice()),
+					app->GetFreq(),
+					0,
+					0,
+					nullptr
+				);
+
+				return false;
+			}
+		} else {
+			LogError("Could not initialize exclusive mode! pw_stream_connect returned ", ret);
+
+			StopPipeWire();
+
+			BASS_Free();
+			BASS_Init(
+				Platform::GetDeviceIndex<true>(Settings::settings.GetOutputDevice()),
+				app->GetFreq(),
+				0,
+				0,
+				nullptr
+			);
+
+			return false;
+		}
+	} else {
+		target = OpenWithFlags(path, extension, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT);
+		visualTarget = OpenWithFlags(path, extension, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE);
+
+		return true;
+	}
+
+	return false;
+}
+
+void Linux::StopExclusive(bool reset, bool flush) {
+	pw_thread_loop_lock(pwData.loop);
+	pw_stream_set_active(pwData.stream, false);
+	pw_thread_loop_unlock(pwData.loop);
+
+	if (reset) {
+		StopPipeWire();
+
+		BASS_Free();
+		BASS_Init(
+			Platform::GetDeviceIndex<true>(Settings::settings.GetOutputDevice()),
+			app->GetFreq(),
+			0,
+			0,
+			nullptr
+		);
+	}
+}
+
+// -----------------------------------------------------
+// ---------------------- HDR --------------------------
+// -----------------------------------------------------
+std::optional<std::tuple<bool, float, float>> Linux::GetHdrProperties(int display, bool force) {
+	SDL_PropertiesID displayProps = SDL_GetDisplayProperties(
+		display
+	);
+
+	SDL_PropertiesID windowProps = SDL_GetWindowProperties(app->GetSdlWindow());
+	bool enabled = SDL_GetBooleanProperty(displayProps, SDL_PROP_DISPLAY_HDR_ENABLED_BOOLEAN, false);
+	float whitePoint = SDL_GetFloatProperty(windowProps, SDL_PROP_WINDOW_SDR_WHITE_LEVEL_FLOAT, 1.0f);
+	float headroom = SDL_GetFloatProperty(windowProps, SDL_PROP_WINDOW_HDR_HEADROOM_FLOAT, 1.0f);
+
+	enabled |= (headroom > 1.01);
+
+	return std::make_tuple(enabled, whitePoint, headroom);
+}
+
+void Linux::UpdateHdrProperties(bool miniPlayer, bool force) {
+	auto displayId = SDL_GetDisplayForWindow(app->GetSdlWindow());
+
+	Desktop::UpdateHdrProperties(miniPlayer, displayId, force);
+}
+
+// -----------------------------------------------------
+// ------------------ File Opening ---------------------
+// -----------------------------------------------------
+HSTREAM Linux::OpenWithFlags(const std::filesystem::path &path, const std::string &extension, DWORD flags) {
+	auto ret = BASS_StreamCreateFile(
+		FALSE,
+		path.u8string().c_str(),
+		0,
+		0,
+		flags
+	);
+	if (!ret) {
+		// In case our plugins didn't properly load
+		if (extension == ".flac") {
+			ret = BASS_FLAC_StreamCreateFile(
+				FALSE,
+				path.u8string().c_str(),
+				0,
+				0,
+				flags
+			);
+		} else if (extension == ".ape") {
+			ret = BASS_APE_StreamCreateFile(
+				FALSE,
+				path.u8string().c_str(),
+				0,
+				0,
+				flags
+			);
+		} else if (extension == ".wv") {
+			ret = BASS_WV_StreamCreateFile(
+				FALSE,
+				path.u8string().c_str(),
+				0,
+				0,
+				flags
+			);
+		}
+		else if (extension == ".m4a" || extension == ".mp4") {
+			ret = BASS_ALAC_StreamCreateFile(
+				FALSE,
+				path.u8string().c_str(),
+				0,
+				0,
+				flags
+			);
+			if (!ret) {
+				ret = BASS_AAC_StreamCreateFile(
+					FALSE,
+					path.u8string().c_str(),
+					0,
+					0,
+					flags
+				);
+			}
+		}
+		else if (extension == ".tta") {
+			ret = BASS_TTA_StreamCreateFile(
+				FALSE,
+				path.u8string().c_str(),
+				0,
+				0,
+				flags
+			);
+		}
+		else {
+			ret = BASS_StreamCreateFile(
+				FALSE,
+				path.u8string().c_str(),
+				0,
+				0,
+				flags
+			);
+		}
+	}
+
+	return ret;
+}
+
+std::filesystem::path Linux::GetTemporaryFile(const std::string &pattern) {
+	if (!lastTempFile.empty())
+		unlink(lastTempFile.c_str());
+
+	auto tempFileName = new char[pattern.length() + 1];
+	memcpy(tempFileName, pattern.c_str(), pattern.length());
+	tempFileName[pattern.length()] = '\0';
+	mkstemp(tempFileName);
+
+	lastTempFile = std::string(tempFileName, tempFileName + pattern.length());
+
+	delete[] tempFileName;
+
+	return lastTempFile;
+}
+
+// -----------------------------------------------------
+// ---------------------- BASS -------------------------
+// -----------------------------------------------------
+void Linux::LoadBassPlugins() {
+	if (!BASS_PluginLoad("./libbassflac.so", 0))
+		LogError("Could not load FLAC plugin! Error code ", BASS_ErrorGetCode());
+	if (!BASS_PluginLoad("./libbassape.so", 0))
+		LogError("Could not load APE plugin! Error code ", BASS_ErrorGetCode());
+	if (!BASS_PluginLoad("./libbasswv.so", 0))
+		LogError("Could not load WavPack plugin! Error code ", BASS_ErrorGetCode());
+	if (!BASS_PluginLoad("./libbassalac.so", 0))
+		LogError("Could not load ALAC plugin! Error code ", BASS_ErrorGetCode());
+	if (!BASS_PluginLoad("./libbass_aac.so", 0))
+		LogError("Could not load AAC plugin! Error code ", BASS_ErrorGetCode());
+}
+
+// -----------------------------------------------------
+// -------------------- Fullscreen ---------------------
+// -----------------------------------------------------
+void Linux::ToggleFullscreen() {
+	if (SDL_GetWindowFlags(app->GetSdlWindow()) & SDL_WINDOW_FULLSCREEN)
+		SDL_SetWindowFullscreen(app->GetSdlWindow(), 0);
+	else
+		SDL_SetWindowFullscreen(app->GetSdlWindow(), SDL_WINDOW_FULLSCREEN);
+	
+}
+
+// -----------------------------------------------------
+// -------------------- Miniplayer ---------------------
+// -----------------------------------------------------
+void Linux::SetChromaKey(bool enabled) {
+	if (enabled == colorKeyEnabled) return;
+
+	colorKeyEnabled = enabled;
+
+	//LogDebug("ColorKey ", enabled ? "Enabled" : "Disabled");
+}
+
+void Linux::SetMiniPlayer(bool miniPlayer, uint8_t chromaKey) {
+	this->miniPlayer = miniPlayer;
+	UpdateWindowShape();
+}
+
+bool Linux::SetTransparent(bool transparent) {
+	return true;
+}
+
+bool Linux::AllowsWindowMovement() const {
+	return false;
+}
+
+std::optional<Vector2i> Linux::SetWindowPos(int x, int y, int width, int height, int *windowWidth, int *windowHeight, bool alreadyRespawned) {
+	Vector2i ret = {x, y};
+
+	if (windowWidth && windowHeight) {
+		*windowWidth = width * (miniPlayer ? scale : 1.0f);
+		*windowHeight = height * (miniPlayer ? scale : 1.0f);
+
+		if (!alreadyRespawned)
+			app->RespawnWindow();
+
+		//if (!miniPlayer)
+		app->OnResize(width, height, scale, true);
+	}
+
+	return ret;
+}
+
+// =====================================================
+// ===================== Virtuals ======================
+// =====================================================
+
+// -----------------------------------------------------
+// ------------------ CApp Helpers ---------------------
+// -----------------------------------------------------
+bool Linux::OnMouseClicked(const Vector2i &mousePos) {
+	if (auto toggled = app->GetControls().GetExclusiveIndicator().OnMouseClicked(mousePos)) {
+		app->ToggleExclusive();
+		return true;
+	}
+
+	return false;
+}
+
+bool Linux::OnMouseDown(const Vector2i &mousePos) {
+	return false;
+}
+
+// -----------------------------------------------------
+// --------------- Display Properties ------------------
+// -----------------------------------------------------
+int Linux::GetDefaultFramebuffer() {
+	return app->GetVulkan() ? GetInterop()->GetFramebuffer() : 0;
+}
+
+const float Linux::GetScale(SDL_Window *window, Context &context, int *w, int *h) {
+	SDL_GetWindowSize(window, w, h);
+
+	scale = SDL_GetWindowDisplayScale(window);
+
+	// Round to 2 decimal places
+	scale = std::round(scale * 100.0f) / 100.0f;
+
+	SetSafeArea(window, context, *w * scale, *h * scale);
+
+	return scale;
+}
+
+// -----------------------------------------------------
+// ------------------ Exclusive Mode -------------------
+// -----------------------------------------------------
+bool Linux::LoadExclusive(double pos) {
+	if (app->GetControls().GetExclusiveIndicator().IsExclusive()) {
+		// Since this is only called when switching audio devices,
+		// force a reinitialization on the new device
+		if (exclusiveChannelInfo.freq != 0)
+			exclusiveChannelInfo.freq = 1; // 0 is considered totally unloaded
+
+		if (app->Open(app->GetLoadedFile(), app->GetLoadedFileExtension(), true, app->GetStreamHandle(), app->GetVisualStreamHandle(), true)) {
+			app->SeekTo(pos);
+			app->SetPlaying(true);
+
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool Linux::StopPlayingExclusive() {
+	if (app->GetControls().GetExclusiveIndicator().IsExclusive()) {
+		const auto active = streamState == PW_STREAM_STATE_PAUSED;
+
+		pw_thread_loop_lock(pwData.loop);
+		pw_stream_set_active(pwData.stream, active);
+		pw_thread_loop_unlock(pwData.loop);
+
+		app->SetPlaying(active);
+
+		return true;
+	}
+
+	return false;
+}
+
+bool Linux::StartPlayingExclusive(bool fromPlaylist, bool fileLoaded, bool advanceOnNextLoop, bool wasPlaying) {
+	if (app->GetControls().GetExclusiveIndicator().IsExclusive()) {
+		if (PlayAfterLoad() || wasPlaying) {
+			pw_thread_loop_lock(pwData.loop);
+			pw_stream_set_active(pwData.stream, true);
+			pw_thread_loop_unlock(pwData.loop);
+		}
+
+		// We still want to return true,
+		// even if we aren't playing, because
+		// a return of false here indicates
+		// exclusive mode itself failed
+		return true;
+	}
+
+	return false;
+}
+
+std::size_t Linux::GetAvailable() const {
+	if (streamState != PW_STREAM_STATE_STREAMING)
+		return 0;
+
+	pw_time time;
+	pw_stream_get_time_n(pwData.stream, &time, sizeof(pw_time));
+
+	const int64_t elapsed = 
+		(time.rate.denom * (pw_stream_get_nsec(pwData.stream) - time.now)) /
+		(time.rate.num * SPA_NSEC_PER_SEC);
+
+	const auto currentTime = (time.ticks + elapsed) * 1000 * time.rate.num / time.rate.denom;
+
+	return (queueSize - (currentTime - lastQueueTime)) * // Milliseconds
+		(exclusiveChannelInfo.freq / 1000.0) * // (mono) samples per millisecond
+		exclusiveChannelInfo.chans * // total channels
+		sizeof(float); // sample size
+}
+
+// -----------------------------------------------------
+// ---------------------- Audio ------------------------
+// -----------------------------------------------------
+std::map<std::string, Platform::OutputDevice> Linux::GetOutputDevices() {
+	return outputDevices;
+}
+
+bool Linux::GetOutputDeviceIndex(int &index, const std::string &device) {
+	auto iter = outputDevices.begin();
+
+	OutputDevice *sink = nullptr;
+	for(; iter != outputDevices.end(); ++iter) {
+		if (iter->second.name == device) {
+			sink = &iter->second;
+			break;
+		}
+	}
+
+	if (!sink) return false;
+
+	// Let BASS handle the default
+	// device normally
+	if (sink->isDefault) {
+		index = -1;
+		return true;
+	}
+
+	BASS_DEVICEINFO info;
+
+	for (; index != -1 && BASS_GetDeviceInfo(index, &info); ++index) {
+		if (strlen(info.driver) && 
+			strncmp(info.driver, sink->driver.c_str(), std::min(strlen(info.driver), sink->driver.size())) == 0) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+// -----------------------------------------------------
+// ------------------ Mouse Pointer --------------------
+// -----------------------------------------------------
+bool Linux::IsPointerInWindow() const {
+	return inWindow;
+}
+
+// -----------------------------------------------------
+// ---------------- Window Management ------------------
+// -----------------------------------------------------
+bool Linux::IsMoving() const {
+	return moving;
+}
+
+bool Linux::IsResizing() const {
+	return resizing;
+}
+
+void Linux::UpdateWindowShape() {
+	// If we don't have a wl_surface yet, ignore
+	if (!surface)
+		return;
+
+	if (!miniPlayer) {
+		LogDebug("Resetting input region!");
+		wl_surface_set_input_region(surface, nullptr);
+		wl_surface_commit(surface);
+
+		return;
+	}
+
+	const auto start = std::chrono::system_clock::now();
+
+	struct wl_region *region = wl_compositor_create_region(compositor);
+
+	// Input region is scale agnostic
+	const auto width = std::lround(app->GetWindowSize().first / app->GetScale());
+	const auto height = std::lround(app->GetWindowSize().second / app->GetScale());
+
+	LogDebug("Updating window shape based on window size of ", width, "x", height);
+
+#if DEBUG_RASTERIZATION
+	std::vector<uint8_t> bitmap(width * height * 3);
+	memset(bitmap.data(), 0xFF, width * height * 3);
+#endif
+
+	// Input region is scale agnostic
+	const auto baseRadius = std::lround(app->GetAlbumArt().GetRadius(true) / app->GetAlbumArt().GetScale());
+
+	// Rasterize album art circle
+	const auto radius = baseRadius + app->GetAlbumArt().GetOutline().GetWidth();
+
+	for (long y = -radius; y < radius; ++y) {
+		const auto dx = std::floor(std::sqrt(radius * radius - y * y));
+
+#if DEBUG_RASTERIZATION
+		for (long x = width / 2 - dx; x < width / 2 + dx; ++x) {
+			const auto index = ((y + height / 2) * width + x) * 3;
+
+			if (index < 0 || index > width * height * 3 - 3)
+				continue;
+
+			bitmap[index] = 0;
+			bitmap[index + 1] = 0;
+			bitmap[index + 2] = 0;
+		}
+#endif
+
+		wl_region_add(
+			region,
+			width / 2 - dx,
+			y + height / 2,
+			dx * 2,
+			1
+		);
+	}
+
+	// Drop a square down for the close box
+	const int32_t closeSize = std::lround(
+		app->GetControls().GetIconSize() /
+		Close::GetLowestRatio() /
+		// GetIconSize() uses the _album art's_ scale,
+		// and input region is scale agnostic
+		app->GetAlbumArt().GetScale()
+	);
+
+	const Rectanglei closeRect = {
+		static_cast<int32_t>(width / 2 + baseRadius) - closeSize * 2,
+		static_cast<int32_t>(height / 2 - baseRadius) + closeSize / 2,
+		closeSize * 2,
+		closeSize * 2
+	};
+
+	wl_region_add(
+		region,
+		closeRect.x,
+		closeRect.y,
+		closeRect.w,
+		closeRect.h
+	);
+
+#if DEBUG_RASTERIZATION
+	for (auto x = closeRect.x; x < closeRect.x + closeRect.w; ++x) {
+		for (auto y = closeRect.y; y < closeRect.y + closeRect.h; ++y) {
+			const auto index = (y * width + x) * 3;
+
+			bitmap[index] = 0;
+			bitmap[index + 1] = 0;
+			bitmap[index + 2] = 0;
+		}
+	}
+#endif
+
+	// Rasterize the outer ring
+	const auto outerRadius = baseRadius * Settings::settings.GetMiniPlayerVisualizerRatio() / 2;
+	const auto innerRadius = outerRadius - app->GetAlbumArt().GetVisualizerOutline().GetWidth() * 3;
+	
+	for (long y = -outerRadius; y < outerRadius; ++y) {
+		const auto dx = std::floor(std::sqrt(outerRadius * outerRadius - y * y));
+		auto innerDx = std::floor(std::sqrt(innerRadius * innerRadius - y * y));
+
+		if (std::isnan(innerDx))
+			innerDx = 0;
+
+#if DEBUG_RASTERIZATION
+		for (long x = width / 2 - dx; x < width / 2 + dx; ++x) {
+			if (y > -innerRadius && y < innerRadius && x > width / 2 - innerDx && x < width / 2 + innerDx)
+				continue;
+				
+			const auto index = ((y + height / 2) * width + x) * 3;
+
+			if (index < 0 || index > width * height * 3 - 3)
+				continue;
+
+			bitmap[index] = 0;
+			bitmap[index + 1] = 0;
+			bitmap[index + 2] = 0;
+		}
+#endif
+
+		// Make two rectangles
+		wl_region_add(
+			region,
+			width / 2 - dx,
+			y + height / 2,
+			dx - innerDx,
+			1
+		);
+		wl_region_add(
+			region,
+			width / 2 + innerDx,
+			y + height / 2,
+			dx - innerDx,
+			1
+		);
+	}
+	
+
+#if DEBUG_RASTERIZATION
+	lodepng::encode(
+		std::filesystem::path(getenv("HOME")) / "Desktop/test.png",
+		bitmap,
+		width,
+		height,
+		LCT_RGB
+	);
+#endif
+
+	wl_surface_set_input_region(surface, region);
+	wl_surface_commit(surface);
+	wl_region_destroy(region);
+
+	LogDebug("Rasterizing input region took ", Duration<Microseconds>(std::chrono::system_clock::now() - start).AsSeconds(), " seconds");
+}
+
+void Linux::HookWindow(bool miniPlayer) {
+	if (this->miniPlayer == miniPlayer && compositor)
+		throw std::runtime_error("Trying to hook a window that's already been hooked!");
+
+	if (!miniPlayer) return;
+
+	display = reinterpret_cast<wl_display*>(
+		SDL_GetPointerProperty(
+			SDL_GetWindowProperties(app->GetSdlWindow()),
+			SDL_PROP_WINDOW_WAYLAND_DISPLAY_POINTER,
+			NULL
+		)
+	);
+
+	seatListener.name = &Linux::SeatName;
+	seatListener.capabilities = &Linux::SeatCapabilities;
+
+	registryListener.global = &Linux::WaylandRegistryGlobal;
+	registryListener.global_remove = &Linux::WaylandRegistryGlobalRemove;
+
+	pointerListener.enter = &Linux::PointerEnter;
+	pointerListener.leave = &Linux::PointerLeave;
+	pointerListener.motion = &Linux::PointerMotion;
+	pointerListener.button = &Linux::PointerButton;
+	pointerListener.axis = &Linux::PointerAxis;
+	pointerListener.frame = &Linux::PointerFrame;
+	pointerListener.axis_source = &Linux::PointerAxisSource;
+	pointerListener.axis_stop = &Linux::PointerAxisStop;
+	pointerListener.axis_discrete = &Linux::PointerAxisDiscrete;
+	pointerListener.axis_relative_direction = &Linux::PointerAxisRelativeDirection;
+	pointerListener.axis_value120 = &Linux::PointerAxisValue120;
+
+	xdgWmBaseListener.ping = &Linux::XdgWmBasePing;
+	
+	registry = wl_display_get_registry(display);
+	wl_registry_add_listener(registry, &registryListener, this);
+
+	wl_display_roundtrip(display);
+
+	surface = reinterpret_cast<wl_surface*>(
+		SDL_GetPointerProperty(
+			SDL_GetWindowProperties(app->GetSdlWindow()),
+			SDL_PROP_WINDOW_WAYLAND_SURFACE_POINTER,
+			NULL
+		)
+	);
+
+	if (!xdgTopLevel) {
+		xdgSurface = xdg_wm_base_get_xdg_surface(xdgWmBase, surface);
+
+		xdgTopLevel = xdg_surface_get_toplevel(xdgSurface);
+
+#ifdef USING_FLATPAK
+		xdg_toplevel_set_app_id(xdgTopLevel, "org.fetcko.popRocks");
+#else
+		xdg_toplevel_set_app_id(xdgTopLevel, "popRocks");
+#endif
+
+		xdgSurfaceListener.configure = &Linux::XdgSurfaceConfigure;
+
+		xdg_surface_add_listener(xdgSurface, &xdgSurfaceListener, this);
+
+		xdgTopLevelListener.configure = &Linux::XdgTopLevelConfigure;
+		xdgTopLevelListener.close = &Linux::XdgTopLevelClose;
+
+		xdg_toplevel_add_listener(xdgTopLevel, &xdgTopLevelListener, this);
+		xdg_toplevel_set_title(xdgTopLevel, SDL_GetWindowTitle(app->GetSdlWindow()));
+
+		wl_surface_commit(surface);
+
+		auto start = std::chrono::system_clock::now();
+
+		while (!configured) {
+			wl_display_dispatch(display);
+
+			// 5s timeout
+			if (std::chrono::system_clock::now() - start >= 5s)
+				break;
+		}
+	}
+}
+
+void Linux::DestroyWindow(SDL_Window *window) {
+	if (miniPlayer) {
+		if (xdgTopLevel) {
+			xdg_toplevel_destroy(xdgTopLevel);
+			xdgTopLevel = nullptr;
+		}
+
+		if (xdgSurface) {
+			xdg_surface_destroy(xdgSurface);
+			xdgSurface = nullptr;
+		}
+
+		if (xdgWmBase) {
+			xdg_wm_base_destroy(xdgWmBase);
+			xdgWmBase = nullptr;
+		}
+
+		if (registry) {
+			wl_registry_destroy(registry);
+			registry = nullptr;
+		}
+
+		if (compositor) {
+			wl_compositor_destroy(compositor);
+			compositor = nullptr;
+		}
+
+		if (pointer) {
+			wl_pointer_release(pointer);
+			pointer = nullptr;
+		}
+
+		if (seat) {
+			wl_seat_destroy(seat);
+			seat = nullptr;
+		}
+
+		surface = nullptr;
+		display = nullptr;
+	}
+
+	SDL_DestroyWindow(window);
+}
+
+void Linux::ShowDialogBox(const std::string &title, const std::string &message) {
+	SDL_ShowSimpleMessageBox(
+		SDL_MESSAGEBOX_ERROR,
+		title.c_str(),
+		message.c_str(),
+		app->GetSdlWindow()
+	);
+}
+
+bool Linux::HandleExistingWindow(int argc, char *argv[]) {
+	constexpr auto MapSharedMemory = [](uint8_t **sharedMemory, int sharedFd) {
+		*sharedMemory = reinterpret_cast<uint8_t*>(
+			mmap(0, SharedMemorySize, PROT_READ | PROT_WRITE, MAP_SHARED, sharedFd, 0)
+		);
+
+		pthread_mutexattr_t attr;
+		pthread_mutexattr_init(&attr);
+		pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+		pthread_mutex_init(reinterpret_cast<pthread_mutex_t*>(*sharedMemory), &attr);
+		pthread_mutexattr_destroy(&attr);
+	};
+
+	// Can we create an exclusive file?
+	sharedFd = shm_open(SharedMemoryName.data(), O_RDWR | O_CREAT | O_EXCL, 0666);
+	if (sharedFd == -1) {
+		printf("Found an exiting popRocks instance! Redirecting arguments to it...\n");
+		bool redirected = false;
+
+		// If not, open exiting file
+		sharedFd = shm_open(SharedMemoryName.data(), O_RDWR, 0666);
+		if (sharedFd != -1) {
+			MapSharedMemory(&sharedMemory, sharedFd);
+
+			if (!sharedMemory) {
+				printf("Shared memory is null!\n");
+			} else if (argc > 1) {
+				pthread_mutex_lock(reinterpret_cast<pthread_mutex_t*>(sharedMemory));
+
+				// Send length of our argument first
+				*reinterpret_cast<std::size_t*>(&sharedMemory[sizeof(pthread_mutex_t)]) = strlen(argv[1]);
+				// Then the argument itself
+				memcpy(&sharedMemory[sizeof(pthread_mutex_t) + sizeof(std::size_t)], argv[1], strlen(argv[1]));
+
+				pthread_mutex_unlock(reinterpret_cast<pthread_mutex_t*>(sharedMemory));
+
+				// Make sure we actually get ingested
+				const auto start = std::chrono::system_clock::now();
+				auto now = start;
+				while (!redirected && now - start <= 100ms) {
+					pthread_mutex_lock(reinterpret_cast<pthread_mutex_t*>(sharedMemory));
+
+					if (*reinterpret_cast<std::size_t*>(&sharedMemory[sizeof(pthread_mutex_t)]) == 0) {
+						printf("\tRedirect successful!\n");
+						redirected = true;
+					}
+
+					pthread_mutex_unlock(reinterpret_cast<pthread_mutex_t*>(sharedMemory));
+
+					std::this_thread::sleep_for(1ms);
+					now = std::chrono::system_clock::now();
+				}
+			}
+
+			close(sharedFd);
+		} else printf("Could not open shared fd!\n");
+
+		// If we weren't redirected, assume control
+		if (!redirected) {
+			LogWarning("Found abandoned shared fd!");
+			sharedFd = shm_open(SharedMemoryName.data(), O_RDWR | O_CREAT, 0666);
+		} else return true;
+	}
+
+	if (sharedFd != -1) {
+		if (ftruncate(sharedFd, SharedMemorySize) == 0) {
+			MapSharedMemory(&sharedMemory, sharedFd);
+
+			// Clear length
+			pthread_mutex_lock(reinterpret_cast<pthread_mutex_t*>(sharedMemory));
+			*reinterpret_cast<std::size_t*>(&sharedMemory[sizeof(pthread_mutex_t)]) = 0;
+			pthread_mutex_unlock(reinterpret_cast<pthread_mutex_t*>(sharedMemory));
+
+			LogDebug("Opened exclusive file!");
+		} else {
+			close(sharedFd);
+			shm_unlink(SharedMemoryName.data());
+			sharedFd = -1;
+
+			LogError("Could not truncate shared fd!");
+		}
+	}
+
+	return false;
+}
+
+// -----------------------------------------------------
+// ---------------- System Management ------------------
+// -----------------------------------------------------
+float Linux::GetCpuUsage() {
+	float ret = 0.0f;
+
+	tms now;
+	times(&now);
+
+	auto processTime = now.tms_utime + now.tms_stime;
+	auto systemTime = std::chrono::steady_clock::now();
+
+	if (lastProcessTime) {
+		const auto processDelta = processTime - lastProcessTime;
+		const auto systemDelta = std::chrono::duration<double>(systemTime - lastSystemTime);
+
+		ret = static_cast<double>(processDelta) / sysconf(_SC_CLK_TCK) / systemDelta.count() * 100.0 / std::thread::hardware_concurrency();
+	}
+
+	lastProcessTime = processTime;
+	lastSystemTime = systemTime;
+
+	return ret;
+}
+
+int64_t Linux::GetRamUsage() {
+	if (std::ifstream inFile{"/proc/self/smaps_rollup"}) {
+		std::string line;
+		while (std::getline(inFile, line)) {
+			const auto split = Utils::Split(line, isspace);
+			if (split.size() > 1 && split[0] == "Pss:") {
+				// Convert from KB -> bytes
+				return std::stoll(split[1]) * 1024;
+			}
+		}
+	} else {
+		long pages = 0;
+		if (std::ifstream inFile{"/proc/self/statm"}) {
+			long virtualMemory;
+
+			// We want Resident Set Size (RSS, not to be
+			// confused with Really Simple Syndication),
+			// which is the second value
+			inFile >> virtualMemory >> pages;
+		}
+
+		// Convert from pages -> bytes
+		return pages * (sysconf(_SC_PAGESIZE));
+	}
+}
+
+// -----------------------------------------------------
+// ---------------------- Bling ------------------------
+// -----------------------------------------------------
+void Linux::SetStatus(Status status, int progress) {
+	if (progress == lastProgress) return;
+
+	lastProgress = progress;
+
+	// FIXME: Need a DBus base class for both this
+	//        and MPRIS to inherit.
+	DBusError err;
+	dbus_error_init(&err);
+
+	if (!statusConnection) {
+		statusConnection = dbus_bus_get(DBUS_BUS_SESSION, &err);
+		if (dbus_error_is_set(&err)) {
+			LogError("D-Bus Error: ", err.message);
+			dbus_error_free(&err);
+			return;
+		}
+	}
+
+	DBusMessage *msg = dbus_message_new_signal(
+		"/",
+		"com.canonical.Unity.LauncherEntry",
+		"Update"
+	);
+
+	if (!msg) return;
+
+#ifdef USING_FLATPAK
+	const char *uri = "application://org.fetcko.popRocks.desktop";
+#else
+	const char *uri = "application://popRocks.desktop";
+#endif
+
+	DBusMessageIter messageArgs{0}, dictIter{0}, entryIter{0}, variantIter{0};
+
+	dbus_message_iter_init_append(msg, &messageArgs);
+
+	dbus_message_iter_append_basic(&messageArgs, DBUS_TYPE_STRING, &uri);
+
+	dbus_message_iter_open_container(&messageArgs, DBUS_TYPE_ARRAY, "{sv}", &dictIter);
+
+	dbus_message_iter_open_container(&dictIter, DBUS_TYPE_DICT_ENTRY, NULL, &entryIter);
+
+	const char* visibleKey = "progress-visible";
+	dbus_bool_t visible = status == Status::Stopped ? FALSE : TRUE;
+
+	dbus_message_iter_append_basic(&entryIter, DBUS_TYPE_STRING, &visibleKey);
+
+	dbus_message_iter_open_container(&entryIter, DBUS_TYPE_VARIANT, "b", &variantIter);
+	dbus_message_iter_append_basic(&variantIter, DBUS_TYPE_BOOLEAN, &visible);
+	dbus_message_iter_close_container(&entryIter, &variantIter);
+	dbus_message_iter_close_container(&dictIter, &entryIter);
+
+	dbus_message_iter_open_container(&dictIter, DBUS_TYPE_DICT_ENTRY, NULL, &entryIter);
+
+	const char* progressKey = "progress";
+	double progressPercent = progress / 100.0;
+
+	dbus_message_iter_append_basic(&entryIter, DBUS_TYPE_STRING, &progressKey);
+
+	dbus_message_iter_open_container(&entryIter, DBUS_TYPE_VARIANT, "d", &variantIter);
+	dbus_message_iter_append_basic(&variantIter, DBUS_TYPE_DOUBLE, &progressPercent);
+	dbus_message_iter_close_container(&entryIter, &variantIter);
+	dbus_message_iter_close_container(&dictIter, &entryIter);
+
+	dbus_message_iter_close_container(&messageArgs, &dictIter);
+
+	dbus_connection_send(statusConnection, msg, NULL);
+	dbus_connection_flush(statusConnection);
+
+	dbus_message_unref(msg);
+}
+
+// =====================================================
+// ===================== Wayland =======================
+// =====================================================
+void Linux::WaylandRegistryGlobal(void *data, struct wl_registry *registry, uint32_t name, const char *interface, uint32_t version) {
+	auto platform = reinterpret_cast<Linux*>(data);
+
+	if (strcmp(interface, wl_compositor_interface.name) == 0) {
+        platform->SetCompositor(
+			reinterpret_cast<wl_compositor*>(
+				wl_registry_bind(registry, name, &wl_compositor_interface, version)
+			)
+		);
+    } else if (strcmp(interface, wl_seat_interface.name) == 0) {
+        platform->SetSeat(
+			reinterpret_cast<wl_seat*>(
+				wl_registry_bind(registry, name, &wl_seat_interface, version)
+			)
+		);
+        
+		wl_seat_add_listener(
+			platform->GetSeat(),
+			&platform->GetSeatListener(),
+			data
+		);
+    } else if (strcmp(interface, xdg_wm_base_interface.name) == 0) {
+		platform->SetXdgWmBase(
+			reinterpret_cast<struct xdg_wm_base*>(
+				wl_registry_bind(registry, name, &xdg_wm_base_interface, 1)
+			)
+		);
+		
+		xdg_wm_base_add_listener(
+			platform->GetXdgWmBase(),
+			&platform->GetXdgWmBaseListener(),
+			data
+		);
+	}
+}
+
+void Linux::WaylandRegistryGlobalRemove(void *data, struct wl_registry *registry, uint32_t name) {
+}
+
+void Linux::SeatName(void *data, wl_seat *seat, const char *name) {
+}
+
+void Linux::SeatCapabilities(void *data, struct wl_seat *seat, uint32_t caps) {
+    if (caps & WL_SEAT_CAPABILITY_POINTER) {
+        struct wl_pointer *pointer = wl_seat_get_pointer(seat);
+
+		auto platform = reinterpret_cast<Linux*>(data);
+		platform->SetPointer(pointer);
+		wl_pointer_add_listener(pointer, &platform->GetPointerListener(), data);
+    }
+}
+
+void Linux::PointerEnter(void *data, wl_pointer *pointer, uint serial, wl_surface *surface, wl_fixed_t surface_x, wl_fixed_t surface_y) {
+	auto platform = reinterpret_cast<Linux*>(data);
+
+	if (platform->IsMoving()) {
+		platform->GetApp()->GetAlbumArt().TargetOverrideOutlineAlpha(0.0f);
+		platform->SetMoving(false);
+	}
+	
+	platform->SetPointerX(wl_fixed_to_int(surface_x));
+	platform->SetPointerY(wl_fixed_to_int(surface_y));
+
+	platform->SetInWindow(true);
+}
+
+void Linux::PointerLeave(void *data, wl_pointer *pointer, uint serial, wl_surface *surface) {
+	auto platform = reinterpret_cast<Linux*>(data);
+	
+	if (!platform->IsMoving())
+		platform->SetInWindow(false);
+}
+
+void Linux::PointerMotion(void *data, wl_pointer *pointer, uint time, wl_fixed_t surface_x, wl_fixed_t surface_y) {
+	auto platform = reinterpret_cast<Linux*>(data);
+	
+	platform->SetPointerX(wl_fixed_to_int(surface_x));
+	platform->SetPointerY(wl_fixed_to_int(surface_y));
+}
+
+void Linux::PointerButton(void *data, wl_pointer *pointer, uint serial, uint time, uint button, uint state) {
+	auto platform = reinterpret_cast<Linux*>(data);
+
+	if (button == BTN_LEFT) {
+		if (state == WL_POINTER_BUTTON_STATE_PRESSED) {
+			CApp::MouseDownState state = CApp::MouseDownState::None;
+
+			platform->GetApp()->OnMouseDown({
+				platform->GetPointerX() * platform->GetApp()->GetScale(),
+				platform->GetPointerY() * platform->GetApp()->GetScale()
+			}, &state);
+
+			if (state == CApp::MouseDownState::Dragging) {
+				platform->LogDebug("Handing window moving to Wayland");
+				
+				platform->SetMoving(true);
+				platform->GetApp()->OnMoveStart();
+
+				xdg_toplevel_move(
+					platform->GetXdgTopLevel(),
+					platform->GetSeat(),
+					serial
+				);
+			} else if (state == CApp::MouseDownState::Resizing && 
+				platform->GetApp()->GetAlbumArt().GetActiveOutline() == AlbumArt::Outline::Visualizer) {
+				platform->LogDebug("Handing window resizing to Wayland");
+
+				xdg_toplevel_resize_edge edge = XDG_TOPLEVEL_RESIZE_EDGE_NONE;
+
+				switch(platform->GetApp()->GetAlbumArt().GetCursor()) {
+				case SDL_SYSTEM_CURSOR_N_RESIZE:
+					edge = XDG_TOPLEVEL_RESIZE_EDGE_TOP;
+					break;
+				case SDL_SYSTEM_CURSOR_S_RESIZE:
+					edge = XDG_TOPLEVEL_RESIZE_EDGE_BOTTOM;
+					break;
+				case SDL_SYSTEM_CURSOR_E_RESIZE:
+					edge = XDG_TOPLEVEL_RESIZE_EDGE_RIGHT;
+					break;
+				case SDL_SYSTEM_CURSOR_W_RESIZE:
+					edge = XDG_TOPLEVEL_RESIZE_EDGE_LEFT;
+					break;
+				case SDL_SYSTEM_CURSOR_NE_RESIZE:
+					edge = XDG_TOPLEVEL_RESIZE_EDGE_TOP_RIGHT;
+					break;
+				case SDL_SYSTEM_CURSOR_NW_RESIZE:
+					edge = XDG_TOPLEVEL_RESIZE_EDGE_TOP_LEFT;
+					break;
+				case SDL_SYSTEM_CURSOR_SE_RESIZE:
+					edge = XDG_TOPLEVEL_RESIZE_EDGE_BOTTOM_RIGHT;
+					break;
+				case SDL_SYSTEM_CURSOR_SW_RESIZE:
+					edge = XDG_TOPLEVEL_RESIZE_EDGE_BOTTOM_LEFT;
+					break;
+				default:
+					edge = XDG_TOPLEVEL_RESIZE_EDGE_NONE;
+					break;
+				}
+
+				if (edge != XDG_TOPLEVEL_RESIZE_EDGE_NONE) {
+					platform->SetResizing(true);
+					xdg_toplevel_resize(
+						platform->GetXdgTopLevel(),
+						platform->GetSeat(),
+						serial,
+						edge
+					);
+				}
+			}
+		} else if (state == WL_POINTER_BUTTON_STATE_RELEASED) {		
+			platform->SetMoving(false);
+			platform->SetResizing(false);
+		}
+    } else if (button == BTN_RIGHT && state == WL_POINTER_BUTTON_STATE_PRESSED) {
+		xdg_toplevel_show_window_menu(
+			platform->GetXdgTopLevel(),
+			platform->GetSeat(),
+			serial,
+			platform->GetPointerX(),
+			platform->GetPointerY()
+		);
+	}
+}
+
+void Linux::PointerAxis(void *data, wl_pointer *pointer, uint time, uint axis, wl_fixed_t value) {
+
+}
+
+void Linux::PointerFrame(void *data, wl_pointer *pointer) {
+
+}
+
+void Linux::PointerAxisSource(void *data, wl_pointer *pointer, uint axis_source) {
+
+}
+
+void Linux::PointerAxisStop(void *data, wl_pointer *pointer, uint time, uint axis) {
+
+}
+
+void Linux::PointerAxisDiscrete(void *data, wl_pointer *pointer, uint axis, int discrete) {
+
+}
+
+void Linux::PointerAxisRelativeDirection(void *data, wl_pointer *pointer, uint32_t axis, uint32_t direction) {
+
+}
+
+void Linux::PointerAxisValue120(void *data, wl_pointer *pointer, uint32_t axis, int32_t value120) {
+
+}
+
+void Linux::XdgSurfaceConfigure(void *data, struct xdg_surface *xdg_surface, uint32_t serial) {
+	auto platform = reinterpret_cast<Linux*>(data);
+
+	if (platform->GetConfigured()) {
+		xdg_surface_ack_configure(xdg_surface, serial);
+		wl_surface_commit(platform->GetSurface());
+		
+	} else {
+		platform->SetConfigureSerial(serial);
+		platform->SetConfigured(true);
+	}
+}
+
+void Linux::XdgWmBasePing(void *data, struct xdg_wm_base *xdg_wm_base, uint32_t serial) {
+	xdg_wm_base_pong(xdg_wm_base, serial);
+}
+
+void Linux::XdgTopLevelConfigure(void *data, struct xdg_toplevel *toplevel, int32_t width, int32_t height, struct wl_array *states) {
+	auto platform = reinterpret_cast<Linux*>(data);
+
+	uint32_t *state = reinterpret_cast<uint32_t*>(states->data);
+	bool hadResize = false;
+	for (std::size_t i = 0; i < states->size / sizeof(uint32_t); ++i, ++state) {
+		if (*state == XDG_TOPLEVEL_STATE_RESIZING) {
+			hadResize = true;
+
+			const auto min = std::min(width, height);
+
+			if (platform->GetApp()->GetAlbumArt().GetActiveOutline() == AlbumArt::Outline::Art) {
+				/*
+				const auto radius = min / Settings::settings.GetMiniPlayerVisualizerRatio();
+
+				platform->GetApp()->GetAlbumArt().SetRadius(radius, true);
+				platform->GetApp()->GetControls().UpdateFontSize(radius);
+				platform->GetApp()->GetControls().OnRadiusChanged(*platform->GetApp()->GetContext(), radius);
+
+				Settings::settings.Save();
+				*/
+			} else {
+				const auto radius = 
+					platform->GetApp()->GetAlbumArt().GetRadius(true);
+
+				const auto ratio = min * platform->GetApp()->GetScale() / radius;
+
+				if (ratio >= 3.0f && ratio <= 15.0f) {
+					SDL_SetWindowSize(platform->GetApp()->GetSdlWindow(), width, height);
+
+					Settings::settings.SetMiniPlayerVisualizerRatio(ratio);
+
+					platform->GetApp()->GetAlbumArt().SetRadius(radius, true);
+				}
+			}
+			break;
+		}
+	}
+
+	if (!hadResize && platform->IsResizing()) {
+		platform->SetResizing(false);
+		platform->GetApp()->OnMouseUp({0, 0});
+		platform->GetApp()->GetAlbumArt().OnMouseUp({0, 0});
+	} 
+}
+
+void Linux::XdgTopLevelClose(void *data, struct xdg_toplevel *topLevel) {
+	SDL_Event quitEvent;
+	quitEvent.type = SDL_EVENT_QUIT;
+	SDL_PushEvent(&quitEvent);
+}
+
+// =====================================================
+// ==================== PipeWire =======================
+// =====================================================
+void Linux::PipeWireProcess(void *data) {
+	struct Linux *platform = reinterpret_cast<Linux*>(data);
+
+	struct pw_buffer *b;
+	struct spa_buffer *buf;
+
+	int frames, stride;
+	float *dst, val;
+
+	if ((b = pw_stream_dequeue_buffer(platform->GetPipeWireData().stream)) == NULL) {
+		pw_log_warn("out of buffers: %m");
+		return;
+	}
+
+	buf = b->buffer;
+	if ((dst = reinterpret_cast<float *>(buf->datas[0].data)) == NULL)
+		return;
+
+	stride = sizeof(float) * platform->GetExclusiveChannelInfo().chans;
+	frames = buf->datas[0].maxsize / stride;
+	if (b->requested)
+			frames = SPA_MIN(b->requested, frames);
+
+	const auto length = frames * stride;
+
+	std::unique_lock lock(platform->GetApp()->GetStreamHandleMutex());
+
+	if (!platform->GetApp()->GetStreamHandle())
+		return;
+
+	bool done = false;
+
+	DWORD c = 
+		BASS_ChannelGetData(platform->GetApp()->GetStreamHandle(), dst, length);
+
+	if (c == static_cast<DWORD>(-1))
+		c = 0;
+
+	if (c < length) {
+		if (auto next = platform->GetApp()->GetNextStreamHandle(); next) {
+			DWORD c2 = BASS_ChannelGetData(next, &reinterpret_cast<uint8_t*>(dst)[c], length - c - 1);
+			if (c2 == 0 || c2 == static_cast<DWORD>(-1)) {
+				done = true;
+
+				platform->GetApp()->StopExclusive();
+			} else {
+				// Update the UI on the next loop
+				platform->GetApp()->AdvanceToNextTrack();
+			}
+		} else if (c == 0 || c == static_cast<DWORD>(-1)) {
+			platform->GetApp()->StopExclusive();
+
+			done = true;
+		}
+	}
+
+	if (!done) {
+		buf->datas[0].chunk->offset = 0;
+		buf->datas[0].chunk->stride = stride;
+		buf->datas[0].chunk->size = frames * stride;
+
+		pw_time time;
+		pw_stream_get_time_n(platform->GetPipeWireData().stream, &time, sizeof(pw_time));
+
+		const int64_t elapsed = 
+			(time.rate.denom * (pw_stream_get_nsec(platform->GetPipeWireData().stream) - time.now)) /
+			(time.rate.num * SPA_NSEC_PER_SEC);
+
+		platform->SetLastQueueTime((time.ticks + elapsed) * 1000 * time.rate.num / time.rate.denom);
+		platform->SetQueueSize(frames * 1000.0 / platform->GetExclusiveChannelInfo().freq);
+
+		pw_stream_queue_buffer(platform->GetPipeWireData().stream, b);
+	}
+}
+
+void Linux::PipeWireStateChanged(
+	void *data,
+	pw_stream_state old,
+	pw_stream_state state,
+	const char *error
+) {
+	if (old != state) {
+		auto platform = reinterpret_cast<Linux*>(data);
+
+		std::stringstream stateStream;
+
+		stateStream << "State changed to ";
+
+		switch(state) {
+		case PW_STREAM_STATE_ERROR: {
+			const auto errorString = std::string(error, error + strlen(error));
+
+			stateStream << "PW_STREAM_STATE_ERROR: " << errorString;
+			platform->ShowDialogBox("Could not initialize exclusive mode!", "Error: " + errorString);
+			
+			break;
+		} case PW_STREAM_STATE_UNCONNECTED:
+			stateStream << "PW_STREAM_STATE_UNCONNECTED";
+			break;
+		case PW_STREAM_STATE_CONNECTING:
+			stateStream << "PW_STREAM_STATE_CONNECTING";
+			break;
+		case PW_STREAM_STATE_PAUSED:
+			stateStream << "PW_STREAM_STATE_PAUSED";
+			break;
+		case PW_STREAM_STATE_STREAMING:
+			stateStream << "PW_STREAM_STATE_STREAMING";
+			break;
+		default:
+			break;
+		}
+
+		platform->LogDebug(stateStream.str());
+		platform->SetStreamState(state);
+	}
+}
+
+void Linux::PulseAudioContextStateCallback(pa_context *c, void *data) {
+    int *state = reinterpret_cast<int*>(data);
+    switch (pa_context_get_state(c)) {
+        case PA_CONTEXT_READY:
+            *state = 1;
+            break;
+        case PA_CONTEXT_FAILED:
+        case PA_CONTEXT_TERMINATED:
+            *state = -1;
+            break;
+        default:
+            break;
+    }
+}
+
+void Linux::PulseAudioGetServerInfoCallback(
+	pa_context *c,
+	const pa_server_info *i,
+	void *data
+) {
+    if (i && i->default_sink_name) {
+		reinterpret_cast<Linux*>(data)->GetDefaultSinkName() = 
+			std::string(
+				i->default_sink_name, 
+				i->default_sink_name + strlen(i->default_sink_name)
+			);
+    }
+}
+
+void Linux::AddOutputDevice(const std::string &description, const std::string &name, const std::string &driver) {
+	outputDevices[description] = OutputDevice{
+		name,
+		driver,
+		name == defaultSinkName
+	};
+}
+
+void Linux::PulseAudioSinkListCallback(pa_context *c, const pa_sink_info *i, int eol, void *data) {
+	if (eol > 0 || !i) return;
+	// hw:{alsa.card},{alsa.device}
+	const char *card = pa_proplist_gets(i->proplist, "alsa.card");
+	const char *device = pa_proplist_gets(i->proplist, "alsa.device");
+
+	const auto driver = std::string("hw:") + card + "," + device;
+
+	reinterpret_cast<Linux*>(data)->AddOutputDevice(i->description, i->name, driver);
+}
+
+void Linux::GetDefaultDevice() {
+	pa_mainloop *mainloop = pa_mainloop_new();
+	pa_mainloop_api *api = pa_mainloop_get_api(mainloop);
+	
+	int contextState = 0;
+	pa_context *context = pa_context_new(api, "PipeWireDefaultSinkFinder");
+	pa_context_set_state_callback(context, PulseAudioContextStateCallback, &contextState);
+	
+	pa_context_connect(context, NULL, PA_CONTEXT_NOAUTOSPAWN, NULL);
+	
+	while (contextState == 0)
+		pa_mainloop_iterate(mainloop, 1, NULL);
+	
+	if (contextState == 1) {
+		pa_operation *op = pa_context_get_server_info(
+			context,
+			PulseAudioGetServerInfoCallback,
+			this
+		);
+
+		pa_mainloop_iterate(mainloop, 1, NULL);
+
+		while(pa_operation_get_state(op) == PA_OPERATION_RUNNING)
+			pa_mainloop_iterate(mainloop, 1, NULL);
+
+		pa_operation_unref(op);
+ 
+		outputDevices.clear();
+
+		op = pa_context_get_sink_info_list(
+			context,
+			PulseAudioSinkListCallback,
+			this
+		);
+
+		pa_mainloop_iterate(mainloop, 1, NULL);
+		
+		while (pa_operation_get_state(op) == PA_OPERATION_RUNNING)
+			pa_mainloop_iterate(mainloop, 1, NULL);
+
+		pa_operation_unref(op);
+	}
+
+	pa_mainloop_quit(mainloop, 0);
+	
+	pa_context_disconnect(context);
+	pa_context_unref(context);
+	pa_mainloop_free(mainloop);
+}
+
+void Linux::StopPipeWire() {
+	if (pwData.loop) {
+		pw_thread_loop_lock(pwData.loop);
+		pw_stream_destroy(pwData.stream);
+		pw_thread_loop_unlock(pwData.loop);
+		pw_thread_loop_stop(pwData.loop);
+		pw_thread_loop_destroy(pwData.loop);
+
+		pw_deinit();
+		
+		pwData = {0};
+		exclusiveChannelInfo = {0, 0, 0, 0, 0, 0, 0, nullptr};
+	}
+}
+
+#endif

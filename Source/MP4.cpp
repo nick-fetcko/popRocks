@@ -1,10 +1,10 @@
 #include "MP4.hpp"
 
+#include <cstring>
+
 #include "ID3V2.hpp"
 
-#include "CConsole.h"
-
-MP4::Atom::Atom(std::ifstream &file) : file(file) {
+MP4::Atom::Atom(std::ifstream *file) : file(file) {
 
 }
 
@@ -16,21 +16,21 @@ MP4::Atom::Atom(Atom &&other) noexcept : file(std::move(other.file)) {
 	memset(&other.flags, 0, sizeof(flags));
 	dataSize = std::move(other.dataSize);
 	data = std::move(other.data);
-	other.data = nullptr; // null out to prevent deletion on destruction
 	mimeType = std::move(other.mimeType);
 }
 
 MP4::Atom::~Atom() {
-	delete[] data;
 }
 
 void MP4::Atom::Read() {
 	char name[4];
-	file.read(reinterpret_cast<char *>(&size), sizeof(size));
+	file->read(reinterpret_cast<char *>(&size), sizeof(size));
 	// Convert from Big Endian to Little Endian
 	ID3V2::Fix32Bit(&size, false);
-	file.read(name, sizeof(name));
+	file->read(name, sizeof(name));
 	this->name = std::string(name, name + sizeof(name));
+
+	std::transform(this->name.begin(), this->name.end(), this->name.begin(), tolower);
 
 	bytes = sizeof(size) + sizeof(name);
 }
@@ -40,29 +40,40 @@ constexpr int32_t MP4::Atom::GetExtrasSize() {
 }
 
 void MP4::Atom::ReadExtras() {
-	file.read(reinterpret_cast<char *>(&version), sizeof(uint8_t));
-	file.read(reinterpret_cast<char *>(flags), sizeof(flags));
+	file->read(reinterpret_cast<char *>(&version), sizeof(uint8_t));
+	file->read(reinterpret_cast<char *>(flags), sizeof(flags));
 
 	bytes += GetExtrasSize();
 }
 
-void MP4::Atom::ReadData() {
+bool MP4::Atom::ReadData(bool textOnly) {
+	bool ret = false;
+
 	// FIXME: Make this test more robust
-	if (name != "data") return;
+	if (name != "data") return ret;
 
 	ReadExtras();
 
 	// There are currently 4 reserved
 	// bytes in "data" atoms
-	file.seekg(4, std::ios::cur);
+	file->seekg(4, std::ios::cur);
 
-	mimeType = "image/";
 	switch (flags[2]) {
+	case 0:
+		mimeType = "application/octet-stream";
+		break;
+	case 1:
+		mimeType = "text/plain";
+		break;
 	case 13:
-		mimeType += "jpeg";
+		mimeType = "image/jpeg";
+		if (textOnly) return ret;
+		ret = true;
 		break;
 	case 14:
-		mimeType += "png";
+		mimeType = "image/png";
+		if (textOnly) return ret;
+		ret = true;
 		break;
 	default:
 		break;
@@ -76,8 +87,10 @@ void MP4::Atom::ReadData() {
 	//		4 bytes reserved
 	dataSize = size - 16;
 
-	data = new uint8_t[dataSize];
-	file.read(reinterpret_cast<char *>(data), dataSize);
+	data.resize(dataSize);
+	file->read(reinterpret_cast<char *>(data.data()), dataSize);
+
+	return ret;
 }
 
 bool MP4::Atom::IsValid() const {
@@ -89,8 +102,9 @@ bool MP4::Atom::IsValid() const {
 	};
 
 	if (std::find_if(
-		// iTunes tags can begin with '©'
-		*name.begin() == '©' ? name.begin() + 1 : name.begin(),
+		// iTunes tags can begin with 'ï¿½' (copyright sign)
+		// which is 0xA9 in Windows-1252
+		*name.begin() == static_cast<char>(0xA9) ? name.begin() + 1 : name.begin(),
 		name.end(),
 		isValid
 	) != name.end())
@@ -123,7 +137,7 @@ std::optional<MP4::Atom> MP4::GetAtomAtPath(const std::vector<std::string> &path
 }
 
 std::optional<MP4::Atom> MP4::SeekToAtom(const std::string &name, const std::optional<Atom> &parent) {
-	Atom ret(file);
+	Atom ret(&file);
 
 	while (file) {
 		ret.Read();
@@ -150,4 +164,46 @@ std::optional<MP4::Atom> MP4::SeekToAtom(const std::string &name, const std::opt
 	}
 
 	return std::nullopt;
+}
+
+std::map<std::string, std::string> MP4::GetTags(bool textOnly) {
+	std::map<std::string, std::string> ret;
+
+	auto atom = GetAtomAtPath({ "moov", "udta", "meta", "ilst" });
+
+	int64_t size = atom->size;
+	auto pos = file.tellg();
+	
+	while (file.tellg() < pos + static_cast<std::streampos>(size)) {
+		atom->Read();
+		if (!atom->IsValid()) {
+			file.seekg(-(atom->GetBytes() * 2), std::ios::cur);
+
+			atom->Read();
+			atom->ReadExtras();
+		}
+
+		if (auto iter = RelevantAtoms.find(atom->name); iter != RelevantAtoms.end()) {
+			// "data" atom comes next
+			atom->Read();
+			if (atom->ReadData(textOnly)) {
+				artAtom.emplace(std::move(*atom));
+			} else if (atom->flags[2] == 1) { // text/plain
+				ret[iter->second] = std::string(atom->data.begin(), atom->data.end());
+			} else if (atom->flags[2] == 0) { // application/octet-stream
+				for (uint32_t i = 0; i < atom->dataSize; ++i) {
+					if (atom->data[i] != 0) {
+						ret[iter->second] = std::to_string(static_cast<uint16_t>(atom->data[i]));
+
+						// We only care about the _first_ non-zero for now.
+						// Just getting "disc 1" is fine... we don't need
+						// "disc 1 of x"
+						break;
+					}
+				}
+			}
+		} else file.seekg(atom->size - atom->GetBytes(), std::ios::cur);
+	}
+
+	return ret;
 }

@@ -16,6 +16,8 @@
 #ifndef _BEAT_TRACKER_H_
 #define _BEAT_TRACKER_H_
 
+#include <atomic>
+
 #include "Event.h"
 #include "Agent.h"
 #include "AgentList.h"
@@ -56,8 +58,8 @@ public:
      *  @param events The onsets or peaks in a feature list
      *  @return The list of beats, or an empty list if beat tracking fails
      */
-    static EventList beatTrack(AgentParameters params, EventList events) {
-	return beatTrack(params, events, EventList());
+    static EventList beatTrack(AgentParameters params, EventList events, std::atomic<bool> &canceled) {
+	return beatTrack(params, events, EventList(), canceled);
     }
 	
     /** Perform beat tracking.
@@ -66,7 +68,7 @@ public:
      *  @return The list of beats, or an empty list if beat tracking fails
      */
     static EventList beatTrack(AgentParameters params,
-                               EventList events, EventList beats);
+                               EventList events, EventList beats, std::atomic<bool> &canceled);
 	
 	
     // Various get and set methods

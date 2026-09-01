@@ -1,14 +1,21 @@
 #include "Bicubic.hpp"
 
+#include <cmath>
+#include <thread>
+#include <vector>
+
 #define MULTITHREADED 1
 
-SDL_Surface *Bicubic::ResizeImage(SDL_Surface *surface, float scale) {
-	SDL_Surface *ret = SDL_CreateRGBSurfaceWithFormat(
-		surface->flags,
+Bicubic::Bicubic(std::size_t numBytes) :
+	numBytes(numBytes) {
+
+}
+
+SDL_Surface *Bicubic::ResizeImage(SDL_Surface *surface, float scale, bool *running) {
+	SDL_Surface *ret = SDL_CreateSurface(
 		static_cast<int>(std::ceil(surface->w * scale)),
 		static_cast<int>(std::ceil(surface->h * scale)),
-		surface->format->BytesPerPixel,
-		surface->format->format
+		surface->format
 	);
 
 	if (!ret) return surface;
@@ -16,30 +23,34 @@ SDL_Surface *Bicubic::ResizeImage(SDL_Surface *surface, float scale) {
 	uint8_t *pixels = reinterpret_cast<uint8_t *>(ret->pixels);
 
 #if MULTITHREADED
-	const auto numThreads = std::max(1u, std::thread::hardware_concurrency() - 1);
+	const auto numThreads = std::max(1, static_cast<int>(std::thread::hardware_concurrency()) - 4);
 	std::vector<std::thread> threads(numThreads);
 
 	for (unsigned int t = 0; t < numThreads; ++t) {
-		threads[t] = std::thread([t, numThreads, ret, pixels, surface] {
+		threads[t] = std::thread([this, t, numThreads, ret, pixels, surface, running] {
+			uint8_t *sample = new uint8_t[numBytes];
+
 			for (int y = static_cast<int>(t * std::ceil(static_cast<float>(ret->h) / numThreads));
-				y < (t + 1) * std::ceil(static_cast<float>(ret->h) / numThreads) && y < ret->h;
+				y < (t + 1) * std::ceil(static_cast<float>(ret->h) / numThreads) && y < ret->h && *running;
 				++y) {
 #else
+			uint8_t *sample = new uint8_t[numBytes];
 			for (int y = 0; y < ret->h; ++y) {
 #endif
 				uint8_t *destPixel = pixels + y * ret->pitch;
 				float v = float(y) / float(ret->h - 1);
-				for (int x = 0; x < ret->w; ++x) {
+				for (int x = 0; x < ret->w && running; ++x) {
 					float u = float(x) / float(ret->w - 1);
-					auto sample = SampleBicubic(surface, u, v);
+					SampleBicubic(surface, u, v, sample);
 
-					destPixel[0] = sample[0];
-					destPixel[1] = sample[1];
-					destPixel[2] = sample[2];
+					for (std::size_t i = 0; i < numBytes; ++i)
+						destPixel[i] = sample[i];
 
-					destPixel += 3;
+					destPixel += numBytes;
 				}
 			}
+
+			delete[] sample;
 #if MULTITHREADED
 		});
 	}
@@ -51,7 +62,7 @@ SDL_Surface *Bicubic::ResizeImage(SDL_Surface *surface, float scale) {
 	}
 #endif
 
-	SDL_FreeSurface(surface);
+	SDL_DestroySurface(surface);
 
 	return ret;
 }
@@ -71,10 +82,10 @@ inline const uint8_t *Bicubic::GetPixelClamped(SDL_Surface *surface, int x, int 
 
 	auto pixels = reinterpret_cast<uint8_t *>(surface->pixels);
 
-	return &pixels[(y * surface->pitch) + x * 3 + 0];
+	return &pixels[(y * surface->pitch) + x * numBytes + 0];
 }
 
-inline std::array<uint8_t, 3> Bicubic::SampleBicubic(SDL_Surface *surface, float u, float v) {
+inline void Bicubic::SampleBicubic(SDL_Surface *surface, float u, float v, uint8_t *pixels) {
 	// calculate coordinates -> also need to offset by half a pixel to keep image from shifting down and left half a pixel
 	float x = (u * surface->w) - 0.5f;
 	const int xInt = static_cast<int>(x);
@@ -110,15 +121,12 @@ inline std::array<uint8_t, 3> Bicubic::SampleBicubic(SDL_Surface *surface, float
 
 	// interpolate bi-cubically!
 	// Clamp the values since the curve can put the value below 0 or above 255
-	std::array<uint8_t, 3> ret;
-	for (int i = 0; i < 3; ++i) {
+	for (int i = 0; i < numBytes; ++i) {
 		float col0 = CubicHermite(p00[i], p10[i], p20[i], p30[i], xfract);
 		float col1 = CubicHermite(p01[i], p11[i], p21[i], p31[i], xfract);
 		float col2 = CubicHermite(p02[i], p12[i], p22[i], p32[i], xfract);
 		float col3 = CubicHermite(p03[i], p13[i], p23[i], p33[i], xfract);
 		float value = CubicHermite(col0, col1, col2, col3, yfract);
-		value = std::clamp(value, 0.0f, 255.0f);
-		ret[i] = uint8_t(value);
+		pixels[i] = uint8_t(std::clamp(value, 0.0f, 255.0f));
 	}
-	return ret;
 }

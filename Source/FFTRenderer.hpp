@@ -8,13 +8,18 @@
 #include "MathCPP/Maths.hpp"
 #include "MathCPP/Duration.hpp"
 
+#include "OpenGL/Buffer.hpp"
+#include "OpenGL/VertexArray.hpp"
+
+#include "Utils/Logger.hpp"
+
 #include "Buffer.hpp"
-#include "CConsole.h"
 #include "Renderer.hpp"
 
 using namespace MathsCPP;
+using namespace Fetcko;
 
-class FFTRenderer : public Renderer {
+class FFTRenderer : public Renderer, public LoggableClass {
 public:
 	FFTRenderer(
 		const DynamicGain<float> *dynamicGain,
@@ -22,6 +27,8 @@ public:
 	);
 
 	FFTRenderer(Renderer &&right);
+
+	void OnDestroy() override;
 
 	virtual ~FFTRenderer();
 
@@ -35,14 +42,21 @@ public:
 		const Delta &time,
 		bool fileLoaded,
 		float hStep,
+		Context &context,
+		const Colour<float> &color,
+		const Colour<float> &brightColor,
+		float frameCount,
 		float maxHeardSample = 0.0f,
-		bool resetGain = false
+		bool resetGain = false,
+		bool miniPlayer = false
 	) override;
 
 	void Draw(
 		const Delta &time,
 		float frameCount,
-		const Colour<float> &color
+		const Colour<float> &color,
+		const Vector<int, 2> &blurOffset,
+		Context &context
 	) override;
 
 	void Reset() override;
@@ -72,7 +86,22 @@ public:
 	}
 
 private:
-	const std::array<unsigned short, 6> *indexBuffer = &Buffer::SquareBuffer;
+	enum Indices {
+		TopLeftCoords = 0,
+		TopLeftColor = TopLeftCoords + 2,
+		TopLeftAngle = TopLeftColor + 4,
+		BottomLeftCoords = TopLeftAngle + 1,
+		BottomLeftColor = BottomLeftCoords + 2,
+		BottomLeftAngle = BottomLeftColor + 4,
+		BottomRightCoords = BottomLeftAngle + 1,
+		BottomRightColor = BottomRightCoords + 2,
+		BottomRightAngle = BottomRightColor + 4,
+		TopRightCoords = BottomRightAngle + 1,
+		TopRightColor = TopRightCoords + 2,
+		TopRightAngle = TopRightColor + 4,
+		Total = TopRightAngle + 1
+	};
+	const std::array<unsigned short, 6> *indexBuffer = &Buffers::SquareBuffer;
 
 	const float *floatBuffer = nullptr;
 
@@ -95,4 +124,39 @@ private:
 	bool xRot = false;
 	bool yRot = false;
 	bool zRot = true;
+
+	std::unique_ptr<VertexArray> vao;
+	std::unique_ptr<ArrayBuffer> vbo;
+	std::unique_ptr<ElementBuffer> eab;
+
+	static inline bool Register() {
+		RendererFactory::Register("fft", [] (
+			const DynamicGain<float> *dynamicGain,
+			const AlbumArt *albumArt,
+			Renderer *oldRenderer = nullptr,
+			std::optional<int> windowWidth = std::nullopt,
+			std::optional<int> windowHeight = std::nullopt,
+			uint8_t *buffer = nullptr,
+			std::optional<std::size_t> maxLength = std::nullopt,
+			std::optional<std::size_t> bufferLength = std::nullopt) {
+			Renderer *ret = nullptr;
+			if (oldRenderer) {
+				oldRenderer->OnDestroy();
+				ret = new FFTRenderer(std::move(*oldRenderer));
+				delete oldRenderer;
+			} else if (windowWidth) {
+				ret = new FFTRenderer(dynamicGain, albumArt);
+				ret->OnInit(*windowWidth, *windowHeight);
+				ret->SetBuffer(buffer, *maxLength);
+				ret->SetBufferLength(*bufferLength, true);
+			} else {
+				ret = new FFTRenderer(dynamicGain, albumArt);
+			}
+
+			return ret;
+		});
+
+		return true;
+	}
+	static inline bool registered = Register();
 };

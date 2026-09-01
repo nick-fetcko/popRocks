@@ -1,16 +1,32 @@
 #include "FFTRenderer.hpp"
 
+#include "Utils/Hash.hpp"
+
+#include "AlbumArt.hpp"
+#include "Settings.hpp"
+
 FFTRenderer::FFTRenderer(
 	const DynamicGain<float> *dynamicGain,
 	const AlbumArt *albumArt) :
 	Renderer(dynamicGain, albumArt),
-	indexBuffer(&Buffer::SquareBuffer) {
-
+	indexBuffer(&Buffers::SquareBuffer) {
+	pulses = true;
+	SetDecayTime(Settings::settings.GetDecayTime());
+	SetFadeTime(Settings::settings.GetFadeTime());
 }
 
 FFTRenderer::FFTRenderer(Renderer &&right) : Renderer(std::move(right)) {
 	SetBuffer(buffer, fullBufferLength, true);
 	SetBufferLength(bufferLength, true);
+	pulses = true;
+	SetDecayTime(Settings::settings.GetDecayTime());
+	SetFadeTime(Settings::settings.GetFadeTime());
+}
+
+void FFTRenderer::OnDestroy() {
+	vao.reset();
+	vbo.reset();
+	eab.reset();
 }
 
 FFTRenderer::~FFTRenderer() {
@@ -36,7 +52,7 @@ bool FFTRenderer::SetBuffer(const uint8_t *const buffer, std::size_t len, bool f
 		delete[] min;
 		delete[] max;
 
-		rects = new float[8 * fullBufferLength];
+		rects = new float[Indices::Total * fullBufferLength];
 		shrinkDecays = new Decay[fullBufferLength];
 		fadeDecays = new Decay[fullBufferLength];
 
@@ -64,39 +80,68 @@ bool FFTRenderer::SetBuffer(const uint8_t *const buffer, std::size_t len, bool f
 }
 
 void FFTRenderer::SetBufferLength(std::size_t bufferLength, bool changed) {
-	if (changed)
+	if (changed) {
 		Renderer::SetBufferLength(bufferLength, changed);
+
+		vao = std::make_unique<VertexArray>();
+		vbo = std::make_unique<ArrayBuffer>();
+		eab = std::make_unique<ElementBuffer>();
+
+		vao->Bind();
+		vbo->Bind();
+		vao->AddAttribute(VertexArray::Attribute(0, 2, 7 * sizeof(float)));
+		vao->AddAttribute(VertexArray::Attribute(1, 4, 7 * sizeof(float), 2 * sizeof(float)));
+		vao->AddAttribute(VertexArray::Attribute(2, 1, 7 * sizeof(float), 6 * sizeof(float)));
+
+		// Buffer in blank data right away
+		memset(rects, 0, Indices::Total * bufferLength * sizeof(float));
+		vbo->BufferData(rects, bufferLength * Indices::Total, GL_DYNAMIC_DRAW);
+
+		vbo->Unbind();
+		vao->Unbind();
+
+		std::vector<unsigned short> indices(bufferLength * 6);
+		for (std::size_t i = 0; i < bufferLength; ++i) {
+			indices[i * 6] = Buffers::SquareBuffer[0] + (4 * i);
+			indices[i * 6 + 1] = Buffers::SquareBuffer[1] + (4 * i);
+			indices[i * 6 + 2] = Buffers::SquareBuffer[2] + (4 * i);
+			indices[i * 6 + 3] = Buffers::SquareBuffer[3] + (4 * i);
+			indices[i * 6 + 4] = Buffers::SquareBuffer[4] + (4 * i);
+			indices[i * 6 + 5] = Buffers::SquareBuffer[5] + (4 * i);
+		}
+
+		eab->Bind();
+		eab->BufferData(indices);
+		eab->Unbind();
+	}
 }
 
 void FFTRenderer::OnLoop(
 	const Delta &time,
 	bool fileLoaded,
 	float hStep,
+	Context &context,
+	const Colour<float> &color,
+	const Colour<float> &brightColor,
+	float frameCount,
 	float maxHeardSample,
-	bool resetGain
+	bool resetGain,
+	bool miniPlayer
 ) {
-	std::size_t maxUpdates = 0;
+	const float thickness = GetThickness(miniPlayer);
 
-	for (int i = 0; i < fullBufferLength; i++) {
-		//rects[i * 4] = i*hStep;
-		//rects[i * 4 + 1] = SCREEN_HEIGHT;
-		//if(fileLoaded) rects[i * 4 + 3] = rects[i * 4 + 1] - (buffer.floatBuffer[i]*5000);
-		//else rects[i * 4 + 3] = -out[0][i]*10.0f;
-		//rects[i].h = buffer[i]/10000000;
-		//rects[i].w = 10;
-		//rects[i * 4 + 2] = rects[i * 4] + 1;
+	// TODO: Make setting for "constrained to window size" mode
+	const auto height = GetHeight(0, miniPlayer);
 
-		//auto value = (buffer.floatBuffer[i] * 2500.0f) * gain;
-		//auto value = (buffer.floatBuffer[i] * 2500.0f) * (static_cast<float>(i) / bufferLength) * gain;
-
+	for (std::size_t i = 0; i < fullBufferLength; i++) {
 		auto rawValue = floatBuffer[i];
 
 		if (resetGain) {
 			if (dynamicGain->adjustMin)
-				min[i] = rawValue;
+				min[i] = dynamicGain->minReset;
 
 			if (dynamicGain->adjustMax)
-				max[i] = rawValue;
+				max[i] = dynamicGain->maxReset;
 		}
 
 		if (dynamicGain->adjustMin) {
@@ -112,92 +157,91 @@ void FFTRenderer::OnLoop(
 				max[i] -= dynamicGain->smallStep;
 		}
 
-		auto height = (std::max(windowWidth, windowHeight) / 2.0f - albumArt->GetRadius() / 2.0f);
-
 		// If we're listening, skip normalization
-		auto scaledValue =
-			fileLoaded ?
-			((rawValue - min[i]) / (max[i] - min[i])) * height :
-			(rawValue / maxHeardSample) * height;
+		const auto scaledValue =
+			//fileLoaded ?
+			std::clamp(((rawValue - min[i]) / (max[i] - min[i])) * height, 0.0f, height) //:
+			//rawValue * height;
+		;
 
 		shrinkDecays[i].Update(time);
-		if (scaledValue > shrinkDecays[i].Get()) {
-			// Ignore higher-frequency bins
-			if (i < bufferLength / 2)
-				++maxUpdates;
-
+		if (time.change == 0us || scaledValue > shrinkDecays[i].Get()) {
 			shrinkDecays[i].Reset(scaledValue);
 			fadeDecays[i].Reset(1.0f);
 		}
-		//values[i] = value; // BYPASS DECAYS
-
-		//if (value > SCREEN_HEIGHT / 4.0f)
-		//	value = SCREEN_HEIGHT / 4.0f;
 
 		// Only update the rectangles we're actively rendering
 		if (i < bufferLength) {
-			float thickness = std::ceil(std::max((albumArt->GetRadius() * Maths::PI<float>) / bufferLength, 1.0f));
+			const Colour<float> *finalColor = &color;
+			float alpha = fadeDecays[i].Get();
 
-			rects[i * 8 + 0] = -thickness;
-			rects[i * 8 + 1] = 0;
-			rects[i * 8 + 2] = -thickness;
-			rects[i * 8 + 3] = shrinkDecays[i].Get();
-			rects[i * 8 + 4] = thickness;
-			rects[i * 8 + 5] = shrinkDecays[i].Get();
-			rects[i * 8 + 6] = thickness;
-			rects[i * 8 + 7] = 0;
+			if (pulse && fadeDecays[i].WasReset()) {
+				finalColor = &brightColor;
+				alpha = static_cast<float>(
+					fadeDecays[i].Get() - fadeDecays[i].Get() * (fadeDecays[i].SinceLastReset().AsSeconds() / pulseTime.AsSeconds())
+				);
+				if (fadeDecays[i].SinceLastReset() >= pulseTime)
+					fadeDecays[i].HasBeenReset();
+			}
+
+			fadeDecays[i].Update(time);
+
+			const auto angle = (((((static_cast<float>(i) / bufferLength * 360.0f) - frameCount) / distribution) * 360.0f)) * Maths::DEG2RAD<float>;
+
+			// Top left
+			rects[i * Indices::Total + Indices::TopLeftCoords] = -thickness;
+			rects[i * Indices::Total + Indices::TopLeftCoords + 1] = 0.0f;
+			rects[i * Indices::Total + Indices::TopLeftColor] = finalColor->r;
+			rects[i * Indices::Total + Indices::TopLeftColor + 1] = finalColor->g;
+			rects[i * Indices::Total + Indices::TopLeftColor + 2] = finalColor->b;
+			rects[i * Indices::Total + Indices::TopLeftColor + 3] = alpha;
+			rects[i * Indices::Total + Indices::TopLeftAngle] = angle;
+
+			// Bottom Left
+			rects[i * Indices::Total + Indices::BottomLeftCoords] = -thickness;
+			rects[i * Indices::Total + Indices::BottomLeftCoords + 1] = shrinkDecays[i].Get();
+			rects[i * Indices::Total + Indices::BottomLeftColor] = finalColor->r;
+			rects[i * Indices::Total + Indices::BottomLeftColor + 1] = finalColor->g;
+			rects[i * Indices::Total + Indices::BottomLeftColor + 2] = finalColor->b;
+			rects[i * Indices::Total + Indices::BottomLeftColor + 3] = alpha;
+			rects[i * Indices::Total + Indices::BottomLeftAngle] = angle;
+
+			// Bottom Right
+			rects[i * Indices::Total + Indices::BottomRightCoords] = thickness;
+			rects[i * Indices::Total + Indices::BottomRightCoords + 1] = shrinkDecays[i].Get();
+			rects[i * Indices::Total + Indices::BottomRightColor] = finalColor->r;
+			rects[i * Indices::Total + Indices::BottomRightColor + 1] = finalColor->g;
+			rects[i * Indices::Total + Indices::BottomRightColor + 2] = finalColor->b;
+			rects[i * Indices::Total + Indices::BottomRightColor + 3] = alpha;
+			rects[i * Indices::Total + Indices::BottomRightAngle] = angle;
+
+			// Top Right
+			rects[i * Indices::Total + Indices::TopRightCoords] = thickness;
+			rects[i * Indices::Total + Indices::TopRightCoords + 1] = 0.0f;
+			rects[i * Indices::Total + Indices::TopRightColor] = finalColor->r;
+			rects[i * Indices::Total + Indices::TopRightColor + 1] = finalColor->g;
+			rects[i * Indices::Total + Indices::TopRightColor + 2] = finalColor->b;
+			rects[i * Indices::Total + Indices::TopRightColor + 3] = alpha;
+			rects[i * Indices::Total + Indices::TopRightAngle] = angle;
 		}
 	}
+
+	vbo->Bind();
+	vbo->BufferData(rects, bufferLength * Indices::Total, GL_DYNAMIC_DRAW);
+	vbo->Unbind();
 }
 
-void FFTRenderer::Draw(const Delta &time, float frameCount, const Colour<float> &color) {
-	auto brightColor = color.ToHsv();
-	brightColor.v = 1.0;
-	//brightColor.s = 1.0;
-	auto brightRgb = Colour<float>::FromHsv(brightColor.h, brightColor.s, brightColor.v);
+void FFTRenderer::Draw(const Delta &time, float frameCount, const Colour<float> &color, const Vector<int, 2> &blurOffset, Context &context) {
+	context.Use("rotate"_hash);
+	context.LoadIdentity();
 
-	for (int i = 0; i < bufferLength; i++) {
-		glVertexPointer(2, GL_FLOAT, 0, &rects[i * 8]);
+	vao->Bind();
+	eab->Bind();
+	eab->DrawElements(GL_TRIANGLES);
+	eab->Unbind();
+	vao->Unbind();
 
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glTranslatef(windowWidth / 2.0f, windowHeight / 2.0f, 0.0f);
-		auto angle = ((((static_cast<float>(i) / bufferLength * 360.0f) - frameCount) / distribution) * 360.0f);
-		glTranslatef(
-			albumArt->GetRadius() * sin(angle * Maths::DEG2RAD<float>),
-			albumArt->GetRadius() * cos(angle * Maths::DEG2RAD<float>),
-			0.0f
-		);
-		glRotatef(
-			360.0f - angle,
-			xRot ? 1.0f : 0.0f,
-			yRot ? 1.0f : 0.0f,
-			zRot ? 1.0f : 0.0f
-		);
-
-		fadeDecays[i].Update(time);
-
-		SetColor(color, fadeDecays[i].Get());
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, indexBuffer->data());
-
-		// FIXME: Rendering a _copy_ of the rectangle is not efficient
-		if (pulse && fadeDecays[i].WasReset()) {
-			SetColor(
-				brightRgb,
-				static_cast<float>(
-					fadeDecays[i].Get() - fadeDecays[i].Get() * (fadeDecays[i].SinceLastReset().AsSeconds() / pulseTime.AsSeconds())
-				)
-			);
-			
-			if (fadeDecays[i].SinceLastReset() >= pulseTime)
-				fadeDecays[i].HasBeenReset();
-
-			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, indexBuffer->data());
-		}
-
-		glDisableClientState(GL_VERTEX_ARRAY);
-
-		glLoadIdentity();
-	}
+	context.Use("texture"_hash);
 }
 
 void FFTRenderer::Reset() {
@@ -220,5 +264,5 @@ void FFTRenderer::PrintMax() const {
 	}
 
 	stream << "max = " << max;
-	CConsole::Console.Print(stream.str(), MSG_DIAG);
+	LogDebug(stream.str());
 }

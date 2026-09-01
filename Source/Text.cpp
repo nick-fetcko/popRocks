@@ -2,21 +2,48 @@
 
 #include "Buffer.hpp"
 
-void Text::OnInit(TTF_Font *font) {
+Text::Text(bool delayedCacheUpdate) : delayedCacheUpdate(delayedCacheUpdate) {
+
+}
+
+#ifdef _DEBUG
+Text::~Text() {
+	if (!destroyed)
+		LogWarning("Text deallocated without destruction!");
+}
+#endif
+
+void Text::SetFont(OpenGLFont *font) {
+	if (this->font)
+		this->font->RemoveSizeChangedListener(this);
+
 	this->font = font;
+
+	if (font)
+		font->AddSizeChangedListener(this);
 
 	// Refresh our text, if there is any
 	SetText(text, true);
 }
 
+void Text::OnInit(OpenGLFont *font, Context *context) {
+	this->context = context;
+
+	SetFont(font);
+}
+
 Vector2i Text::MeasureText(const std::string &text) const {
 	Vector2i ret;
-	TTF_SizeUTF8(font, text.c_str(), &ret.x, &ret.y);
+	if (font && font->HasFaces()) {
+		auto bounds = font->MeasureText(text, 1.0f);
+		ret.x = bounds.width;
+		ret.y = bounds.height;
+	}
 	return ret;
 }
 
-void Text::SetText(const std::string &text, bool force) {
-	if ((this->text == text || !font) && !force) return;
+bool Text::SetText(const std::string &text, bool force) {
+	if ((this->text == text && !force) || !font || !font->HasFaces()) return false;
 
 	this->text = text;
 
@@ -26,104 +53,59 @@ void Text::SetText(const std::string &text, bool force) {
 	// Don't try to load an empty string
 	//
 	// We'll likely get a null surface anyway
-	if (Empty()) return;
+	if (Empty()) return true;
 
-	auto surface = TTF_RenderUTF8_Blended(
-		font,
-		text.c_str(),
-		SDL_Color {
-			static_cast<uint8_t>(color.r * 255.0f),
-			static_cast<uint8_t>(color.g * 255.0f),
-			static_cast<uint8_t>(color.b * 255.0f),
-			static_cast<uint8_t>(color.a * 255.0f)
-		}
+	std::tie(cached, bounds) = font->CacheText(
+		text,
+		glm::vec3(color.r, color.g, color.b),
+		*context
 	);
 
-	if (!surface) {
+	if (!cached) {
 		this->text.clear();
-		return;
+		return true;
 	}
 
-	glEnable(GL_TEXTURE_2D);
-	glDeleteTextures(1, &texture);
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
+	size = { bounds.width, bounds.renderedHeight };
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-	GLenum textureFormat = GL_RGBA;
-	if (surface->format->BytesPerPixel == 4) {		// alpha
-		if (surface->format->Rmask == 0x000000ff)
-			textureFormat = GL_RGBA;
-		else
-			textureFormat = GL_BGRA;
-	} else {										// no alpha
-		if (surface->format->Rmask == 0x000000ff)
-			textureFormat = GL_RGB;
-		else
-			textureFormat = GL_BGR;
-	}
-
-	// For some reason (on my machine, at least) each row has a ton of extra padding
-	// Use this to (slowly) flatten the data
-	uint8_t *flat = new uint8_t[surface->w * surface->h * surface->format->BytesPerPixel];
-	auto pixels = reinterpret_cast<uint8_t *>(surface->pixels);
-
-	for (auto y = 0; y < surface->h; ++y) {
-		for (auto x = 0; x < surface->w; ++x) {
-			flat[y * surface->w * 4 + (x * 4 + 0)] = pixels[y * surface->pitch + (x * 4 + 0)];
-			flat[y * surface->w * 4 + (x * 4 + 1)] = pixels[y * surface->pitch + (x * 4 + 1)];
-			flat[y * surface->w * 4 + (x * 4 + 2)] = pixels[y * surface->pitch + (x * 4 + 2)];
-			flat[y * surface->w * 4 + (x * 4 + 3)] = pixels[y * surface->pitch + (x * 4 + 3)];
-		}
-	}
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, textureFormat, GL_UNSIGNED_BYTE, flat);
-
-	delete[] flat;
-
-	rect[0] = 0;
-	rect[1] = 0;
-	rect[2] = 0;
-	rect[3] = static_cast<float>(surface->h);
-	rect[4] = static_cast<float>(surface->w);
-	rect[5] = static_cast<float>(surface->h);
-	rect[6] = static_cast<float>(surface->w);
-	rect[7] = 0;
-
-	size = { surface->w, surface->h + TTF_FontDescent(font) / 2.0f };
-
-	SDL_FreeSurface(surface);
-	glDisable(GL_TEXTURE_2D);
+	return true;
 }
 
 void Text::OnDestroy() {
-	glDeleteTextures(1, &texture);
-	texture = 0;
+	cached.reset();
+
+	font->RemoveSizeChangedListener(this);
+
+#ifdef _DEBUG
+	destroyed = true;
+#endif
 }
 
 void Text::OnLoop(int x, int y) const {
 	if (!font || Empty()) return;
 
-	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, texture);
+	// Center rendered text on the line
+	y += (bounds.height - bounds.renderedHeight) / 2.0f;
 
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	if (bounds.overhang)
+		y -= std::floor((bounds.renderedHeight - bounds.overhang) / 2.0f) - std::ceil(bounds.overhang / 2.0f);
+	else
+		y -= bounds.renderedHeight / 2.0f;
 
-	glVertexPointer(2, GL_FLOAT, 0, rect);
-	glTexCoordPointer(2, GL_FLOAT, 0, Buffer::TexCoordBuffer.data());
+	context->Translate(x, y, 0.0f);
+	context->Apply();
 
-	glTranslatef(static_cast<GLfloat>(x), static_cast<GLfloat>(y), 0.0f);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, Buffer::SquareBuffer.data());
+	font->RenderCached(cached, context->GetProjection(), *context);
 
-	glLoadIdentity();
+	context->LoadIdentity();
+}
 
-	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-	glDisableClientState(GL_VERTEX_ARRAY);
+void Text::OnSizeChanged(FT_UInt size) {
+	// Force a cache refresh
+	if (!delayedCacheUpdate)
+		SetText(text, true);
+}
 
-	glDisable(GL_TEXTURE_2D);
+void Text::SetAltText(const std::string &altText) {
+	this->altText = altText;
 }
