@@ -5,6 +5,13 @@
 - Windows .exe file coming soon!
 - Flathub package coming soon!
 
+## Using
+Drag-and-drop any music / .cue file (or folder containing music / .cue files) into the popRocks window.
+
+On first launch, a help interface appears:
+
+<img width="662" height="662" alt="popRocks-help" src="https://github.com/user-attachments/assets/66d82cf9-a172-4227-85e3-c72c555820ee" />
+
 ## What popRocks IS
 - A desktop audio player for Windows and Linux
   - Supports lossy formats: MP3, M4A, OGG
@@ -66,16 +73,15 @@
 ### Instructions
 1. `git clone https://github.com/nick-fetcko/popRocks`
 2. `cd popRocks`
-3. `git checkout miniplayer`
-4. `git submodule update --init --recursive`
-5. If using an external `vcpkg` installation, set `cmakeToolchain` in [CMakeSettings](CMakeSettings.json) to its `vckpg.cmake`
-6. In Visual Studio 2022: File -> Open -> Folder
-7. Select the same `popRocks` folder as in step 2
-8. Wait for CMake generation to finish
-9. Navigate to `popRocks/Build/x64-[Debug/Release]` and open `popRocks.sln`
-10. Right-click on `popRocks` in Solution Explorer
-11. Select "Set as Startup Project"
-12. Build -> Build Solution or Debug -> Start Debugging / Start Without Debugging
+3. `git submodule update --init --recursive`
+4. If using an external `vcpkg` installation, set `cmakeToolchain` in [CMakeSettings](CMakeSettings.json) to its `vckpg.cmake`
+5. In Visual Studio 2022: File -> Open -> Folder
+6. Select the same `popRocks` folder as in step 2
+7. Wait for CMake generation to finish
+8. Navigate to `popRocks/Build/x64-[Debug/Release]` and open `popRocks.sln`
+9. Right-click on `popRocks` in Solution Explorer
+10. Select "Set as Startup Project"
+11. Build -> Build Solution or Debug -> Start Debugging / Start Without Debugging
 
 ## Building (Linux Flatpak)
 ### Prerequisites
@@ -83,17 +89,9 @@
 ### Instructions
 1. `git clone https://github.com/nick-fetcko/popRocks`
 2. `cd popRocks`
-3. `git checkout miniplayer`
-4. `git submodule update --init --recursive`
-5. `flatpak-builder --force-clean --user --install-deps-from=flathub --repo=repo --install builddir org.fetcko.popRocks.yml`
-6. OR, if flatpak-builder is installed as a Flatpak: `flatpak run org.flatpak.builder --force-clean --user --install-deps-from=flathub --repo=repo --install builddir org.fetcko.popRocks.yml`
-
-## Using
-Drag-and-drop any music / .cue file (or folder containing music / .cue files) into the popRocks window.
-
-On first launch, a help interface appears:
-
-<img width="662" height="662" alt="popRocks-help" src="https://github.com/user-attachments/assets/66d82cf9-a172-4227-85e3-c72c555820ee" />
+3. `git submodule update --init --recursive`
+4. `flatpak-builder --force-clean --user --install-deps-from=flathub --repo=repo --install builddir org.fetcko.popRocks.yml`
+5. OR, if flatpak-builder is installed as a Flatpak: `flatpak run org.flatpak.builder --force-clean --user --install-deps-from=flathub --repo=repo --install builddir org.fetcko.popRocks.yml`
 
 ## Contributing
 Pull requests are welcomed—so long as the requester is human! This project exists to make listening to music a more *fun*, active experience—so anything which furthers that goal is encouraged!
