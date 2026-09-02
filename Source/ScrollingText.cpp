@@ -2,6 +2,7 @@
 
 #include "CApp.h"
 
+float ScrollingText::speed = Speed;
 float ScrollingText::bleedEdgeRatio = 1.0f;
 
 ScrollingText::ScrollingText(const bool &vulkan, bool delayedCacheUpdate) : Text(delayedCacheUpdate), vulkan(vulkan) {
@@ -99,5 +100,5 @@ void ScrollingText::SetBleedEdgeRatio(float ratio) {
 // In pixels-per-second
 // Default: 20
 void ScrollingText::SetSpeed(float speed) {
-	this->speed = speed;
+	ScrollingText::speed = speed;
 }

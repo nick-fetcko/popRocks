@@ -16,6 +16,7 @@ private:
 
 public:
 	constexpr static int BleedEdge = 20;
+	constexpr static float Speed = 20.0f;
 
 	ScrollingText(const bool &vulkan, bool delayedCacheUpdate = false);
 
@@ -33,10 +34,12 @@ public:
 	static void SetBleedEdgeRatio(float ratio);
 
 	// In pixels-per-second
-	// Default: 20
-	void SetSpeed(float speed);
+	static void SetSpeed(float speed);
 
 private:
+	static float speed;
+	static float bleedEdgeRatio;
+
 	inline void UpdateWidthDelta() {
 		widthDelta = (bounds.width - font->GetOutlineRadius() * 2) - maxWidth;
 
@@ -55,13 +58,10 @@ private:
 
 	float widthDelta = 0.0f;
 	float offset = 0.0f;
-	float speed = 20.0f;
 
 	std::optional<std::chrono::system_clock::time_point> pauseTimer = std::nullopt;
 
 	int windowHeight = 0;
-
-	static float bleedEdgeRatio;
 
 	const bool &vulkan;
 };
