@@ -146,11 +146,11 @@ void Discord::OnSongChanged(
 
 	activity.SetTimestamps(timestamps);
 
-	discordpp::ActivityButton buyButton;
-	buyButton.SetLabel("Get popRocks");
-	buyButton.SetUrl("https://popRocks.app");
+	discordpp::ActivityButton getButton;
+	getButton.SetLabel("Get popRocks Visualizer");
+	getButton.SetUrl("https://popRocks.app");
 
-	activity.AddButton(buyButton);
+	activity.AddButton(getButton);
 
 	assets.SetLargeImage("poprocks-icon-main");
 	activity.SetAssets(assets);
