@@ -91,7 +91,7 @@ On first launch, a help interface appears:
 2. `cd popRocks`
 3. `git submodule update --init --recursive`
 4. `flatpak-builder --force-clean --user --install-deps-from=flathub --repo=repo --install builddir org.fetcko.popRocks.yml`
-5. OR, if flatpak-builder is installed as a Flatpak: `flatpak run org.flatpak.builder --force-clean --user --install-deps-from=flathub --repo=repo --install builddir org.fetcko.popRocks.yml`
+5. OR, if flatpak-builder is installed as a Flatpak: `flatpak run org.flatpak.Builder --force-clean --user --install-deps-from=flathub --repo=repo --install builddir org.fetcko.popRocks.yml`
 
 ## Contributing
 Pull requests are welcomed—so long as the requester is human! This project exists to make listening to music a more *fun*, active experience—so anything which furthers that goal is encouraged!
