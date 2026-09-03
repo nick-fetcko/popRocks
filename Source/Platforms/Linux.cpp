@@ -1850,6 +1850,8 @@ void Linux::PulseAudioSinkListCallback(pa_context *c, const pa_sink_info *i, int
 	const char *card = pa_proplist_gets(i->proplist, "alsa.card");
 	const char *device = pa_proplist_gets(i->proplist, "alsa.device");
 
+	if (!card || !device) return;
+
 	const auto driver = std::string("hw:") + card + "," + device;
 
 	reinterpret_cast<Linux*>(data)->AddOutputDevice(i->description, i->name, driver);
