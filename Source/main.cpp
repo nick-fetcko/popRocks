@@ -19,6 +19,8 @@
 #include "Platforms/Android.hpp"
 #elif defined WIN32
 #include <shellapi.h>
+#elif defined __linux__
+#include <malloc.h>
 #endif
 
 using namespace MathsCPP;
@@ -69,6 +71,13 @@ int main(int argc, char *argv[])
 int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 #endif
 {
+	// Use fewer malloc arenas because
+	// we aren't heavily dependent on
+	// allocation speed / concurrency
+#ifdef __linux__
+	mallopt(M_ARENA_MAX, 2);
+#endif
+
 #ifdef USING_FLATPAK
 	Utils::SetResourceFolder("/app/bin");
 #endif
