@@ -85,10 +85,12 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 	SDL_Event event;
 	bool running = true;
 
-	CApp app;
+	CApp *app = new CApp();
 
-	if (app.GetPlatform()->HandleExistingWindow(argc, argv))
+	if (app->GetPlatform()->HandleExistingWindow(argc, argv)) {
+		delete app;
 		return 1;
+	}
 
 #ifdef __ANDROID__
 	*pApp = &app;
@@ -108,30 +110,30 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 	// else our integrations might try to start in
 	// a "no song loaded" state
 	if (argc > 1)
-		app.SetPreLoaded(true);
+		app->SetPreLoaded(true);
 
-	app.OnInit();
+	app->OnInit();
 
 #ifdef WIN32
 	SDL_SetEventFilter(EventFilter, &app);
 #endif
 
-	app.GetPlatform()->HookWindow(app.GetMiniPlayer());
+	app->GetPlatform()->HookWindow(app->GetMiniPlayer());
 
 #ifndef __ANDROID__
 	if(argc > 1) {
 #ifdef WIN32
 		int wargc;
 		if (LPWSTR *wargv = CommandLineToArgvW(GetCommandLineW(), &wargc); wargv && wargc > 1)
-			app.LoadFile(wargv[1]);
+			app->LoadFile(wargv[1]);
 #else
 		logger.LogDebug("File prepared: ", argv[1]);
 		auto utf8 = std::string(argv[1]);
-		app.LoadFile(utf8);
+		app->LoadFile(utf8);
 #endif
 	}
 #else
-	dynamic_cast<Android*>(app.GetPlatform().get())->LoadFileNextLoop(Filesystem::GetPath("../../current"), false);
+	dynamic_cast<Android*>(app->GetPlatform().get())->LoadFileNextLoop(Filesystem::GetPath("../../current"), false);
 #endif
 
 	Vector2i mousePos{ 0, 0 };
@@ -151,10 +153,10 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 	while(running) {
 		while(SDL_PollEvent(&event)) {
 #if GUI
-			if (!app.GetMiniPlayer()) {
+			if (!app->GetMiniPlayer()) {
 				ImGui_ImplSDL3_ProcessEvent(&event);
 				if (io.WantCaptureKeyboard || io.WantCaptureMouse)
-					app.UpdateUi();
+					app->UpdateUi();
 			} else if (io.WantCaptureKeyboard || io.WantCaptureMouse) {
 				io.WantCaptureKeyboard = false;
 				io.WantCaptureMouse = false;
@@ -167,92 +169,92 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 					break;
 				case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED: {
 					auto window = SDL_GetWindowFromID(event.window.windowID);
-					const auto oldScale = app.GetScale();
+					const auto oldScale = app->GetScale();
 
-					auto scale = app.GetScale(window, &w, &h);
+					auto scale = app->GetScale(window, &w, &h);
 					if (oldScale != scale) {
-						app.OnResize(w, h, scale);
+						app->OnResize(w, h, scale);
 					}
 					break;
 				} case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: {
-					app.OnResize(
-						event.window.data1 / app.GetPlatform()->GetScale(),
-						event.window.data2 / app.GetPlatform()->GetScale(),
-						app.GetScale()
+					app->OnResize(
+						event.window.data1 / app->GetPlatform()->GetScale(),
+						event.window.data2 / app->GetPlatform()->GetScale(),
+						app->GetScale()
 					);
 					break;
 				} case SDL_EVENT_WINDOW_MOVED:
 					if (mouseButtonDown) break;
 
-					if (!app.GetMiniPlayer()) {
+					if (!app->GetMiniPlayer()) {
 						Settings::settings.SetWindowX(event.window.data1);
 						Settings::settings.SetWindowY(event.window.data2);
 
 						logger.LogDebug("Window moved to (", event.window.data1, ", ", event.window.data2, ")");
 					}
 
-					app.UpdateHdrProperties();
+					app->UpdateHdrProperties();
 					break;
 				case SDL_EVENT_WINDOW_HDR_STATE_CHANGED:
-					app.UpdateHdrProperties(true);
+					app->UpdateHdrProperties(true);
 					break;
 				case SDL_EVENT_KEY_DOWN:
 #if GUI
-					if (io.WantCaptureKeyboard || app.IsEnteringText() /* Disable hotkeys on text entry */) break;
+					if (io.WantCaptureKeyboard || app->IsEnteringText() /* Disable hotkeys on text entry */) break;
 
 					else 
 #endif
 					if (event.key.key == SDLK_MEDIA_NEXT_TRACK ||
 						(event.key.key == SDLK_D && (event.key.mod & SDL_KMOD_CTRL)) ||
 						(event.key.key == SDLK_RIGHT && (event.key.mod & SDL_KMOD_CTRL)))
-						app.NextTrack();
+						app->NextTrack();
 					else if (event.key.key == SDLK_MEDIA_PREVIOUS_TRACK ||
 						(event.key.key == SDLK_A && (event.key.mod & SDL_KMOD_CTRL)) ||
 						(event.key.key == SDLK_LEFT && (event.key.mod & SDL_KMOD_CTRL)))
-						app.PreviousTrack();
+						app->PreviousTrack();
 					else if ((event.key.key == SDLK_VOLUMEUP ||
 						(event.key.key == SDLK_W && (event.key.mod & SDL_KMOD_CTRL)) ||
 						(event.key.key== SDLK_UP && (event.key.mod & SDL_KMOD_CTRL))) &&
-						app.GetControls().GetExclusiveIndicator().IsExclusive())
-						app.GetControls().GetVolume().VolumeUp();
+						app->GetControls().GetExclusiveIndicator().IsExclusive())
+						app->GetControls().GetVolume().VolumeUp();
 					else if ((event.key.key == SDLK_VOLUMEDOWN ||
 						(event.key.key == SDLK_S && (event.key.mod & SDL_KMOD_CTRL)) ||
 						(event.key.key == SDLK_DOWN && (event.key.mod & SDL_KMOD_CTRL))) &&
-						app.GetControls().GetExclusiveIndicator().IsExclusive())
-						app.GetControls().GetVolume().VolumeDown();
+						app->GetControls().GetExclusiveIndicator().IsExclusive())
+						app->GetControls().GetVolume().VolumeDown();
 					else if (event.key.key == SDLK_RIGHT ||
 						event.key.key == SDLK_D)
-						app.GetAlbumArt().NextBin();
+						app->GetAlbumArt().NextBin();
 					else if (event.key.key == SDLK_LEFT ||
 						event.key.key == SDLK_A)
-						app.GetAlbumArt().PreviousBin();
-					else if (event.key.key == SDLK_P && !app.GetMiniPlayer())
-						app.SaveBlurFBO();
+						app->GetAlbumArt().PreviousBin();
+					else if (event.key.key == SDLK_P && !app->GetMiniPlayer())
+						app->SaveBlurFBO();
 					else if (event.key.key == SDLK_SPACE || event.key.key == SDLK_MEDIA_PLAY || event.key.key == SDLK_MEDIA_PLAY_PAUSE)
-						app.TogglePlaying();
-					else if (event.key.key == SDLK_RETURN && event.key.mod & SDL_KMOD_ALT && !app.GetMiniPlayer())
-						app.ToggleFullscreen();
+						app->TogglePlaying();
+					else if (event.key.key == SDLK_RETURN && event.key.mod & SDL_KMOD_ALT && !app->GetMiniPlayer())
+						app->ToggleFullscreen();
 					else if (event.key.key == SDLK_ESCAPE)
 						running = false;
-					else if (event.key.key >= SDLK_F1 && event.key.key <= SDLK_F12 && !app.GetMiniPlayer())
-						app.LoadPreset(event.key.key - SDLK_F1);
+					else if (event.key.key >= SDLK_F1 && event.key.key <= SDLK_F12 && !app->GetMiniPlayer())
+						app->LoadPreset(event.key.key - SDLK_F1);
 					else if (event.key.key == SDLK_S)
-						app.SyncToNearestBeat();
+						app->SyncToNearestBeat();
 					else if (event.key.key == SDLK_PAGEDOWN)
-						app.GetControls().PageDown();
+						app->GetControls().PageDown();
 					else if (event.key.key == SDLK_PAGEUP)
-						app.GetControls().PageUp();
+						app->GetControls().PageUp();
 					else if (event.key.key == SDLK_HOME)
-						app.GetControls().Home();
+						app->GetControls().Home();
 					else if (event.key.key == SDLK_END)
-						app.GetControls().End();
+						app->GetControls().End();
 					else if (event.key.key == SDLK_UP)
-						app.GetControls().AddToScrollOffset(-1);
+						app->GetControls().AddToScrollOffset(-1);
 					else if (event.key.key == SDLK_DOWN)
-						app.GetControls().AddToScrollOffset(1);
+						app->GetControls().AddToScrollOffset(1);
 					break;
 				case SDL_EVENT_KEY_UP:
-					if (app.IsEnteringText() /* Disable hotkeys on text entry */) break;
+					if (app->IsEnteringText() /* Disable hotkeys on text entry */) break;
 
 					// As we can potentially have multiple windows open
 					// while toggling these settings, we explicitly listen
@@ -260,24 +262,24 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 					// for each window individually, causing an infinite
 					// loop of toggling.
 					if (event.key.key == SDLK_V)
-						app.SetVulkan(!app.GetVulkan());
+						app->SetVulkan(!app->GetVulkan());
 					else if (event.key.key == SDLK_M)
-						app.SetMiniPlayer(!app.GetMiniPlayer());
+						app->SetMiniPlayer(!app->GetMiniPlayer());
 					else if (event.key.key == SDLK_R)
-						app.ResetWindow();
+						app->ResetWindow();
 					break;
 				case SDL_EVENT_MOUSE_MOTION:
 					mousePos.x = static_cast<int32_t>(event.motion.x);
 					mousePos.y = static_cast<int32_t>(event.motion.y);
 
 #ifdef __linux__
-					mousePos.x *= app.GetScale();
-					mousePos.y *= app.GetScale();
+					mousePos.x *= app->GetScale();
+					mousePos.y *= app->GetScale();
 #endif
 
 					if (mouseButtonDown) {
 						if (!skipEvents) {
-							if (mouseDragged && app.OnMouseDragged(mousePos)) {
+							if (mouseDragged && app->OnMouseDragged(mousePos)) {
 								skipEvents = 1;
 							}
 						} else --skipEvents;
@@ -286,19 +288,19 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 						// button for more than 100ms
 						if (!mouseDragged && std::chrono::system_clock::now() - mouseTimer > 100ms)
 							mouseDragged = true;
-					} else app.OnMouseMoved(mousePos);
+					} else app->OnMouseMoved(mousePos);
 					break;
 				case SDL_EVENT_MOUSE_BUTTON_DOWN:
 					if (event.button.button == SDL_BUTTON_LEFT
 #if GUI
 						&& !io.WantCaptureMouse
 #endif
-						&& app.OnMouseDown(mousePos)) {
+						&& app->OnMouseDown(mousePos)) {
 						mouseButtonDown = true;
 						mouseDragged = false;
 						mouseTimer = std::chrono::system_clock::now();
 					} else if (event.button.button == SDL_BUTTON_RIGHT) {
-						app.OnMouseRightClicked(mousePos);
+						app->OnMouseRightClicked(mousePos);
 					}
 					break;
 				case SDL_EVENT_MOUSE_BUTTON_UP:
@@ -308,19 +310,19 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 #endif
 						) {
 						if (!mouseDragged) {
-							if (app.OnMouseClicked(mousePos))
+							if (app->OnMouseClicked(mousePos))
 								running = false;
-						} else app.OnMouseUp(mousePos);
+						} else app->OnMouseUp(mousePos);
 
-						if (!app.GetPlatform()->IsResizing())
-							app.GetAlbumArt().OnMouseUp(mousePos);
+						if (!app->GetPlatform()->IsResizing())
+							app->GetAlbumArt().OnMouseUp(mousePos);
 
 						mouseButtonDown = false;
 						mouseDragged = false;
 					}
 					break;
 				case SDL_EVENT_DROP_FILE: {
-					app.LoadFile(
+					app->LoadFile(
 #ifdef WIN32
 						Utils::ToUTF16(const_cast<const char*>(
 #endif
@@ -334,7 +336,7 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 				case SDL_EVENT_DISPLAY_ADDED:
 				case SDL_EVENT_DISPLAY_REMOVED:
 				case SDL_EVENT_DISPLAY_MOVED:
-					app.UpdateDisplayBoundingBox();
+					app->UpdateDisplayBoundingBox();
 					break;
 				case SDL_EVENT_MOUSE_WHEEL:
 					// If we changed directions, reset to 0
@@ -345,7 +347,7 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 						wheelAccum += event.wheel.y;
 
 					if (wheelAccum + event.wheel.y >= 1) {
-						app.AddToScrollOffset((
+						app->AddToScrollOffset((
 							event.wheel.direction == SDL_MOUSEWHEEL_NORMAL ?
 							-1 :
 							// Linux already inverts our Y direction on
@@ -358,7 +360,7 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 						));
 						wheelAccum -= 1.0f;
 					} else if (wheelAccum + event.wheel.y <= -1) {
-						app.AddToScrollOffset((
+						app->AddToScrollOffset((
 							event.wheel.direction == SDL_MOUSEWHEEL_NORMAL ?
 							1 :
 							// Linux already inverts our Y direction on
@@ -380,11 +382,11 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 			// Mini-player fades controls based
 			// on mouse enter / leave, not on
 			// interaction itself.
-			if (!app.GetMiniPlayer())
-				app.FadeControls(true);
+			if (!app->GetMiniPlayer())
+				app->FadeControls(true);
 		}
 
-		app.OnLoop(timer.Update());
+		app->OnLoop(timer.Update());
 	}
 
 #ifdef __ANDROID__
@@ -392,7 +394,9 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 	pAppSet();
 #endif
 
-	app.OnDestroy();
+	app->OnDestroy();
+
+	delete app;
 
 	return 0;
 }
