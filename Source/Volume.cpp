@@ -126,6 +126,7 @@ void Volume::OnDestroy() {
 	outlineRing.OnDestroy();
 
 	text.OnDestroy();
+	outlineText.OnDestroy();
 
 	delete font;
 	font = nullptr;

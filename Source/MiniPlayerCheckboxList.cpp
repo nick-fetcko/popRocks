@@ -33,6 +33,9 @@ void MiniPlayerCheckboxList::OnDestroy() {
 
 	title.OnDestroy();
 	outline.OnDestroy();
+
+	for (auto &checkbox : checkboxes)
+		checkbox.checkbox.OnDestroy();
 }
 
 Checkbox *MiniPlayerCheckboxList::AddItem(const std::string &text, bool enabled, std::function<bool()> &&get, std::function<void(bool)> &&set, std::optional<std::size_t> index, std::string altText) {

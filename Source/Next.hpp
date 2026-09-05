@@ -30,6 +30,8 @@ public:
 	}
 
 	void OnDestroy() override {
+		Symbol::OnDestroy();
+
 		rectVao.reset();
 		rectVbo.reset();
 		rectEab.reset();

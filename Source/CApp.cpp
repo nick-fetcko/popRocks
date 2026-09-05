@@ -2938,6 +2938,9 @@ void CApp::SyncToNearestBeat() {
 
 void CApp::OnDestroy(bool includingLog) {
 	LogDebug("Shutting down...");
+
+	close.OnDestroy();
+	uiFbo.reset();
 	
 	if (discord) {
 		discord->Disable();

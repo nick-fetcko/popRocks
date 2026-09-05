@@ -1173,6 +1173,7 @@ void Controls::OnDestroy() {
 	play.OnDestroy();
 	next.OnDestroy();
 	previous.OnDestroy();
+	hamburger.OnDestroy();
 
 	elapsedText.OnDestroy();
 	elapsedOutline.OnDestroy();

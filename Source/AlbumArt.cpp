@@ -450,6 +450,10 @@ void AlbumArt::OnDestroy() {
 	cube.reset();
 
 	placeholder.OnDestroy();
+
+	outline.OnDestroy();
+	visualizerOutline.OnDestroy();
+	dragAndDropPrompt.OnDestroy();
 }
 
 std::filesystem::path AlbumArt::FindArt(const std::filesystem::path &folder, std::optional<std::filesystem::path> fileName) {
