@@ -3363,7 +3363,7 @@ void CApp::PlaylistLoaded(std::filesystem::path path, std::string extension, std
 		// else
 		controls.LoadFromCue();
 
-		if (!fileLoaded || wasPlaying) {
+		if (!fileLoaded || wasPlaying || Settings::settings.GetAutoPlay()) {
 			if (!platform->StartPlayingExclusive(fromPlaylist, fileLoaded, advanceOnNextLoop, wasPlaying)) {
 				if (wasPlaying || platform->PlayAfterLoad())
 					BASS_ChannelPlay(this->streamHandle, false);
