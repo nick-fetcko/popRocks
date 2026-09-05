@@ -3328,7 +3328,7 @@ void CApp::PlaylistLoaded(std::filesystem::path path, std::string extension, std
 		// Always look for external art,
 		// in case it's higher resolution
 		// than the embedded
-		if (!settings) {
+		if (!settings || settings->albumArt.empty()) {
 			albumArt.Load(
 				platform->GetNativePath(path),
 				originalPath
