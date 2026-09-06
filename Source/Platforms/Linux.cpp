@@ -8,6 +8,7 @@
 #include <sys/mman.h>
 #include <sys/times.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 #include <SDL3/SDL.h>
 
@@ -663,18 +664,28 @@ HSTREAM Linux::OpenWithFlags(const std::filesystem::path &path, const std::strin
 	return ret;
 }
 
-std::filesystem::path Linux::GetTemporaryFile(const std::string &pattern) {
+std::filesystem::path Linux::GetTemporaryFile(const std::string &pattern, std::ofstream &outFile) {
 	if (!lastTempFile.empty())
 		unlink(lastTempFile.c_str());
 
 	auto tempFileName = new char[pattern.length() + 1];
 	memcpy(tempFileName, pattern.c_str(), pattern.length());
 	tempFileName[pattern.length()] = '\0';
-	mkstemp(tempFileName);
 
-	lastTempFile = std::string(tempFileName, tempFileName + pattern.length());
+	const auto fd = mkstemp(tempFileName);
+
+	if (fd == -1)
+		lastTempFile.clear();
+	else {
+		lastTempFile = std::string(tempFileName, tempFileName + pattern.length());
+		outFile.open(lastTempFile, std::ios::out | std::ios::binary);
+	}
 
 	delete[] tempFileName;
+
+#ifdef USING_FLATPAK
+	return std::string(std::getenv("XDG_RUNTIME_DIR")) + "/.flatpak/org.fetcko.popRocks" + lastTempFile;
+#endif
 
 	return lastTempFile;
 }
@@ -1331,6 +1342,8 @@ int64_t Linux::GetRamUsage() {
 				return std::stoll(split[1]) * 1024;
 			}
 		}
+
+		return 0;
 	} else {
 		long pages = 0;
 		if (std::ifstream inFile{"/proc/self/statm"}) {

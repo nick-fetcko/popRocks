@@ -756,7 +756,7 @@ HSTREAM Windows::OpenWithFlags(const std::filesystem::path &path, const std::str
 	return ret;
 }
 
-std::filesystem::path Windows::GetTemporaryFile(const std::string &pattern) {
+std::filesystem::path Windows::GetTemporaryFile(const std::string &pattern, std::ofstream &outFile) {
 	return "";
 }
 

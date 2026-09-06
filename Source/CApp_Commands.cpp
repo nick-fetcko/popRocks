@@ -458,7 +458,7 @@ void CApp::AddCommands() {
 					try {
 						auto radius = IsDefault(args[1]) ? AlbumArt::BaseRadius : std::stof(args[1]);
 
-						SetRadius(radius);
+						//SetRadius(radius);
 					} catch (std::exception &e) {
 						LogError("Could not set radius: ", e.what());
 					}

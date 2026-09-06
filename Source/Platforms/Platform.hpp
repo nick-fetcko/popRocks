@@ -82,7 +82,7 @@ public:
 	
 	// File opening
 	virtual HSTREAM OpenWithFlags(const std::filesystem::path &path, const std::string &extension, DWORD flags) = 0;
-	virtual std::filesystem::path GetTemporaryFile(const std::string &pattern) = 0;
+	virtual std::filesystem::path GetTemporaryFile(const std::string &pattern, std::ofstream &outFile) = 0;
 
 	// BASS
 	virtual void LoadBassPlugins() = 0;

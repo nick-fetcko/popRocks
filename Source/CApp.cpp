@@ -919,19 +919,18 @@ void CApp::ResetWindow() {
 void CApp::OnAlbumArtLoaded(bool embedded) {
 	wasLastAlbumArtLoadEmbedded = embedded;
 
-	for (auto integration : integrations) {
-		auto file = albumArt.GetCurrentFile();
-		if (embedded && albumArt.HasEmbedded()) {
-			if (auto tempFile = platform->GetTemporaryFile("/tmp/popRocks_embedded_art.XXXXXX"); !tempFile.empty()) {
-				const auto [bytes, size] = albumArt.GetEmbedded();
+	auto file = albumArt.GetCurrentFile();
+	if (embedded && albumArt.HasEmbedded()) {
+		std::ofstream outFile;
+		if (auto tempFile = platform->GetTemporaryFile("/tmp/popRocks_embedded_art.XXXXXX", outFile); !tempFile.empty()) {
+			const auto [bytes, size] = albumArt.GetEmbedded();
+			outFile.write(reinterpret_cast<const char *>(bytes), size);
 
-				std::ofstream outFile(tempFile, std::ios::out | std::ios::binary);
-				outFile.write(reinterpret_cast<const char *>(bytes), size);
-
-				file = tempFile;
-			}
+			file = tempFile;
 		}
+	}
 
+	for (auto integration : integrations) {
 		integration->OnSongChanged(
 			beatDetect->GetHash(),
 			controls.GetTitle(),
@@ -1326,7 +1325,7 @@ void CApp::OnInit() {
 
 			if (platform->IsListening() && Settings::settings.GetLoopback())
 				platform->Listen(true);
-			else {
+			else if (fileLoaded) {
 				auto pos = streamHandle ? BASS_ChannelBytes2Seconds(
 					streamHandle,
 					BASS_ChannelGetPosition(streamHandle, BASS_POS_BYTE)
@@ -2523,13 +2522,17 @@ void CApp::OnLoop(const Delta &time) {
 
 	if (blur) {
 		GLint oldViewport[4];
+
+		// Not a reference because we do
+		// want to make a copy here
 		auto identity = context->GetIdentity();
 
 		blurFbo->Bind();
 
 		glGetIntegerv(GL_VIEWPORT, oldViewport);
-		auto projection = glm::ortho(0.0f, static_cast<float>(maxDimension), static_cast<float>(maxDimension), 0.0f);
-		context->SetIdentity(std::move(projection));
+		context->SetIdentity(
+			glm::ortho(0.0f, static_cast<float>(maxDimension), static_cast<float>(maxDimension), 0.0f)
+		);
 		glViewport(0, 0, maxDimension, maxDimension);
 
 		if (pulseBackground)

@@ -72,7 +72,7 @@ public:
 
 	// File opening
 	HSTREAM OpenWithFlags(const std::filesystem::path &path, const std::string &extension, DWORD flags) override;
-	std::filesystem::path GetTemporaryFile(const std::string &pattern) override;
+	std::filesystem::path GetTemporaryFile(const std::string &pattern, std::ofstream &outFile) override;
 
 	// BASS
 	void LoadBassPlugins() override;
