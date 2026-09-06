@@ -1910,6 +1910,21 @@ void Linux::GetDefaultDevice() {
 		while (pa_operation_get_state(op) == PA_OPERATION_RUNNING)
 			pa_mainloop_iterate(mainloop, 1, NULL);
 
+		bool foundDefault = false;
+		for (const auto &device : outputDevices) {
+			if (device.second.isDefault) {
+				foundDefault = true;
+				break;
+			}
+		}
+
+		// Place default device
+		outputDevices["(PulseAudio) Default Device"] = {
+			"",
+			"",
+			!foundDefault
+		};
+
 		pa_operation_unref(op);
 	}
 
