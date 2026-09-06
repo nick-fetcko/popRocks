@@ -93,7 +93,7 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 	}
 
 #ifdef __ANDROID__
-	*pApp = &app;
+	*pApp = app;
 	pAppSet();
 #else
 	// Default presets require our working directory,
@@ -115,7 +115,7 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 	app->OnInit();
 
 #ifdef WIN32
-	SDL_SetEventFilter(EventFilter, &app);
+	SDL_SetEventFilter(EventFilter, app);
 #endif
 
 	app->GetPlatform()->HookWindow(app->GetMiniPlayer());
