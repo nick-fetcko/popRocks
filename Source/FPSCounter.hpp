@@ -31,12 +31,13 @@ public:
 
 		// Refresh our FPS every second
 		if (timer >= 1s) {
-			const auto fps = std::to_string(frames) + " FPS";
+			const auto fpsText = std::to_string(frames) + " FPS";
 
-			outline.SetText(fps);
-			text.SetText(fps);
+			outline.SetText(fpsText);
+			text.SetText(fpsText);
 
 			timer = 0us;
+			fps = frames;
 			frames = 0;
 		}
 
@@ -68,6 +69,8 @@ public:
 
 	const Text &GetText() { return text; }
 
+	const std::size_t &GetFps() const { return fps; }
+
 private:
 	constexpr static int Margin = 12;
 
@@ -80,6 +83,7 @@ private:
 
 	std::chrono::microseconds timer = 0us;
 	std::size_t frames = 0;
+	std::size_t fps = 0;
 
 	Text text;
 	Text outline;

@@ -317,6 +317,8 @@ private:
 
 	inline void SetDiscordIntegration(bool enabled, double seconds);
 
+	inline void CheckIfPositionInterpolationIsNeeded();
+
 	int windowWidth = 1920;
 	int windowHeight = 1080;
 
@@ -532,6 +534,10 @@ private:
 
 	std::string lastPos;
 	std::chrono::system_clock::time_point posTimer = std::chrono::system_clock::now();
+
+	// How many positions we get from BASS every second
+	std::size_t rawPps = 0;
+	// How many positions we _render_ every second
 	std::size_t pps = 0;
 
 	Checkbox *exclusiveCheckbox = nullptr;
@@ -550,4 +556,16 @@ private:
 	SongSettings songSettings;
 
 	std::unique_ptr<Discord> discord;
+
+	double positionAccum = 0.0;
+	std::size_t lastPosBytes = 0;
+	std::size_t lastPosDelta = 0;
+
+	bool interpolatePosition = false;
+
+	float *floatSample = nullptr;
+	int16_t *shortSample = nullptr;
+
+	float firstFloatSample = 0.0f;
+	int16_t firstShortSample = 0;
 };

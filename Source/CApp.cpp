@@ -140,6 +140,12 @@ void CApp::UpdateMaxBufferLength() {
 		floatBuffer = reinterpret_cast<float *>(buffer);
 		shortBuffer = reinterpret_cast<short *>(buffer);
 
+		delete[] floatSample;
+		delete[] shortSample;
+
+		floatSample = new float[channelInfo.chans];
+		shortSample = new int16_t[channelInfo.chans];
+
 		renderer->SetBuffer(buffer, length);
 		resetGain = dynamicGain.reset;
 
@@ -1994,6 +2000,8 @@ void CApp::OnInit() {
  CApp::~CApp() {
 	 delete renderer;
 	 delete[] buffer;
+	 delete[] floatSample;
+	 delete[] shortSample;
 }
 
 HSTREAM CApp::GetStreamHandle() const {
@@ -2215,6 +2223,20 @@ inline bool CApp::IsOnCloseButton(const Vector2i &mousePos) {
 		mousePos.y >= windowHeight / 2 - radius && mousePos.y <= windowHeight / 2 - radius + closeSize * 2;
 }
 
+inline void CApp::CheckIfPositionInterpolationIsNeeded() {
+	// If we're getting more than 33% fewer positions per second than
+	// we are frames per second, turn interpolation on
+	const bool tooSlow = (rawPps < static_cast<std::size_t>(controls.GetFpsCounter().GetFps() * 0.667f));
+
+	if (tooSlow && !interpolatePosition && playing) {
+		LogWarning("Turning position interpolation ON");
+		interpolatePosition = true;
+	} else if (!tooSlow && interpolatePosition) {
+		LogWarning("Turning position interpolation OFF");
+		interpolatePosition = false;
+	}
+}
+
 void CApp::OnLoop(const Delta &time) {
 	if (shuttingDown) {
 		if (!destroyed) OnDestroy(false);
@@ -2398,10 +2420,34 @@ void CApp::OnLoop(const Delta &time) {
 		auto pos =
 			static_cast<int64_t>(BASS_ChannelGetPosition(streamHandle, BASS_POS_BYTE));
 
+		// Did our position actually change?
+		if (pos != lastPosBytes) {
+			lastPosDelta = pos - lastPosBytes;
+			lastPosBytes = pos;
+			positionAccum = 0.0;
+		}
+
+		// Did our underlying data actually change?
+		if (renderer->IsFloatingPoint()) {
+			BASS_ChannelGetData(streamHandle, floatSample, sizeof(float) * channelInfo.chans);
+
+			if (floatSample[0] != firstFloatSample) {
+				++rawPps;
+				firstFloatSample = floatSample[0];
+			}
+		} else {
+			BASS_ChannelGetData(streamHandle, shortSample, sizeof(short) * channelInfo.chans);
+
+			if (shortSample[0] != firstShortSample) {
+				++rawPps;
+				firstShortSample = shortSample[0];
+			}
+		}
+
 		double inSeconds = 0.0;
 			
 		if (audioOffset || controls.GetExclusiveIndicator().IsExclusive()) {
-			pos = pos -
+			pos = (controls.GetExclusiveIndicator().IsExclusive() ? pos : (lastPosBytes - lastPosDelta)) -
 				(audioOffset ? static_cast<int64_t>(BASS_ChannelSeconds2Bytes(streamHandle, std::abs(*audioOffset))) * (*audioOffset < 0 ? -1 : 1) : 0)
 				- platform->GetExclusiveBufferSizeInBytes()
 				+ (platform->GetExclusiveBufferSizeInBytes() - available);
@@ -2409,6 +2455,22 @@ void CApp::OnLoop(const Delta &time) {
 			if (pos < 0) pos = 0;
 
 			inSeconds = BASS_ChannelBytes2Seconds(streamHandle, pos);
+
+			if (!controls.GetExclusiveIndicator().IsExclusive())
+				inSeconds += positionAccum;
+
+			BASS_ChannelSetPosition(
+				visualStreamHandle,
+				BASS_ChannelSeconds2Bytes(visualStreamHandle, inSeconds),
+				BASS_POS_BYTE
+			);
+
+			if (renderer->IsFloatingPoint())
+				BASS_ChannelGetData(visualStreamHandle, buffer, fftFlag);
+			else
+				BASS_ChannelGetData(visualStreamHandle, buffer, static_cast<DWORD>(bufferLength * sizeof(short) * channelInfo.chans));
+		} else if (interpolatePosition) {
+			inSeconds = BASS_ChannelBytes2Seconds(streamHandle, lastPosBytes - lastPosDelta) + positionAccum;
 
 			BASS_ChannelSetPosition(
 				visualStreamHandle,
@@ -2428,6 +2490,10 @@ void CApp::OnLoop(const Delta &time) {
 			else
 				BASS_ChannelGetData(streamHandle, buffer, static_cast<DWORD>(bufferLength * sizeof(short) * channelInfo.chans));
 		}
+
+		// Keep track of how much time has
+		// changed between position changes
+		positionAccum += time.change.AsSeconds();
 
 		if (controls.GetDisplayStats()) {
 			std::stringstream posStream;
@@ -2453,11 +2519,21 @@ void CApp::OnLoop(const Delta &time) {
 					stream << " / " << Utils::GetFriendlyBytes(ramUsage, false);
 
 				controls.SetStats(stream.str());
+
+				CheckIfPositionInterpolationIsNeeded();
+
+				rawPps = 0;
 				pps = 0;
 				posTimer = now;
 			}
 
 			lastPos = newPos;
+		} else if (auto now = std::chrono::system_clock::now(); now - posTimer >= 1s) {
+			CheckIfPositionInterpolationIsNeeded();
+			
+			rawPps = 0;
+			pps = 0;
+			posTimer = now;
 		}
 	} else {
 		platform->LoadHeardSamples(renderer, floatBuffer, shortBuffer, bufferLength);
@@ -3739,6 +3815,9 @@ void CApp::TogglePlaying() {
 				SetPlaying(false);
 			}
 		}
+
+		// Give posTimer a bit of extra time on its first collection
+		posTimer = std::chrono::system_clock::now() + 200ms;
 	}
 }
 
