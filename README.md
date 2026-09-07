@@ -23,6 +23,7 @@ On first launch, a help interface appears:
   - Colors found in album art theme the overall interface
   - BeatRoot beat detection (optionally) changes colors to the song's beat
   - Unique, circular design with transparent visualizer elements
+  - Visualizer frames persist temporally, with shaders determining how old frames blend with new
   - Infinitely resizable / draggable
 - Lightweight
   - 100% C++ / OpenGL
@@ -39,7 +40,7 @@ On first launch, a help interface appears:
 
 ## What popRocks ISN'T (yet)
 - A full-fledged visualizer editor
-  - A beta editor interface does currently exist
+  - A **beta** editor interface does currently exist
   - Visualizers have full access to GLSL shaders, but those must be edited externally
 - A visualizer for streaming music (YouTube, Spotify, Apple Music, Tidal, etc.)
   - Support is theoretically possible using a loopback audio device
@@ -49,7 +50,7 @@ On first launch, a help interface appears:
 - A music library manager
   - Only individual album playlists are supported
 - Fully HDR compatible
-  - Beta visualizer editor *does* support HDR, but player interface doesn't
+  - **Beta** visualizer editor *does* support HDR (via **beta** DXGI / Vulkan interops), but player interface doesn't
 
 ## What popRocks ISN'T (and will never be)
 - Compatible with other visualizers (e.g. Milkdrop)
@@ -57,7 +58,7 @@ On first launch, a help interface appears:
 - An ID3 tag editor
   - A complex tag editing UI would be antithetical to popRocks' design
 - Anything even adjacent to AI / GenAI / LLMs
-  - popRocks was partly developed in opposition to these """technologies"""
+  - popRocks could not have been made without *human* creativity
 
 ## Building (Windows)
 ### Prerequisites
@@ -94,7 +95,7 @@ On first launch, a help interface appears:
 5. OR, if flatpak-builder is installed as a Flatpak: `flatpak run org.flatpak.Builder --force-clean --user --install-deps-from=flathub --repo=repo --install builddir org.fetcko.popRocks.yml`
 
 ## Contributing
-Pull requests are welcomed—so long as the requester is human! This project exists to make listening to music a more *fun*, active experience—so anything which furthers that goal is encouraged!
+Pull requests are welcomed—so long as the requester is human! This project exists to make listening to music a more *fun*, active experience; anything which furthers that goal is encouraged!
 
 ## Credits
 - Logo design: Nick Fetcko
