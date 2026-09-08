@@ -2226,7 +2226,9 @@ inline bool CApp::IsOnCloseButton(const Vector2i &mousePos) {
 inline void CApp::CheckIfPositionInterpolationIsNeeded() {
 	// If we're getting more than 33% fewer positions per second than
 	// we are frames per second, turn interpolation on
-	const bool tooSlow = (rawPps < static_cast<std::size_t>(controls.GetFpsCounter().GetFps() * 0.667f));
+	const bool tooSlow = 
+		!controls.GetExclusiveIndicator().IsExclusive() &&
+		(rawPps < static_cast<std::size_t>(controls.GetFpsCounter().GetFps() * 0.667f));
 
 	if (tooSlow && !interpolatePosition && playing) {
 		LogWarning("Turning position interpolation ON");
@@ -2427,20 +2429,25 @@ void CApp::OnLoop(const Delta &time) {
 			positionAccum = 0.0;
 		}
 
-		// Did our underlying data actually change?
-		if (renderer->IsFloatingPoint()) {
-			BASS_ChannelGetData(streamHandle, floatSample, sizeof(float) * channelInfo.chans);
+		// Since we use a decoding channel when in
+		// exclusive mode, calling BASS_ChannelGetData
+		// steals samples away from playback
+		if (!controls.GetExclusiveIndicator().IsExclusive()) {
+			// Did our underlying data actually change?
+			if (renderer->IsFloatingPoint()) {
+				BASS_ChannelGetData(streamHandle, floatSample, sizeof(float) * channelInfo.chans);
 
-			if (floatSample[0] != firstFloatSample) {
-				++rawPps;
-				firstFloatSample = floatSample[0];
-			}
-		} else {
-			BASS_ChannelGetData(streamHandle, shortSample, sizeof(short) * channelInfo.chans);
+				if (floatSample[0] != firstFloatSample) {
+					++rawPps;
+					firstFloatSample = floatSample[0];
+				}
+			} else {
+				BASS_ChannelGetData(streamHandle, shortSample, sizeof(short) * channelInfo.chans);
 
-			if (shortSample[0] != firstShortSample) {
-				++rawPps;
-				firstShortSample = shortSample[0];
+				if (shortSample[0] != firstShortSample) {
+					++rawPps;
+					firstShortSample = shortSample[0];
+				}
 			}
 		}
 
