@@ -79,6 +79,13 @@ inline void Discord::UpdateVisualizerName() {
 
 inline void Discord::UpdateAlbumName() {
 	if (album.size()) {
+		// Remove any parentheticals at the _end_ of the album name
+		// This gets rid of (Deluxe Edition), (Reissue), (20XX Remaster), etc.
+		if (*album.rbegin() == ')' && album.find('(') != std::string::npos) {
+			album = album.substr(0, album.find_last_of('('));
+			Utils::rtrim(album);
+		}
+
 		const auto state = "on the album " + Italics::ToItalics(album);
 
 		activity.SetState(Utils::Truncate(state, 128, true));
@@ -117,6 +124,8 @@ void Discord::OnSongChanged(
 	this->title = title;
 	this->artist = artist;
 	this->album = album;
+
+	Utils::rtrim(this->album);
 
 	activity = discordpp::Activity();
 
