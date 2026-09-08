@@ -1197,10 +1197,16 @@ void Controls::OnDestroy() {
 
 	font->OnDestroy();
 	outlineFont->OnDestroy();
+	boldFont->OnDestroy();
+	boldOutlineFont->OnDestroy();
 	delete font;
 	font = nullptr;
 	delete outlineFont;
 	outlineFont = nullptr;
+	delete boldFont;
+	boldFont = nullptr;
+	delete boldOutlineFont;
+	boldOutlineFont = nullptr;
 }
 
 std::string Controls::FormatSeconds(int seconds) const {
