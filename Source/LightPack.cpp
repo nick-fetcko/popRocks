@@ -109,15 +109,18 @@ void LightPack::OnInit() {
 			}
 
 			std::unique_lock lock(condMutex);
-			cond.wait_for(lock, sleepTime);
+			if (running)
+				cond.wait_for(lock, sleepTime);
 			if (lightBin) sleepTime = 1ms;
 		}
 
 		// Process whatever's left in the queue
+		LogInfo("Processing what's left in the queue (", queue.size(), " items)...");
 		while (queue.size()) {
-			queue.front()(this);
+			if (tcpsock) queue.front()(this);
 			queue.pop();
 		}
+		LogInfo("Done processing!");
 
 		delete[] lightBin;
 		lightBin = nullptr;
@@ -322,14 +325,20 @@ void LightPack::OnDestroy() {
 		});
 	}
 
+	LogInfo("Stopping LightPack thread...");
+
 	{
 		std::unique_lock lock(condMutex);
 		running = false;
 		cond.notify_one();
 	}
 
+	LogInfo("\tJoining...");
+
 	if (thread.joinable())
 		thread.join();
+
+	LogInfo("LightPack thread stopped!");
 }
 
 void LightPack::NextSamples(float *samples, std::size_t count) {
