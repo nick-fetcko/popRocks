@@ -54,10 +54,6 @@ bool MP4::Atom::ReadData(bool textOnly) {
 
 	ReadExtras();
 
-	// There are currently 4 reserved
-	// bytes in "data" atoms
-	file->seekg(4, std::ios::cur);
-
 	switch (flags[2]) {
 	case 0:
 		mimeType = "application/octet-stream";
@@ -78,6 +74,10 @@ bool MP4::Atom::ReadData(bool textOnly) {
 	default:
 		break;
 	}
+
+	// There are currently 4 reserved
+	// bytes in "data" atoms
+	file->seekg(4, std::ios::cur);
 
 	// 16 bytes in total before the data proper:
 	//		4 bytes for atom size
@@ -201,7 +201,8 @@ std::map<std::string, std::string> MP4::GetTags(bool textOnly) {
 						break;
 					}
 				}
-			}
+			} else if (textOnly) // Skip the covr atom in textOnly mode
+				file.seekg(atom->size - atom->GetBytes(), std::ios::cur);
 		} else file.seekg(atom->size - atom->GetBytes(), std::ios::cur);
 	}
 
