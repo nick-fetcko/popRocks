@@ -94,6 +94,15 @@ On first launch, a help interface appears:
 4. `flatpak-builder --force-clean --user --install-deps-from=flathub --repo=repo --install builddir org.fetcko.popRocks.yml`
 5. OR, if flatpak-builder is installed as a Flatpak: `flatpak run org.flatpak.Builder --force-clean --user --install-deps-from=flathub --repo=repo --install builddir org.fetcko.popRocks.yml`
 
+## Troubleshooting (Windows)
+- If using **Rectify11** / **Mica For Everyone** and player isn't transparent
+  - Add a Process Rule for popRocks to **Mica For Everyone** and set "Backdrop Type" to "None"
+- If using *beta* Vulkan interop on an NVIDIA GPU and player isn't transparent
+  - Under "Manage 3D settings" in the NVIDIA Control Panel, find "Vulkan/OpenGL present method" at the bottom and change it to "Native"
+- A "G-SYNC" indicator is visible next to the player on an NVIDIA GPU
+  - Select "Change Resolution" in the NVIDIA Control Panel, find the "Display" menu up top and deselect "G-SYNC, G-SYNC Compatible Indicator"
+  - OR, to add an individual exception for popRocks, use [NVIDIA Profile Inspector](https://github.com/Orbmu2k/nvidiaProfileInspector)
+
 ## Contributing
 Pull requests are welcomed—so long as the requester is human! This project exists to make listening to music a more *fun*, active experience; anything which furthers that goal is encouraged!
 
