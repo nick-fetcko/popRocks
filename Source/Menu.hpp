@@ -710,6 +710,9 @@ public:
 				if (selectedPresets.find(i) != selectedPresets.end())
 					name = "- " + name;
 
+				if (preset.GetAvailableInMiniPlayer())
+					name += " (M)";
+
 				if (ImGui::MenuItem(name.c_str(), nullptr, &presetSelections[i])) {
 					if (onPresetChanged)
 						onPresetChanged(i);
