@@ -86,6 +86,8 @@ LightPack::~LightPack() {
 }
 
 void LightPack::OnInit() {
+	initialized = NET_Init();
+
 	// Avoid potential off-by-one-millisecond
 	sleepTime = 0s;
 
@@ -131,6 +133,12 @@ void LightPack::OnInit() {
 		}
 
 		NET_Quit();
+
+		// Make sure to clear the error message
+		// for this thread, as we aren't an SDL
+		// thread
+		SDL_ClearError();
+		SDL_CleanupTLS();
 	});
 
 	std::unique_lock lock(mutex);
@@ -199,11 +207,13 @@ bool LightPack::CanConnect() {
 void LightPack::_OnInit() {
 	if (!running) return;
 
-	if (NET_Init()) {
+	if (initialized) {
 		if (auto ip = NET_ResolveHostname("127.0.0.1")) {
 			auto status = NET_WaitUntilResolved(ip, -1);
 			if (CanConnect())
 				tcpsock = NET_CreateClient(ip, 3636);
+
+			NET_UnrefAddress(ip);
 
 			if (status = NET_WaitUntilConnected(tcpsock, -1); status != NET_SUCCESS) {
 				NET_DestroyStreamSocket(tcpsock);

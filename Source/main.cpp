@@ -398,5 +398,7 @@ int popRocks_main(CApp **pApp, std::function<void()> pAppSet)
 
 	delete app;
 
+	SDL_Quit();
+
 	return 0;
 }

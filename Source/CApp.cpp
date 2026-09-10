@@ -4447,7 +4447,7 @@ void CApp::SaveBlurFBO() {
 
 void CApp::UpdateDisplayBoundingBox() {
 	int numDisplays = 0;
-	const auto displays = SDL_GetDisplays(&numDisplays);
+	auto displays = SDL_GetDisplays(&numDisplays);
 
 	displayBoundingBox = { 0, 0, 0, 0 };
 	for (int i = 0; i < numDisplays; ++i) {
@@ -4464,6 +4464,8 @@ void CApp::UpdateDisplayBoundingBox() {
 		if (bounds.y + bounds.h > displayBoundingBox.h)
 			displayBoundingBox.h = bounds.y + bounds.h;
 	}
+
+	SDL_free(displays);
 }
 
 bool CApp::AddToScrollOffset(int offset) {

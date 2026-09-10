@@ -398,6 +398,9 @@ void Playlist::OnDestroy() {
 	vao.reset();
 	vbo.reset();
 	eab.reset();
+
+	currentTitle.OnDestroy();
+	outline.OnDestroy();
 }
 
 void Playlist::Clear() {

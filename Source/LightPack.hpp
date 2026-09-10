@@ -135,4 +135,6 @@ private:
 	std::mutex condMutex;
 
 	bool firstTry = true;
+
+	bool initialized = false;
 };
