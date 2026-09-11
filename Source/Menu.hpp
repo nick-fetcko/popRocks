@@ -166,7 +166,7 @@ public:
 			open = true;
 
 #ifndef __ANDROID__
-			if (ImGui::MenuItem("Open File", "Ctrl-O", false, true)) {
+			if (ImGui::MenuItem("Open File", nullptr, false, true)) {
 				nfdnchar_t *outPath;
 
 #ifdef WIN32
@@ -200,7 +200,7 @@ public:
 			}
 #endif
 
-			if (ImGui::MenuItem("Open Folder", "Ctrl-Shift-O", false, true)) {
+			if (ImGui::MenuItem("Open Folder", nullptr, false, true)) {
 #ifndef __ANDROID__
 				nfdnchar_t *outPath;
 				nfdresult_t result = NFD_PickFolderN(&outPath, nullptr);
@@ -213,6 +213,44 @@ public:
 					fileOpenFunc();
 #endif
 			}
+
+			ImGui::Separator();
+
+			cacheDetectionResults = Settings::settings.GetCacheDetectionResults();
+			if (ImGui::MenuItem("Cache beat detection results?", nullptr, &cacheDetectionResults)) {
+				Settings::settings.SetCacheDetectionResults(cacheDetectionResults);
+			}
+
+			if (ImGui::MenuItem("Clear detection cache")) {
+				std::error_code ec;
+				if (std::filesystem::remove_all(Filesystem::GetPath("cache"), ec) == static_cast<std::uintmax_t>(-1))
+					LogError("Could not clear detection cache! ", ec.message());
+			}
+
+			// Only update our cache info every 10 seconds
+			if (auto now = std::chrono::system_clock::now(); (Duration<Microseconds>(now - lastFrame).AsSeconds() > 10.0 || cacheSize.empty()) && std::filesystem::exists(Filesystem::GetPath("cache"))) {
+				auto dirIter = std::filesystem::directory_iterator(Filesystem::GetPath("cache"));
+				std::size_t bytes = 0;
+
+				cacheFileCount = std::count_if(
+					begin(dirIter),
+					end(dirIter),
+					[&](auto &entry) {
+						if (entry.is_regular_file()) {
+							bytes += std::filesystem::file_size(entry.path());
+							return true;
+						}
+						return false;
+					}
+				);
+
+				cacheSize = Utils::GetFriendlyBytes(bytes);
+
+				lastFrame = now;
+			}
+
+			ImGui::Text("\tCached songs: %ld", cacheFileCount);
+			ImGui::Text("\tCache size: %s", cacheSize.c_str());
 
 			ImGui::Separator();
 
@@ -393,42 +431,6 @@ public:
 				if (onDetectBpmChanged)
 					onDetectBpmChanged(!Settings::settings.GetDetectBpm());
 			}
-
-			cacheDetectionResults = Settings::settings.GetCacheDetectionResults();
-			if (ImGui::MenuItem("Cache detection results?", nullptr, &cacheDetectionResults)) {
-				Settings::settings.SetCacheDetectionResults(cacheDetectionResults);
-			}
-
-			if (ImGui::MenuItem("Clear detection cache")) {
-				std::error_code ec;
-				if (std::filesystem::remove_all(Filesystem::GetPath("cache"), ec) == static_cast<std::uintmax_t>(-1))
-					LogError("Could not clear detection cache! ", ec.message());
-			}
-
-			// Only update our cache info every 10 seconds
-			if (auto now = std::chrono::system_clock::now(); (Duration<Microseconds>(now - lastFrame).AsSeconds() > 10.0 || cacheSize.empty()) && std::filesystem::exists(Filesystem::GetPath("cache"))) {
-				auto dirIter = std::filesystem::directory_iterator(Filesystem::GetPath("cache"));
-				std::size_t bytes = 0;
-
-				cacheFileCount = std::count_if(
-					begin(dirIter),
-					end(dirIter),
-					[&](auto &entry) {
-						if (entry.is_regular_file()) {
-							bytes += std::filesystem::file_size(entry.path());
-							return true;
-						}
-						return false;
-					}
-				);
-
-				cacheSize = Utils::GetFriendlyBytes(bytes);
-
-				lastFrame = now;
-			}
-
-			ImGui::Text("\tCached songs: %ld", cacheFileCount);
-			ImGui::Text("\tCache size: %s", cacheSize.c_str());
 
 			halveBpm = Settings::settings.GetHalveBpm();
 			if (ImGui::MenuItem("Halve detected BPM?", nullptr, &halveBpm)) {
@@ -641,22 +643,7 @@ public:
 			}
 			ImGui::EndDisabled();
 
-			ImGui::Separator();
-
-			frameLimit = Settings::settings.GetFrameLimit();
-			
-			bool limitFramerate = Settings::settings.GetLimitFramerate();
-			if (ImGui::MenuItem("Limit framerate?", nullptr, &limitFramerate)) {
-				if (onLimitFramerateChanged)
-					onLimitFramerateChanged(limitFramerate);
-			}
-			ImGui::BeginDisabled(!limitFramerate);
-			if (ImGui::SliderInt("Limit", &frameLimit, 5, 360)) {
-				if (onFrameLimitChanged)
-					onFrameLimitChanged(frameLimit);
-			}
-			ImGui::EndDisabled();
-
+			/*
 			ImGui::Separator();
 
 			if (ImGui::MenuItem("Randomize")) {
@@ -678,13 +665,7 @@ public:
 					onRandomizeTimeChanged(randomizeTime);
 			}
 			ImGui::EndDisabled();
-
-			ImGui::Separator();
-
-			if (ImGui::MenuItem("Reset window", "R")) {
-				if (onResetWindow)
-					onResetWindow();
-			}
+			*/
 
 			ImGui::EndMenu();
 		}
@@ -978,6 +959,13 @@ public:
 							onHdrWhitePointChanged(hdrWhitePoint);
 					}
 				}
+			}
+
+			ImGui::Separator();
+
+			if (ImGui::MenuItem("Reset window", "R")) {
+				if (onResetWindow)
+					onResetWindow();
 			}
 
 			ImGui::EndMenu();
@@ -1316,6 +1304,22 @@ public:
 				if (onVsyncChanged)
 					onVsyncChanged(vsync);
 			}
+
+			ImGui::Separator();
+
+			frameLimit = Settings::settings.GetFrameLimit();
+
+			bool limitFramerate = Settings::settings.GetLimitFramerate();
+			if (ImGui::MenuItem("Limit framerate?", nullptr, &limitFramerate)) {
+				if (onLimitFramerateChanged)
+					onLimitFramerateChanged(limitFramerate);
+			}
+			ImGui::BeginDisabled(!limitFramerate);
+			if (ImGui::SliderInt("Limit", &frameLimit, 5, 360)) {
+				if (onFrameLimitChanged)
+					onFrameLimitChanged(frameLimit);
+			}
+			ImGui::EndDisabled();
 				
 #ifdef __ANDROID__
 			if (HDR::Capable) {
