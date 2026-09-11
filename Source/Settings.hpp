@@ -517,7 +517,7 @@ private:
 	float strobeIntensity = 0.66f;
 
 	bool limitFramerate = false;
-	int frameLimit = 60;
+	int frameLimit = 240;
 
 	bool randomize = false;
 	Duration<Microseconds> randomizeTime = 2.5s;
