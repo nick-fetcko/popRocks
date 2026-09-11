@@ -2881,19 +2881,6 @@ void CApp::OnLoop(const Delta &time) {
 }
 
 inline void CApp::SwapBuffers(const Delta &time) {
-	std::chrono::duration<double, std::nano> over;
-
-	if (frameLimit != -1) {
-		if (std::chrono::duration_cast<std::chrono::microseconds>(frameStart.time_since_epoch()).count() == 0)
-			frameStart = std::chrono::steady_clock::now();
-
-		while (std::chrono::steady_clock::now() < frameStart + (1s / frameLimit))
-			std::this_thread::sleep_for(1ms);
-
-		// How far over the target time are we?
-		over = std::chrono::steady_clock::now() - (frameStart + (1s / frameLimit));
-	}
-
 	controls.GetFpsCounter().OnFrame();
 
 #if GUI
@@ -3010,7 +2997,19 @@ inline void CApp::SwapBuffers(const Delta &time) {
 		platform->SwapBuffers();
 	}
 
-	frameStart = std::chrono::steady_clock::now() - std::chrono::duration_cast<std::chrono::microseconds>(over);
+	if (frameLimit != -1) {
+		if (std::chrono::duration_cast<std::chrono::microseconds>(frameStart.time_since_epoch()).count() == 0)
+			frameStart = std::chrono::steady_clock::now();
+
+		while (std::chrono::steady_clock::now() < frameStart + (1s / frameLimit))
+			std::this_thread::sleep_for(1ms);
+
+		// How far over the target time are we?
+		std::chrono::duration<double, std::nano> over = 
+			std::chrono::steady_clock::now() - (frameStart + (1s / frameLimit));
+
+		frameStart = std::chrono::steady_clock::now() - std::chrono::duration_cast<std::chrono::microseconds>(over);
+	}
 }
 
 void CApp::SyncToNearestBeat() {
