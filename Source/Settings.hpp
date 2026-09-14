@@ -442,7 +442,7 @@ private:
 
 	// Actual settings
 	float volume = 1.0f;
-	bool exclusive = true;
+	bool exclusive = false;
 	ColorSelection colorSelection;
 
 	int windowWidth = -1;
