@@ -1605,7 +1605,7 @@ void AlbumArt::Scale(bool force) {
 			surfaceToLoad = resized;
 
 			LogDebug("Image resizing took " + std::to_string(Duration<Microseconds>(end - start).AsSeconds()) + " seconds");
-		}
+		} else SDL_DestroySurface(resized);
 	});
 }
 
