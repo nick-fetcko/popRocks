@@ -12,6 +12,8 @@ On first launch, a help interface appears:
 
 <img width="662" height="662" alt="popRocks-help" src="https://github.com/user-attachments/assets/66d82cf9-a172-4227-85e3-c72c555820ee" />
 
+After first launch, right-clicking any folder in Windows will provide an option to "Visualize with popRocks". On Linux, this option is under "Open Folder With". popRocks can also be assigned as the default application for any supported file extensions.
+
 ## What popRocks IS
 - A desktop audio player for Windows and Linux
   - Supports lossy formats: MP3, M4A, OGG
