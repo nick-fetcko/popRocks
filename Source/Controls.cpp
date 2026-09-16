@@ -1277,7 +1277,7 @@ void Controls::OnMouseMoved(const Vector2i &mousePos) {
 		}
 	) == MiniPlayerList::HoverState::Trigger) 
 		button = ControlButton::Menu;
-	else if (help.OnMouseMoved(mousePos))
+	else if (!playlist.IsActive() && !presetList.IsActive() && !checkboxList.IsActive() && help.OnMouseMoved(mousePos))
 		button = ControlButton::None;
 
 	next.SetHovered(button == ControlButton::Next);
