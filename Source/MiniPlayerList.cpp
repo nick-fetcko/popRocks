@@ -357,10 +357,12 @@ MiniPlayerList::HoverState MiniPlayerList::OnMouseMoved(const Vector2i &mousePos
 		// restrict us to the size of said items
 		numberOfVisibleItems * font->GetEm().height;
 
+	const auto overhang = numberOfVisibleItems > 0 ? items[scrollOffset + numberOfVisibleItems - 1].first.GetBounds().overhang : 0;
+
 	const auto inY = justBounds ? (mousePos.y > bounds.y && mousePos.y < bounds.h) : (
-		(direction == Direction::Down && mousePos.y > bounds.y && mousePos.y < bounds.h + (bounds.h - bounds.y) + radius) ||
+		(direction == Direction::Down && mousePos.y > bounds.y && mousePos.y < bounds.h + (bounds.h - bounds.y) + radius + GetItemLeading() + overhang) ||
 		(direction == Direction::Up && mousePos.y < bounds.h && mousePos.y > bounds.y - (bounds.h - bounds.y) - radius) ||
-		(direction == Direction::Both && mousePos.y < bounds.h + radius / 2 && mousePos.y > bounds.y - (bounds.h - bounds.y) - radius / 2)
+		(direction == Direction::Both && mousePos.y < bounds.h + radius / 2 + GetItemLeading() + overhang && mousePos.y > bounds.y - (bounds.h - bounds.y) - radius / 2)
 	);
 
 	hoveredOffset = -1;
@@ -378,7 +380,7 @@ MiniPlayerList::HoverState MiniPlayerList::OnMouseMoved(const Vector2i &mousePos
 			const auto &title = items[i + scrollOffset];
 
 			if (mousePos.x >= pos.x - (title.first.GetBounds().width + GetItemWidth() * 2.25f) / 2 && mousePos.x <= pos.x + (title.first.GetBounds().width + GetItemWidth()) / 2 &&
-				mousePos.y >= yOffset - title.first.GetBounds().height / 2 && mousePos.y <= yOffset + title.first.GetBounds().height / 2 + title.first.GetBounds().overhang) {
+				mousePos.y >= yOffset - title.first.GetBounds().height / 2 - GetItemLeading() && mousePos.y <= yOffset + title.first.GetBounds().height / 2 + title.first.GetBounds().overhang + GetItemLeading()) {
 				hoveredOffset = i;
 				break;
 			}
