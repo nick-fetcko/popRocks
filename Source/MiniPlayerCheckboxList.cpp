@@ -21,9 +21,11 @@ void MiniPlayerCheckboxList::OnInit(OpenGLFont *font, OpenGLFont *boldFont, Open
 bool MiniPlayerCheckboxList::OnResize(int windowWidth, int windowHeight, float scale, bool miniPlayer, float maxWidth) {
 	const auto ret = MiniPlayerList::OnResize(windowWidth, windowHeight, scale, miniPlayer, maxWidth + GetItemWidth());
 
-	for (auto &setting : checkboxes) {
+	for (auto &setting : checkboxes)
 		setting.checkbox.OnResize(controls->GetIconSize());
-	}
+
+	// Update number of visible items
+	OnRadiusChanged();
 
 	return ret;
 }
