@@ -2324,7 +2324,7 @@ void CApp::OnLoop(const Delta &time) {
 		// hovered over the album art circle
 		// or close button
 		if (auto onClose = IsOnCloseButton({ x, y }); 
-			Vector2f(x, y).Distance({ windowWidth / 2, windowHeight / 2 }) / scale <= albumArt.GetRadius(miniPlayer) + albumArt.GetOutline().GetWidth() ||
+			Vector2f(x, y).Distance({ windowWidth / 2, windowHeight / 2 }) <= albumArt.GetRadius(miniPlayer) + albumArt.GetOutline().GetWidth() ||
 			onClose) {
 			platform->SetTransparent(false);
 
