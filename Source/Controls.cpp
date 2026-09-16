@@ -1363,14 +1363,14 @@ Controls::ControlButton Controls::OnMouseClicked(const Vector2i &mousePos, std::
 		return ControlButton::None;
 	}
 
-	if (canTakeAction && !presetList.IsHoveredOrWillBeHovered() && dynamic_cast<MiniPlayerList *>(&presetList)->OnMouseClicked(mousePos, {
+	if (canTakeAction && !checkboxList.IsActive() && !playlist.IsActive() && !presetList.IsHoveredOrWillBeHovered() && dynamic_cast<MiniPlayerList *>(&presetList)->OnMouseClicked(mousePos, {
 		windowWidth / 2 - presetText.GetBounds().width / 2,
 		static_cast<int>(iconY + albumArt->GetRadius(miniPlayer) * MiniPlayerIconRatio * 1.5f - presetText.GetBounds().height / 2.0f),
 		windowWidth / 2 + presetText.GetBounds().width / 2,
 		static_cast<int>(iconY + albumArt->GetRadius(miniPlayer) * MiniPlayerIconRatio * 1.5f + presetText.GetBounds().height / 2.0f)
 	})) return ControlButton::None;
 
-	if (canTakeAction && checkboxList.OnMouseClicked(
+	if (canTakeAction && !playlist.IsActive() && !presetList.IsActive() && checkboxList.OnMouseClicked(
 		mousePos,
 		{
 			static_cast<int>(windowWidth / 2 - (albumArt->GetRadius(miniPlayer) * MiniPlayerSeekbarRatio) / 2.0f - hamburger.GetRadius() * 1.25f - hamburger.GetRadius() / 2),
