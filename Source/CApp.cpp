@@ -630,7 +630,7 @@ inline SDL_PropertiesID CApp::CreateSdlWindow(bool first) {
 	windowX = miniPlayer ? Settings::settings.GetMiniPlayerX() : Settings::settings.GetWindowX();
 	windowY = miniPlayer ? Settings::settings.GetMiniPlayerY() : Settings::settings.GetWindowY();
 
-	const float newScale = first ? 1.0f : platform->GetScaleForPoint(windowX, windowY);
+	const float newScale = first && miniPlayer ? 1.0f : platform->GetScaleForPoint(windowX, windowY);
 
 	scale = originalScale = newScale;
 
