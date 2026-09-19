@@ -93,8 +93,8 @@ After first launch, right-clicking any folder in Windows will provide an option 
 1. `git clone https://github.com/nick-fetcko/popRocks`
 2. `cd popRocks`
 3. `git submodule update --init --recursive`
-4. `flatpak-builder --force-clean --user --install-deps-from=flathub --repo=repo --install builddir org.fetcko.popRocks.yml`
-5. OR, if flatpak-builder is installed as a Flatpak: `flatpak run org.flatpak.Builder --force-clean --user --install-deps-from=flathub --repo=repo --install builddir org.fetcko.popRocks.yml`
+4. `flatpak-builder --force-clean --user --install-deps-from=flathub --repo=repo --install builddir app.popRocks.popRocks.yml`
+5. OR, if flatpak-builder is installed as a Flatpak: `flatpak run org.flatpak.Builder --force-clean --user --install-deps-from=flathub --repo=repo --install builddir app.popRocks.popRocks.yml`
 
 ## Troubleshooting (Windows)
 - If using **Rectify11** / **Mica For Everyone** and player isn't transparent

@@ -89,7 +89,7 @@ void MPRIS::OnLoop() {
 						AddBooleanProp(dictIter, entryIter, variantIter, "HasTrackList", 1);
 						AddStringProp(dictIter, entryIter, variantIter, "Identity", "popRocks Visualizer");
 #ifdef USING_FLATPAK
-						AddStringProp(dictIter, entryIter, variantIter, "DesktopEntry", "org.fetcko.popRocks");
+						AddStringProp(dictIter, entryIter, variantIter, "DesktopEntry", "app.popRocks.popRocks");
 #else
 						AddStringProp(dictIter, entryIter, variantIter, "DesktopEntry", "popRocks");
 #endif

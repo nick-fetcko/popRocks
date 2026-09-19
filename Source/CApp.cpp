@@ -3504,6 +3504,18 @@ void CApp::PlaylistLoaded(std::filesystem::path path, std::string extension, std
 }
 
 void CApp::LoadFile(std::filesystem::path path, bool fromPlaylist) {
+	if (!std::filesystem::exists(path)) {
+		preLoaded = false;
+		LogError<true>(
+			"Could not load file!", "File at path \"" + path.u8string() + "\" does not exist!"
+#ifdef USING_FLATPAK
+			+ " Make sure the Flatpak has permission to accesss this directory."
+#endif
+		);
+
+		return;
+	}
+
 	loadFilePath = path;
 
 	loadFileExtension = path.extension().u8string();

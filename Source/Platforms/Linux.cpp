@@ -45,12 +45,12 @@ constexpr std::string_view ServiceMenuTemplate =
 R"([Desktop Entry]
 Type=Service
 MimeType=inode/directory
-Actions=org.fetcko.popRocks.visualizeWith
+Actions=app.popRocks.popRocks.visualizeWith
 
-[Desktop Action org.fetcko.popRocks.visualizeWith]
+[Desktop Action app.popRocks.popRocks.visualizeWith]
 Name=Visualize with popRocks
-Icon=org.fetcko.popRocks
-Exec=flatpak run org.fetcko.popRocks %u)";
+Icon=app.popRocks.popRocks
+Exec=flatpak run app.popRocks.popRocks %u)";
 #else
 R"([Desktop Entry]
 Type=Service
@@ -164,7 +164,7 @@ void Linux::OnInit(Interop::InitArgs args, Context &context) {
 
 		if (std::filesystem::exists(serviceMenuPath)) {
 #ifdef USING_FLATPAK
-			serviceMenuPath /= "org.fetcko.popRocks.visualizeWith.desktop";
+			serviceMenuPath /= "app.popRocks.popRocks.visualizeWith.desktop";
 
 			std::string serviceMenuContents =
 				std::string(
@@ -684,7 +684,7 @@ std::filesystem::path Linux::GetTemporaryFile(const std::string &pattern, std::o
 	delete[] tempFileName;
 
 #ifdef USING_FLATPAK
-	return std::string(std::getenv("XDG_RUNTIME_DIR")) + "/.flatpak/org.fetcko.popRocks" + lastTempFile;
+	return std::string(std::getenv("XDG_RUNTIME_DIR")) + "/.flatpak/app.popRocks.popRocks" + lastTempFile;
 #endif
 
 	return lastTempFile;
@@ -1139,7 +1139,7 @@ void Linux::HookWindow(bool miniPlayer) {
 		xdgTopLevel = xdg_surface_get_toplevel(xdgSurface);
 
 #ifdef USING_FLATPAK
-		xdg_toplevel_set_app_id(xdgTopLevel, "org.fetcko.popRocks");
+		xdg_toplevel_set_app_id(xdgTopLevel, "app.popRocks.popRocks");
 #else
 		xdg_toplevel_set_app_id(xdgTopLevel, "popRocks");
 #endif
@@ -1391,7 +1391,7 @@ void Linux::SetStatus(Status status, int progress) {
 	if (!msg) return;
 
 #ifdef USING_FLATPAK
-	const char *uri = "application://org.fetcko.popRocks.desktop";
+	const char *uri = "application://app.popRocks.popRocks.desktop";
 #else
 	const char *uri = "application://popRocks.desktop";
 #endif
