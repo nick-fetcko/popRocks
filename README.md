@@ -96,6 +96,15 @@ After first launch, right-clicking any folder in Windows will provide an option 
 4. `flatpak-builder --force-clean --user --install-deps-from=flathub --repo=repo --install builddir app.popRocks.popRocks.yml`
 5. OR, if flatpak-builder is installed as a Flatpak: `flatpak run org.flatpak.Builder --force-clean --user --install-deps-from=flathub --repo=repo --install builddir app.popRocks.popRocks.yml`
 
+## Troubleshooting (General)
+- If certain presets do not visually match what's shown in videos / demos
+  - The appearance of certain presets is highly dependent on framerate
+  - Many videos / demos were recorded at 240 FPS:
+    - Toggle the visualizer editor with "M"
+    - Disable "Vertical sync?" from the "Display" menu
+    - Enable "Limit framerate?" from the "Display" menu
+    - Ensure "Limit" is set to "240"
+
 ## Troubleshooting (Windows)
 - If using **Rectify11** / **Mica For Everyone** and player isn't transparent
   - Add a Process Rule for popRocks to **Mica For Everyone** and set "Backdrop Type" to "None"
