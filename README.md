@@ -2,7 +2,11 @@
 <img width="720" height="720" alt="preview" src="https://github.com/user-attachments/assets/0c0aa4bb-fe14-4161-8772-d65e3a843d75" />
 
 ## Installation
-- Windows .exe file coming soon!
+- Windows
+  - Download `popRocks.0.1.0.zip` from [Releases](https://github.com/nick-fetcko/popRocks/releases/latest)
+  - Extract ZIP contents to a folder anywhere on your computer
+  - Open `popRocks` / `popRocks.exe` in the extracted folder
+    
 - Flathub package coming soon!
 
 ## Using
