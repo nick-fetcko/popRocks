@@ -114,7 +114,7 @@ After first launch, right-clicking any folder in Windows will provide an option 
   - Add a Process Rule for popRocks to **Mica For Everyone** and set "Backdrop Type" to "None"
 - If using *beta* Vulkan interop on an NVIDIA GPU and player isn't transparent
   - Under "Manage 3D settings" in the NVIDIA Control Panel, find "Vulkan/OpenGL present method" at the bottom and change it to "Native"
-- A "G-SYNC" indicator is visible next to the player on an NVIDIA GPU
+- A "G-SYNC" / "NORMAL" indicator is visible on the top right corner of the player on an NVIDIA GPU
   - Select "Change Resolution" in the NVIDIA Control Panel, find the "Display" menu up top and deselect "G-SYNC, G-SYNC Compatible Indicator"
   - OR, to add an individual exception for popRocks, use [NVIDIA Profile Inspector](https://github.com/Orbmu2k/nvidiaProfileInspector)
 
